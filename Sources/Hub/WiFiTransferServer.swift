@@ -21,7 +21,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
 
     private var listener: NWListener?
     private var pin: String = ""
-    private let queue = DispatchQueue(label: "com.gagaemu.wifi", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.zenithblue.gagaemu.wifi", qos: .userInitiated)
     private let lock = NSLock()
 
     public init(romDirectory: URL, port: UInt16 = 8080) {

@@ -39,7 +39,7 @@ public final class AudioEngineManager: ObservableObject {
     private let bufferLock = NSLock()
 
     private let chunkFrames: Int = 1024
-    private let audioQueue = DispatchQueue(label: "com.gagaemu.audio.scheduler", qos: .userInteractive)
+    private let audioQueue = DispatchQueue(label: "com.zenithblue.gagaemu.audio.scheduler", qos: .userInteractive)
     private var isScheduling: Bool = false
 
     public init(outputSampleRate: Double = 44100.0) {

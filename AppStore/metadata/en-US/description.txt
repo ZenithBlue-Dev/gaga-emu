@@ -1,0 +1,22 @@
+GagaEmu is a retro game emulator for iPhone.
+
+It runs software that you provide yourself: homebrew, and games that you have legally dumped from cartridges, discs and consoles you own. The app does not include any games, ROMs or BIOS, and it does not sell, link to or help you obtain them. You may load only legally owned backups of software you already own.
+
+YOUR LIBRARY
+- Import a game file through the Files app, or copy files into GagaEmu with the Files app or Finder on a Mac
+- See your games in one library
+- Pull to refresh after adding files
+
+PLAY
+- Full screen, with graphics drawn through Metal
+- On-screen touch controls
+- Game controllers supported by iOS, over Bluetooth or USB; the touch controls hide when one connects
+- Pause, resume or stop from the in-game menu
+
+EARLY RELEASE
+GagaEmu is in early development. Speed depends on your device and the software you load. We make no promise that any particular title will run.
+
+PRIVACY
+The app collects no data. It has no accounts, analytics, advertising or tracking. Your games and saves stay on your device unless you choose to share a file.
+
+GagaEmu is an independent project. It is not affiliated with, endorsed by or sponsored by any console maker. All trademarks belong to their owners.

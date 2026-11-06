@@ -218,7 +218,7 @@ To maintain clean Git hygiene and avoid merge conflicts in `.xcodeproj` files, G
 ```yaml
 name: GagaEmu
 options:
-  bundleIdPrefix: com.gagaemu
+  bundleIdPrefix: com.zenithblue
   deploymentTarget:
     iOS: "17.0"
 settings:

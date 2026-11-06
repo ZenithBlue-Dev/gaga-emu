@@ -95,7 +95,7 @@ public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
     private var playerInputs: [GagaInputState] = Array(repeating: GagaInputState(), count: 4)
     private let inputLock = NSLock()
 
-    private let executionQueue = DispatchQueue(label: "com.gagaemu.core.execution", qos: .userInteractive)
+    private let executionQueue = DispatchQueue(label: "com.zenithblue.gagaemu.core.execution", qos: .userInteractive)
     private var frameTimer: DispatchSourceTimer?
     private var isStepping: Bool = false
 

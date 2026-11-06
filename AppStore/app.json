@@ -1,0 +1,42 @@
+{
+  "bundleId": "com.zenithblue.gagaemu",
+  "platform": "IOS",
+  "versionString": "1.0",
+  "locale": "en-US",
+  "primaryCategory": "ENTERTAINMENT",
+  "secondaryCategory": null,
+  "contentRightsDeclaration": "DOES_NOT_USE_THIRD_PARTY_CONTENT",
+  "ageRatingDeclaration": {
+    "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+    "contests": "NONE",
+    "gamblingSimulated": "NONE",
+    "gunsOrOtherWeapons": "NONE",
+    "horrorOrFearThemes": "NONE",
+    "matureOrSuggestiveThemes": "NONE",
+    "medicalOrTreatmentInformation": "NONE",
+    "profanityOrCrudeHumor": "NONE",
+    "sexualContentGraphicAndNudity": "NONE",
+    "sexualContentOrNudity": "NONE",
+    "violenceCartoonOrFantasy": "NONE",
+    "violenceRealistic": "NONE",
+    "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+    "advertising": false,
+    "ageAssurance": false,
+    "gambling": false,
+    "healthOrWellnessTopics": false,
+    "lootBox": false,
+    "messagingAndChat": false,
+    "parentalControls": false,
+    "socialMedia": false,
+    "unrestrictedWebAccess": false,
+    "userGeneratedContent": false
+  },
+  "ITSAppUsesNonExemptEncryption": false,
+  "manual": {
+    "appPrivacy": "Data Not Collected",
+    "usesNonExemptEncryption": false,
+    "exportComplianceNote": "Info.plist sets ITSAppUsesNonExemptEncryption to false.",
+    "pricing": "Owner's choice",
+    "availability": "Owner's choice"
+  }
+}
