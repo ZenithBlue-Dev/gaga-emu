@@ -1,0 +1,5 @@
+module GagaBridge {
+    header "GagaBridge.h"
+    header "GagaCoreRegistry.h"
+    export *
+}

@@ -1,0 +1,66 @@
+name: GagaEmu
+options:
+  bundleIdPrefix: com.gagaemu
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+  groupSortPosition: top
+
+configs:
+  Debug:
+    type: debug
+    settings:
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      GCC_OPTIMIZATION_LEVEL: "0"
+  Release:
+    type: release
+    settings:
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      GCC_OPTIMIZATION_LEVEL: "s"
+
+settings:
+  SWIFT_VERSION: "5.9"
+  ENABLE_BITCODE: NO
+  CLANG_ENABLE_MODULES: YES
+  IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+  TARGETED_DEVICE_FAMILY: "1,2"
+
+targets:
+  GagaEmu:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gagaemu.GagaEmu
+      INFOPLIST_FILE: Sources/App/Info.plist
+      SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
+      HEADER_SEARCH_PATHS:
+        - $(SRCROOT)/Sources/Bridge
+      OTHER_CFLAGS:
+        - -std=c99
+    frameworks:
+      - Metal
+      - MetalKit
+      - GameController
+      - CoreHaptics
+      - AVFoundation
+      - StoreKit
+      - AudioToolbox
+
+  GagaEmuTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: GagaEmu
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.gagaemu.GagaEmuTests
+      SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
+      HEADER_SEARCH_PATHS:
+        - $(SRCROOT)/Sources/Bridge

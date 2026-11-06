@@ -1,0 +1,35 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode & Swift
+build/
+DerivedData/
+*.xcuserstate
+project.xcworkspace/
+*.xcuserdatad/
+*.xcscmblueprint
+.build/
+Packages/
+*.xcworkspace
+xcuserdata/
+
+# Swift Package Manager
+.swiftpm/
+
+# IDEs
+.idea/
+.vscode/
+
+# Fastlane / CI / temp
+*.log
+*.tmp
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
