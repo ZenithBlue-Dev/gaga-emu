@@ -38,8 +38,9 @@ targets:
     sources:
       - path: Sources
     settings:
-      PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.GagaEmu
+      PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.gagaemu
       INFOPLIST_FILE: Sources/App/Info.plist
+      CODE_SIGN_ENTITLEMENTS: Sources/App/GagaEmu.entitlements
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
