@@ -236,6 +236,21 @@ No GPL-2.0-only file is compiled into this framework, so there is no GPL-2.0-onl
 
 No Nintendo BIOS or firmware is read or bundled: `melonds_sysfile_mode` is `builtin`, so melonDS uses FreeBIOS and its generated firmware and boots the game directly. That mode cannot boot an encrypted retail dump, which needs Nintendo's BIOS: melonDS DS shows its own error screen for one. The test ROM carries no Nintendo logo bytes.
 
+### MoltenVK and layer-path licence obligations
+
+Source: [github.com/KhronosGroup/MoltenVK](https://github.com/KhronosGroup/MoltenVK), tag v1.4.2, commit `db66022459ffb663aa2b50f6b018bc2e124f5edf`. `scripts/build-moltenvk.sh` clones it into `build/moltenvk-src`, runs MoltenVK's own `fetchDependencies --ios --iossim`, which checks out each dependency at the commit the tag records in `ExternalRevisions/`, and builds the static `MoltenVK.xcframework` (`ios-arm64` and `ios-arm64_x86_64-simulator`). SPIRV-Tools uses MoltenVK's pregenerated headers, so no CMake configure runs. Nothing built is committed. Every layer-path core links `libMoltenVK.a` into its own framework (`CORE_USES_MOLTENVK=1`), so each such framework carries all of the rows below. The script copies each licence to `build/moltenvk/licenses`.
+
+| Part | Commit | Compiled part | Licence | What it asks of a binary release |
+|---|---|---|---|---|
+| MoltenVK | `db660224` (v1.4.2) | `MoltenVK/`, `MoltenVKShaderConverter/`, `Common/` | Apache-2.0 | Ship the licence text and any NOTICE; state changes (none). |
+| SPIRV-Cross | `6c09849f` | MSL, GLSL and reflection back ends | Apache-2.0 (some files Apache-2.0 OR MIT) | Ship the licence text. |
+| SPIRV-Tools | `0d6fd73c` | optimiser and validator, built in MoltenVK's `ExternalDependencies` project | Apache-2.0 | Ship the licence text. |
+| cereal | `a56bad8b` | headers (pipeline cache serialisation) | BSD-3-Clause | Reproduce the notice. |
+| Vulkan-Headers | `e3b1eec0` | headers | Apache-2.0 OR MIT | Ship either licence text. |
+| SPIRV-Headers | `29981f65` | headers | MIT (KhronosFreeUse) | Reproduce the notice. |
+
+Fetched and not compiled: Vulkan-Tools (`8c66b352`) and volk (`77689330`), which only MoltenVK's Cube demo uses. None of these licences conflicts with the GPL cores, and the Vulkan test core `vktest` (`Cores/vktest`, written in this repository, debug and test builds only) has no upstream. MoltenVK translates SPIR-V to MSL and Metal compiles it into an `MTLLibrary` for the GPU at run time; no CPU code is generated, and the no-JIT gate passes on both slices. compiler-rt's `@available` support, linked with MoltenVK, imports `_dlsym` to read the OS version from CoreFoundation; it loads no code.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
