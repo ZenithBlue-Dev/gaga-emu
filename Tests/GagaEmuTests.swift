@@ -611,7 +611,8 @@ final class GagaEmuTests: XCTestCase {
         try Data("old".utf8).write(to: old.appendingPathComponent("scph5501.bin"))
         try Data("new".utf8).write(to: system.appendingPathComponent("scph5501.bin"))
 
-        XCTAssertEqual(GagaCoreWrapper.migrateBIOSFolder(base: base), system)
+        // The code returns a directory URL ("System/"); compare paths, which carry no trailing slash.
+        XCTAssertEqual(GagaCoreWrapper.migrateBIOSFolder(base: base).standardizedFileURL.path, system.standardizedFileURL.path)
         XCTAssertEqual(try Data(contentsOf: system.appendingPathComponent("bios9.bin")), Data("bios9".utf8))
         XCTAssertEqual(try Data(contentsOf: system.appendingPathComponent("scph5501.bin")), Data("new".utf8), "not overwritten")
         XCTAssertEqual(try Data(contentsOf: old.appendingPathComponent("scph5501.bin")), Data("old".utf8), "kept, not lost")
@@ -648,6 +649,10 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(try platform("saturn.iso", image(Array("SEGA SEGASATURN ".utf8), at: 0)), "saturn")
         XCTAssertEqual(try platform("saturn.bin", image(Array("SEGA SEGASATURN ".utf8), at: 16)), "saturn", "raw sector")
         XCTAssertEqual(try platform("saturn.cue", Data("FILE \"saturn.bin\" BINARY\n  TRACK 01 MODE1/2352\n".utf8)), "saturn")
+        _ = try platform("saturn.img", image(Array("SEGA SEGASATURN ".utf8), at: 16))
+        XCTAssertEqual(try platform("saturn.ccd", Data("[CloneCD]\nVersion=3\n".utf8)), "saturn", "through the .img beside it")
+        XCTAssertEqual(try platform("ps.toc", Data("CD_ROM_XA\nTRACK MODE2_RAW\nDATAFILE \"ps.bin\"\n".utf8)), "ps1", "through DATAFILE")
+        XCTAssertNil(try platform("disk.ccd", Data("[CloneCD]\n".utf8)), "an ISO .img beside a .ccd is not DOS, asks")
         XCTAssertEqual(try platform("sega.bin", image(Array("SEGA GENESIS    ".utf8), at: 16)), "megacd", "any other SEGA disc")
         XCTAssertEqual(try platform("pc.iso", image(Array("CD001".utf8), at: 32769)), "dos")
         XCTAssertEqual(try platform("disk.img", Data(count: 1024)), "dos")
