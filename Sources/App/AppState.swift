@@ -121,7 +121,9 @@ enum CoreCatalog {
             .init(id: "ppsspp", name: "PPSSPP", note: "IR interpreter", recommended: true)
         ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
-            .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
+            .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true),
+            // Sideload builds only. FBNeo names some sets differently, so the player picks it per game (docs/03 section 8).
+            .init(id: "fbneo", name: "FinalBurn Neo", note: "Sideload", recommended: false)
         ]),
         .init(id: "dos", name: "MS-DOS", manufacturer: "Vintage", cores: [
             .init(id: "dosbox_pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)

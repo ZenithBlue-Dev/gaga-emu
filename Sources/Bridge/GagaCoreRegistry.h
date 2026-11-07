@@ -29,6 +29,7 @@ const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
 const GagaCoreInterface* Snes9x_GetInterface(void);
 const GagaCoreInterface* GenesisPlusGX_GetInterface(void);
 const GagaCoreInterface* Picodrive_GetInterface(void);
+const GagaCoreInterface* Fbneo_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

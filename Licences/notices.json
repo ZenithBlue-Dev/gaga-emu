@@ -221,6 +221,22 @@
         { "title": "dr_libs", "from": "Cores/picodrive/upstream/platform/common/dr_libs/LICENSE" },
         { "title": "libretro-common", "from": "Cores/picodrive/upstream/platform/libretro/libretro-common/file/file_path.c", "comment": true }
       ]
+    },
+    {
+      "id": "fbneo", "title": "FinalBurn Neo", "cores": ["fbneo"], "framework": "FbneoCore",
+      "licence": "FB Neo licence (non-commercial, no donations), with MAME, Final Burn, BSD, zlib, MIT and public-domain parts",
+      "source": "https://github.com/libretro/FBNeo, commit 4cdb31f, built unmodified. Sideload builds only: its licence forbids seeking profit from it and asking for donations.",
+      "texts": [
+        { "title": "FB Neo, Final Burn, MAME and libspng", "from": "Cores/fbneo/upstream/src/license.txt" },
+        { "title": "libchdr", "from": "Cores/fbneo/upstream/src/dep/libs/libchdr/LICENSE.txt" },
+        { "title": "LZMA SDK", "from": "Cores/fbneo/upstream/src/dep/libs/lzma/LICENSE" },
+        { "title": "zlib", "from": "Cores/fbneo/upstream/src/dep/libs/zlib/zlib.h", "comment": true },
+        { "title": "Zstandard", "from": "Cores/fbneo/upstream/src/dep/libs/zstd/zstddeclib.c", "comment": true },
+        { "title": "dr_libs", "from": "Cores/fbneo/upstream/src/dep/libs/dr_libs/LICENSE.txt" },
+        { "title": "stb_vorbis", "from": "Cores/fbneo/upstream/src/dep/libs/stb_vorbis/stb_vorbis.c", "comment": true },
+        { "title": "r8brain-free-src", "from": "Cores/fbneo/upstream/src/dep/libs/r8brain/r8bbase.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/fbneo/upstream/src/burner/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
     }
   ]
 }

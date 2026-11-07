@@ -892,6 +892,54 @@
      "file": "licence-d9877dd11360.txt"
     }
    ]
+  },
+  {
+   "id": "fbneo",
+   "title": "FinalBurn Neo",
+   "licence": "FB Neo licence (non-commercial, no donations), with MAME, Final Burn, BSD, zlib, MIT and public-domain parts",
+   "source": "https://github.com/libretro/FBNeo, commit 4cdb31f, built unmodified. Sideload builds only: its licence forbids seeking profit from it and asking for donations.",
+   "cores": [
+    "fbneo"
+   ],
+   "framework": "FbneoCore",
+   "texts": [
+    {
+     "title": "FB Neo, Final Burn, MAME and libspng",
+     "file": "licence-a60e56a96bf5.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-1ed215a9dd43.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-91e669b8e3b1.txt"
+    },
+    {
+     "title": "dr_libs",
+     "file": "licence-dd1c647e6f76.txt"
+    },
+    {
+     "title": "stb_vorbis",
+     "file": "licence-6a17177a99bf.txt"
+    },
+    {
+     "title": "r8brain-free-src",
+     "file": "licence-b9795878a8a8.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
   }
  ]
 }

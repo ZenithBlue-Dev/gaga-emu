@@ -1,0 +1,58 @@
+$ nobt
+
+
+ @file r8bbase.h
+
+ @version 7.1
+
+ @brief The "base" header file with basic classes and functions.
+
+ This is the "base" header file for the "r8brain-free-src" sample rate
+ converter. This file contains implementations of several small utility
+ classes and functions used by the library.
+
+ @mainpage
+
+ @section intro_sec Introduction
+
+ Open source (under the MIT license) high-quality professional audio sample
+ rate converter (SRC) / resampler C++ library.  Features routines for SRC,
+ both up- and downsampling, to/from any sample rate, including non-integer
+ sample rates: it can be also used for conversion to/from SACD/DSD sample
+ rates, and even go beyond that.  SRC routines were implemented in a
+ multi-platform C++ code, and have a high level of optimality. Also suitable
+ for fast general-purpose 1D time-series resampling / interpolation (with
+ relaxed filter parameters).
+
+ For more information, please visit
+ https://github.com/avaneev/r8brain-free-src
+
+ Email: aleksey.vaneev@gmail.com or info@voxengo.com
+
+ @section license License
+
+ The MIT License (MIT)
+
+ r8brain-free-src Copyright (c) 2013-2025 Aleksey Vaneev
+
+ Permission is hereby granted, free of charge, to any person obtaining a
+ copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation
+ the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the
+ Software is furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ DEALINGS IN THE SOFTWARE.
+
+ Please credit the creator of this library in your documentation in the
+ following way: "Sample rate converter designed by Aleksey Vaneev of
+ Voxengo"

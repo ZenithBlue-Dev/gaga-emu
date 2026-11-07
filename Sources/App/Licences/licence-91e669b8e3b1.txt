@@ -1,0 +1,32 @@
+ \file zstddeclib.c
+ Single-file Zstandard decompressor.
+
+ Generate using:
+ \code
+	python combine.py -r ../../lib -x legacy/zstd_legacy.h -o zstddeclib.c zstddeclib-in.c
+ \endcode
+
+
+ Copyright (c) Meta Platforms, Inc. and affiliates.
+ All rights reserved.
+
+ This source code is licensed under both the BSD-style license (found in the
+ LICENSE file in the root directory of this source tree) and the GPLv2 (found
+ in the COPYING file in the root directory of this source tree).
+ You may select, at your option, one of the above-listed licenses.
+
+
+ Settings to bake for the standalone decompressor.
+
+ Note: It's important that none of these affects 'zstd.h' (only the
+ implementation files we're amalgamating).
+
+ Note: MEM_MODULE stops xxhash redefining BYTE, U16, etc., which are also
+ defined in mem.h (breaking C99 compatibility).
+
+ Note: the undefs for xxHash allow Zstd's implementation to coincide with
+ standalone xxHash usage (with global defines).
+
+ Note: if you enable ZSTD_LEGACY_SUPPORT the combine.py script will need
+ re-running without the "-x legacy/zstd_legacy.h" option (it excludes the
+ legacy support at the source level).

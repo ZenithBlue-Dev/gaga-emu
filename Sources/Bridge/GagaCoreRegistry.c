@@ -416,6 +416,9 @@ DEFINE_CORE_INTERFACE(GenesisPlusGX_GetInterface, "genesis_plus_gx", "Genesis Pl
 #ifndef GAGA_HAS_PICODRIVE
 DEFINE_CORE_INTERFACE(Picodrive_GetInterface,     "picodrive",       "PicoDrive",         GAGA_CORE_EXCLUDED, "32x|md|gen|smd|sms|gg|sg|bin|cue|chd|iso|m3u", 60.0, 44100)
 #endif
+#ifndef GAGA_HAS_FBNEO
+DEFINE_CORE_INTERFACE(Fbneo_GetInterface,         "fbneo",           "FinalBurn Neo",     GAGA_CORE_EXCLUDED, "zip|7z",   60.0,    48000)
+#endif
 
 // ============================================================================
 // REGISTRY DISPATCH TABLE
@@ -443,6 +446,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Snes9x_GetInterface, // After the default core of each platform, so FindByExtension keeps the default.
     GenesisPlusGX_GetInterface,
     Picodrive_GetInterface,
+    Fbneo_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 
