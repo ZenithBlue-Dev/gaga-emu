@@ -1,6 +1,6 @@
 # 02 — Feature Set & Manic EMU Reference
 
-Gaga-Emu uses Manic EMU as a feature reference, checked against the 14 screenshots in `maniac-emu-reference-images/`. It does not claim 1:1 parity: some Manic features are deliberately dropped, Manic's listing covers more systems than GagaEmu plans, and much of the detail below is GagaEmu's own design.
+Manic EMU is a feature reference only: this document tracks which features exist. The UI is not copied, and nothing here is an instruction to match Manic's screens, labels or layouts. GagaEmu's own original design is in `docs/06` section 3. Feature facts are checked against the 14 screenshots in `maniac-emu-reference-images/`. GagaEmu does not claim 1:1 parity: some Manic features are deliberately dropped, Manic's listing covers more systems than GagaEmu plans, and much of the detail below is GagaEmu's own design.
 
 No screenshot shows a version number. The [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790) showed version 2.0.2 when checked on 2026-11-07.
 
@@ -47,14 +47,14 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 ## 2. Subsystem Specifications
 
 ### 2.1 Adventurer Card & Community Links (Ref: `F7ADD189`, `8A17681E`)
-- **Card** [S]: heading `Adventurer Card`, with `Nickname: Adventurer`, `Play Time: Start your adventure now`, `Joined: 6 Nov 2026` and a mascot image. Status: built.
-- **Banner** [S]: `Unlock MANIC EMU membership`, `You are the protagonist of this story`, `50% Off`.
-- **Behaviour** [G]: editable nickname, play time tracked across cores, joined date set at first launch, selectable avatars. Using the nickname as a RetroAchievements or netplay handle needs those features first. Status: planned.
+- **Card** [S]: heading `Adventurer Card`, with `Nickname: Adventurer`, `Play Time: Start your adventure now`, `Joined: 6 Nov 2026` and a mascot image. Status: removed by the redesign; saved fields stay in `state.json`.
+- **Banner** [S]: `Unlock MANIC EMU membership`, `You are the protagonist of this story`, `50% Off`. Status: not built. GagaEmu has a Gaga Plus settings category instead.
+- **Play time** [G]: tracked per game and totalled in Settings > Play. Status: built, with no session to feed it.
 - **Community links** [S]: `FAQ`, `Feedback`, `Join QQ Channel`, `Join Discord`. Status: `FAQ` and `Feedback` built as links; `Join QQ Channel` and `Join Discord` removed, since GagaEmu has neither (`docs/06` section 3.3).
 - **Clear Cache** [S]: label only. What it clears (temp ROMs, covers, shader caches) is [G].
 
 ### 2.2 Controllers & Input (Ref: `026FA2CF`, `C4E3779B`)
-- **Controllers panel** [S]: a side panel that slides in with the main screen visible at its edge, opened from the top-left button on Games. It has a `Touch Control` row with a `Player 1` picker, plus `?` and `...` buttons. Status: built, as a sheet. Manic's side panel is not copied (`docs/07` 1.13).
+- **Controllers panel** [S]: a side panel that slides in with the main screen visible at its edge, opened from the top-left button on Games. It has a `Touch Control` row with a `Player 1` picker, plus `?` and `...` buttons. Status: slot assignment built, in Settings > Controls.
 - **Player slots**: only `Player 1` is seen [S]. Players 1 to 4 and touch fallback are [G]. Status: built in `Sources/Input/ControllerManager.swift`.
 - **Hardware controllers** [G]: `GameController.framework` for DualShock 4, DualSense, Xbox, Joy-Con and MFi pads. Brands are not shown in any screenshot.
 - **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure, EKA2L1 and J2meJS. Status: built in `Sources/Input/ControllerManager.swift`, with no session to feed.
@@ -65,15 +65,15 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. The `Assign Skin` row is hidden until 3.9. A skin customizer is planned.
 
 ### 2.3 Shaders (Ref: `0BF2D032`)
-- **Sheet** [S]: search field (placeholder `SearchShaders`), edit button, close button, an image button on the preview card (purpose not shown), and an eye icon plus radio button on each row. Status: built, except that the edit and image buttons are not in the code.
+- **Sheet** [S]: search field (placeholder `SearchShaders`), edit button, close button, an image button on the preview card (purpose not shown), and an eye icon plus radio button on each row. Status: GagaEmu has a list and a large live preview only (`docs/06` section 3.4).
 - **Preview**: the card shows a pixel-art scene [S]. A still cannot show whether it is live. Live preview is [G]. Status: built.
-- **Tabs** [S]: `Default`, `RetroArch`, `Import`, `Custom`. Only Default's contents are shown. In the code, the other three show placeholder text.
+- **Tabs** [S]: `Default`, `RetroArch`, `Import`, `Custom`. Only Default's contents are shown. GagaEmu has no tabs; the sources below appear when they exist.
   1. **Default**: MSL presets [G]. Status: built.
   2. **RetroArch**: libretro Slang presets converted ahead of time [G]; see `docs/05`. Status: planned.
   3. **Import**: runtime `.metal` source through `makeLibrary(source:)` is allowed [G]. `.slangp` import is planned and needs a translation path. Status: planned.
   4. **Custom**: parameter editing such as scanlines, curvature, bloom and colour temperature [G]. Status: planned.
 - **Presets** [S]: `Original`, `Cartoon`, `CRT v1`, `CRT v2`, `Geom CRT Border`, `Geom CRT`, `Film`. The screenshot cuts off at Film, so the total is not confirmed. Effect definitions are [G]; see `docs/05`.
-- **Anime4K / xBRZ and CRT-Royale** are not presets and are not sold until implemented. `Sources/App/AppState.swift:155` still lists `Anime4K / xBRZ` as premium, and it currently falls back to Original. The fix is a roadmap item.
+- **Anime4K / xBRZ and CRT-Royale** are not presets and are not sold until implemented. A saved choice of either falls back to Original.
 
 ### 2.4 Import Hub (Ref: `A59F001A`, `443B8BE2`)
 - **Top bar** [S]: `+`, cloud-download, `?` and `...` buttons, with tagline `Your adventure begins here!`. Their functions are not shown. Status: not specified.
@@ -86,13 +86,13 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
   - Accepting http(s) download links and raw ROM data is [G]; neither is shown for Manic.
 - **MultiDisc Helper** [S]: title only. Grouping by disc naming and writing `.m3u` playlists is [G]. Status: built.
 - **RomPatcher** [S]: title only. In-memory IPS, UPS and BPS patching with checksum verification is [G]. Status: built.
-- **Drag & Drop** [S]: `Drag files to any Manic EMU interface for transfer`, so the target is any screen, not only the game grid. Status: built on the Import screen; other screens not checked.
+- **Drag & Drop** [S]: `Drag files to any Manic EMU interface for transfer`, so the target is any screen, not only the game grid. Status: built on the Add screen only.
 
 ### 2.5 Library & Gameplay (Ref: `FC11608F`, `E2946B38`, `44F4AEE0`)
 - **Navigation** [S]: bottom bar with `Games` (rocket), `Import` (folder), `Settings` (gear). The Games header has a controller button on the left and a crossed-swords button on the right, which opens the Play History side panel.
 - **Empty state** [S]: `Welcome to MANIC EMU's World`, `Tap the [icon] button to import` (a text hint, not a button), `Join Discord for assistance`, `Ensure game ROMs are legally obtained`. There is no hero art here; the mascot art is on Import.
-- **Play History** [S]: the empty state only, with an `Import Games` button. Timeline and quick resume are [G]. Status: built, as a sheet. Manic's side panel is not copied (`docs/07` 1.13).
-- **Library** [G]: search, platform filter, console ordering (`Console Ordering` appears as a Theme subtitle [S]) and favourites. No populated library appears in any screenshot. Search is not visible on Manic's empty Games header.
+- **Play History** [S]: the empty state only, with an `Import Games` button. GagaEmu's play history is the Continue panel plus a Recent filter [G]. Status: built.
+- **Library** [G]: search, platform filter and favourites. Console ordering (`Console Ordering` appears as a Theme subtitle [S]) is not planned. No populated library appears in any screenshot. Search is not visible on Manic's empty Games header.
 - **Long-press** [S for core switching only]: a caption says cores switch by long-pressing a game. Other sheet actions are [G]; see `docs/06` section 3.1.
 - **Cover Scraping** [S]: row only. Status: row hidden until 3.8. Sources are [G]: OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration. Status: planned.
 - **Save states**: `Auto Save States` is a toggle, shown off [S]. Manual slots with thumbnails and a proposed 50-slot rolling auto-save are [G]. Status: the toggle is hidden until 2.6, and the free-tier cap exists in `StoreKitManager` but has no caller.
@@ -128,17 +128,15 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 | Premium Filters | Locked | Unlocked | `premiumShaderIDs` lists `geom-crt` and `geom-crt-border`. `anime4k` and `crt-royale` join when implemented. No Manic screenshot shows which filters are premium. |
 | Auto save state | Not gated | Not gated | No entitlement exists yet. Adding it is a roadmap item. |
 
-**Products** (IDs unchanged): `monthly.sub` as `Monthly Membership`, `annual.sub` as `Annual Membership`, `lifetime.pass` as `Lifetime Pass`.
-
-**Code gaps** (roadmap items, code not changed by this doc): the `Redeem Offer` button has no action (`Sources/UI/Settings/MembershipPaywallView.swift:63`). `50% Off` and the other badges are hard-coded (`StoreKitManager.swift:144-151`).
+**Products** (IDs unchanged): `monthly.sub`, `annual.sub` and `lifetime.pass`. GagaEmu's labels are in `docs/06` section 4.1.
 
 ### 2.7 Settings Row Inventory
-Rows and subtitles are [S]. Status comes from `Sources/UI/Settings/SettingsView.swift`.
+Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and layout are in `docs/06` section 3.3. Status comes from `Sources/UI/Settings/SettingsView.swift`.
 
 | Section | Row | Source detail | Status |
 | :--- | :--- | :--- | :--- |
-| General | `Appearance` | Shown `Dark Mode`; three unlabelled icons | built |
-| General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | hidden |
+| General | `Appearance` | Shown `Dark Mode`; three unlabelled icons | not planned: the app follows the system appearance |
+| General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | not planned: the palette is fixed |
 | General | `Quick Start` | `Skip preparation page`; shown off | hidden |
 | General | `Auto Save States` | Shown off | hidden |
 | General | `Assign Skin` | | hidden |
@@ -167,7 +165,7 @@ Rows and subtitles are [S]. Status comes from `Sources/UI/Settings/SettingsView.
 | More from Manic | BitBop promo, `Try Now` | Manic's own product | **Not applicable.** Not planned. |
 | None | `Rate Us` card | `Your 5-star rating means the world to us! :)` | hidden |
 
-Rows marked hidden are not shown; each returns in the milestone noted in `docs/07`. Saved values stay in `state.json`.
+Rows marked hidden are not shown; each returns in the milestone and settings category listed in `docs/06` section 3.3. Saved values stay in `state.json`.
 
 ---
 

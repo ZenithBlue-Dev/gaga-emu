@@ -2,7 +2,7 @@
 
 Multi-system emulator for iOS and iPadOS, designed for App Store distribution with no JIT in any shipped core.
 
-**Status: early shell with a mock core; no real emulation core runs yet** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md)). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and a **SwiftUI** interface that uses **Manic EMU** screenshots as a reference, without claiming feature parity.
+**Status: early shell with a mock core; no real emulation core runs yet** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md)). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
 
 ---
 
@@ -25,9 +25,10 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
    - Selected per game through a library long-press, with a per-platform default.
    - Compile-time core registry. Planned packaging is one dynamic, embedded framework per core, exporting only the bridge. Code is never loaded from user paths or downloaded.
 
-4. **Manic EMU as a Feature Reference** (no parity claim; `docs/02` tags each item by source and status):
-   - Adventurer Card with nickname, play time, joined date and avatar. Play time tracking across cores and selectable avatars are planned.
-   - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, MultiDisc M3U helper, and in-memory RomPatcher (IPS, including RLE records, plus BPS and UPS).
+4. **Original Landscape UI** (`docs/06` section 3): "Paper and ink", a quiet game shelf with a left rail, in landscape only on iPhone and iPad.
+
+5. **Manic EMU as a Feature Reference** (no parity claim and no copied UI; `docs/02` tags each item by source and status):
+   - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, Multi-Disc M3U helper, and an in-memory ROM patcher (IPS, including RLE records, plus BPS and UPS).
    - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built, but there is no game session to feed yet.
    - Scope is an explicit platform list in `docs/03`. PS3 (`samba-s3`) and PS4 (`bachata-s4`) are external sister projects, never catalog rows or frame producers. PS2 (`balero-s2`) and GameCube/Wii are non-shipping research and are not promised.
 
@@ -42,5 +43,5 @@ Detailed engineering specifications located in [`docs/`](./docs/):
 - [**03 — Core Matrix & Platform Catalog**](./docs/03-core-matrix-and-platform-catalog.md): Canonical core list, alternates, licences, renderer paths, and the legal and no-JIT gates.
 - [**04 — No-JIT Interpreter Architecture & Execution Engine**](./docs/04-no-jit-interpreter-architecture.md): iOS execution constraints, sister-project evidence, ranked optimisations, in-house interpreter design, performance tiers (target, unmeasured), benchmark method, and the per-core gate.
 - [**05 — Metal Graphics Pipeline & Shader Subsystem**](./docs/05-metal-graphics-pipeline-and-shaders.md): Graphics rules, GPU floor, frame paths, shader picker and presets, and runtime shader policy.
-- [**06 — iOS App Architecture, C-Bridge & Subsystem Specification**](./docs/06-ios-app-bridge-and-subsystem-spec.md): `GagaBridge.h` interface and planned additions, screen specifications, the canonical premium and in-app purchase spec, and the XcodeGen project manifest.
+- [**06 — iOS App Architecture, C-Bridge & Subsystem Specification**](./docs/06-ios-app-bridge-and-subsystem-spec.md): `GagaBridge.h` interface and planned additions, the UI design and screen specifications, the canonical premium and in-app purchase spec, and the XcodeGen project manifest.
 - [**07 — Roadmap & Implementation Plan**](./docs/07-roadmap-and-implementation-plan.md): Phases 0 to 7, status, milestones, and the definition of done for a core.
