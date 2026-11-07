@@ -7,6 +7,7 @@ struct GameView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var controllers: ControllerManager
     @EnvironmentObject private var skins: TouchSkinEngine
+    @ObservedObject private var external = ExternalDisplay.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var touchVisible: Bool { controllers.touchOwnsPlayerOne }
@@ -15,12 +16,20 @@ struct GameView: View {
         GeometryReader { geometry in
             let reserveBands = touchVisible || !state.autoFullScreen
             ZStack(alignment: .topLeading) {
-                GamePicture(session: session)
-                    .padding(.horizontal, reserveBands ? geometry.size.width * TouchSkinEngine.controlBand : 0)
-                    .ignoresSafeArea(edges: .vertical)
-                    .accessibilityElement()
-                    .accessibilityLabel("\(session.game.title), game picture")
-                    .accessibilityAddTraits(.isImage)
+                if external.showsPicture {
+                    Text("The picture is on the other screen.")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.onLetterbox)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    GamePicture(session: session)
+                        .padding(.horizontal, reserveBands ? geometry.size.width * TouchSkinEngine.controlBand : 0)
+                        .ignoresSafeArea(edges: .vertical)
+                        .accessibilityElement()
+                        .accessibilityLabel("\(session.game.title), game picture")
+                        .accessibilityAddTraits(.isImage)
+                }
                 if touchVisible { TouchControls(session: session, skins: skins) }
                 HStack(spacing: 0) {
                     pauseButton
@@ -44,7 +53,11 @@ struct GameView: View {
         .persistentSystemOverlays(.hidden)
         .defersSystemGestures(on: .all)
         .onChange(of: touchVisible) { session.clearTouches() }
-        .onAppear { session.run() }
+        .onAppear {
+            external.present(state.airPlayFullscreen ? session : nil)
+            session.run()
+        }
+        .onDisappear { external.present(nil) }
     }
 
     private var pauseButton: some View {
@@ -79,7 +92,7 @@ struct GameView: View {
     }
 }
 
-private struct GamePicture: UIViewRepresentable {
+struct GamePicture: UIViewRepresentable {
     @ObservedObject var session: GameSession
 
     func makeUIView(context: Context) -> MTKView {
