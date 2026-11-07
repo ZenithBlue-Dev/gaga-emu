@@ -31,7 +31,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Platform | GagaEmu default | Manic default (screenshot) | Alternates | Licence | Renderer path | No-JIT status | Upstream state | Load tier |
 |---|---|---|---|---|---|---|---|---|
 | Game Boy / GBC | Gambatte | Gambatte | SameBoy, Gearboy | [GPL-2.0](https://github.com/libretro/gambatte-libretro) (source header says version 2) | Software | Unverified | Active, last push 2026-10-30 | 1 |
-| GBA | mGBA | mGBA | VBA-M, gpSP (interpreter) | [MPL-2.0](https://github.com/mgba-emu/mgba), plus LGPL-2.1 and BSD-3-Clause parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending | Active, last push 2026-11-06. Pinned to tag 0.10.5, `26b7884bc25a5933960f3cdcd98bac1ae14d42e2` | 1 |
+| GBA | mGBA | mGBA | VBA-M, gpSP (interpreter) | [MPL-2.0](https://github.com/mgba-emu/mgba), plus a BSD-3-Clause part (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending | Active, last push 2026-11-06. Pinned to tag 0.10.5, `26b7884bc25a5933960f3cdcd98bac1ae14d42e2` | 1 |
 | NES | Nestopia | Not seen | FCEUMM, QuickNES | [GPL-2.0](https://raw.githubusercontent.com/libretro/nestopia/master/COPYING) | Software | Unverified | Active, last push 2026-09-13 ([0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)) | 1 |
 | SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt) | Software | Unverified | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro)) | 2 |
 | Genesis / Mega-CD | JGenesis (self-maintained iOS port) | JGenesis (Mega-CD row) | ClownMDEmu | [GPL-3.0](https://raw.githubusercontent.com/jsgroth/jgenesis/master/README.md) | Software frames expected; port needed, since upstream's frontend uses wgpu | Unverified. [`Cargo.lock`](https://raw.githubusercontent.com/jsgroth/jgenesis/master/Cargo.lock) lists no cranelift, dynasm or wasmtime crate | Active, last push 2026-11-06. Linux, Windows and web are official; iOS is not | 2 |
@@ -129,13 +129,14 @@ Dynamic linking does not change the GPL analysis above.
 
 Source: [github.com/mgba-emu/mgba](https://github.com/mgba-emu/mgba), tag 0.10.5, commit `26b7884bc25a5933960f3cdcd98bac1ae14d42e2`, as the unmodified submodule `Cores/mgba/upstream`. `Cores/mgba/MgbaCore.c` is GagaEmu's own file, combined with mGBA as a Larger Work (MPL-2.0 section 3.3).
 
-The build compiles three licences, and each needs a place in the 7.5 notices:
+The build compiles two licences, and each needs a place in the 7.5 notices:
 
 | Part | Licence | What it asks of a binary release |
 |---|---|---|
 | mGBA, including its own HLE BIOS `src/gba/hle-bios.c` | MPL-2.0 | Tell recipients the source is available and where (section 3.2): the URL and commit above. Any change to an MPL file must be published under MPL-2.0. None is changed today. |
 | `src/third-party/inih` | BSD-3-Clause | Reproduce its copyright notice and licence. |
-| `src/third-party/blip_buf` | LGPL-2.1 | **Open.** Notice, source and the recipient's right to relink a modified version. Whether an App Store binary can honour that right is the same kind of question as the legal gate above, so the owner and counsel need to answer it before release. The alternative is to replace blip_buf inside the bridge with another resampler. |
+
+`src/third-party/blip_buf` (LGPL-2.1) is no longer compiled. `Cores/mgba/blip.c`, GagaEmu's own 116-line band-limited resampler, implements the same functions, written from the contracts in the header and not from the library's source. The header, `include/mgba/core/blip_buf.h`, is still read at compile time, because mGBA's own files include it. It contributes declarations only, and `Cores/mgba/sources.txt` compiles no file from `third-party/blip_buf`. This engineering step removes the relinking question, but it is not legal advice: counsel should confirm the header's status when they look at the gate above.
 
 The app has no licence screen yet. In-app notices are tracked at milestone 7.5, which must close before any App Store release containing this core. No Nintendo BIOS or game is bundled.
 

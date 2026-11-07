@@ -1,5 +1,6 @@
 MgbaCore.c
 version.c
+blip.c
 upstream/src/arm/arm.c
 upstream/src/arm/decoder-arm.c
 upstream/src/arm/decoder-thumb.c
@@ -53,7 +54,6 @@ upstream/src/gba/sio/joybus.c
 upstream/src/gba/timer.c
 upstream/src/gba/video.c
 upstream/src/platform/posix/memory.c
-upstream/src/third-party/blip_buf/blip_buf.c
 upstream/src/third-party/inih/ini.c
 upstream/src/util/circle-buffer.c
 upstream/src/util/configuration.c
