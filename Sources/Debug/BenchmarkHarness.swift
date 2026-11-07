@@ -305,6 +305,7 @@ final class BenchmarkRun {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(record).write(to: url, options: .atomic)
+        print("[gaga-bench] saved \(url.lastPathComponent)") // Device runners wait for this line.
         return url
     }
 
