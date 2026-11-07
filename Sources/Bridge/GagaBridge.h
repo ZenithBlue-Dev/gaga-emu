@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 1u
+#define GAGA_BRIDGE_ABI_VERSION 2u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -111,12 +111,23 @@ typedef struct GagaCoreInterface {
     void (*set_video_callback)(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor* frame, void* userdata), void* userdata);
     void (*set_audio_callback)(GagaInstance* inst, void (*cb)(const GagaAudioDescriptor* audio, void* userdata), void* userdata);
 
-    // Save States (File-path based to support dynamic NAND/Card sizes)
-    bool (*save_state_file)(GagaInstance* inst, const char* file_path);
-    bool (*load_state_file)(GagaInstance* inst, const char* file_path);
+    // Save states. A core only fills and reads bytes: the host owns files, headers, checksums and atomic
+    // writes. state_size is the exact byte count save_state writes now. NULL state_size means no states.
+    // state_version changes when old state bytes stop meaning the same thing. The host refuses any other.
+    uint32_t state_version;
+    size_t (*state_size)(GagaInstance* inst);
+    bool   (*save_state)(GagaInstance* inst, void* buffer, size_t size);
+    // False fills error, which may be NULL. The running game must be unchanged afterwards.
+    bool   (*load_state)(GagaInstance* inst, const void* buffer, size_t size, char* error, size_t error_capacity);
 
-    // Cheats
-    void (*apply_cheat)(GagaInstance* inst, uint32_t index, bool enabled, const char* code);
+    // Forces battery save data to storage. Called on pause and before destroy. NULL if a core has none.
+    void (*flush_battery_save)(GagaInstance* inst);
+
+    // Cheats, by a host-chosen ID. code holds one or more newline-separated lines in any format the core
+    // recognises. False fills error, which may be NULL, and adds nothing. NULL cheat_add means no cheats.
+    bool (*cheat_add)(GagaInstance* inst, uint32_t id, const char* code, bool enabled, char* error, size_t error_capacity);
+    void (*cheat_remove)(GagaInstance* inst, uint32_t id);
+    void (*cheat_set_enabled)(GagaInstance* inst, uint32_t id, bool enabled);
 
     // Runs with no instance or game. Returns false and fills error on failure.
     bool (*self_test)(char* error, size_t error_capacity);

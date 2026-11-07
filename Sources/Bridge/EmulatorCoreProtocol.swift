@@ -10,6 +10,7 @@ public enum EmulatorCoreError: LocalizedError {
     case romLoadFailed(String)
     case saveStateFailed(String)
     case loadStateFailed(String)
+    case cheatRejected(String)
     case coreNotLoaded
     case invalidPixelFormat(UInt32)
     case invalidFrame(width: Int, height: Int, pitch: Int)
@@ -24,10 +25,12 @@ public enum EmulatorCoreError: LocalizedError {
             return reason
         case .romLoadFailed(let reason):
             return reason
-        case .saveStateFailed(let path):
-            return "Failed to save state to \(path)."
-        case .loadStateFailed(let path):
-            return "Failed to load state from \(path)."
+        case .saveStateFailed(let reason):
+            return reason
+        case .loadStateFailed(let reason):
+            return reason
+        case .cheatRejected(let reason):
+            return reason
         case .coreNotLoaded:
             return "No emulator core instance is currently loaded."
         case .invalidPixelFormat(let fmt):
@@ -79,9 +82,13 @@ public protocol EmulatorCoreProtocol: AnyObject {
     func step(inputs: [GagaInputState])
 
     func setInput(player: Int, state: GagaInputState)
-    func saveState(to path: String) async throws
-    func loadState(from path: String) async throws
-    func applyCheat(index: UInt32, enabled: Bool, code: String)
+    func saveState() throws -> Data
+    func loadState(_ state: Data) throws
+    func flushBatterySave()
+    func addCheat(id: UInt32, code: String, enabled: Bool) throws
+    func removeCheat(id: UInt32)
+    func setCheat(id: UInt32, enabled: Bool)
+    func setSpeed(_ multiplier: Int)
     func attachMetalLayer(_ caMetalLayer: UnsafeMutableRawPointer) -> Bool
 
     var onVideoFrame: ((VideoFrame) -> Void)? { get set }
@@ -127,9 +134,12 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     private let executionQueue = DispatchQueue(label: "com.zenithblue.gagaemu.core.execution", qos: .userInteractive)
     private var frameTimer: DispatchSourceTimer?
     private var hasPaused = false
+    private var speed = 1 // Guarded by inputLock.
     // Queue only.
     private var stepping = false
     private var lastFatalMessage: String?
+    private var presentVideo = true
+    private var playAudio = true
 
     // MARK: - Metadata Accessors
 
@@ -157,6 +167,10 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public var nativeSampleRate: UInt32 {
         return coreInterface.native_sample_rate > 0 ? coreInterface.native_sample_rate : 44100
     }
+
+    public var stateVersion: UInt32 { coreInterface.state_version }
+    public var supportsSaveStates: Bool { coreInterface.state_size != nil }
+    public var supportsCheats: Bool { coreInterface.cheat_add != nil }
 
     /// Frames stepped so far and the player 1 buttons the core last saw, after any filter.
     public var stats: (frames: Int, buttons: UInt32) {
@@ -228,6 +242,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         coreInterface.set_video_callback(validInst, { rawFrame, userdata in
             guard let rawFrame = rawFrame, let userdata = userdata else { return }
             let wrapper = Unmanaged<GagaCoreWrapper>.fromOpaque(userdata).takeUnretainedValue()
+            guard wrapper.presentVideo else { return }
 
             let frame = VideoFrame(
                 pixelData: rawFrame.pointee.pixel_data,
@@ -242,6 +257,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         coreInterface.set_audio_callback(validInst, { rawAudio, userdata in
             guard let rawAudio = rawAudio, let userdata = userdata else { return }
             let wrapper = Unmanaged<GagaCoreWrapper>.fromOpaque(userdata).takeUnretainedValue()
+            guard wrapper.playAudio else { return }
 
             let totalSamples = rawAudio.pointee.frames * Int(rawAudio.pointee.channels)
             var sampleArray: [Int16] = []
@@ -339,7 +355,10 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         frameTimer = nil
         executionQueue.sync {
             stepping = false
-            if let inst = instance { coreInterface.pause?(inst) }
+            if let inst = instance {
+                coreInterface.pause?(inst)
+                coreInterface.flush_battery_save?(inst)
+            }
         }
     }
 
@@ -359,6 +378,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         frameTimer = nil
         executionQueue.sync {
             stepping = false
+            if let inst = instance { coreInterface.flush_battery_save?(inst) }
             destroyInstance()
             onVideoFrame = nil
             onAudioPacket = nil
@@ -374,6 +394,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public func step(inputs: [GagaInputState]) {
         executionQueue.sync {
             guard let inst = instance, let stepFn = coreInterface.step_frame else { return }
+            presentVideo = true
+            playAudio = true
             var inArray = inputs
             while inArray.count < 4 {
                 inArray.append(GagaInputState())
@@ -382,8 +404,21 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         }
     }
 
+    /// Fast-forward runs `speed` whole frames per tick, so the timer's cadence and pausing stay the same.
+    /// Only the last one is drawn, and audio is dropped until normal speed, so neither ring can back up.
     private func tickFrame() {
         guard stepping, let inst = instance, let stepFn = coreInterface.step_frame else { return }
+        inputLock.lock()
+        let steps = speed
+        inputLock.unlock()
+        playAudio = steps == 1
+        for step in 1...steps {
+            presentVideo = step == steps
+            stepOnce(inst, stepFn)
+        }
+    }
+
+    private func stepOnce(_ inst: OpaquePointer, _ stepFn: @convention(c) (OpaquePointer?, UnsafePointer<GagaInputState>?, UInt32) -> Void) {
         inputLock.lock()
         var currentInputs = playerInputs
         let frame = framesStepped
@@ -413,48 +448,83 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         inputLock.unlock()
     }
 
+    /// `multiplier` whole frames per timer tick. Audio is dropped above 1.
+    public func setSpeed(_ multiplier: Int) {
+        inputLock.lock()
+        speed = max(multiplier, 1)
+        inputLock.unlock()
+    }
+
+    /// Runs `work` between frames.
+    func betweenFrames<T>(_ work: () -> T) -> T { executionQueue.sync(execute: work) }
+
     // MARK: - Save States
 
-    public func saveState(to path: String) async throws {
-        let success: Bool = await withCheckedContinuation { continuation in
-            executionQueue.async { [self] in
-                guard let inst = instance, let saveFn = coreInterface.save_state_file else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                continuation.resume(returning: path.withCString { saveFn(inst, $0) })
-            }
-        }
+    /// The core's own state bytes, with no frame in flight. `SaveStateFile` wraps them for disk.
+    public func saveState() throws -> Data {
+        try executionQueue.sync { try captureState() }
+    }
 
-        if !success {
-            throw EmulatorCoreError.saveStateFailed(path)
+    // Queue only.
+    private func captureState() throws -> Data {
+        guard let inst = instance, let sizeFn = coreInterface.state_size, let saveFn = coreInterface.save_state else {
+            throw EmulatorCoreError.saveStateFailed("This core has no save states.")
+        }
+        let size = sizeFn(inst)
+        var state = Data(count: size)
+        let saved = size > 0 && state.withUnsafeMutableBytes { saveFn(inst, $0.baseAddress, size) }
+        guard saved else { throw EmulatorCoreError.saveStateFailed("The core could not save its state.") }
+        return state
+    }
+
+    /// A refused state leaves the game as it was. A core that fails partway through is put back from a
+    /// snapshot taken first, so that promise does not rest on every core's own checks.
+    public func loadState(_ state: Data) throws {
+        try executionQueue.sync {
+            guard let inst = instance, let loadFn = coreInterface.load_state else {
+                throw EmulatorCoreError.loadStateFailed("This core has no save states.")
+            }
+            let snapshot = try? captureState()
+            var error = [CChar](repeating: 0, count: 256)
+            let loaded = state.withUnsafeBytes { loadFn(inst, $0.baseAddress, state.count, &error, error.count) }
+            guard loaded else {
+                _ = snapshot?.withUnsafeBytes { loadFn(inst, $0.baseAddress, $0.count, nil, 0) }
+                let reason = String(cString: error)
+                throw EmulatorCoreError.loadStateFailed(reason.isEmpty ? "The core could not load this save state." : reason)
+            }
         }
     }
 
-    public func loadState(from path: String) async throws {
-        let success: Bool = await withCheckedContinuation { continuation in
-            executionQueue.async { [self] in
-                guard let inst = instance, let loadFn = coreInterface.load_state_file else {
-                    continuation.resume(returning: false)
-                    return
-                }
-                continuation.resume(returning: path.withCString { loadFn(inst, $0) })
-            }
-        }
-
-        if !success {
-            throw EmulatorCoreError.loadStateFailed(path)
+    public func flushBatterySave() {
+        executionQueue.sync {
+            if let inst = instance { coreInterface.flush_battery_save?(inst) }
         }
     }
 
     // MARK: - Cheats & Metal Layer
 
-    public func applyCheat(index: UInt32, enabled: Bool, code: String) {
-        executionQueue.sync {
-            guard let inst = instance, let cheatFn = coreInterface.apply_cheat else { return }
-            code.withCString { codeC in
-                cheatFn(inst, index, enabled, codeC)
+    public func addCheat(id: UInt32, code: String, enabled: Bool) throws {
+        try executionQueue.sync {
+            guard let inst = instance, let addFn = coreInterface.cheat_add else {
+                throw EmulatorCoreError.cheatRejected("This core has no cheats.")
             }
+            var error = [CChar](repeating: 0, count: 256)
+            guard addFn(inst, id, code, enabled, &error, error.count) else {
+                let reason = String(cString: error)
+                throw EmulatorCoreError.cheatRejected(reason.isEmpty ? "The core did not accept this code." : reason)
+            }
+        }
+    }
+
+    public func removeCheat(id: UInt32) {
+        executionQueue.sync {
+            if let inst = instance { coreInterface.cheat_remove?(inst, id) }
+        }
+    }
+
+    public func setCheat(id: UInt32, enabled: Bool) {
+        executionQueue.sync {
+            if let inst = instance { coreInterface.cheat_set_enabled?(inst, id, enabled) }
         }
     }
 

@@ -4,12 +4,17 @@
 #include "GagaBridge.h"
 
 #include <mgba/core/blip_buf.h>
+#include <mgba/core/cheats.h>
 #include <mgba/core/core.h>
 #include <mgba/core/log.h>
 #include <mgba/gba/core.h>
+#include <mgba/internal/gba/cheats.h>
+#include <mgba/internal/gba/gba.h>
 #include <mgba/internal/gba/input.h>
+#include <mgba/internal/gba/serialize.h>
 #include <mgba-util/vfs.h>
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +24,7 @@
 #define MGBA_HEIGHT 160
 #define MGBA_SAMPLE_RATE 32768
 #define MGBA_AUDIO_CAPACITY 2048 // About 3.7 frames at 549 samples per frame.
+#define MGBA_STATE_VERSION 0x01000007u // GBASavestateMagic + GBASavestateVersion. A test checks this against real state bytes.
 
 enum { MGBA_EVENT_FATAL_LOG = 1, MGBA_EVENT_BAD_ROM = 2, MGBA_EVENT_BAD_SAVE = 3 };
 
@@ -221,11 +227,118 @@ static void mgba_set_event_callback(GagaInstance* inst, void (*cb)(GagaEventSeve
 static void mgba_pause(GagaInstance* inst) { (void)inst; }
 static void mgba_resume(GagaInstance* inst) { (void)inst; }
 
-// shortcut: save states and cheats return with milestones 2.6 and 2.10, which add their UI. Until then these report failure rather than pretend.
-static bool mgba_save_state_file(GagaInstance* inst, const char* path) { (void)inst; (void)path; return false; }
-static bool mgba_load_state_file(GagaInstance* inst, const char* path) { (void)inst; (void)path; return false; }
-static void mgba_apply_cheat(GagaInstance* inst, uint32_t index, bool enabled, const char* code) {
-    (void)inst; (void)index; (void)enabled; (void)code;
+static size_t mgba_state_size(GagaInstance* inst) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    return m ? m->core->stateSize(m->core) : 0;
+}
+
+static bool mgba_save_state(GagaInstance* inst, void* buffer, size_t size) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    if (!m || !buffer || size != m->core->stateSize(m->core)) return false;
+    return m->core->saveState(m->core, buffer);
+}
+
+static void mgba_error(char* error, size_t capacity, const char* message) {
+    if (error && capacity > 0) snprintf(error, capacity, "%s", message);
+}
+
+// GBADeserialize checks everything it refuses before it changes anything. It only warns about a
+// different ROM CRC, which would run a state on code it was not made for, so that is refused here.
+static bool mgba_load_state(GagaInstance* inst, const void* buffer, size_t size, char* error, size_t error_capacity) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    if (!m || !buffer || size != m->core->stateSize(m->core)) {
+        mgba_error(error, error_capacity, "This save state is the wrong size for mGBA.");
+        return false;
+    }
+    const struct GBA* gba = m->core->board;
+    if (((const struct GBASerializedState*)buffer)->romCrc32 != gba->romCrc32 || !m->core->loadState(m->core, buffer)) {
+        mgba_error(error, error_capacity, "This save state belongs to another game or another version of this game.");
+        return false;
+    }
+    return true;
+}
+
+// The save is a shared mapping, so a killed app keeps it. This also reaches storage if the OS goes down.
+static void mgba_flush_battery_save(GagaInstance* inst) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    if (!m) return;
+    struct GBA* gba = m->core->board;
+    struct GBASavedata* save = &gba->memory.savedata;
+    if (save->vf && save->data && (save->mapMode & MAP_WRITE)) save->vf->sync(save->vf, save->data, GBASavedataSize(save));
+}
+
+// A set is named after the host's ID, so the device's own list is the only table.
+static struct mCheatSet* mgba_find_cheat(struct mCheatDevice* device, uint32_t id) {
+    char name[16];
+    snprintf(name, sizeof(name), "%u", id);
+    for (size_t i = 0; i < mCheatSetsSize(&device->cheats); ++i) {
+        struct mCheatSet* set = *mCheatSetsGetPointer(&device->cheats, i);
+        if (set->name && strcmp(set->name, name) == 0) return set;
+    }
+    return NULL;
+}
+
+// One or more lines of GameShark, Action Replay, CodeBreaker or VBA codes. mGBA detects the format.
+static bool mgba_cheat_add(GagaInstance* inst, uint32_t id, const char* code, bool enabled, char* error, size_t error_capacity) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    if (!m || !code) return false;
+    struct mCheatDevice* device = m->core->cheatDevice(m->core);
+    char name[16];
+    snprintf(name, sizeof(name), "%u", id);
+    struct mCheatSet* set = device->createSet(device, name);
+    char* copy = strdup(code);
+    char* cursor = NULL;
+    int lines = 0;
+    bool valid = set && copy;
+    for (char* line = copy ? strtok_r(copy, "\r\n", &cursor) : NULL; line && valid; line = strtok_r(NULL, "\r\n", &cursor)) {
+        while (isspace((unsigned char)*line)) ++line;
+        if (!*line) continue;
+        if (mCheatAddLine(set, line, GBA_CHEAT_AUTODETECT)) {
+            ++lines;
+        } else {
+            valid = false;
+            if (error && error_capacity > 0) snprintf(error, error_capacity, "mGBA does not recognise this code: %.32s", line);
+        }
+    }
+    free(copy);
+    if (valid && lines == 0) {
+        valid = false;
+        mgba_error(error, error_capacity, "Enter a cheat code.");
+    }
+    const struct GBACheatSet* parsed = (const struct GBACheatSet*)set;
+    if (valid && (parsed->incompleteCheat != COMPLETE || parsed->incompletePatch)) {
+        valid = false;
+        mgba_error(error, error_capacity, "This code is missing its last line.");
+    }
+    if (!valid) {
+        if (set) mCheatSetDeinit(set);
+        return false;
+    }
+    set->enabled = enabled;
+    mCheatAddSet(device, set);
+    return true;
+}
+
+static void mgba_cheat_set_enabled(GagaInstance* inst, uint32_t id, bool enabled) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    if (!m) return;
+    struct mCheatDevice* device = m->core->cheatDevice(m->core);
+    struct mCheatSet* set = mgba_find_cheat(device, id);
+    if (!set) return;
+    set->enabled = enabled;
+    mCheatRefresh(device, set); // Undoes any ROM patch at once, not at the next frame.
+}
+
+static void mgba_cheat_remove(GagaInstance* inst, uint32_t id) {
+    MgbaInstance* m = (MgbaInstance*)inst;
+    if (!m) return;
+    struct mCheatDevice* device = m->core->cheatDevice(m->core);
+    struct mCheatSet* set = mgba_find_cheat(device, id);
+    if (!set) return;
+    set->enabled = false;
+    mCheatRefresh(device, set);
+    mCheatRemoveSet(device, set);
+    mCheatSetDeinit(set);
 }
 
 static bool mgba_attach_metal_layer(GagaInstance* inst, void* layer) { (void)inst; (void)layer; return false; }
@@ -258,9 +371,14 @@ static const GagaCoreInterface s_interface = {
     .attach_metal_layer = mgba_attach_metal_layer,
     .set_video_callback = mgba_set_video_callback,
     .set_audio_callback = mgba_set_audio_callback,
-    .save_state_file = mgba_save_state_file,
-    .load_state_file = mgba_load_state_file,
-    .apply_cheat = mgba_apply_cheat,
+    .state_version = MGBA_STATE_VERSION,
+    .state_size = mgba_state_size,
+    .save_state = mgba_save_state,
+    .load_state = mgba_load_state,
+    .flush_battery_save = mgba_flush_battery_save,
+    .cheat_add = mgba_cheat_add,
+    .cheat_remove = mgba_cheat_remove,
+    .cheat_set_enabled = mgba_cheat_set_enabled,
     .self_test = mgba_self_test,
     .pause = mgba_pause,
     .resume = mgba_resume,

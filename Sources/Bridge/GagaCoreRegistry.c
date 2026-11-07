@@ -217,39 +217,35 @@ static void mock_set_audio_callback(GagaInstance* inst, void (*cb)(const GagaAud
     m->audio_userdata = userdata;
 }
 
-static bool mock_save_state_file(GagaInstance* inst, const char* file_path) {
-    MockCoreInstance* m = (MockCoreInstance*)inst;
-    if (!m || !file_path) return false;
-    FILE* fp = fopen(file_path, "wb");
-    if (!fp) return false;
-    fwrite(&m->frame_counter, sizeof(m->frame_counter), 1, fp);
-    fwrite(&m->audio_phase, sizeof(m->audio_phase), 1, fp);
-    fclose(fp);
-    return true;
-}
+typedef struct {
+    uint32_t frame_counter;
+    double audio_phase;
+} MockState;
 
-static bool mock_load_state_file(GagaInstance* inst, const char* file_path) {
-    MockCoreInstance* m = (MockCoreInstance*)inst;
-    if (!m || !file_path) return false;
-    FILE* fp = fopen(file_path, "rb");
-    if (!fp) return false;
-    if (fread(&m->frame_counter, sizeof(m->frame_counter), 1, fp) != 1) {
-        fclose(fp);
-        return false;
-    }
-    if (fread(&m->audio_phase, sizeof(m->audio_phase), 1, fp) != 1) {
-        fclose(fp);
-        return false;
-    }
-    fclose(fp);
-    return true;
-}
-
-static void mock_apply_cheat(GagaInstance* inst, uint32_t index, bool enabled, const char* code) {
+static size_t mock_state_size(GagaInstance* inst) {
     (void)inst;
-    (void)index;
-    (void)enabled;
-    (void)code;
+    return sizeof(MockState);
+}
+
+static bool mock_save_state(GagaInstance* inst, void* buffer, size_t size) {
+    MockCoreInstance* m = (MockCoreInstance*)inst;
+    if (!m || !buffer || size != sizeof(MockState)) return false;
+    MockState state = { m->frame_counter, m->audio_phase };
+    memcpy(buffer, &state, sizeof(state));
+    return true;
+}
+
+static bool mock_load_state(GagaInstance* inst, const void* buffer, size_t size, char* error, size_t error_capacity) {
+    MockCoreInstance* m = (MockCoreInstance*)inst;
+    if (!m || !buffer || size != sizeof(MockState)) {
+        if (error && error_capacity > 0) snprintf(error, error_capacity, "This save state is the wrong size.");
+        return false;
+    }
+    MockState state;
+    memcpy(&state, buffer, sizeof(state));
+    m->frame_counter = state.frame_counter;
+    m->audio_phase = state.audio_phase;
+    return true;
 }
 
 static bool mock_self_test(char* error, size_t error_capacity) {
@@ -296,9 +292,10 @@ static const GagaCoreInterface s_mock_interface = {
     .attach_metal_layer = mock_attach_metal_layer,
     .set_video_callback = mock_set_video_callback,
     .set_audio_callback = mock_set_audio_callback,
-    .save_state_file = mock_save_state_file,
-    .load_state_file = mock_load_state_file,
-    .apply_cheat = mock_apply_cheat,
+    .state_version = 1,
+    .state_size = mock_state_size,
+    .save_state = mock_save_state,
+    .load_state = mock_load_state,
     .self_test = mock_self_test,
     .pause = mock_pause,
     .resume = mock_resume,
@@ -336,9 +333,6 @@ static void stub_step_frame(GagaInstance* i, const GagaInputState in[4], uint32_
 static bool stub_attach_metal_layer(GagaInstance* i, void* l) { (void)i; (void)l; return true; }
 static void stub_set_video_callback(GagaInstance* i, void (*cb)(const GagaFrameDescriptor*, void*), void* u) { (void)i; (void)cb; (void)u; }
 static void stub_set_audio_callback(GagaInstance* i, void (*cb)(const GagaAudioDescriptor*, void*), void* u) { (void)i; (void)cb; (void)u; }
-static bool stub_save_state_file(GagaInstance* i, const char* p) { (void)i; (void)p; return true; }
-static bool stub_load_state_file(GagaInstance* i, const char* p) { (void)i; (void)p; return true; }
-static void stub_apply_cheat(GagaInstance* i, uint32_t idx, bool en, const char* c) { (void)i; (void)idx; (void)en; (void)c; }
 static void stub_pause(GagaInstance* i) { (void)i; }
 static void stub_resume(GagaInstance* i) { (void)i; }
 static void stub_set_event_callback(GagaInstance* i, void (*cb)(GagaEventSeverity, int32_t, const char*, void*), void* u) { (void)i; (void)cb; (void)u; }
@@ -367,9 +361,6 @@ __attribute__((weak)) const GagaCoreInterface* getter(void) { \
         .attach_metal_layer = stub_attach_metal_layer, \
         .set_video_callback = stub_set_video_callback, \
         .set_audio_callback = stub_set_audio_callback, \
-        .save_state_file = stub_save_state_file, \
-        .load_state_file = stub_load_state_file, \
-        .apply_cheat = stub_apply_cheat, \
         .self_test = stub_self_test, \
         .pause = stub_pause, \
         .resume = stub_resume, \
