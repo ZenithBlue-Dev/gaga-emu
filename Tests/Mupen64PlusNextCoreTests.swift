@@ -218,10 +218,10 @@ final class Mupen64PlusNextCoreTests: XCTestCase {
     }
 
     func testTeardownAndRelaunchFiveTimes() async throws {
-        for _ in 0..<5 {
+        for boot in 1...5 {
             let (core, capture) = try await loaded()
             run(core, frames: 4)
-            try assertPicture(core)
+            try assertPicture(core, counter: boot) // The SRAM boot counter persists from one launch to the next.
             XCTAssertNil(capture.fatal)
             core.stop()
         }
