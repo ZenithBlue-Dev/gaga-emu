@@ -58,7 +58,7 @@ build_slice() { # core dir sdk target
         local rust_target=aarch64-apple-ios
         [ "$sdk" = iphonesimulator ] && rust_target=aarch64-apple-ios-sim
         IPHONEOS_DEPLOYMENT_TARGET=$min_ios cargo build --quiet --release --locked --target "$rust_target" \
-            --manifest-path "$dir/$CORE_CARGO_MANIFEST" --target-dir "$root/build/cores/$core/cargo"
+            --manifest-path "$cargo_dir/$CORE_CARGO_MANIFEST" --target-dir "$root/build/cores/$core/cargo"
         objects+=("$root/build/cores/$core/cargo/$rust_target/release/$CORE_CARGO_LIB")
     fi
 
@@ -105,6 +105,8 @@ PLIST
         exit 1
     fi
     "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS"
+    # No boot ROM or other firmware in any core (docs/03 section 5), including a file upstream embeds.
+    python3 -I "$root/scripts/bootrom-gate.py" "$binary" "$dir"
 
     # Optional: source paths that must never be compiled, such as a dynarec's. The dSYM names every compiled
     # file, including any a source file includes, so this checks what was built, not what sources.txt says.
@@ -127,7 +129,7 @@ build_core() {
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
     # Optional, so one core's value must not reach the next.
     unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS
-    unset CORE_UPSTREAM_SUBMODULES
+    unset CORE_UPSTREAM_SUBMODULES CORE_BLANK_FILES
     # shellcheck source=/dev/null
     source "$dir/core.env"
 
@@ -165,6 +167,22 @@ build_core() {
         echo "Source audit found code-generation calls in Cores/$core:" >&2
         echo "$hits" >&2
         exit 1
+    fi
+
+    # Optional: upstream files a cargo core must not compile in, such as a boot ROM upstream embeds. Cargo then
+    # builds a copy of shim/ and upstream/ in which each listed file is zeros of the same size; the submodule
+    # itself is never changed. build_slice reads cargo_dir.
+    local cargo_dir=$dir file size
+    if [ -n "${CORE_BLANK_FILES:-}" ]; then
+        cargo_dir="$root/build/cores/$core/stage"
+        rm -rf "$cargo_dir"
+        mkdir -p "$cargo_dir"
+        cp -R "$dir/shim" "$dir/upstream" "$cargo_dir/"
+        for file in $CORE_BLANK_FILES; do
+            [ -f "$cargo_dir/upstream/$file" ] || { echo "CORE_BLANK_FILES: Cores/$core/upstream/$file not found" >&2; exit 1; }
+            size=$(wc -c <"$cargo_dir/upstream/$file")
+            head -c "$size" /dev/zero >"$cargo_dir/upstream/$file"
+        done
     fi
 
     build_slice "$core" "$dir" iphonesimulator "arm64-apple-ios$min_ios-simulator"
