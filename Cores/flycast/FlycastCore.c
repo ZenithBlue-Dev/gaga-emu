@@ -48,7 +48,7 @@ const GagaCoreInterface* Flycast_GetInterface(void) {
         .core_id = "flycast",
         .core_name = "Flycast",
         .core_version = GAGA_CORE_VERSION,
-        .supported_extensions = "gdi|cdi|chd",
+        .supported_extensions = "gdi|cdi|chd|cue", // A .cue import reaches Dreamcast through its IP.BIN (AppState).
         .target_fps = 59.9453,        // retro_get_system_av_info for NTSC. PAL reports 50.
         .native_sample_rate = 44100,  // The AICA's rate, as retro_get_system_av_info reports it.
         .state_version = 854,         // Serializer::Current (V59) in upstream's core/serialize.h.
