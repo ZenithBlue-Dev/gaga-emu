@@ -65,7 +65,7 @@ final class AzaharCoreTests: XCTestCase {
                 try await core.loadROM(path: path)
                 XCTFail("loaded \(path)")
             } catch {
-                XCTAssertEqual(error.localizedDescription, "Azahar could not load this game.")
+                XCTAssertEqual(error.localizedDescription, "This file is not a decrypted Nintendo 3DS game or 3DS homebrew.")
             }
             core.stop()
         }

@@ -9,6 +9,7 @@
 #include "LibretroAdapter.h"
 #include "LibretroVulkan.h"
 #include <stdio.h>
+#include <string.h>
 
 // Azahar returns no RETRO_MEMORY_SAVE_RAM: the emulated 3DS writes its save data, extdata and SD card as files
 // under <game's save folder>/Azahar/ through stdio. Pushing every buffered write out on each flush (pause,
@@ -42,8 +43,23 @@ static const GagaLibretroVariable s_variables[] = {
     { NULL, NULL },
 };
 
+// Citra picks a loader by the file's magic and falls back to the extension, so a .3dsx with no 3DSX header reached
+// the 3DSX loader and stopped the app in an assert (SetupMainThread, device run 5). Only files that carry one of
+// the magics a loader checks are passed on.
+static const char* azahar_refuse_load(const char* system_dir, const char* rom_path) {
+    (void)system_dir;
+    uint8_t head[0x104] = { 0 };
+    FILE* file = fopen(rom_path, "rb");
+    size_t got = file ? fread(head, 1, sizeof(head), file) : 0;
+    if (file) fclose(file);
+    if (got >= 4 && (memcmp(head, "3DSX", 4) == 0 || memcmp(head, "\x7f" "ELF", 4) == 0)) return NULL;
+    if (got == sizeof(head) && (memcmp(head + 0x100, "NCSD", 4) == 0 || memcmp(head + 0x100, "NCCH", 4) == 0)) return NULL;
+    return "This file is not a decrypted Nintendo 3DS game or 3DS homebrew.";
+}
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Azahar",
+    .refuse_load = azahar_refuse_load,
     .game_kind = "a decrypted Nintendo 3DS game or 3DS homebrew",
     .variables = s_variables,
     // retro_serialize_size returns the size of a fresh, compressed state each time.
