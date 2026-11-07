@@ -24,9 +24,12 @@ struct GameItem: Identifiable, Codable, Equatable {
 
     /// The saved absolute path goes stale when iOS moves the app container, so also look in the ROM folder.
     func resolvedROMPath(romDirectory: URL) -> String? {
-        let name = URL(fileURLWithPath: romPath).lastPathComponent
-        return [romPath, romDirectory.appendingPathComponent(name).path]
-            .first(where: FileManager.default.fileExists(atPath:))
+        let url = URL(fileURLWithPath: romPath), folder = url.deletingLastPathComponent()
+        // A disc set's descriptor keeps its set folder, and never falls back to a flat file of the same name.
+        let moved = folder.deletingLastPathComponent().lastPathComponent == romDirectory.lastPathComponent
+            ? romDirectory.appendingPathComponent(folder.lastPathComponent).appendingPathComponent(url.lastPathComponent)
+            : romDirectory.appendingPathComponent(url.lastPathComponent)
+        return [romPath, moved.path].first(where: FileManager.default.fileExists(atPath:))
     }
 }
 
@@ -497,6 +500,32 @@ enum CoreCatalog {
         return try ClipboardImporter.place(part, named: destination.lastPathComponent, in: destination.deletingLastPathComponent())
     }
 
+    /// Unpacks a zip that holds one disc set (a descriptor and the files it names, at most 2 GiB each) into a new
+    /// set folder, and returns it. Nil, with nothing left behind, when the zip is not exactly one complete set.
+    static func extractZipDiscSet(_ entries: [ZipEntry], from zip: URL, into romDirectory: URL) throws -> URL? {
+        let files = entries.filter { !$0.name.hasSuffix("/") && !zipSidecarExtensions.contains(($0.name as NSString).pathExtension.lowercased()) }
+        let names = files.map { WiFiTransferServer.sanitize(String($0.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last ?? "")) }
+        guard files.count >= 2, let sheet = names.first(where: DiscSet.isDescriptor), !names.contains(""),
+              Set(names.map { $0.lowercased() }).count == names.count else { return nil }
+        guard files.allSatisfy({ !$0.name.hasPrefix("/") && !$0.name.hasPrefix("\\") && !$0.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).contains("..") })
+        else { throw ZipError.unsafeName }
+        let folder = try DiscSet.newFolder(for: sheet, in: romDirectory)
+        do {
+            for (entry, name) in Swift.zip(files, names) {
+                try extractZipEntry(entry, from: zip, to: folder.appendingPathComponent(name), limit: zipROMLimit("disc"))
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: folder)
+            throw error
+        }
+        guard DiscSet.primary(in: folder) != nil, DiscSet.missing(in: folder).isEmpty,
+              Set(DiscSet.wanted(in: folder).map { $0.lowercased() }) == Set(names.map { $0.lowercased() }) else {
+            try? FileManager.default.removeItem(at: folder)
+            return nil
+        }
+        return folder
+    }
+
     /// The records in a ZIP's central directory, or none when the file is not a readable ZIP.
     static func zipEntries(_ url: URL) -> [ZipEntry] {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return [] }
@@ -781,8 +810,10 @@ final class AppState: ObservableObject {
     }
 
     /// A file uploaded again with the same bytes keeps its name, so it must not become a second shelf entry.
+    /// A name is a path under the ROM folder, as "Game/Game.cue" for a disc set.
     func addUploads(_ names: [String]) {
-        for name in names where !games.contains(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }) {
+        for name in names where !games.contains(where: { ClipboardImporter.relativePath(URL(fileURLWithPath: $0.romPath), in: romDirectory) == name
+                                                          || (!name.contains("/") && URL(fileURLWithPath: $0.romPath).lastPathComponent == name) }) {
             importROM(at: romDirectory.appendingPathComponent(name))
         }
     }
@@ -916,7 +947,7 @@ final class AppState: ObservableObject {
 
     func importDebugROM(at url: URL) throws {
         let dest = try ClipboardImporter.persist(.file(url), into: romDirectory)
-        addUploads([dest.lastPathComponent])
+        addUploads([ClipboardImporter.relativePath(dest, in: romDirectory)])
     }
 
     /// `-GagaImportTestROM <core-id>`: adds that core's generated test ROM (the benchmark's) to the Library,
@@ -1058,6 +1089,9 @@ final class AppState: ObservableObject {
             return nil
         }
         if platformID == nil, url.pathExtension.lowercased() == "rom" { return nil }
+        if let folder = DiscSet.folder(of: url, romDirectory: romDirectory) {
+            return importDiscSet(folder, arrived: url, title: title, platformID: platformID)
+        }
         var url = url
         // No console core reads a .zip, so its one ROM is stored as a plain file and the copied zip goes.
         // Only a zip already in the ROM folder is unpacked, so a file elsewhere is never removed. A damaged or
@@ -1073,6 +1107,9 @@ final class AppState: ObservableObject {
                                                                  limit: CoreCatalog.zipROMLimit(rom.platformID))
                     try? FileManager.default.removeItem(at: url)
                     url = placed
+                } else if let folder = try CoreCatalog.extractZipDiscSet(entries, from: url, into: romDirectory) {
+                    try? FileManager.default.removeItem(at: url)
+                    return importDiscSet(folder, arrived: folder, title: title, platformID: nil)
                 }
             } catch {
                 lastImportNote = "\(url.lastPathComponent): \(error.localizedDescription)"
@@ -1082,10 +1119,59 @@ final class AppState: ObservableObject {
         return addGame(url, title: title, platform: platformID ?? CoreCatalog.platformID(forFile: url) ?? "unknown")
     }
 
+    /// Game entries this run added and nobody has played, by ROM path. Only their files may join a disc set
+    /// that arrives later, so an older game is never taken.
+    private var freshImports: Set<String> = []
+
+    /// A disc set's file arrived in `folder`: take earlier arrivals in, reuse an identical older set, and keep one
+    /// entry on the set's descriptor. Nil while the folder has no descriptor or the file has already moved on.
+    private func importDiscSet(_ folder: URL, arrived url: URL, title: String?, platformID: String?) -> GameItem? {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+        let taken = DiscSet.gather(into: folder, romDirectory: romDirectory) { file in
+            let entries = games.filter { $0.resolvedROMPath(romDirectory: romDirectory) == file.path }
+            return entries.allSatisfy { freshImports.contains($0.romPath) && $0.playTime == 0 && $0.lastPlayed == nil }
+        }
+        let gone = Set(taken.map(\.standardizedFileURL.path))
+        dropFresh { game in
+            guard let path = game.resolvedROMPath(romDirectory: romDirectory) ?? Optional(game.romPath) else { return false }
+            return gone.contains(path) || gone.contains(URL(fileURLWithPath: path).deletingLastPathComponent().standardizedFileURL.path)
+        }
+        guard var sheet = DiscSet.primary(in: folder) else { return nil }
+        if let twin = DiscSet.twin(of: folder, in: romDirectory), let twinSheet = DiscSet.primary(in: twin) {
+            // The same set again: the older folder stays and this copy goes.
+            dropFresh { $0.romPath == sheet.path }
+            if !games.contains(where: { $0.resolvedROMPath(romDirectory: romDirectory) == sheet.path }) {
+                try? fileManager.removeItem(at: folder)
+                sheet = twinSheet
+            }
+        }
+        let platform = platformID ?? CoreCatalog.platformID(forFile: sheet) ?? "unknown"
+        // A sheet that came before its tracks could not be placed then.
+        if let index = games.firstIndex(where: { $0.romPath == sheet.path }), games[index].platformID == "unknown", platform != "unknown" {
+            update(games[index].id) { $0.platformID = platform }
+        }
+        return addGame(sheet, title: title, platform: platform)
+    }
+
+    /// Removes fresh entries that match, after their files joined a disc set.
+    private func dropFresh(_ match: (GameItem) -> Bool) {
+        let dropped = games.filter { freshImports.contains($0.romPath) && $0.playTime == 0 && $0.lastPlayed == nil && match($0) }
+        guard !dropped.isEmpty else { return }
+        let ids = Set(dropped.map(\.id))
+        games.removeAll { ids.contains($0.id) }
+        history.removeAll { ids.contains($0.gameID) }
+        save()
+    }
+
     private func addGame(_ url: URL, title: String?, platform: String) -> GameItem {
         // Import reuses a file with the same contents, so the same file in the ROM folder is the same game.
         if url.deletingLastPathComponent().standardizedFileURL == romDirectory.standardizedFileURL,
            let existing = games.first(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == url.lastPathComponent }) {
+            return existing
+        }
+        if DiscSet.folder(of: url, romDirectory: romDirectory) != nil,
+           let existing = games.first(where: { $0.resolvedROMPath(romDirectory: romDirectory) == url.path }) {
             return existing
         }
         let name = title ?? url.deletingPathExtension().lastPathComponent
@@ -1093,6 +1179,7 @@ final class AppState: ObservableObject {
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,
                             isFavorite: false, shaderID: shaderID)
         games.append(item)
+        freshImports.insert(item.romPath)
         save()
         refreshCovers()
         return item
@@ -1106,10 +1193,16 @@ final class AppState: ObservableObject {
         objectWillChange.send()
     }
 
+    /// A disc set's folder goes with its game, unless another entry still points into it. Saves stay.
     func delete(_ game: GameItem) {
         games.removeAll { $0.id == game.id }
         history.removeAll { $0.gameID == game.id }
         save()
+        guard let path = game.resolvedROMPath(romDirectory: romDirectory),
+              let folder = DiscSet.folder(of: URL(fileURLWithPath: path), romDirectory: romDirectory),
+              !games.contains(where: { $0.resolvedROMPath(romDirectory: romDirectory).map { URL(fileURLWithPath: $0).deletingLastPathComponent() } == folder })
+        else { return }
+        try? FileManager.default.removeItem(at: folder)
     }
 
     func clearCache() {
