@@ -31,6 +31,13 @@ public final class MetalTextureRing {
         return (framesWritten, framesDropped, width, height, pixelFormat)
     }
 
+    /// Counts a frame a layer-path core presented itself, so its stats show frames as a copy-path core's do.
+    public func noteLayerFrame() {
+        lock.lock()
+        framesWritten += 1
+        lock.unlock()
+    }
+
     public init(device: MTLDevice, width: Int, height: Int, pixelFormat: MTLPixelFormat = .rgba8Unorm) {
         self.device = device
         self.width = max(width, 1)

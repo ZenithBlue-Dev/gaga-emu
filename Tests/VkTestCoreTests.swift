@@ -175,6 +175,10 @@ final class VkTestCoreTests: GagaTestCase {
         let middle = try XCTUnwrap(GameSession.libretroPointer(CGPoint(x: 200, y: 150), bounds: layer.bounds.size, content: content))
         XCTAssertEqual(middle.x, 0)
         XCTAssertEqual(middle.y, 0)
+        // Presented layer frames count as written, and the benchmark's screenshot reads the layer back.
+        XCTAssertGreaterThan(session.stats.videoWritten, 0)
+        session.pause(.menu)
+        XCTAssertNotNil(session.benchmarkScreenshot().flatMap(UIImage.init(data:)))
         session.stop()
     }
 

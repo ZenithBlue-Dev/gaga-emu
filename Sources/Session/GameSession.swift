@@ -195,8 +195,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         var reportedBadFrame = false
         core.onVideoFrame = { [ring, renderer, weak self] frame in
             guard let pixels = frame.pixelData else {
-                // A layer-path core's size-only frame. Its size places a finger on the picture.
-                if frame.width > 0, frame.height > 0 { renderer.setPresentedSize(width: frame.width, height: frame.height) }
+                // A layer-path core's size-only frame, sent for each presented frame. Its size places a finger on the picture.
+                if frame.width > 0, frame.height > 0 {
+                    renderer.setPresentedSize(width: frame.width, height: frame.height)
+                    ring.noteLayerFrame()
+                }
                 return
             }
             guard let format = MetalTextureRing.metalFormat(for: frame.pixelFormat),
@@ -501,6 +504,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         }
         core?.onFrameTimed = timing
     }
+
+    /// The picture on screen as a PNG, read back from the layer for a layer-path core.
+    func benchmarkScreenshot() -> Data? { core.flatMap(thumbnail) }
     #endif
 
     // MARK: - Input

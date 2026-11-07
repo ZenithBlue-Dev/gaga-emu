@@ -322,8 +322,14 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertEqual(session.phase, .stopped)
 
         let url = try XCTUnwrap(written)
-        defer { try? FileManager.default.removeItem(at: url) }
+        let png = url.deletingPathExtension().appendingPathExtension("png")
+        defer {
+            try? FileManager.default.removeItem(at: url)
+            try? FileManager.default.removeItem(at: png)
+        }
+        XCTAssertNotNil(UIImage(contentsOfFile: png.path), "the run's last frame beside the record")
         let record = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        XCTAssertGreaterThan(try XCTUnwrap((record["video"] as? [String: Any])?["framesWritten"] as? Int), 0)
         #if targetEnvironment(simulator)
         XCTAssertEqual(record["label"] as? String, "simulator, not a performance measure")
         #else
@@ -335,7 +341,8 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertEqual((record["rom"] as? [String: Any])?["sha256"] as? String,
                        SHA256Hex(try Data(contentsOf: URL(fileURLWithPath: romPath))))
         for key in ["device", "os", "appBuild", "buildCommit", "core", "coreCPUMsPerFrame", "frameIntervalMs", "fps1PercentLow",
-                    "threadCPUPercentOfOneCore", "memory", "thermal", "audio", "video", "inputScript", "codeGenViolations"] {
+                    "threadCPUPercentOfOneCore", "memory", "thermal", "audio", "video", "inputScript", "codeGenViolations",
+                    "startupSlowFrames"] {
             XCTAssertNotNil(record[key], key)
         }
         XCTAssertEqual(record["codeGenViolations"] as? [String], [])

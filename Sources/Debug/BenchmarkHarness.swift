@@ -62,6 +62,9 @@ final class BenchmarkRun {
         /// When each frame interval over 25 ms ended, in seconds after measuring began: one entry is a single hitch
         /// (a shader compile), entries at a steady spacing are a periodic stall.
         let slowFramesAtSeconds: [Double]
+        /// The same during the warm-up, in seconds after the first frame: start-up hitches such as first shader
+        /// compiles, kept out of every measured figure.
+        let startupSlowFrames: [Double]
         /// Primary metric: CPU time on the core thread per guest frame, including the host callbacks.
         let coreCPUMsPerFrame: Percentiles
         let coreWallMsPerFrame: Percentiles
@@ -197,10 +200,12 @@ final class BenchmarkRun {
         }
         guard session.phase != .stopped else { return }
         session.pause(.menu)
+        // The last frame of the run, so a device run can see the picture (a layer-path core draws).
+        let screenshot = session.benchmarkScreenshot()
 
         let record = makeRecord(thermalStart: thermalStart, measureFrom: measureFrom, statsAtStart: statsAtStart, interrupted: interrupted)
         do {
-            let url = try write(record)
+            let url = try write(record, screenshot: screenshot)
             Logger(subsystem: "com.zenithblue.gagaemu", category: "benchmark").notice("record \(url.path, privacy: .public)")
             onWritten?(url)
             session.stop(message: "Benchmark saved to Documents/Benchmarks/\(url.lastPathComponent).")
@@ -244,6 +249,9 @@ final class BenchmarkRun {
         let first = samples.starts.firstIndex { $0 >= measureFrom } ?? samples.starts.count
         let starts = samples.starts[first...]
         let intervals = zip(starts.dropFirst(), starts).map { Double($0 - $1) / 1_000_000 }
+        let warmupStarts = samples.starts[..<first]
+        let startupSlow = zip(warmupStarts.dropFirst(), warmupStarts).filter { Double($0 - $1) / 1_000_000 > 25 }
+            .map { (Double($0.0 - warmupStarts.first!) / 10_000_000).rounded() / 100 }
         let slowest = Array(intervals.sorted().suffix(Swift.max(1, intervals.count / 100)))
         let slowestMean = slowest.reduce(0, +) / Double(Swift.max(1, slowest.count))
         let measured = starts.count > 1 ? Double(starts.last! - starts.first!) / 1_000_000_000 : 0
@@ -286,6 +294,7 @@ final class BenchmarkRun {
             frameIntervalMs: Percentiles(intervals),
             slowFramesAtSeconds: zip(starts.dropFirst(), intervals).filter { $1 > 25 }
                 .map { (Double($0.0 - starts.first!) / 10_000_000).rounded() / 100 },
+            startupSlowFrames: startupSlow,
             coreCPUMsPerFrame: Percentiles(samples.cpus[first...].map { Double($0) / 1_000_000 }),
             coreWallMsPerFrame: Percentiles(samples.walls[first...].map { Double($0) / 1_000_000 }),
             threadCPUPercentOfOneCore: threadTotals.mapValues { ($0 / divisor * 10).rounded() / 10 },
@@ -296,7 +305,8 @@ final class BenchmarkRun {
             codeGenViolations: CodeGenCheck.violations().map(\.description))
     }
 
-    private func write(_ record: Record) throws -> URL {
+    /// The screenshot goes beside the record as <record name>.png. A missing one is logged, not an error.
+    private func write(_ record: Record, screenshot: Data?) throws -> URL {
         let folder = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("Benchmarks", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -305,6 +315,12 @@ final class BenchmarkRun {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         try encoder.encode(record).write(to: url, options: .atomic)
+        let png = url.deletingPathExtension().appendingPathExtension("png")
+        if let screenshot, (try? screenshot.write(to: png, options: .atomic)) != nil {
+            print("[gaga-bench] screenshot \(png.lastPathComponent)")
+        } else {
+            print("[gaga-bench] no screenshot")
+        }
         print("[gaga-bench] saved \(url.lastPathComponent)") // Device runners wait for this line.
         return url
     }
