@@ -40,3 +40,6 @@
 [submodule "Cores/melonds_ds/deps/glm"]
 	path = Cores/melonds_ds/deps/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "Cores/mame/upstream"]
+	path = Cores/mame/upstream
+	url = https://github.com/libretro/mame.git
