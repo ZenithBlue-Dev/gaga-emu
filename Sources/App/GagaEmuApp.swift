@@ -12,6 +12,7 @@ struct GagaEmuApp: App {
                 .environmentObject(state.triggerPro)
                 .environmentObject(state.skins)
                 .environmentObject(state.store)
+                .environmentObject(state.wifi)
                 .preferredColorScheme(state.appearance.colorScheme)
                 .tint(AppTheme.accent)
                 .task { GameCenter.authenticate() }

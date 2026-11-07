@@ -5,6 +5,7 @@ import UniformTypeIdentifiers
 /// tiles, MultiDisc and RomPatcher tiles, drag-and-drop strip.
 struct ImportHubView: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var wifi: WiFiTransferServer
     @State private var showFiles = false
     @State private var showMultiDisc = false
     @State private var showPatcher = false
@@ -157,13 +158,13 @@ struct ImportHubView: View {
     }
 
     private var wifiBinding: Binding<Bool> {
-        Binding(get: { if case .running = state.wifi.state { return true } else { return false } },
-                set: { $0 ? state.wifi.start() : state.wifi.stop() })
+        Binding(get: { if case .running = wifi.state { return true } else { return false } },
+                set: { $0 ? wifi.start() : wifi.stop() })
     }
 
     private var wifiDetail: String {
-        switch state.wifi.state {
-        case .stopped: return "Off by default. Transfers files by browser on your network over unencrypted local HTTP."
+        switch wifi.state {
+        case .stopped: return "Off by default. Browser transfer over unencrypted local HTTP."
         case .running(let host, let port, let pin): return "http://\(host):\(port)\nPIN \(pin)\nUnencrypted local HTTP. Turn off when done."
         case .failed(let message): return message
         }
