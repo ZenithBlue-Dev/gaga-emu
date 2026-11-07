@@ -1,150 +1,308 @@
 import SwiftUI
 
-/// Settings. Order matches 44F4AEE0, C4E3779B, 8A17681E, 9EFF77AC. Rows with nothing behind them
-/// are hidden until a later phase implements them (docs/07). Their saved values stay in state.json.
+/// Two-pane settings. Only rows with working behaviour appear; docs/07 says what returns when.
+/// Saved values for hidden rows stay in state.json.
 struct SettingsView: View {
-    @EnvironmentObject private var state: AppState
-    @EnvironmentObject private var store: StoreKitManager
-    @State private var showPaywall = false
-    @State private var showShaders = false
-    @State private var showCores = false
-    @State private var showTriggerPro = false
-    @State private var showBIOS = false
-    @State private var showClearConfirm = false
-    @State private var cacheNote: String?
+    @Environment(\.verticalSizeClass) private var verticalSize
+    @State private var category: Category = .play
+
+    enum Category: String, CaseIterable, Identifiable {
+        case play = "Play", library = "Library", graphics = "Graphics", controls = "Controls",
+             storage = "Storage", gagaPlus = "Gaga Plus", about = "About"
+        var id: String { rawValue }
+        /// Gaga Plus stays out of the app while the paywall gate is closed (docs/06 section 4.5).
+        static var visible: [Category] { allCases.filter { $0 != .gagaPlus || PaywallGate.isOpen } }
+    }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Settings")
-                    .font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                membershipBanner
-                AdventurerCardView()
-                section("General") {
-                    appearanceRow
-                }
-                section("Advanced") {
-                    navRow("cpu.fill", .red, "BIOS", "BIOS required for some platforms") { showBIOS = true }
-                    navRow("square.grid.2x2", .yellow, "TriggerPro", "Create and manage advanced custom buttons.") { showTriggerPro = true }
-                    navRow("circle.grid.3x3.fill", AppTheme.accent, "Shaders", nil) { showShaders = true }
-                    navRow("atom", .purple, "Emulator Core", nil) { showCores = true }
-                }
-                section("Support") {
-                    linkRow("questionmark.circle.fill", .orange, "FAQ", SiteLinks.support)
-                    linkRow("envelope.fill", .green, "Feedback", SiteLinks.support)
-                }
-                section("Others") {
-                    navRow("trash.fill", .yellow, "Clear Cache", cacheNote) { showClearConfirm = true }
-                    linkRow("doc.text.fill", .red, "Terms of Service", SiteLinks.terms)
-                    linkRow("lock.shield.fill", .purple, "Privacy Policy", SiteLinks.privacy)
+        HStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                    ForEach(Category.visible) { categoryRow($0) }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 120)
-        }
-        .sheet(isPresented: $showPaywall) { MembershipPaywallView() }
-        .sheet(isPresented: $showShaders) { ShadersSettingsView() }
-        .sheet(isPresented: $showCores) { EmulatorCoreListView() }
-        .sheet(isPresented: $showTriggerPro) { TriggerProEditor() }
-        .sheet(isPresented: $showBIOS) { BIOSManagerView() }
-        .confirmationDialog("Clear cached covers, temp ROMs, and shader caches?", isPresented: $showClearConfirm, titleVisibility: .visible) {
-            Button("Clear Cache", role: .destructive) { state.clearCache(); cacheNote = "Cleared" }
-            Button("Cancel", role: .cancel) {}
+            .frame(width: verticalSize == .compact ? 170 : 240)
+            Rule().ignoresSafeArea(edges: .vertical)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(category.rawValue).font(.gameTitle).accessibilityAddTraits(.isHeader)
+                        .padding(.bottom, 8)
+                    detail
+                }
+                .padding(.horizontal, 20).padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .id(category)
         }
     }
 
-    @ViewBuilder private var membershipBanner: some View {
-        if PaywallGate.isOpen { membershipCard }
-    }
-
-    private var membershipCard: some View {
-        Button { if store.entitlements.showsSubscribePrompts { showPaywall = true } } label: {
-            VStack(spacing: 8) {
-                Text(store.entitlements.premium ? "GAGA-EMU Membership Active" : "Unlock GAGA-EMU membership")
-                    .font(.system(size: 18, weight: .heavy)).foregroundStyle(.white)
-                Text("You are the protagonist of this story")
-                    .font(.system(size: 14)).foregroundStyle(.white.opacity(0.85))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 20)
-            .background(AppTheme.membershipGradient, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    private func categoryRow(_ item: Category) -> some View {
+        let selected = category == item
+        return Button { category = item } label: {
+            Text(item.rawValue)
+                .fontWeight(selected ? .bold : .regular)
+                .foregroundStyle(selected ? AppTheme.accent : AppTheme.ink)
+                .padding(.horizontal, 16).padding(.vertical, 6)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+                .overlay(alignment: .leading) {
+                    if selected { Rectangle().fill(AppTheme.accent).frame(width: 3) }
+                }
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    private var appearanceRow: some View {
-        HStack {
-            Image(systemName: "circle.lefthalf.filled").foregroundStyle(.blue).frame(width: 28)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Appearance").foregroundStyle(.white)
-                Text(state.appearance.label).font(.system(size: 12)).foregroundStyle(AppTheme.textSecondary)
-            }
-            Spacer()
-            HStack(spacing: 2) {
-                ForEach(AppearanceMode.allCases) { mode in
-                    Button { state.appearance = mode } label: {
-                        Image(systemName: mode.symbol)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(state.appearance == mode ? .white : AppTheme.textSecondary)
-                            .frame(width: 32, height: 28)
-                            .background(state.appearance == mode ? AppTheme.cardRaised : .clear, in: Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(mode.label)
-                }
-            }
-            .padding(3)
-            .background(Color.black.opacity(0.3), in: Capsule())
-        }
-        .padding(.vertical, 6)
-    }
-
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary).padding(.leading, 4)
-            VStack(spacing: 4) { content() }
-                .padding(.horizontal, 14).padding(.vertical, 8)
-                .glassCard()
-        }
-    }
-
-    private func navRow(_ symbol: String, _ tint: Color, _ title: String, _ subtitle: String?, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                label(symbol, tint, title, subtitle)
-                Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(AppTheme.textTertiary)
-            }
-            .padding(.vertical, 6)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func linkRow(_ symbol: String, _ tint: Color, _ title: String, _ url: String) -> some View {
-        navRow(symbol, tint, title, nil) {
-            if let link = URL(string: url) { UIApplication.shared.open(link) }
-        }
-    }
-
-    private func label(_ symbol: String, _ tint: Color, _ title: String, _ subtitle: String?) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol).foregroundStyle(tint).frame(width: 28)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).foregroundStyle(.white)
-                if let subtitle {
-                    Text(subtitle).font(.system(size: 12)).foregroundStyle(AppTheme.textSecondary)
-                }
-            }
-            Spacer(minLength: 0)
+    @ViewBuilder private var detail: some View {
+        switch category {
+        case .play: PlayPane()
+        case .library: LibraryPane()
+        case .graphics: GraphicsPane()
+        case .controls: ControlsPane()
+        case .storage: StoragePane()
+        case .gagaPlus: GagaPlusPane()
+        case .about: AboutPane()
         }
     }
 }
 
+// MARK: - Rows
+
+struct ValueRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer(minLength: 12)
+            Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct ActionRow: View {
+    let title: String
+    var value: String?
+    var symbol = "chevron.right"
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer(minLength: 12)
+                if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted) }
+                Image(systemName: symbol).font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+            }
+            .padding(.vertical, 6)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct LinkRow: View {
+    @Environment(\.openURL) private var openURL
+    let title: String
+    let url: String
+
+    var body: some View {
+        ActionRow(title: title, symbol: "arrow.up.right") {
+            if let link = URL(string: url) { openURL(link) }
+        }
+        .accessibilityAddTraits(.isLink)
+    }
+}
+
+private struct PaneNote: View {
+    let text: String
+    var body: some View {
+        Text(text).font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 8)
+    }
+}
+
+// MARK: - Panes
+
+private struct PlayPane: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        ValueRow(title: "Total play time", value: CoreCatalog.playTime(state.totalPlayTime))
+        Rule()
+        ValueRow(title: "Sessions", value: "\(state.history.count)")
+        Rule()
+        PaneNote(text: "Options for running games appear here once a core can run one.")
+    }
+}
+
+private struct LibraryPane: View {
+    @EnvironmentObject private var state: AppState
+    @State private var showBIOS = false
+
+    var body: some View {
+        ValueRow(title: "Games", value: "\(state.games.count)")
+        Rule()
+        ActionRow(title: "BIOS Files") { showBIOS = true }
+            .sheet(isPresented: $showBIOS) { BIOSManagerView() }
+        Rule()
+        Text("Default core per platform")
+            .font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader).padding(.top, 16).padding(.bottom, 4)
+        PaneNote(text: "Touch and hold a game in the library to change the core for that game only.")
+            .padding(.bottom, 4)
+        Rule()
+        ForEach(CoreCatalog.platforms) { platform in
+            if platform.cores.count > 1 {
+                HStack {
+                    Text(platform.name)
+                    Spacer(minLength: 12)
+                    Picker(platform.name, selection: core(platform)) {
+                        ForEach(platform.cores) { Text($0.name).tag($0.id) }
+                    }
+                    .labelsHidden()
+                }
+                .frame(minHeight: 44)
+            } else {
+                ValueRow(title: platform.name, value: platform.cores.first?.name ?? "")
+            }
+            Rule()
+        }
+    }
+
+    private func core(_ platform: PlatformInfo) -> Binding<String> {
+        Binding(get: { state.defaultCores[platform.id] ?? CoreCatalog.defaultCore(for: platform.id) },
+                set: { state.defaultCores[platform.id] = $0 })
+    }
+}
+
+private struct GraphicsPane: View {
+    @EnvironmentObject private var state: AppState
+    @State private var showFilters = false
+
+    var body: some View {
+        ActionRow(title: "Default Filter", value: ShaderCatalog.builtIn.first { $0.id == state.shaderID }?.name) {
+            showFilters = true
+        }
+        Rule()
+        PaneNote(text: "New games start with this filter. Touch and hold a game to choose one for that game.")
+            .fullScreenCover(isPresented: $showFilters) { FilterPickerView() }
+    }
+}
+
+private struct ControlsPane: View {
+    @EnvironmentObject private var controllers: ControllerManager
+    @State private var showTriggerPro = false
+
+    var body: some View {
+        ValueRow(title: "Touch Control", value: controllers.touchOwnsPlayerOne ? "Player 1" : "Unassigned")
+        Rule()
+        ForEach(controllers.devices) { device in
+            HStack {
+                Text(device.name)
+                Spacer(minLength: 12)
+                Menu(device.slot.map { "Player \($0 + 1)" } ?? "Unassigned") {
+                    ForEach(0..<ControllerManager.slotCount, id: \.self) { index in
+                        Button("Player \(index + 1)") { controllers.assign(device.id, to: index) }
+                    }
+                    Button("Unassign") { controllers.assign(device.id, to: nil) }
+                }
+                .foregroundStyle(AppTheme.accent)
+                .frame(minHeight: 44)
+                .accessibilityLabel("\(device.name) player slot")
+            }
+            Rule()
+        }
+        ActionRow(title: "TriggerPro") { showTriggerPro = true }
+            .sheet(isPresented: $showTriggerPro) { TriggerProEditor() }
+        Rule()
+        if controllers.devices.isEmpty {
+            PaneNote(text: "No controllers connected. Pair a DualSense, DualShock 4, Xbox, Joy-Con or MFi pad in iOS Settings.")
+        }
+    }
+}
+
+private struct StoragePane: View {
+    @EnvironmentObject private var state: AppState
+    @State private var romBytes: Int64 = 0
+    @State private var showClearConfirm = false
+    @State private var cleared = false
+
+    var body: some View {
+        ValueRow(title: "Game files", value: romBytes.formatted(.byteCount(style: .file)))
+            .task { romBytes = folderSize(state.romDirectory) }
+        Rule()
+        ActionRow(title: "Clear Cache", value: cleared ? "Cleared" : nil, symbol: "trash") { showClearConfirm = true }
+            .confirmationDialog("Clear cached files?", isPresented: $showClearConfirm, titleVisibility: .visible) {
+                Button("Clear Cache", role: .destructive) {
+                    state.clearCache()
+                    cleared = true
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your games and library stay.")
+            }
+        Rule()
+    }
+
+    private func folderSize(_ folder: URL) -> Int64 {
+        let files = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.fileSizeKey])
+        return (files?.allObjects as? [URL] ?? []).reduce(0) { sum, url in
+            sum + Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+    }
+}
+
+private struct GagaPlusPane: View {
+    @EnvironmentObject private var store: StoreKitManager
+    @State private var showPlans = false
+
+    private var status: String {
+        if store.entitlements.lifetime { return "Lifetime" }
+        return store.entitlements.premium ? "Active" : "Not subscribed"
+    }
+
+    var body: some View {
+        ValueRow(title: "Status", value: status)
+            .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+        Rule()
+        if store.entitlements.showsSubscribePrompts {
+            ActionRow(title: "See Plans") { showPlans = true }
+            Rule()
+        }
+    }
+}
+
+private struct AboutPane: View {
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
+    }
+
+    var body: some View {
+        ValueRow(title: "Version", value: version)
+        Rule()
+        LinkRow(title: "Support and FAQ", url: SiteLinks.support)
+        Rule()
+        LinkRow(title: "Feedback", url: SiteLinks.support)
+        Rule()
+        LinkRow(title: "Terms of Service", url: SiteLinks.terms)
+        Rule()
+        LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
+        Rule()
+    }
+}
+
+// MARK: - Tools
+
 /// TriggerPro editor: turbo rate, hold latch, and a combo of up to four steps.
 struct TriggerProEditor: View {
     @EnvironmentObject private var triggerPro: TriggerProManager
-    @Environment(\.dismiss) private var dismiss
     @State private var name = "Turbo"
     @State private var mode: TriggerProManager.Mode = .turbo
     @State private var hertz = 15.0
@@ -156,21 +314,25 @@ struct TriggerProEditor: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            Form {
+        PaperSheet(title: "TriggerPro", scrolls: false) {
+            List {
                 Section("Bindings") {
+                    if triggerPro.bindings.isEmpty {
+                        Text("No bindings yet.").foregroundStyle(AppTheme.muted)
+                    }
                     ForEach(triggerPro.bindings) { binding in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(binding.name)
-                                Text(binding.mode.label).font(.caption).foregroundStyle(.secondary)
+                                Text(binding.mode.label).font(.meta).foregroundStyle(AppTheme.muted)
                             }
                             Spacer()
-                            Toggle("", isOn: bindingEnabled(binding.id)).labelsHidden()
+                            Toggle(binding.name, isOn: bindingEnabled(binding.id)).labelsHidden().tint(AppTheme.accentFill)
                         }
                     }
                     .onDelete { triggerPro.bindings.remove(atOffsets: $0) }
                 }
+                .paperRows()
                 Section("New") {
                     TextField("Name", text: $name)
                     Picker("Mode", selection: $mode) {
@@ -180,12 +342,12 @@ struct TriggerProEditor: View {
                         Stepper("Rate \(Int(hertz)) Hz", value: $hertz, in: 5...30, step: 1)
                     }
                     ForEach(buttons, id: \.1) { label, mask in
-                        Button("Bind \(label)") { add(mask) }
+                        Button("Bind \(label)") { add(mask) }.foregroundStyle(AppTheme.accent)
                     }
                 }
+                .paperRows()
             }
-            .navigationTitle("TriggerPro")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+            .paperList()
         }
     }
 
@@ -210,7 +372,6 @@ struct TriggerProEditor: View {
 
 /// BIOS presence list. Checksums are shown once a file is imported into the BIOS folder.
 struct BIOSManagerView: View {
-    @Environment(\.dismiss) private var dismiss
     @State private var files: [URL] = []
 
     private var biosDirectory: URL {
@@ -226,44 +387,56 @@ struct BIOSManagerView: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        PaperSheet(title: "BIOS Files", scrolls: false) {
             List {
                 Section("Required") {
                     ForEach(required, id: \.0) { name, system in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(name)
-                                Text(system).font(.caption).foregroundStyle(.secondary)
+                                Text(system).font(.meta).foregroundStyle(AppTheme.muted)
                             }
                             Spacer()
-                            Image(systemName: present(name) ? "checkmark.circle.fill" : "xmark.circle")
-                                .foregroundStyle(present(name) ? .green : .secondary)
+                            Label(present(name) ? "Found" : "Missing",
+                                  systemImage: present(name) ? "checkmark.circle" : "xmark.circle")
+                                .font(.footnote).foregroundStyle(present(name) ? AppTheme.ink : AppTheme.muted)
                         }
                     }
                 }
+                .paperRows()
                 Section("Imported") {
-                    if files.isEmpty { Text("No BIOS files yet.").foregroundStyle(.secondary) }
+                    if files.isEmpty { Text("No BIOS files yet.").foregroundStyle(AppTheme.muted) }
                     ForEach(files, id: \.path) { url in
                         VStack(alignment: .leading) {
                             Text(url.lastPathComponent)
                             if let data = try? Data(contentsOf: url) {
                                 Text("SHA1 \(RomPatcher.checksums(data).sha1.prefix(12))…")
-                                    .font(.caption.monospaced()).foregroundStyle(.secondary)
+                                    .font(.meta).foregroundStyle(AppTheme.muted)
                             }
                         }
                     }
                 }
+                .paperRows()
             }
-            .navigationTitle("BIOS")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-            .onAppear {
-                try? FileManager.default.createDirectory(at: biosDirectory, withIntermediateDirectories: true)
-                files = (try? FileManager.default.contentsOfDirectory(at: biosDirectory, includingPropertiesForKeys: nil)) ?? []
-            }
+            .paperList()
+        }
+        .onAppear {
+            try? FileManager.default.createDirectory(at: biosDirectory, withIntermediateDirectories: true)
+            files = (try? FileManager.default.contentsOfDirectory(at: biosDirectory, includingPropertiesForKeys: nil)) ?? []
         }
     }
 
     private func present(_ name: String) -> Bool {
         files.contains { $0.lastPathComponent.lowercased() == name.lowercased() }
+    }
+}
+
+private extension View {
+    func paperList() -> some View {
+        listStyle(.plain).scrollContentBackground(.hidden)
+    }
+
+    func paperRows() -> some View {
+        listRowBackground(Color.clear).listRowSeparatorTint(AppTheme.rule)
     }
 }
