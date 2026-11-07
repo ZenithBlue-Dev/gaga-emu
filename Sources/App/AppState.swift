@@ -722,7 +722,8 @@ final class AppState: ObservableObject {
             throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
         }
         skins.loadBuiltIn(TouchSkinEngine.layoutID(game: game.skinID, platform: platformSkins[game.platformID],
-                                                   platformID: game.platformID))
+                                                   platformID: game.platformID),
+                          platformID: game.platformID)
         skins.hapticsEnabled = rumble
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"

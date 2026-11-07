@@ -529,6 +529,31 @@ final class TouchLayoutTests: XCTestCase {
         XCTAssertEqual(engine.skin?.id, "standard")
     }
 
+    /// DOSBox Pure opens its on-screen keyboard on L3, so every DOS layout carries a key for it.
+    func testDOSLayoutsHaveAKeyboardKeyThatPressesL3() throws {
+        let band = TouchSkinEngine.controlBand
+        for layout in TouchSkinEngine.Layout.choices(for: "dos") {
+            let buttons = layout.buttons(for: "dos")
+            let key = try XCTUnwrap(buttons.first { $0.id == "l3" }, layout.id)
+            XCTAssertEqual(key.mask, ControllerManager.Button.l3)
+            XCTAssertTrue(key.frame.maxX <= band, layout.id)
+            XCTAssertGreaterThanOrEqual(key.frame.height * 369, 44)
+            for other in buttons where other.id != "l3" {
+                XCTAssertFalse(key.frame.intersects(other.frame), "\(layout.id): keyboard and \(other.id) overlap")
+            }
+        }
+        XCTAssertNil(TouchSkinEngine.Layout.standard.buttons(for: "gba").first { $0.id == "l3" })
+
+        let engine = TouchSkinEngine()
+        engine.hapticsEnabled = false
+        engine.soundEnabled = false
+        engine.loadBuiltIn("low-reach", platformID: "dos")
+        let frame = try XCTUnwrap(engine.skin?.buttons.first { $0.id == "l3" }).frame
+        XCTAssertEqual(engine.setTouches([CGPoint(x: frame.midX, y: frame.midY)]), ControllerManager.Button.l3)
+        XCTAssertEqual(TouchSkinEngine.mask(for: "l3"), ControllerManager.Button.l3)
+        XCTAssertEqual(TouchSkinEngine.label(for: "l3").spoken, "Keyboard")
+    }
+
     func testAGameSkinSurvivesASaveAndOldFilesDecode() throws {
         var game = GameItem(id: UUID(), title: "A", platformID: "gba", romPath: "/a", coverPath: nil, coreOverride: nil,
                             playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")

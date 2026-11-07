@@ -97,9 +97,9 @@ public final class TouchSkinEngine: ObservableObject {
     }
 
     /// An unknown ID, say from a later build's state.json, gets the standard layout.
-    public func loadBuiltIn(_ id: String) {
+    public func loadBuiltIn(_ id: String, platformID: String = "") {
         let layout = Layout.builtIn.first { $0.id == id } ?? .standard
-        skin = Skin(id: layout.id, name: layout.name, format: .flex, buttons: layout.buttons,
+        skin = Skin(id: layout.id, name: layout.name, format: .flex, buttons: layout.buttons(for: platformID),
                     opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil)
     }
 
@@ -200,6 +200,8 @@ public final class TouchSkinEngine: ObservableObject {
         case "zr", "r2": return ControllerManager.Button.r2
         case "start": return ControllerManager.Button.start
         case "select": return ControllerManager.Button.select
+        case "l3": return ControllerManager.Button.l3
+        case "r3": return ControllerManager.Button.r3
         default: return nil
         }
     }
@@ -222,6 +224,7 @@ public final class TouchSkinEngine: ObservableObject {
         case "r": return ("R button", "R")
         case "start": return ("Start", "Start")
         case "select": return ("Select", "Select")
+        case "l3": return ("Keyboard", "Keyboard")
         default: return (id, id.uppercased())
         }
     }
@@ -299,6 +302,15 @@ public final class TouchSkinEngine: ObservableObject {
                 ],
                 platforms: ["gba", "gb", "gbc", "nes"])
         }()
+
+        /// DOSBox Pure opens its on-screen keyboard on L3. It sits in the space under L that every layout a
+        /// typing platform can choose leaves free.
+        static let keyboard = button("l3", 0.03, 0.2, 0.14, 0.12, ControllerManager.Button.l3, .rect)
+
+        /// The layout's buttons, plus the keyboard key on a platform that types (`GameSession.typingPlatforms`).
+        public func buttons(for platformID: String) -> [Button] {
+            GameSession.typingPlatforms.contains(platformID) ? buttons + [Self.keyboard] : buttons
+        }
 
         public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton]
 
