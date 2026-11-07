@@ -9,6 +9,7 @@ struct GameView: View {
     @EnvironmentObject private var skins: TouchSkinEngine
     @ObservedObject private var external = ExternalDisplay.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dropTargeted = false
 
     private var touchVisible: Bool { controllers.touchOwnsPlayerOne }
 
@@ -47,6 +48,10 @@ struct GameView: View {
         .alert(session.notice ?? "", isPresented: Binding(get: { session.notice != nil }, set: { if !$0 { session.notice = nil } })) {
             Button("OK", role: .cancel) {}
         }
+        // A file dropped on the game goes to the Library; the game keeps running.
+        .gameFileDrop(isTargeted: $dropTargeted) { line, _ in session.notice = line }
+        .dropHighlight(dropTargeted)
+        .unplacedQuestion()
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: session.menuOpen)
         .background(AppTheme.letterbox.ignoresSafeArea())
         .statusBarHidden(true)

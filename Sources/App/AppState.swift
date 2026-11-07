@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import Compression
+import UniformTypeIdentifiers
 
 /// One imported game. `coreOverride` wins over the platform default.
 struct GameItem: Identifiable, Codable, Equatable {
@@ -928,10 +929,14 @@ final class AppState: ObservableObject {
     @Published var launchFailure: LaunchFailure?
     /// A game waiting on the player's answer: resume its auto save, or start from the battery save.
     @Published var resumeOffer: GameItem?
+    /// Disc images and archives whose contents did not name a platform, asked one at a time (`unplacedQuestion`).
+    @Published var unplaced: [GameItem] = []
     /// Waits for the game view to finish dismissing, because an alert cannot present during that.
     private var pendingFailure: LaunchFailure?
 
     struct LaunchFailure: Identifiable, Equatable {
+        /// The title of a failure that came from an import, not a game.
+        static let importTitle = "Import"
         let id = UUID()
         let title: String
         let message: String
@@ -941,6 +946,7 @@ final class AppState: ObservableObject {
             // A finished benchmark ends its session the same way a failure does.
             if message.hasPrefix("Benchmark saved") { return "Benchmark finished" }
             #endif
+            if title == Self.importTitle { return "Could not import" }
             return "Could not play \(title)"
         }
     }
@@ -1061,6 +1067,42 @@ final class AppState: ObservableObject {
     /// A name is a path under the ROM folder, as "Game/Game.cue" for a disc set.
     func addUploads(_ names: [String]) async {
         for name in names { await importArrived(romDirectory.appendingPathComponent(name)) }
+    }
+
+    /// `importArrived` for a file the player chose or dropped: queues the platform question when a disc image
+    /// or archive did not say. Returns the note, when there is one.
+    @discardableResult
+    func importChosen(_ dest: URL) async -> String? {
+        let (game, note) = await importArrived(dest)
+        if let game, game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath)) != nil {
+            unplaced.append(game)
+        }
+        return note
+    }
+
+    /// Drop import, for every screen that takes drops: copies each dropped file into the ROM folder off the
+    /// main thread, then `importChosen`. `done` gets each file's notice, and true when it is a problem (a note
+    /// or an error) rather than "Imported". False when nothing is a file.
+    func importDropped(_ providers: [NSItemProvider], done: @escaping @MainActor (String, Bool) -> Void) -> Bool {
+        var accepted = false
+        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            accepted = true
+            // @Sendable: the provider calls back on its own queue, never the main actor.
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { @Sendable item, _ in
+                guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                Task { @MainActor in
+                    do {
+                        let romDirectory = self.romDirectory
+                        let dest = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
+                        let note = await self.importChosen(dest)
+                        done(note ?? "Imported \(dest.lastPathComponent)", note != nil)
+                    } catch {
+                        done(error.localizedDescription, true)
+                    }
+                }
+            }
+        }
+        return accepted
     }
 
     /// Every import ends here: Files, drop, clipboard, download, WiFi Transfer and the Debug launch arguments.

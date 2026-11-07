@@ -8,6 +8,7 @@ struct LibraryView: View {
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
     @State private var pendingLoad: (GameItem, SaveSlot)?
+    @State private var dropTargeted = false
     /// Tiles widen with Dynamic Type so titles do not break mid-word.
     @ScaledMetric(relativeTo: .footnote) private var tileScale: CGFloat = 1
 
@@ -43,6 +44,11 @@ struct LibraryView: View {
                 }
             }
         }
+        // A dropped game lands on its shelf; only a problem needs words.
+        .gameFileDrop(isTargeted: $dropTargeted) { line, problem in
+            if problem { state.launchFailure = .init(title: AppState.LaunchFailure.importTitle, message: line) }
+        }
+        .dropHighlight(dropTargeted)
         .sheet(item: $sheet, onDismiss: startPendingLoad) { sheet in
             switch sheet {
             case .core(let game): CorePickerSheet(game: game)
