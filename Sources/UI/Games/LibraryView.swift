@@ -100,6 +100,7 @@ struct LibraryView: View {
                 .buttonStyle(PrimaryButtonStyle())
                 .accessibilityLabel("Play \(game.title)")
                 .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(AppTheme.paper)
             }
         }
     }

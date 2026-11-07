@@ -5,6 +5,8 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.verticalSizeClass) private var verticalSize
     @State private var category: Category = .play
+    /// The category column widens with Dynamic Type so names do not break mid-word.
+    @ScaledMetric(relativeTo: .body) private var columnScale: CGFloat = 1
 
     enum Category: String, CaseIterable, Identifiable {
         case play = "Play", library = "Library", graphics = "Graphics", controls = "Controls",
@@ -23,7 +25,7 @@ struct SettingsView: View {
                     ForEach(Category.visible) { categoryRow($0) }
                 }
             }
-            .frame(width: verticalSize == .compact ? 170 : 240)
+            .frame(width: (verticalSize == .compact ? 170 : 240) * min(columnScale, 1.5))
             Rule().ignoresSafeArea(edges: .vertical)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
