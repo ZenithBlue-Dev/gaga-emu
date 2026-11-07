@@ -2,7 +2,7 @@
 
 Multi-system emulator for iOS and iPadOS, designed for App Store distribution with no JIT in any shipped core.
 
-**Status: early. mGBA is the first real core. It runs a homebrew test ROM on the iOS Simulator, and has not run on a device or been benchmarked yet** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md)). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
+**Status: early. 35 real cores are merged and build, and 11 systems have run owner-supplied games on a device (iPhone 17) with benchmarks. Release builds ship no GPL core until the legal gate closes** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md) and the device figures in [docs/04](./docs/04-no-jit-interpreter-architecture.md) section 7.1). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
 
 ---
 
@@ -17,19 +17,19 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
    - App UI, frame presentation and the host post-process chain use native Metal. 3D cores use Vulkan on statically linked MoltenVK to `CAMetalLayer` (design), and a native Metal backend is allowed where upstream has one. GLES-only and desktop-GL-only renderers are not accepted.
    - GPU: A14 required for layer-path 3D cores; 2D cores have no such floor. Apple7 is the family, checked by `GPUFloor.supportsLayerPathCores`. iOS 17.0 also runs on A12 and A13, which can still run 2D cores.
    - 2D and software cores copy each frame into a triple-buffered shared `MTLBuffer` ring, with textures from `MTLBuffer.makeTexture(descriptor:offset:bytesPerRow:)`. The copy path is not zero copy; only the planned host-buffer path may be described that way.
-   - Built-in MSL presets with live preview (Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT, Film). They run only in the preview today, because no core frame reaches the renderer.
-   - Planned: community Slang presets converted offline, runtime `.metal` import, and `.slangp` import once a translation path exists.
+   - Built-in MSL presets with live preview (Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT, Film). They run on core frames in a game session.
+   - Built: community Slang presets converted offline, runtime `.metal` import, `.slangp` import (translated to MSL at import), and saved filter presets (`.slangp` and saved presets are device pending).
 
 3. **Multi-Core Flexibility per Platform** (design):
-   - Defaults and alternates come from `docs/03`, for example GBA: mGBA, with VBA-M and gpSP; SNES: bsnes, with bsnes-jg and bsnes-mercury; PS1: PCSX-ReARMed, with Beetle PSX HW; 3DS: Azahar (experimental). Some platforms have no usable alternate yet.
+   - Defaults and alternates come from `docs/03`, for example GBA: mGBA (gpSP is a registry stub only); SNES: bsnes, with bsnes-jg and bsnes-mercury; PS1: PCSX-ReARMed, with Beetle PSX HW; 3DS: Azahar (experimental). Some platforms have no usable alternate yet.
    - Selected per game through a library long-press, with a per-platform default.
-   - Compile-time core registry. Planned packaging is one dynamic, embedded framework per core, exporting only the bridge. Code is never loaded from user paths or downloaded.
+   - Compile-time core registry. Packaging is one dynamic, embedded framework per core, exporting only the bridge. Code is never loaded from user paths or downloaded.
 
 4. **Original Landscape UI** (`docs/06` section 3): "Paper and ink", a quiet game shelf with a left rail, in landscape only on iPhone and iPad.
 
 5. **Manic EMU as a Feature Reference** (no parity claim and no copied UI; `docs/02` tags each item by source and status):
    - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, Multi-Disc M3U helper, and an in-memory ROM patcher (IPS, including RLE records, plus BPS and UPS).
-   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built. Touch has been proved with mGBA on the Simulator; controllers and TriggerPro in a session on the mock core only.
+   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built. Touch has driven games on a device in the UI walk; a real hardware controller or keyboard has not been run in a test.
    - Scope is an explicit platform list in `docs/03`. PS3 (`samba-s3`) and PS4 (`bachata-s4`) are external sister projects, never catalog rows or frame producers. PS2 (`balero-s2`) and GameCube/Wii are non-shipping research and are not promised.
 
 ---
@@ -66,4 +66,4 @@ Detailed engineering specifications located in [`docs/`](./docs/):
 - [**04 — No-JIT Interpreter Architecture & Execution Engine**](./docs/04-no-jit-interpreter-architecture.md): iOS execution constraints, sister-project evidence, ranked optimisations, in-house interpreter design, performance tiers (target, unmeasured), benchmark method, and the per-core gate.
 - [**05 — Metal Graphics Pipeline & Shader Subsystem**](./docs/05-metal-graphics-pipeline-and-shaders.md): Graphics rules, GPU floor, frame paths, shader picker, presets and multi-pass chain, runtime shader policy and `.metal` import, and shader licences.
 - [**06 — iOS App Architecture, C-Bridge & Subsystem Specification**](./docs/06-ios-app-bridge-and-subsystem-spec.md): `GagaBridge.h` interface and planned additions, the UI design and screen specifications, the canonical premium and in-app purchase spec, and the XcodeGen project manifest.
-- [**07 — Roadmap & Implementation Plan**](./docs/07-roadmap-and-implementation-plan.md): Phases 0 to 7, status, milestones, and the definition of done for a core.
+- [**07 — Roadmap & Implementation Plan**](./docs/07-roadmap-and-implementation-plan.md): Phases 0 to 8, status, milestones, and the definition of done for a core.
