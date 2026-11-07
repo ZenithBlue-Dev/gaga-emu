@@ -36,6 +36,7 @@ case "sgx": try PCETestROM.build(superGrafx: true).write(to: url)
 case "vb": try VBTestROM.build().write(to: url)
 case "ngc": try NGPTestROM.build().write(to: url)
 case "wsc": try WSTestROM.build().write(to: url)
+case "min": try PMTestROM.build().write(to: url)
 default: try GBATestROM.build().write(to: url)
 }
 SWIFT
@@ -43,7 +44,7 @@ xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAs
     "$root/Sources/Debug/GBTestROM.swift" "$root/Sources/Debug/NESTestROM.swift" "$root/Sources/Debug/SNESTestROM.swift" \
     "$root/Sources/Debug/NDSTestROM.swift" "$root/Sources/Debug/MDTestROM.swift" "$root/Sources/Debug/PS1TestEXE.swift" \
     "$root/Sources/Debug/VkTestROM.swift" "$root/Sources/Debug/DOSTestCOM.swift" "$root/Sources/Debug/GridleeTestSet.swift" \
-    "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/PCETestROM.swift" "$root/Sources/Debug/VBTestROM.swift" "$root/Sources/Debug/NGPTestROM.swift" "$root/Sources/Debug/WSTestROM.swift" "$root/Sources/Hub/RomPatcher.swift" \
+    "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/PCETestROM.swift" "$root/Sources/Debug/VBTestROM.swift" "$root/Sources/Debug/NGPTestROM.swift" "$root/Sources/Debug/WSTestROM.swift" "$root/Sources/Debug/PMTestROM.swift" "$root/Sources/Hub/RomPatcher.swift" \
     -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

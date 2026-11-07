@@ -133,6 +133,7 @@ final class BenchmarkRun {
         case "vb": data = VBTestROM.build()
         case "ngp": (data, ext) = (NGPTestROM.build(), "ngc")
         case "ws": (data, ext) = (WSTestROM.build(), "wsc")
+        case "pokemini": (data, ext) = (PMTestROM.build(), "min")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
