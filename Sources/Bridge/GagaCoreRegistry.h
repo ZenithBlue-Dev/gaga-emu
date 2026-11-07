@@ -15,6 +15,7 @@ const GagaCoreInterface* Mgba_GetInterface(void);
 const GagaCoreInterface* Gpsp_GetInterface(void);
 const GagaCoreInterface* Bsnes_GetInterface(void);
 const GagaCoreInterface* Gambatte_GetInterface(void);
+const GagaCoreInterface* Nestopia_GetInterface(void);
 const GagaCoreInterface* Jgenesis_GetInterface(void);
 const GagaCoreInterface* MelonDS_GetInterface(void);
 const GagaCoreInterface* Azahar_GetInterface(void);

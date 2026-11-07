@@ -378,6 +378,9 @@ DEFINE_CORE_INTERFACE(Mgba_GetInterface,          "mgba",            "mGBA",    
 #ifndef GAGA_HAS_GAMBATTE
 DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",          GAGA_CORE_EXCLUDED, "gb|gbc",   59.7275, 32768)
 #endif
+#ifndef GAGA_HAS_NESTOPIA
+DEFINE_CORE_INTERFACE(Nestopia_GetInterface,      "nestopia",        "Nestopia UE",       GAGA_CORE_EXCLUDED, "nes",      60.0988, 48000)
+#endif
 
 DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX ReARMed",      "r23",    "cue|bin|chd|pbp|iso", 60.0, 44100)
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
@@ -399,6 +402,7 @@ static const CoreGetterFunc s_core_getters[] = {
     MockCore_GetInterface,
     Mgba_GetInterface,
     Gambatte_GetInterface,
+    Nestopia_GetInterface,
     Bsnes_GetInterface,
     Jgenesis_GetInterface,
     PcsxReArmed_GetInterface,
