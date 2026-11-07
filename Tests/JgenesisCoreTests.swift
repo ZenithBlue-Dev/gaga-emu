@@ -3,7 +3,7 @@ import XCTest
 
 /// JGenesis through GagaEmu's own Rust shim and the real bridge, running the generated homebrew ROM
 /// (`MDTestROM`). No BIOS, no TMSS and no commercial game.
-final class JgenesisCoreTests: XCTestCase {
+final class JgenesisCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("jgenesis")!.pointee
@@ -513,13 +513,13 @@ final class JgenesisCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
+    func testUploadedGamesPickThisCore() async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for ext in ["md", "gen", "smd"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, "megadrive")
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "jgenesis")
@@ -562,7 +562,7 @@ final class JgenesisCoreTests: XCTestCase {
 
     /// `-GagaImportROM <path>`: an .md file lands in the Library as a Mega Drive game on this core.
     @MainActor
-    func testDebugImportAddsTheGameOnce() throws {
+    func testDebugImportAddsTheGameOnce() async throws {
         let state = AppState()
         let saved = Set(state.games.map(\.id))
         let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).md")
@@ -572,8 +572,8 @@ final class JgenesisCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             try? FileManager.default.removeItem(at: dest)
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "megadrive")

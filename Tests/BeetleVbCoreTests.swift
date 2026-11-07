@@ -3,7 +3,7 @@ import XCTest
 
 /// Beetle VB through the shared libretro adapter, running the generated cartridge (`VBTestROM`).
 /// Device pending: built and checked on a macOS host harness, not yet run on a device (docs/07 8.3).
-final class BeetleVbCoreTests: XCTestCase {
+final class BeetleVbCoreTests: GagaTestCase {
     private var probe: LibretroProbe!
 
     override func setUpWithError() throws {
@@ -95,8 +95,8 @@ final class BeetleVbCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        LibretroProbe.assertUploadsPick("beetle_vb", platforms: ["vb": "vb", "vboy": "vb"])
+    func testUploadedGamesPickThisCore() async {
+        await LibretroProbe.assertUploadsPick("beetle_vb", platforms: ["vb": "vb", "vboy": "vb"])
     }
 
     @MainActor

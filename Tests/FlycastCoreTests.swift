@@ -8,7 +8,7 @@ import XCTest
 /// (docs/07 6.2). No homebrew Dreamcast disc is generated yet, so the tests that need a running game skip;
 /// docs/07 6.2 says what a generator needs.
 @MainActor
-final class FlycastCoreTests: XCTestCase {
+final class FlycastCoreTests: GagaTestCase {
     private var directory: URL!
     private let interface = GagaCoreRegistry_FindByID("flycast")!.pointee
 

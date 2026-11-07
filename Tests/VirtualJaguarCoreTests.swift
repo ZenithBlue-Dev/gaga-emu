@@ -4,7 +4,7 @@ import XCTest
 /// Virtual Jaguar (Atari Jaguar) with the generated homebrew cartridge (`JaguarTestROM`), booted by HLE with no boot
 /// ROM. Heavy tier: the homebrew is trivial, so these tests say nothing about full-speed play of real games.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class VirtualJaguarCoreTests: XCTestCase {
+final class VirtualJaguarCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -97,8 +97,8 @@ final class VirtualJaguarCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("j64", "jaguar"), ("jag", "jaguar")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("j64", "jaguar"), ("jag", "jaguar")])
     }
 
     @MainActor

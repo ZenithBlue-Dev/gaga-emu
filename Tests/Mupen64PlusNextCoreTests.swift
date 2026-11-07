@@ -7,7 +7,7 @@ import XCTest
 /// paraLLEl-RDP on MoltenVK, presenting to a CAMetalLayer. The game is N64TestROM, booted by the core's HLE
 /// PIF boot. Device pending: these were built but have not run on a device yet (docs/07 5.2).
 @MainActor
-final class Mupen64PlusNextCoreTests: XCTestCase {
+final class Mupen64PlusNextCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("mupen64plus_next")!.pointee

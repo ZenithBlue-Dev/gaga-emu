@@ -3,7 +3,7 @@ import XCTest
 
 /// Beetle PCE Fast through the shared libretro adapter, running the generated HuCard (`PCETestROM`).
 /// Device pending: built and checked on a macOS host harness, not yet run on a device (docs/07 8.1).
-final class BeetlePceFastCoreTests: XCTestCase {
+final class BeetlePceFastCoreTests: GagaTestCase {
     private var probe: LibretroProbe!
 
     override func setUpWithError() throws {
@@ -117,8 +117,8 @@ final class BeetlePceFastCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        LibretroProbe.assertUploadsPick("beetle_pce_fast", platforms: ["pce": "pce", "ccd": "pce"])
+    func testUploadedGamesPickThisCore() async {
+        await LibretroProbe.assertUploadsPick("beetle_pce_fast", platforms: ["pce": "pce", "ccd": "pce"])
     }
 
     @MainActor

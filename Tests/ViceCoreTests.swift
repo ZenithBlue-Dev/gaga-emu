@@ -5,7 +5,7 @@ import XCTest
 /// KERNAL, BASIC and character ROM files, so each test puts all-zero stand-ins (`C64TestROM.standInSystemFiles`) in
 /// the system folder; the cartridge replaces the KERNAL, so they never run. No Commodore ROM is used.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class ViceCoreTests: XCTestCase {
+final class ViceCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -119,8 +119,8 @@ final class ViceCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("d64", "c64"), ("t64", "c64"), ("prg", "c64"), ("crt", "c64"), ("tap", "c64")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("d64", "c64"), ("t64", "c64"), ("prg", "c64"), ("crt", "c64"), ("tap", "c64")])
     }
 
     @MainActor

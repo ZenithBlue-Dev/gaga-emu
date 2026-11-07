@@ -4,7 +4,7 @@ import XCTest
 /// Snes9x, the sideload-only alternate Super Famicom core, through the shared libretro adapter and the real
 /// bridge, running the generated homebrew ROM (`SNESTestROM`). No firmware and no commercial game.
 /// Device-pending: written against a macOS host run of the same core and adapter, not yet run on the iPhone.
-final class Snes9xCoreTests: XCTestCase {
+final class Snes9xCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("snes9x")!.pointee

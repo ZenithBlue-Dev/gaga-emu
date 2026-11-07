@@ -4,7 +4,7 @@ import XCTest
 /// Atari800 with the generated homebrew programs (`Atari800TestROM`): an 8-bit .xex and a 5200 .a52, both booted on
 /// the bundled AltirraOS with no Atari ROM in the system folder. No battery memory or cheats upstream.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class Atari800CoreTests: XCTestCase {
+final class Atari800CoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var xexPath: String!
     private var a52Path: String!
@@ -113,8 +113,8 @@ final class Atari800CoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("a52", "atari5200"), ("xex", "atari8bit"), ("atr", "atari8bit")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("a52", "atari5200"), ("xex", "atari8bit"), ("atr", "atari8bit")])
     }
 
     func testThe8BitPlatformTypes() {

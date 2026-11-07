@@ -2,7 +2,7 @@ import XCTest
 @testable import GagaEmu
 
 /// Settings > About > Licences (docs/07 milestone 7.5) against what this build embeds.
-final class LicenceNoticeTests: XCTestCase {
+final class LicenceNoticeTests: GagaTestCase {
     /// Core frameworks in the app bundle. The test runner adds its own XCTest frameworks there too.
     private func embeddedCores() throws -> [String] {
         let folder = try XCTUnwrap(Bundle.main.privateFrameworksURL)

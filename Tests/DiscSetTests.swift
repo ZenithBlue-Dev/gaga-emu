@@ -3,7 +3,7 @@ import XCTest
 
 /// Multi-file discs: each set in its own folder under ROMs, every file under its own name. Files are generated.
 @MainActor
-final class DiscSetTests: XCTestCase {
+final class DiscSetTests: GagaTestCase {
     private var state: AppState!
     private var saved: [GameItem] = []
     private var stem = ""

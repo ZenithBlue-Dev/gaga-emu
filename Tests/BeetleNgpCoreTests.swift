@@ -3,7 +3,7 @@ import XCTest
 
 /// Beetle NeoPop through the shared libretro adapter, running the generated cartridge (`NGPTestROM`).
 /// Device pending: built and checked on a macOS host harness, not yet run on a device (docs/07 8.4).
-final class BeetleNgpCoreTests: XCTestCase {
+final class BeetleNgpCoreTests: GagaTestCase {
     private var probe: LibretroProbe!
     private var flashPath: String { (probe.romPath as NSString).deletingPathExtension + ".flash" }
 
@@ -97,8 +97,8 @@ final class BeetleNgpCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        LibretroProbe.assertUploadsPick("beetle_ngp", platforms: ["ngp": "ngp", "ngc": "ngp", "ngpc": "ngp", "npc": "ngp"])
+    func testUploadedGamesPickThisCore() async {
+        await LibretroProbe.assertUploadsPick("beetle_ngp", platforms: ["ngp": "ngp", "ngc": "ngp", "ngpc": "ngp", "npc": "ngp"])
     }
 
     @MainActor

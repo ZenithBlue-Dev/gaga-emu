@@ -3,7 +3,7 @@ import Metal
 import AVFoundation
 @testable import GagaEmu
 
-final class GagaEmuTests: XCTestCase {
+final class GagaEmuTests: GagaTestCase {
 
     // MARK: - Core Registry Tests
 

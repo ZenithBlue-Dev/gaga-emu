@@ -3,7 +3,7 @@ import XCTest
 
 /// Gearsystem (Master System, Game Gear, SG-1000) with the generated homebrew ROM (`SMSTestROM`).
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class GearsystemCoreTests: XCTestCase {
+final class GearsystemCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -129,8 +129,8 @@ final class GearsystemCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("sms", "mastersystem"), ("gg", "gamegear"), ("sg", "sg1000")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("sms", "mastersystem"), ("gg", "gamegear"), ("sg", "sg1000")])
     }
 
     @MainActor

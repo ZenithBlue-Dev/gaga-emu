@@ -4,7 +4,7 @@ import XCTest
 /// DOSBox Pure through the shared libretro adapter and the real bridge, running the generated DOS program
 /// (`DOSTestCOM`). DOS runs on its own thread between frames and boots for a while first, so each check
 /// steps until the picture is the expected one, within a frame budget.
-final class DosboxPureCoreTests: XCTestCase {
+final class DosboxPureCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("dosbox_pure")!.pointee
@@ -426,13 +426,13 @@ final class DosboxPureCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() throws {
+    func testUploadedGamesPickThisCore() async throws {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for ext in ["com", "bat", "dosz", "exe"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, "dos", ext)
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "dosbox_pure", ext)
@@ -479,7 +479,7 @@ final class DosboxPureCoreTests: XCTestCase {
 
     /// `-GagaImportROM <path>`: copied into the ROM folder, added once however often the app relaunches.
     @MainActor
-    func testDebugImportAddsTheGameOnce() throws {
+    func testDebugImportAddsTheGameOnce() async throws {
         let state = AppState()
         let saved = Set(state.games.map(\.id))
         let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).com")
@@ -489,8 +489,8 @@ final class DosboxPureCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             try? FileManager.default.removeItem(at: dest)
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "dos")

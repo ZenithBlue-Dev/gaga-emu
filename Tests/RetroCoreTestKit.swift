@@ -194,13 +194,13 @@ final class RetroCoreTestKit {
     }
 
     @MainActor
-    func assertUploadsPick(_ cases: [(ext: String, platform: String)], file: StaticString = #filePath, line: UInt = #line) {
+    func assertUploadsPick(_ cases: [(ext: String, platform: String)], file: StaticString = #filePath, line: UInt = #line) async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for (ext, platform) in cases {
             let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, platform, ext, file: file, line: line)
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), coreID, ext, file: file, line: line)

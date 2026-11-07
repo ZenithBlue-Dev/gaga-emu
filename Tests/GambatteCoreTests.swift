@@ -3,7 +3,7 @@ import XCTest
 
 /// Gambatte through the shared libretro adapter and the real bridge, running the generated homebrew ROM
 /// (`GBTestROM`). Also the adapter's tests: a later libretro core copies this file.
-final class GambatteCoreTests: XCTestCase {
+final class GambatteCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("gambatte")!.pointee
@@ -552,13 +552,13 @@ final class GambatteCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
+    func testUploadedGamesPickThisCore() async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for ext in ["gb", "gbc"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, ext)
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "gambatte")
@@ -614,7 +614,7 @@ final class GambatteCoreTests: XCTestCase {
 
     /// `-GagaImportROM <path>`: copied into the ROM folder, added once however often the app relaunches.
     @MainActor
-    func testDebugImportAddsTheGameOnce() throws {
+    func testDebugImportAddsTheGameOnce() async throws {
         let state = AppState()
         let saved = Set(state.games.map(\.id))
         let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).gb")
@@ -624,13 +624,16 @@ final class GambatteCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             try? FileManager.default.removeItem(at: dest)
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "gb")
         XCTAssertEqual(added.first?.resolvedCoreID(defaults: [:]), "gambatte")
         XCTAssertEqual(try Data(contentsOf: dest), try Data(contentsOf: source))
-        XCTAssertThrowsError(try state.importDebugROM(at: directory.appendingPathComponent("missing.gb")))
+        do {
+            try await state.importDebugROM(at: directory.appendingPathComponent("missing.gb"))
+            XCTFail("a missing file throws")
+        } catch {}
     }
 }

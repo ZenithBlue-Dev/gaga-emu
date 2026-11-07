@@ -7,7 +7,7 @@ import XCTest
 /// Azahar's Vulkan renderer on MoltenVK presenting to a CAMetalLayer. Device pending: built, not yet run on a
 /// device (docs/07 6.3). No homebrew 3DS program is generated yet, so the tests that need a running game skip.
 @MainActor
-final class AzaharCoreTests: XCTestCase {
+final class AzaharCoreTests: GagaTestCase {
     private var directory: URL!
     private let interface = GagaCoreRegistry_FindByID("azahar")!.pointee
 

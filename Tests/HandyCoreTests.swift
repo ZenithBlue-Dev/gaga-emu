@@ -4,7 +4,7 @@ import XCTest
 /// Handy (Atari Lynx) with the generated homebrew program (`LynxTestROM`), run without a boot ROM. The program uses
 /// no cart EEPROM, and upstream's libretro target has no cheats, so neither is tested.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class HandyCoreTests: XCTestCase {
+final class HandyCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -91,8 +91,8 @@ final class HandyCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("lnx", "lynx")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("lnx", "lynx")])
     }
 
     @MainActor

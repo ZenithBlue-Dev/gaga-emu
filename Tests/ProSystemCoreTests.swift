@@ -4,7 +4,7 @@ import XCTest
 /// ProSystem (Atari 7800) with the generated homebrew cartridge (`Atari7800TestROM`), booted without a BIOS. The
 /// 7800 has no battery memory and upstream's libretro target has no cheats, so neither is tested.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class ProSystemCoreTests: XCTestCase {
+final class ProSystemCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -87,8 +87,8 @@ final class ProSystemCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("a78", "atari7800")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("a78", "atari7800")])
     }
 
     @MainActor

@@ -4,7 +4,7 @@ import XCTest
 @testable import GagaEmu
 
 /// Runs the presets on mGBA's real frames, and the multi-pass chain's parts, through `MetalRenderer`.
-final class ShaderChainTests: XCTestCase {
+final class ShaderChainTests: GagaTestCase {
     private var directory: URL!
 
     override func setUpWithError() throws {
@@ -213,7 +213,7 @@ final class ShaderChainTests: XCTestCase {
 }
 
 /// Bad `.metal` input must end in a plain message, never a crash, and never a kept file.
-final class ImportedFilterTests: XCTestCase {
+final class ImportedFilterTests: GagaTestCase {
     private var directory: URL!
     private var store: ImportedFilterStore!
 
@@ -356,7 +356,7 @@ final class StubCoverProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-final class CoverArtTests: XCTestCase {
+final class CoverArtTests: GagaTestCase {
     private var directory: URL!
     private var fetcher: CoverArtFetcher!
     private let game = GameItem(id: UUID(), title: "Some Game (USA)", platformID: "gba", romPath: "/a.gba", coverPath: nil,
@@ -476,7 +476,7 @@ final class CoverArtTests: XCTestCase {
     }
 }
 
-final class TouchLayoutTests: XCTestCase {
+final class TouchLayoutTests: GagaTestCase {
     func testEveryLayoutStaysInTheBandsWithLargeTargetsAndNoOverlaps() {
         for layout in TouchSkinEngine.Layout.builtIn {
             let band = TouchSkinEngine.controlBand

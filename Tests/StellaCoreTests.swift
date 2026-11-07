@@ -4,7 +4,7 @@ import XCTest
 /// Stella (Atari 2600) with the generated homebrew cartridge (`Atari2600TestROM`). The 2600 has no battery
 /// memory and upstream's libretro target has no cheats, so neither is tested.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class StellaCoreTests: XCTestCase {
+final class StellaCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -101,8 +101,8 @@ final class StellaCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("a26", "atari2600")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("a26", "atari2600")])
     }
 
     @MainActor

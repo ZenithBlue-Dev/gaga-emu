@@ -3,7 +3,7 @@ import XCTest
 
 /// bsnes through the shared libretro adapter and the real bridge, running the generated homebrew ROM
 /// (`SNESTestROM`). No firmware and no commercial game.
-final class BsnesCoreTests: XCTestCase {
+final class BsnesCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("bsnes")!.pointee
@@ -499,13 +499,13 @@ final class BsnesCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
+    func testUploadedGamesPickThisCore() async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for ext in ["sfc", "smc"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, "snes")
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "bsnes")
@@ -548,7 +548,7 @@ final class BsnesCoreTests: XCTestCase {
 
     /// `-GagaImportROM <path>`: an .sfc file lands in the Library as a Super Famicom game on this core.
     @MainActor
-    func testDebugImportAddsTheGameOnce() throws {
+    func testDebugImportAddsTheGameOnce() async throws {
         let state = AppState()
         let saved = Set(state.games.map(\.id))
         let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).sfc")
@@ -558,8 +558,8 @@ final class BsnesCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             try? FileManager.default.removeItem(at: dest)
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "snes")

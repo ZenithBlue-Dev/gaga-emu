@@ -6,7 +6,7 @@ import XCTest
 /// tests use). The set's CRCs are not the dumped ones, so a copy goes in system/fbneo/patched, where upstream
 /// matches files by name and size only. No commercial ROM and no BIOS.
 /// Device-pending: written against a macOS host run of the same core and adapter, not yet run on the iPhone.
-final class FbneoCoreTests: XCTestCase {
+final class FbneoCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("fbneo")!.pointee

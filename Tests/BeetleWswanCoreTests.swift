@@ -3,7 +3,7 @@ import XCTest
 
 /// Beetle Cygne through the shared libretro adapter, running the generated cartridge (`WSTestROM`).
 /// Device pending: built and checked on a macOS host harness, not yet run on a device (docs/07 8.5).
-final class BeetleWswanCoreTests: XCTestCase {
+final class BeetleWswanCoreTests: GagaTestCase {
     private var probe: LibretroProbe!
 
     override func setUpWithError() throws {
@@ -108,8 +108,8 @@ final class BeetleWswanCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        LibretroProbe.assertUploadsPick("beetle_wswan", platforms: ["ws": "ws", "wsc": "ws", "pc2": "ws"])
+    func testUploadedGamesPickThisCore() async {
+        await LibretroProbe.assertUploadsPick("beetle_wswan", platforms: ["ws": "ws", "wsc": "ws", "pc2": "ws"])
     }
 
     @MainActor

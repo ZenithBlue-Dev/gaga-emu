@@ -228,13 +228,13 @@ final class LibretroProbe {
 
     /// An upload with each extension lands on `platformID` and plays on `coreID`. The saved Library is put back.
     @MainActor
-    static func assertUploadsPick(_ coreID: String, platforms: [String: String], file: StaticString = #filePath, line: UInt = #line) {
+    static func assertUploadsPick(_ coreID: String, platforms: [String: String], file: StaticString = #filePath, line: UInt = #line) async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() }
         for (ext, platformID) in platforms {
             let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, platformID, ext, file: file, line: line)
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), coreID, ext, file: file, line: line)

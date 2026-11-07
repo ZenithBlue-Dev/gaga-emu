@@ -4,7 +4,7 @@ import XCTest
 /// PicoDrive, the sideload-only 32X core and alternate Mega Drive core, through the shared libretro adapter and the real
 /// bridge, running the generated homebrew ROM (`MDTestROM`). No BIOS and no commercial game.
 /// Device-pending: written against a macOS host run of the same core and adapter, not yet run on the iPhone.
-final class PicodriveCoreTests: XCTestCase {
+final class PicodriveCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("picodrive")!.pointee

@@ -2,7 +2,7 @@ import XCTest
 @testable import GagaEmu
 
 /// Console ROMs in a .zip: placed by the one ROM inside, then stored unzipped. Every zip here is generated.
-final class ZipImportTests: XCTestCase {
+final class ZipImportTests: GagaTestCase {
     private var dir: URL!
 
     override func setUpWithError() throws {
@@ -105,7 +105,7 @@ final class ZipImportTests: XCTestCase {
     }
 
     @MainActor
-    func testImportStoresTheROMUnzippedUnderItsOwnName() throws {
+    func testImportStoresTheROMUnzippedUnderItsOwnName() async throws {
         let state = AppState()
         let saved = state.games
         let stem = "zip-\(UUID().uuidString)"
@@ -119,7 +119,8 @@ final class ZipImportTests: XCTestCase {
         }
         try FileManager.default.createDirectory(at: state.romDirectory, withIntermediateDirectories: true)
         try Self.deflatedZip([(rom.lastPathComponent, GBATestROM.build(), nil), ("readme.txt", Data("hi".utf8), nil)]).write(to: zip)
-        let game = try XCTUnwrap(state.importROM(at: zip))
+        let imported = await state.importArrived(zip).game
+        let game = try XCTUnwrap(imported)
         XCTAssertEqual(game.platformID, "gba")
         XCTAssertEqual(game.title, "\(stem) (USA)")
         XCTAssertEqual(URL(fileURLWithPath: game.romPath).lastPathComponent, rom.lastPathComponent)
@@ -128,7 +129,8 @@ final class ZipImportTests: XCTestCase {
 
         // The same zip again is the same game.
         try Self.deflatedZip([(rom.lastPathComponent, GBATestROM.build(), nil)]).write(to: zip)
-        XCTAssertEqual(state.importROM(at: zip)?.id, game.id)
+        let again = await state.importArrived(zip).game
+        XCTAssertEqual(again?.id, game.id)
         XCTAssertEqual(state.games.count, saved.count + 1)
     }
 
@@ -176,7 +178,7 @@ final class ZipImportTests: XCTestCase {
     /// An .iso names no platform by itself, so one in a zip or 7z is unpacked and placed by its sector 16, as a bare
     /// .iso is (device run 5: a PSP UMD in a 7z named .zip stayed "unknown").
     @MainActor
-    func testAnISOInAnArchiveIsPlacedByItsContents() throws {
+    func testAnISOInAnArchiveIsPlacedByItsContents() async throws {
         let state = AppState()
         let saved = state.games
         let stem = "iso-\(UUID().uuidString)"
@@ -189,7 +191,8 @@ final class ZipImportTests: XCTestCase {
                                   ("zip", try Self.zip64("\(stem)-c.iso", iso))] {
             let url = state.romDirectory.appendingPathComponent("\(stem)-\(suffix)-\(archive.count).\(suffix)")
             try archive.write(to: url)
-            let game = try XCTUnwrap(state.importROM(at: url), suffix)
+            let imported = await state.importArrived(url).game
+            let game = try XCTUnwrap(imported, suffix)
             XCTAssertEqual(game.platformID, "psp", suffix)
             XCTAssertEqual(URL(fileURLWithPath: game.romPath).pathExtension, "iso", suffix)
             XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: game.romPath)), iso, suffix)
@@ -208,7 +211,7 @@ final class ZipImportTests: XCTestCase {
     }
 
     @MainActor
-    func testTheSameROMNameNeverReplacesADifferentROM() throws {
+    func testTheSameROMNameNeverReplacesADifferentROM() async throws {
         let state = AppState()
         let saved = state.games
         let stem = "same-\(UUID().uuidString)"
@@ -217,18 +220,21 @@ final class ZipImportTests: XCTestCase {
         let first = GBATestROM.build()
         var second = first
         second[second.count - 1] ^= 0xFF
-        func importZip(_ zipName: String, _ data: Data) throws -> GameItem? {
+        func importZip(_ zipName: String, _ data: Data) async throws -> GameItem? {
             let zip = state.romDirectory.appendingPathComponent("\(stem)-\(zipName).zip")
             try Self.deflatedZip([("\(stem).gba", data, nil)]).write(to: zip)
-            return state.importROM(at: zip)
+            return await state.importArrived(zip).game
         }
-        let game = try XCTUnwrap(try importZip("a", first))
-        let other = try XCTUnwrap(try importZip("b", second), "another zip, same ROM name, other bytes")
+        let firstGame = try await importZip("a", first)
+        let game = try XCTUnwrap(firstGame)
+        let otherGame = try await importZip("b", second)
+        let other = try XCTUnwrap(otherGame, "another zip, same ROM name, other bytes")
         XCTAssertNotEqual(other.id, game.id)
         XCTAssertEqual(URL(fileURLWithPath: other.romPath).lastPathComponent, "\(stem) 2.gba")
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: game.romPath)), first, "the first ROM is untouched")
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: other.romPath)), second)
-        XCTAssertEqual(try importZip("c", first)?.id, game.id, "the same bytes again are the same game")
+        let thirdGame = try await importZip("c", first)
+        XCTAssertEqual(thirdGame?.id, game.id, "the same bytes again are the same game")
         XCTAssertEqual(state.games.count, saved.count + 2)
 
         // A plain file goes through the same placement.
@@ -277,7 +283,7 @@ final class ZipImportTests: XCTestCase {
     }
 
     @MainActor
-    func testARefusedOrDamagedZipSaysWhyAndAnUnclearOneOffersItsPlatforms() throws {
+    func testARefusedOrDamagedZipSaysWhyAndAnUnclearOneOffersItsPlatforms() async throws {
         let state = AppState()
         let saved = state.games
         let stem = "refused-\(UUID().uuidString)"
@@ -295,7 +301,8 @@ final class ZipImportTests: XCTestCase {
         for (name, data, error) in cases {
             let zip = state.romDirectory.appendingPathComponent("\(stem)-\(name).zip")
             try data.write(to: zip)
-            XCTAssertNil(state.importROM(at: zip), name)
+            let refused = await state.importArrived(zip).game
+            XCTAssertNil(refused, name)
             XCTAssertEqual(state.lastImportNote?.hasSuffix(try XCTUnwrap(error.errorDescription)), true, name)
             XCTAssertTrue(FileManager.default.fileExists(atPath: zip.path), "\(name) stays where it is")
         }
@@ -303,7 +310,8 @@ final class ZipImportTests: XCTestCase {
 
         let unclear = state.romDirectory.appendingPathComponent("\(stem)-two.zip")
         try Self.deflatedZip([("a.gba", gba, nil), ("b.nes", NESTestROM.build(), nil), ("c.gba", gba, nil)]).write(to: unclear)
-        let game = try XCTUnwrap(state.importROM(at: unclear))
+        let imported = await state.importArrived(unclear).game
+        let game = try XCTUnwrap(imported)
         XCTAssertEqual(game.platformID, "unknown")
         XCTAssertEqual(CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath))?.map(\.id), ["gba", "nes", "arcade", "dos"])
     }

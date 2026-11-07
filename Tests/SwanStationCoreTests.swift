@@ -6,7 +6,7 @@ import XCTest
 /// PS-EXE by patching a Sony BIOS at fixed offsets, and OpenBIOS refuses a disc with no licence sector. So these
 /// tests check the bridge contract (boot, picture, sound, memory card, states, cheat parsing) on OpenBIOS's own
 /// screen, not the homebrew program's picture. A player's own BIOS runs both.
-final class SwanStationCoreTests: XCTestCase {
+final class SwanStationCoreTests: GagaTestCase {
     private var directory: URL!
     private var exePath: String!
     private let interface = GagaCoreRegistry_FindByID("swanstation")!.pointee

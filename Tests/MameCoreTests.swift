@@ -4,7 +4,7 @@ import XCTest
 /// MAME through the shared libretro adapter and the real bridge, running the generated homebrew set for the
 /// `gridlee` machine (`GridleeTestSet`). `GambatteCoreTests` covers the adapter itself; this file covers what
 /// is MAME's: ROM sets by machine name, NVRAM, MAME's own state format.
-final class MameCoreTests: XCTestCase {
+final class MameCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("mame")!.pointee
@@ -416,7 +416,7 @@ final class MameCoreTests: XCTestCase {
     // MARK: - Import
 
     @MainActor
-    func testUploadedSetsPickThisCore() {
+    func testUploadedSetsPickThisCore() async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved }
@@ -427,7 +427,7 @@ final class MameCoreTests: XCTestCase {
             let text = Data("set".utf8)
             try? SevenZipTestArchive.build([("pacman.6e", text), ("82s123", text)]).write(to: url)
             defer { try? FileManager.default.removeItem(at: url) }
-            state.addUploads([name])
+            await state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, "arcade")
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "mame")
@@ -447,8 +447,8 @@ final class MameCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             if let existing { try? existing.write(to: dest) } else { try? FileManager.default.removeItem(at: dest) }
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == "gridlee.zip" && !saved.contains($0.id) }
         XCTAssertLessThanOrEqual(added.count, 1)
         XCTAssertEqual(try Data(contentsOf: dest), GridleeTestSet.build())

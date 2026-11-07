@@ -3,7 +3,7 @@ import XCTest
 
 /// Nestopia UE through the shared libretro adapter and the real bridge, running the generated homebrew
 /// ROM (`NESTestROM`). `GambatteCoreTests` covers the adapter itself; this file covers what is Nestopia's.
-final class NestopiaCoreTests: XCTestCase {
+final class NestopiaCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("nestopia")!.pointee
@@ -553,12 +553,12 @@ final class NestopiaCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
+    func testUploadedGamesPickThisCore() async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         let name = "upload-\(UUID().uuidString).nes"
-        state.addUploads([name])
+        await state.addUploads([name])
         let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
         XCTAssertEqual(added?.platformID, "nes")
         XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "nestopia")
@@ -599,7 +599,7 @@ final class NestopiaCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testDebugImportAddsTheGameOnce() throws {
+    func testDebugImportAddsTheGameOnce() async throws {
         let state = AppState()
         let saved = Set(state.games.map(\.id))
         let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).nes")
@@ -609,8 +609,8 @@ final class NestopiaCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             try? FileManager.default.removeItem(at: dest)
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "nes")

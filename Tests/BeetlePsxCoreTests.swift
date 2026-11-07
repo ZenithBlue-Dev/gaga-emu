@@ -10,7 +10,7 @@ import XCTest
 /// screen, not the homebrew program's picture, and that a PS-EXE is refused with a message. A player's own BIOS
 /// runs both. Device pending: built, not yet run on a device (docs/07 5.4).
 @MainActor
-final class BeetlePsxCoreTests: XCTestCase {
+final class BeetlePsxCoreTests: GagaTestCase {
     private var directory: URL!
     private var cuePath: String!
     private let interface = GagaCoreRegistry_FindByID("beetle_psx")!.pointee

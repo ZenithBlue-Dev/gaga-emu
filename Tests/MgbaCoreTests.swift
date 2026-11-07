@@ -5,7 +5,7 @@ import XCTest
 @testable import GagaEmu
 
 /// mGBA through the real bridge, running the generated homebrew ROM (`GBATestROM`).
-final class MgbaCoreTests: XCTestCase {
+final class MgbaCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("mgba")!.pointee
@@ -102,13 +102,13 @@ final class MgbaCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedFilesReachTheLibraryOnce() {
+    func testUploadedFilesReachTheLibraryOnce() async {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         let name = "upload-\(UUID().uuidString).gba"
-        state.addUploads([name])
-        state.addUploads([name])
+        await state.addUploads([name])
+        await state.addUploads([name])
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "gba")

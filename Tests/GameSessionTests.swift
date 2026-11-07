@@ -8,7 +8,7 @@ private var injectedEvent: (@convention(c) (GagaEventSeverity, Int32, UnsafePoin
 private var injectedUserdata: UnsafeMutableRawPointer?
 
 @MainActor
-final class GameSessionTests: XCTestCase {
+final class GameSessionTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private var skins: TouchSkinEngine!

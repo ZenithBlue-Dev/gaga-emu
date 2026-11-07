@@ -4,7 +4,7 @@ import XCTest
 /// Beetle SuperGrafx through the shared libretro adapter, running the generated SuperGrafx card
 /// (`PCETestROM.build(superGrafx: true)`). Device pending: built and checked on a macOS host harness, not yet run
 /// on a device (docs/07 8.2).
-final class BeetleSupergrafxCoreTests: XCTestCase {
+final class BeetleSupergrafxCoreTests: GagaTestCase {
     private var probe: LibretroProbe!
 
     override func setUpWithError() throws {
@@ -97,8 +97,8 @@ final class BeetleSupergrafxCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        LibretroProbe.assertUploadsPick("beetle_supergrafx", platforms: ["sgx": "sgx"])
+    func testUploadedGamesPickThisCore() async {
+        await LibretroProbe.assertUploadsPick("beetle_supergrafx", platforms: ["sgx": "sgx"])
     }
 
     @MainActor

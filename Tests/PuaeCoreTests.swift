@@ -4,7 +4,7 @@ import XCTest
 /// PUAE (Amiga 500) with the generated bootable floppy (`AmigaTestROM`), booted on upstream's built-in AROS Kickstart
 /// replacement: no Kickstart is in the system folder. AROS takes about 600 frames to reach the bootblock.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class PuaeCoreTests: XCTestCase {
+final class PuaeCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
     private let boot = 650
@@ -105,8 +105,8 @@ final class PuaeCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("adf", "amiga"), ("hdf", "amiga")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("adf", "amiga"), ("hdf", "amiga")])
     }
 
     @MainActor

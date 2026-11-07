@@ -7,7 +7,7 @@ import XCTest
 /// generated data only. Input, sound and cheats need a real BIOS and game, so they are checked by hand.
 /// Device-pending: built for the iPhone, not yet run there. A macOS build of the same sources passed these
 /// checks.
-final class BeetleSaturnCoreTests: XCTestCase {
+final class BeetleSaturnCoreTests: GagaTestCase {
     private var directory: URL!
     private var system: URL!
     private var cuePath: String!

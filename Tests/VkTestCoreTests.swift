@@ -6,7 +6,7 @@ import XCTest
 /// The layer path (milestone 5.1) through the real bridge: the Vulkan test core (Cores/vktest) renders
 /// with the adapter's libretro Vulkan context on MoltenVK and presents to a CAMetalLayer.
 @MainActor
-final class VkTestCoreTests: XCTestCase {
+final class VkTestCoreTests: GagaTestCase {
     private var directory: URL!
     private var romPath: String!
     private let interface = GagaCoreRegistry_FindByID("vktest")!.pointee

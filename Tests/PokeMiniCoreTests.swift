@@ -3,7 +3,7 @@ import XCTest
 
 /// PokeMini through the shared libretro adapter, running the generated cartridge (`PMTestROM`).
 /// Device pending: built and checked on a macOS host harness, not yet run on a device (docs/07 8.6).
-final class PokeMiniCoreTests: XCTestCase {
+final class PokeMiniCoreTests: GagaTestCase {
     private var probe: LibretroProbe!
     private var eepromPath: String { (probe.romPath as NSString).deletingPathExtension + ".eep" }
 
@@ -100,8 +100,8 @@ final class PokeMiniCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        LibretroProbe.assertUploadsPick("pokemini", platforms: ["min": "pokemini"])
+    func testUploadedGamesPickThisCore() async {
+        await LibretroProbe.assertUploadsPick("pokemini", platforms: ["min": "pokemini"])
     }
 
     @MainActor

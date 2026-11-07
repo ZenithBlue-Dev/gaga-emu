@@ -7,7 +7,7 @@ import XCTest
 /// MoltenVK, presenting to a CAMetalLayer. The game is PSPTestELF, linked by the core's HLE kernel, so no
 /// firmware is read. Device pending: these were built but have not run on a device yet (docs/07 5.5).
 @MainActor
-final class PpssppCoreTests: XCTestCase {
+final class PpssppCoreTests: GagaTestCase {
     private var directory: URL!
     private var elfPath: String!
     private let interface = GagaCoreRegistry_FindByID("ppsspp")!.pointee

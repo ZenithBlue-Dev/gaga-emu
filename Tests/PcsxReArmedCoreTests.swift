@@ -3,7 +3,7 @@ import XCTest
 
 /// PCSX-ReARMed through the shared libretro adapter and the real bridge, running the generated homebrew
 /// program (`PS1TestEXE`) on the core's HLE BIOS. No Sony BIOS is in the system folder.
-final class PcsxReArmedCoreTests: XCTestCase {
+final class PcsxReArmedCoreTests: GagaTestCase {
     private var directory: URL!
     private var exePath: String!
     private let interface = GagaCoreRegistry_FindByID("pcsx_rearmed")!.pointee
@@ -548,14 +548,14 @@ final class PcsxReArmedCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() throws {
+    func testUploadedGamesPickThisCore() async throws {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         // An .exe is a PS-EXE only by its first bytes (DosboxPureCoreTests), and a disc image by its contents
         // (GagaEmuTests.testDiscImagesArePlacedByContent), so only .pbp goes by name.
         let name = "upload-\(UUID().uuidString).pbp"
-        state.addUploads([name])
+        await state.addUploads([name])
         let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
         XCTAssertEqual(added?.platformID, "ps1")
         XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "pcsx_rearmed")
@@ -604,7 +604,7 @@ final class PcsxReArmedCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testDebugImportAddsTheGameOnce() throws {
+    func testDebugImportAddsTheGameOnce() async throws {
         let state = AppState()
         let saved = Set(state.games.map(\.id))
         let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).exe")
@@ -614,8 +614,8 @@ final class PcsxReArmedCoreTests: XCTestCase {
             for game in state.games where !saved.contains(game.id) { state.delete(game) }
             try? FileManager.default.removeItem(at: dest)
         }
-        try state.importDebugROM(at: source)
-        try state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
+        try await state.importDebugROM(at: source)
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "ps1")

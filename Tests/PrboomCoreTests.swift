@@ -4,7 +4,7 @@ import XCTest
 /// PrBoom with the generated IWAD (`DoomTestWAD`): no id Software or Freedoom data. The title page shows from the
 /// first frame; Start, then A twice (New Game, then the default skill) puts the player in MAP01.
 /// Device-pending: checked on a macOS host harness, not yet run on the iPhone.
-final class PrboomCoreTests: XCTestCase {
+final class PrboomCoreTests: GagaTestCase {
     private var kit: RetroCoreTestKit!
     private var romPath: String!
 
@@ -107,8 +107,8 @@ final class PrboomCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
-        kit.assertUploadsPick([("wad", "doom")])
+    func testUploadedGamesPickThisCore() async {
+        await kit.assertUploadsPick([("wad", "doom")])
     }
 
     @MainActor

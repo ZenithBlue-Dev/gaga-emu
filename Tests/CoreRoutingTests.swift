@@ -3,7 +3,7 @@ import XCTest
 
 /// Which core opens a file. Import places a file on a platform by its contents, and the platform's default core
 /// runs it. The registry's lookup by extension alone must agree with the catalog for every extension it claims.
-final class CoreRoutingTests: XCTestCase {
+final class CoreRoutingTests: GagaTestCase {
     private var dir: URL!
 
     override func setUpWithError() throws {
