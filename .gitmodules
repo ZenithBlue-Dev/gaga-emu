@@ -49,3 +49,6 @@
 [submodule "Cores/mame/upstream"]
 	path = Cores/mame/upstream
 	url = https://github.com/libretro/mame.git
+[submodule "Cores/beetle_saturn/upstream"]
+	path = Cores/beetle_saturn/upstream
+	url = https://github.com/libretro/beetle-saturn-libretro
