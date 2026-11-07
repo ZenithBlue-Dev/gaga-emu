@@ -52,3 +52,18 @@
 [submodule "Cores/mupen64plus_next/upstream"]
 	path = Cores/mupen64plus_next/upstream
 	url = https://github.com/libretro/mupen64plus-libretro-nx.git
+[submodule "Cores/snes9x/upstream"]
+	path = Cores/snes9x/upstream
+	url = https://github.com/libretro/snes9x.git
+[submodule "Cores/genesis_plus_gx/upstream"]
+	path = Cores/genesis_plus_gx/upstream
+	url = https://github.com/libretro/Genesis-Plus-GX.git
+[submodule "Cores/picodrive/upstream"]
+	path = Cores/picodrive/upstream
+	url = https://github.com/libretro/picodrive.git
+[submodule "Cores/swanstation/upstream"]
+	path = Cores/swanstation/upstream
+	url = https://github.com/libretro/swanstation.git
+[submodule "Cores/fbneo/upstream"]
+	path = Cores/fbneo/upstream
+	url = https://github.com/libretro/FBNeo.git
