@@ -50,6 +50,7 @@ build_slice() { # core dir sdk target
         -o "$binary" "${objects[@]}"
     xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
 
+    # A bundle identifier allows no underscore, and the short version string only digits and dots.
     cat >"$framework/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -57,11 +58,11 @@ build_slice() { # core dir sdk target
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleExecutable</key><string>$CORE_FRAMEWORK</string>
-    <key>CFBundleIdentifier</key><string>com.zenithblue.gagaemu.$core</string>
+    <key>CFBundleIdentifier</key><string>com.zenithblue.gagaemu.${core//_/-}</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>$CORE_FRAMEWORK</string>
     <key>CFBundlePackageType</key><string>FMWK</string>
-    <key>CFBundleShortVersionString</key><string>$CORE_VERSION</string>
+    <key>CFBundleShortVersionString</key><string>${CORE_VERSION//[^0-9.]/}</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>MinimumOSVersion</key><string>$min_ios</string>
 </dict>
