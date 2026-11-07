@@ -65,7 +65,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 1u
+#define GAGA_BRIDGE_ABI_VERSION 2u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -166,12 +166,23 @@ typedef struct GagaCoreInterface {
     void (*set_video_callback)(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor* frame, void* userdata), void* userdata);
     void (*set_audio_callback)(GagaInstance* inst, void (*cb)(const GagaAudioDescriptor* audio, void* userdata), void* userdata);
 
-    // Save States (File-path based to support dynamic NAND/Card sizes)
-    bool (*save_state_file)(GagaInstance* inst, const char* file_path);
-    bool (*load_state_file)(GagaInstance* inst, const char* file_path);
+    // Save states. A core only fills and reads bytes: the host owns files, headers, checksums and atomic
+    // writes. state_size is the exact byte count save_state writes now. NULL state_size means no states.
+    // state_version changes when old state bytes stop meaning the same thing. The host refuses any other.
+    uint32_t state_version;
+    size_t (*state_size)(GagaInstance* inst);
+    bool   (*save_state)(GagaInstance* inst, void* buffer, size_t size);
+    // False fills error, which may be NULL. The running game must be unchanged afterwards.
+    bool   (*load_state)(GagaInstance* inst, const void* buffer, size_t size, char* error, size_t error_capacity);
 
-    // Cheats
-    void (*apply_cheat)(GagaInstance* inst, uint32_t index, bool enabled, const char* code);
+    // Forces battery save data to storage. Called on pause and before destroy. NULL if a core has none.
+    void (*flush_battery_save)(GagaInstance* inst);
+
+    // Cheats, by a host-chosen ID. code holds one or more newline-separated lines in any format the core
+    // recognises. False fills error, which may be NULL, and adds nothing. NULL cheat_add means no cheats.
+    bool (*cheat_add)(GagaInstance* inst, uint32_t id, const char* code, bool enabled, char* error, size_t error_capacity);
+    void (*cheat_remove)(GagaInstance* inst, uint32_t id);
+    void (*cheat_set_enabled)(GagaInstance* inst, uint32_t id, bool enabled);
 
     // Runs with no instance or game. Returns false and fills error on failure.
     bool (*self_test)(char* error, size_t error_capacity);
@@ -211,9 +222,13 @@ Each remaining stub is a weak definition in the app binary. A core's stub must b
 
 `Sources/Bridge/EmulatorCoreProtocol.swift` defines `EmulatorCoreError`, `VideoFrame`, `AudioPacket`, `EmulatorCoreProtocol` and `GagaCoreWrapper`. The wrapper's initializer throws: it checks `abi_version`, runs `self_test` and creates the instance, so a core that fails either check never gets an instance. A `.userInteractive` serial queue owns every instance call, and a strict timer at `target_fps` drives `step_frame`. `pause` and `stop` are synchronous barriers on that queue, so no callback runs after they return. `Sources/Session/GameSession.swift` is the only caller in the app. `create` gets a per-game save directory, `Saves/<rom file name>/`, from `GagaCoreWrapper.saveDirectory(forROM:)`, and `load_rom` gets a path only.
 
+`Sources/Session/SaveStore.swift` owns everything on disk for a game. State files go in `States/` and `cheats.json` beside them, in the same save directory, so both outlive the game's place in the Library. `SaveStateFile` wraps the core's bytes in a header: `GAGASTAT`, format version, 32-byte core ID, `state_version`, payload length and SHA-256. It checks all of these before a core sees a byte. Every file goes through `AtomicFile`: temp file, `fsync`, `rename`. The wrapper takes a snapshot of the running game before `load_state`, and loads it back if the core refuses, so a bad state leaves the game running.
+
+Fast-forward runs whole frames: at N times speed, each timer tick steps the core N times, presents only the last frame and drops the audio of all N, so nothing plays pitched up or out of step.
+
 ### 2.4 Bridge additions
 
-**Built** (2.5, listed in section 2.1): `GAGA_BRIDGE_ABI_VERSION` with `abi_version`, `self_test`, `pause`, `resume`, `set_event_callback` and `GagaEventSeverity`. A fatal event during `load_rom` supplies the message the player sees. A fatal event while playing ends the session and shows its message on the Library.
+**Built** (2.5 and 2.10, listed in section 2.1): `GAGA_BRIDGE_ABI_VERSION` with `abi_version`, `self_test`, `pause`, `resume`, `set_event_callback` and `GagaEventSeverity`. A fatal event during `load_rom` supplies the message the player sees. A fatal event while playing ends the session and shows its message on the Library. ABI 2 replaced the file-path save state calls and `apply_cheat`, which no core used, with `state_version`, `state_size`, `save_state`, `load_state`, `flush_battery_save`, `cheat_add`, `cheat_remove` and `cheat_set_enabled`.
 
 **Planned.** These arrive with the frame paths that need them. Each changes `GagaCoreInterface`, so each bumps the ABI version.
 
@@ -293,7 +308,13 @@ Status: built for mGBA. `scripts/build-core.sh` writes `build/cores/MgbaCore.xcf
    - Every instance call runs on one serial queue. Callbacks fire on it, inside a host call. Marshal any worker thread to `step_frame`. Descriptor and message pointers are valid only during the callback. No callback after `destroy` returns.
    - `load_rom` gets a path only, and returns false after a FATAL event whose message the player can read. FATAL during play ends the session with its message.
    - The host timer calls `step_frame` at `target_fps` with 4 inputs. Do not self-pace. Each audio packet carries `sample_rate`.
-   - Write battery saves into the `save_dir` you are given. `Cores/mgba/MgbaCore.c` is the pattern.
+   - Write battery saves into the `save_dir` you are given, and implement `flush_battery_save` so they are on disk when it returns. The host calls it on pause and before `destroy`. `Cores/mgba/MgbaCore.c` is the pattern.
+   - Save states are required by `docs/07` section 2. Implement `state_size`, `save_state` and `load_state` over plain buffers. The host owns the file, header, checksum and atomic write, so the core never opens a state file.
+   - Set `state_version` from the core's own state format, and change it when old bytes stop meaning the same thing. The host refuses a file with any other value.
+   - `load_state` validates what it can, such as the size and the ROM the state came from, and returns false with an error for the player. The running game must be unchanged afterwards. The host also takes a snapshot first and loads it back after a refusal, as a second line of defence, not as a reason to skip validation.
+   - `state_size` returns the exact byte count `save_state` writes now. The host asks before each save, so it may change between saves.
+   - `step_frame` must be safe to call several times in one timer tick, because fast-forward does. The host drops the audio and shows the last frame, so a core does not need a fast-forward mode.
+   - Cheats are optional: a NULL `cheat_add` hides the menu row. If you implement it, also implement `cheat_remove` and `cheat_set_enabled`. `id` is the host's and stays stable across sessions. A code the core cannot parse returns false with an error and adds nothing. The host re-adds stored cheats after `load_rom` on every launch.
 8. **Delete the core's `DEFINE_CORE_INTERFACE(<Name>_GetInterface, ...)` line** in `Sources/Bridge/GagaCoreRegistry.c`. Keep its entry in `s_core_getters`. Check that `CoreCatalog` has the `core_id` and the file extensions the core really accepts.
 9. **Add to `project.yml`,** under the `GagaEmu` target's `dependencies`, then run `xcodegen generate`:
    ```yaml
@@ -302,7 +323,7 @@ Status: built for mGBA. `scripts/build-core.sh` writes `build/cores/MgbaCore.xcf
    ```
 10. **Build.** `scripts/build-core.sh <id>` must print `exports (iphonesimulator): _<Name>_GetInterface`, the same for `iphoneos`, and `no-JIT gate: pass <Framework>` twice. The app's post-build gate must print `pass` for the framework. It fails the build if the framework is not embedded.
 11. **Check the privacy manifest.** Run `nm -u` on the framework. Any required-reason API, such as `fstat`, needs an entry in `Sources/App/PrivacyInfo.xcprivacy`.
-12. **Test.** Add `Tests/<Name>CoreTests.swift`, reaching the core through `GagaCoreRegistry_FindByID("<id>")`, because the test bundle cannot link the framework's symbol. Use a homebrew or generated ROM, never a commercial one, and no vendor BIOS. Assert that it loads, frames match, input changes the frame, audio is non-silent, a FATAL message arrives, and `CodeGenCheck.violations()` is empty after a run. `Tests/MgbaCoreTests.swift` and `Sources/Debug/GBATestROM.swift` are the pattern. Update any test that uses this core's ID as its example of a stub.
+12. **Test.** Add `Tests/<Name>CoreTests.swift`, reaching the core through `GagaCoreRegistry_FindByID("<id>")`, because the test bundle cannot link the framework's symbol. Use a homebrew or generated ROM, never a commercial one, and no vendor BIOS. Assert that it loads, frames match, input changes the frame, audio is non-silent, a FATAL message arrives, `CodeGenCheck.violations()` is empty after a run, a state round trip restores the game, a refused state leaves the game running, and any cheat format has an effect. `Tests/MgbaCoreTests.swift` and `Sources/Debug/GBATestROM.swift` are the pattern. Update any test that uses this core's ID as its example of a stub.
 13. **Verify in the app on the Simulator.** Import through a real importer, launch from the Library, press a touch control, pause, resume, quit, relaunch ten times, and check the `.sav`. Run the tests with `-enableThreadSanitizer YES`. Build `generic/platform=iOS` with `CODE_SIGNING_ALLOWED=NO`, both Debug and Release.
 14. **Record.** Update the core's rows in `docs/03` (pin, licence, no-JIT) and `docs/04` section 7.1, and its milestone in `docs/07`. Its status stays "built, device benchmark pending" until a device run per `docs/04` section 7.2 exists.
 
@@ -364,11 +385,11 @@ Tapping a cover plays, as does the Play button. The game view opens only once th
 | Play | Starts a game session | built: only the mock core can run a game until 2.9 |
 | Change Core | Opens the core picker, with an option to set the platform default (`docs/03` section 8) | built |
 | Choose Filter | Opens the filter picker for this game | built: the game session applies it |
-| Manage Saves | Save state slots with thumbnails | planned: the sheet states that no saves exist yet. 2.6 fills it. |
+| Manage Saves | Save state slots with time and thumbnail, Load, Delete with confirmation, and Export Save for the game's battery save, through the share sheet. Loading from here starts the game on that state. | built |
 | Edit Details | Title and favorite, plus platform, core, file size and play time as read-only metadata | built; cover art planned |
-| Delete | Asks for confirmation, then removes the game and its play history from the library. The file stays in the ROM folder. | built |
+| Delete | Asks for confirmation, then removes the game and its play history from the library. The file stays in the ROM folder. The confirmation says that saves and save states stay on the device and return if the same file is added again. | built |
 
-Exporting a battery save and states is planned with 2.6 and has no menu item yet.
+Export Save covers the battery save. Save state files are not exported: they belong to one core version, and nothing in the app can import them.
 
 ### 3.2 Add
 
@@ -394,10 +415,10 @@ Two panes: categories on the left, the selected category on the right. Only rows
 
 | Category | Rows | Status |
 |---|---|---|
-| Play | Total play time and session count, read-only. Quick Start opens the most recent game when the app starts, because GagaEmu has no preparation page to skip. Auto Full Screen removes the touch bands when a controller owns Player 1. Respect Silent Mode makes game audio obey the silent switch. | built |
+| Play | Total play time and session count, read-only. Quick Start opens the most recent game when the app starts, because GagaEmu has no preparation page to skip. Auto Save State saves on quit and when the app goes to the background, and offers to resume when that game next starts; it follows `canUseAutoSaveState`, so a saved value of on does not bypass the gate. Auto Full Screen removes the touch bands when a controller owns Player 1. Respect Silent Mode makes game audio obey the silent switch. | built |
 | Library | Game count, BIOS Files, default core per platform | built |
 | Graphics | Default Filter, which opens the filter picker | built |
-| Controls | Touch Control, connected controllers with their player slot, TriggerPro. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. | built |
+| Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
 | About | Version, Support and FAQ, Feedback, Rate Gaga-Emu, Terms of Service, Privacy Policy. Debug builds add Run Benchmark. | built: Rate Gaga-Emu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
@@ -410,7 +431,6 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 
 | Row | Home when it returns | Returns with |
 |---|---|---|
-| Auto Save States | Play | 2.6, gated by `canUseAutoSaveState` |
 | Cover Scraping | Library | 3.8 |
 | Assign Skin | Controls | 3.9 |
 | RetroAchievements | Play | 3.10 |
@@ -440,15 +460,19 @@ An ink game cover with a vermilion spine on paper, drawn by `scripts/make_app_ic
 
 ### 3.7 Game view and pause menu
 
-`GameView` covers the whole screen, with the status bar and home indicator hidden. The picture is aspect fit on the ink letterbox, which stays dark in both appearances. Touch controls sit in a band on each side of the picture, inside the safe area, with hit areas of at least 44pt. The left band holds L, the D-pad and Select. The right band holds R, the face buttons and Start. A pause button sits top left. When a controller owns Player 1, the controls hide; with Auto Full Screen on, the bands go too and the picture takes the width. Every control has a VoiceOver label, and activating one presses that button briefly.
+`GameView` covers the whole screen, with the status bar and home indicator hidden. The picture is aspect fit on the ink letterbox, which stays dark in both appearances. Touch controls sit in a band on each side of the picture, inside the safe area, with hit areas of at least 44pt. The left band holds L, the D-pad and Select. The right band holds R, the face buttons and Start. A pause button sits top left and a fast-forward toggle top right. The toggle switches between normal speed and the last speed chosen, which starts at 2x. When a controller assigned to Player 1 has sent input in this launch, the controls hide; with Auto Full Screen on, the bands go too and the picture takes the width. iOS can report a controller that never sends anything, as the Simulator does on every launch, so a connected controller alone never hides touch. Keyboard mapping feeds Player 1. Every control has a VoiceOver label, and activating one presses that button briefly.
 
-The pause menu is a compact paper side sheet over the dimmed game: Paused, the game title, Resume and Quit to Library. Later entries, such as save states, appear only when they work. Opening it pauses the core and audio. Quit ends the session and returns to the Library, where Continue shows the game.
+The pause menu is a compact paper side sheet over the dimmed game: Paused, the game title, Resume, Save State, Load State, Fast Forward (Off, then each allowed speed), Cheats and Quit to Library. Save State, Load State and Cheats appear only for a core that implements them. See Gaga Plus appears only while the gate is open, and never for a lifetime owner. Opening the menu pauses the core and audio. Quit ends the session and returns to the Library, where Continue shows the game.
+
+**From a controller.** Pressing Menu and Options together, or Home where the system passes it through, opens and closes the menu. The game does not receive that Start and Select. Either button alone still reaches the game.
+
+**Saves.** Save State writes a new slot and shows the time. Load State opens the Manage Saves sheet. A state that cannot load shows why, and the game keeps running. Reaching the free limit explains it and suggests deleting one. The auto save has one fixed slot and does not count against the limit.
+
+**Cheats.** The sheet has a name field and a code field on the left, and this game's cheats with a switch and a delete button on the right. The Add Cheat button sits above the fields, because the landscape keyboard covers what is below them. The core decides whether a code is valid, and its reason is shown beside that button. mGBA accepts GameShark, Action Replay, CodeBreaker and VBA formats.
 
 **Pausing.** The menu, backgrounding and audio interruptions are separate reasons, and play resumes only when all have cleared. An interruption that ends without the system's resume hint leaves the menu open, so the player chooses.
 
 **Failures.** A load runs before the game view opens. If it fails, the Library shows an alert with the core's own message and no game view opens. A fatal core event while playing closes the game view and shows the same alert.
-
-`shortcut:` the pause button is the only way to open the menu, so a player with a controller still reaches for the screen. A controller combination is the upgrade.
 
 ---
 
@@ -478,11 +502,11 @@ Premium is five items. Free-tier numbers are GagaEmu policy.
 
 | Paywall item | Free | Premium | Enforced in code today |
 |---|---|---|---|
-| Higher fast-forward speed | 2x | 5x | No: `maxFastForward` has no caller and no fast-forward exists. |
-| Unlimited Save States | 3 | Unlimited | No: `canAddSaveState` has no caller and no save state UI exists. |
-| Unlimited Cheat Codes | 3 | Unlimited | No: `canAddCheat` has no caller and no cheat UI exists. |
+| Higher fast-forward speed | 2x | 5x | Yes: `GameSession.fastForwardSpeeds` filters by `maxFastForward`, and `setFastForward` clamps to it. |
+| Unlimited Save States | 3 | Unlimited | Yes: `GameSession.saveState` checks `canAddSaveState`. The auto save slot does not count. |
+| Unlimited Cheat Codes | 3 | Unlimited | Yes: `GameSession.addCheat` checks `canAddCheat`. |
 | Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film | Geom CRT, Geom CRT Border | Yes: `canUseShader` in `FilterPickerView.swift`. |
-| Auto Save State | Off | Available | Gate exists: `canUseAutoSaveState`. Its row is hidden until 2.6. |
+| Auto Save State | Off | Available | Yes: `AppState.autoSaveEnabled` needs `canUseAutoSaveState`, and the Settings row becomes a locked row without it. |
 
 **Sell only what works.** `anime4k` and `crt-royale` are not premium items until implemented (milestone 3.4): neither is in `premiumShaderIDs` or `ShaderCatalog`. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
 
@@ -514,7 +538,7 @@ The paywall stays off in submitted builds until a real core runs end to end. Whi
 |---|---|---|
 | Persistence | JSON at `Application Support/GagaEmu/state.json`; no SQLite or Core Data (`AppState.swift:221-248`, `docs/03` section 8) | built |
 | Audio | `AudioEngineManager`: `AVAudioEngine` source node pulling from a ring buffer, with `LinearResampler` converting core audio to 48 kHz. | built |
-| Controllers | `ControllerManager`: MFi, DualShock 4, DualSense, Xbox, Joy-Con and keyboards | built. Keyboard mapping exists, but the session does not read it yet. |
+| Controllers | `ControllerManager`: MFi, DualShock 4, DualSense, Xbox, Joy-Con and keyboards | built. The session reads keyboard mapping for Player 1. |
 | Touch skins | `TouchSkinEngine`: `.deltaskin` and flex skins, CoreHaptics. One default layout for all platforms; 3.9 adds skin assignment. | built |
 | TriggerPro | `TriggerProManager`: turbo, hold and combo, on player 1 | built |
 | Game Center | Entitlement present, GameKit linked. `GameCenter.authenticate` signs in the local player in the background, with no failure UI. No leaderboards or achievements. | built |
