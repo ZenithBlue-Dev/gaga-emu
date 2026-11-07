@@ -88,7 +88,7 @@ public enum RomPatcher {
         }
     }()
 
-    // MARK: IPS (no RLE records; those throw .unsupported)
+    // MARK: IPS, including RLE records
 
     static func applyIPS(_ patch: Data, to source: Data) throws -> Data {
         var r = Reader(patch)

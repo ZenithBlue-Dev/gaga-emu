@@ -347,6 +347,41 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertFalse(checksums.sha1.isEmpty)
     }
 
+    func testRomPatcherIPSRLE() throws {
+        func ips(_ records: [UInt8]...) -> Data {
+            var patch = Data("PATCH".utf8)
+            for record in records { patch.append(contentsOf: record) }
+            patch.append(Data("EOF".utf8))
+            return patch
+        }
+        let source = Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66])
+
+        // Offset 1, size 0 marks RLE, run 3, value 0xEE.
+        let rle: [UInt8] = [0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x03, 0xEE]
+        XCTAssertEqual(try RomPatcher.apply(ips(rle), to: source), Data([0x11, 0xEE, 0xEE, 0xEE, 0x55, 0x66]))
+
+        // RLE mixed with a normal record, applied in order.
+        let normal: [UInt8] = [0x00, 0x00, 0x05, 0x00, 0x01, 0x99]
+        XCTAssertEqual(try RomPatcher.apply(ips(rle, normal), to: source), Data([0x11, 0xEE, 0xEE, 0xEE, 0x55, 0x99]))
+
+        // A run past the end grows the image.
+        let grow: [UInt8] = [0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0xAB]
+        XCTAssertEqual(try RomPatcher.apply(ips(grow), to: source), Data([0x11, 0x22, 0x33, 0x44, 0xAB, 0xAB, 0xAB, 0xAB]))
+
+        // A run past a gap zero-fills the gap.
+        let gap: [UInt8] = [0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x02, 0xCD]
+        XCTAssertEqual(try RomPatcher.apply(ips(gap), to: source),
+                       Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x00, 0x00, 0xCD, 0xCD]))
+
+        // Source is untouched, and a cut-off RLE record throws.
+        XCTAssertEqual(source, Data([0x11, 0x22, 0x33, 0x44, 0x55, 0x66]))
+        var cut = Data("PATCH".utf8)
+        cut.append(contentsOf: [0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x03])
+        XCTAssertThrowsError(try RomPatcher.apply(cut, to: source)) {
+            XCTAssertEqual($0 as? RomPatcher.PatchError, .truncated)
+        }
+    }
+
     // MARK: - MultiDiscHelper Tests
 
     func testMultiDiscHelperParsingAndPlaylist() throws {
