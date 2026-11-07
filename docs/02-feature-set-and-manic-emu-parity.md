@@ -57,7 +57,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Controllers panel** [S]: a side panel that slides in with the main screen visible at its edge, opened from the top-left button on Games. It has a `Touch Control` row with a `Player 1` picker, plus `?` and `...` buttons. Status: slot assignment built, in Settings > Controls.
 - **Player slots**: only `Player 1` is seen [S]. Players 1 to 4 and touch fallback are [G]. Status: built in `Sources/Input/ControllerManager.swift`.
 - **Hardware controllers** [G]: `GameController.framework` for DualShock 4, DualSense, Xbox, Joy-Con and MFi pads. Brands are not shown in any screenshot.
-- **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure, EKA2L1 and J2meJS. Status: mapping built in `Sources/Input/ControllerManager.swift`; the game session does not read it yet.
+- **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure, EKA2L1 and J2meJS. Status: built. Other cores read it as pad buttons through `ControllerManager.KeyMap`; DOSBox Pure gets every key (bridge ABI 4 `GagaInputState.keys`, `docs/06` section 2.5).
 - **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: the row is built as a haptic on each touch press. Core vibration events need a bridge addition and are not planned yet.
 - **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G]. Status: built, a system click on each touch press.
 - **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode. Status: built, not yet tested on a device.
