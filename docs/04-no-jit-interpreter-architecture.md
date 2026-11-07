@@ -494,6 +494,24 @@ The N64 1% low of 20.1 fps with 6 underruns is the first game-scene sign of drop
 
 N64: one interval over 25 ms, ending at 9.36 s (`slowFramesAtSeconds`), so one stall in the measured 10 s, not a steady shortfall. PSP: the smallest owner file is a 7z named .zip; imported under that name it stayed a raw file and was not added, imported under a .7z name its .iso was unpacked and placed as PSP. The 1929 MB PSP footprint is not PPSSPP's: the benchmark harness read the whole ROM into memory to hash it for the record, and this ISO is 1696 MB. The harness now hashes the file in 1 MiB chunks. PPSSPP itself streams the ISO from disk: `ppsspp_cache_iso` is unset, so `bCacheFullIsoInRam` keeps its default (off), and the libretro build does not report `SYSPROP_ENOUGH_RAM_FOR_FULL_ISO` either, so `RamCachingFileLoader` is never used. Its texture cache already evicts by age, so no setting was changed. The next PSP run gives the real figure. Mega-CD ran on JGenesis with the three `bios_CD_*.bin` files in `GagaEmu/System`; `genesis_plus_gx` and `picodrive` produced no record for it. The FDS game produced no record until `disksys.rom` was in `System`; `-GagaImportROM` put it in `ROMs`. A PS1 .7z disc was copied to `ROMs` and not added to the Library. Short runs, not the three of section 7.2.
 
+**Game-scene device runs, 2026-11-08, build `c80a87b` (device run 7).** Same phone and method, one 10 s run each (5 s warm-up), thermal nominal, 0 audio underruns except N64. Owner-supplied games copied to Documents and imported with `-GagaImportROM`; none kept in the repo, names redacted in the records. The Mega-CD and PS1 records hash only the `.cue` sheet (2000 and 86 bytes).
+
+| Platform | Core | Game | Archive | fps | 1% low | Core CPU ms per frame (mean, p99) | Peak footprint | Audio underruns |
+|---|---|---|---|---|---|---|---|---|
+| Game Boy | Gambatte | owner-supplied GB game | .zip | 59.73 | 56.4 | 1.39, 1.65 | 175 MB | 0 |
+| Game Boy Color (imported as the GB platform) | Gambatte | owner-supplied GBC game | .zip | 59.73 | 56.2 | 1.56, 1.87 | 175 MB | 0 |
+| GBA | mGBA | owner-supplied GBA game | .zip | 59.73 | 56.4 | 3.34, 3.82 | 179 MB | 0 |
+| NES | Nestopia UE | owner-supplied NES game | .zip | 60.10 | 57.1 | 2.95, 3.33 | 185 MB | 0 |
+| Famicom Disk System (imported as NES) | Nestopia UE | owner-supplied FDS game with `disksys.rom` | .zip | 60.09 | 57.1 | 2.62, 3.64 | 186 MB | 0 |
+| SNES | bsnes | owner-supplied SNES game | .zip | 60.09 | 56.9 | 7.19, 8.60 | 258 MB | 0 |
+| N64 | Mupen64Plus-Next | owner-supplied N64 game | .zip | 59.20 | 19.9 | 5.64, 9.59 | 561 MB | 4 |
+| DS | melonDS DS | owner-supplied DS game | .7z | 59.83 | 56.6 | 5.43, 10.71 | 303 MB | 0 |
+| PSP | PPSSPP | owner-supplied PSP game | .zip (a 7z) | 59.94 | 56.7 | 1.65, 2.12 | 329 MB | 0 |
+| PS1 | PCSX-ReARMed | owner-supplied PS1 disc | .7z | 60.00 | 56.8 | 6.21, 8.06 | 179 MB | 0 |
+| Mega-CD | JGenesis | owner-supplied Mega-CD game | .zip | 59.93 | 56.6 | 7.30, 8.17 | 178 MB | 0 |
+
+N64: 5 intervals over 25 ms in the measured 10 s, ending at 0.9, 3.5, 3.5, 4.0 and 4.5 s (`slowFramesAtSeconds`), so a cluster in the first 5 s of measuring and none after, not a steady stall. PSP peak footprint is now 329 MB, so the 1929 MB of run 6 was the whole-ISO hash. Import: the PSP 7z named .zip and the PS1 .7z disc both imported (platforms PSP and PS1), as did every other file; GBC landed on the GB platform and FDS on the NES platform. The three `bios_CD_*.bin` files and `disksys.rom` landed in `GagaEmu/System`. Short runs, not the three of section 7.2.
+
 **Backlog cores, group-retro** (`docs/07` section 8.x). Logic checked on a macOS host harness only; no device numbers yet.
 
 | Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
