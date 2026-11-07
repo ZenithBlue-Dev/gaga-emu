@@ -22,9 +22,16 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertNotNil(GagaCoreRegistry_FindByID("bsnes"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("jgenesis"))
 
-        // Excluded by licence (docs/03 section 6)
-        XCTAssertNil(GagaCoreRegistry_FindByID("snes9x"))
-        XCTAssertNil(GagaCoreRegistry_FindByID("genesis_plus_gx"))
+        // Non-commercial licences (docs/03 section 6): a stub row in the App Store build, real only in a sideload build.
+        #if GAGA_SIDELOAD
+        let sideload = true
+        #else
+        let sideload = false
+        #endif
+        for id in ["snes9x", "genesis_plus_gx", "picodrive", "fbneo"] {
+            XCTAssertNotNil(GagaCoreRegistry_FindByID(id), id)
+            XCTAssertEqual(GagaCoreRegistry_IsExcluded(id), !sideload, id)
+        }
 
         // Validate tier 2 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("pcsx_rearmed"))
@@ -240,9 +247,8 @@ final class GagaEmuTests: XCTestCase {
         for id in ids {
             XCTAssertNotNil(id.range(of: "^[a-z0-9_]+$", options: .regularExpression), "\(id) is not a core_id")
         }
-        for excluded in ["snes9x", "genesis_plus_gx", "picodrive", "fbneo", "kronos", "swanstation"] {
-            XCTAssertFalse(ids.contains(excluded))
-        }
+        // Kronos is never built (docs/03). The licence-gated cores follow the registry, checked below.
+        XCTAssertFalse(ids.contains("kronos"))
         XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), GagaCoreRegistry_IsExcluded("bsnes") ? "" : "bsnes")
         XCTAssertEqual(CoreCatalog.defaultCore(for: "megadrive"), "jgenesis")
         XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), GagaCoreRegistry_IsExcluded("mame") ? "" : "mame")

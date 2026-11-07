@@ -420,6 +420,11 @@ final class MameCoreTests: XCTestCase {
         defer { state.games = saved }
         for ext in ["7z"] { // A .zip is placed by its contents: GagaEmuTests.testZipsArePlacedByContent.
             let name = "upload-\(UUID().uuidString).\(ext)"
+            // Since 7z import an upload is opened, so it must be a real set (SevenZipImportTests.testAMAMESetStaysArcade).
+            let url = state.romDirectory.appendingPathComponent(name)
+            let text = Data("set".utf8)
+            try? SevenZipTestArchive.build([("pacman.6e", text), ("82s123", text)]).write(to: url)
+            defer { try? FileManager.default.removeItem(at: url) }
             state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
             XCTAssertEqual(added?.platformID, "arcade")
