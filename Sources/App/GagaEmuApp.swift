@@ -6,14 +6,13 @@ struct GagaEmuApp: App {
 
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            RootView()
                 .environmentObject(state)
                 .environmentObject(state.controllers)
                 .environmentObject(state.triggerPro)
                 .environmentObject(state.skins)
                 .environmentObject(state.store)
                 .environmentObject(state.wifi)
-                .preferredColorScheme(state.appearance.colorScheme)
                 .tint(AppTheme.accent)
                 .task { GameCenter.authenticate() }
         }

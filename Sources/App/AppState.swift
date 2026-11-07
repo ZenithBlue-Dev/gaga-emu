@@ -109,6 +109,22 @@ enum CoreCatalog {
 
     static func platform(_ id: String) -> PlatformInfo? { platforms.first { $0.id == id } }
 
+    static func platformName(_ id: String) -> String { platform(id)?.name ?? "Other" }
+
+    /// Short label for chips and metadata.
+    static func platformCode(_ id: String) -> String {
+        let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
+                       "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC"]
+        return special[id] ?? id.uppercased()
+    }
+
+    static func playTime(_ seconds: TimeInterval) -> String {
+        let total = Int(seconds)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+    }
+
     static func defaultCore(for platformID: String) -> String {
         platform(platformID)?.cores.first { $0.recommended }?.id ?? platform(platformID)?.cores.first?.id ?? ""
     }
@@ -231,30 +247,9 @@ enum ShaderCatalog {
     ]
 }
 
-enum AppearanceMode: String, CaseIterable, Identifiable, Codable {
+/// Saved value only. The app follows the system appearance; this keeps old state.json files decoding.
+enum AppearanceMode: String, Codable {
     case dark, light, system
-    var id: String { rawValue }
-    var label: String {
-        switch self {
-        case .dark: return "Dark Mode"
-        case .light: return "Light Mode"
-        case .system: return "System"
-        }
-    }
-    var symbol: String {
-        switch self {
-        case .dark: return "moon.fill"
-        case .light: return "sun.max.fill"
-        case .system: return "circle.lefthalf.filled"
-        }
-    }
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .dark: return .dark
-        case .light: return .light
-        case .system: return nil
-        }
-    }
 }
 
 /// Single source of truth for the shell. Persists to Application Support as JSON.
@@ -349,23 +344,12 @@ final class AppState: ObservableObject {
 
     var totalPlayTime: TimeInterval { games.reduce(0) { $0 + $1.playTime } }
 
-    var playTimeLabel: String {
-        let seconds = Int(totalPlayTime)
-        guard seconds > 0 else { return "Start your adventure now" }
-        let hours = seconds / 3600
-        let minutes = (seconds % 3600) / 60
-        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
-    }
-
-    var joinedLabel: String {
-        joined.formatted(.dateTime.day().month(.abbreviated).year())
-    }
-
     var activeGame: GameItem? { games.first { $0.id == activeGameID } }
 
+    /// `platformFilter` is "all", "recent" or a platform ID.
     var filteredGames: [GameItem] {
-        games.filter { game in
-            (platformFilter == "all" || game.platformID == platformFilter)
+        (platformFilter == "recent" ? recentGames : games).filter { game in
+            (platformFilter == "all" || platformFilter == "recent" || game.platformID == platformFilter)
                 && (search.isEmpty || game.title.localizedCaseInsensitiveContains(search))
         }
     }
