@@ -1014,6 +1014,154 @@
    ]
   },
   {
+   "id": "azahar",
+   "title": "Azahar",
+   "licence": "GPL-3.0-or-later as a whole (GPL-2.0-or-later files, two GPL-3.0-or-later files), with GPL-2.0 (FAAD2), LGPL-2.1, BSD, MIT, ISC, OpenSSL, zlib, BSL-1.0, Apache-2.0 and public domain parts",
+   "source": "https://github.com/azahar-emu/azahar, tag 2126.2, commit 219d743, with the dependencies that tag pins: Boost (ext-boost 6a85c31), Crypto++ (cryptopp-modern 8d92d78), fmt (e424e3f), FAAD2 (216f00e), SoundTouch (9ef8458), Teakra (3d697a1), Zstandard (f8745da), ENet (2662c0d), LibreSSL (ext-libressl-portable 88b8e41), LodePNG (0b1d9cc), glslang (fc9889c), sirit (37d49d2), SPIRV-Headers (aa6cef1), Vulkan Memory Allocator (c788c52), Vulkan-Headers (409c16b), xxHash (e626a72), libretro-common (7fc7fee), nihstro (f4d8659), dds-ktx (c3ca8fe), ext-library-headers (3b3e28d) and the headers in its tree (cpp-httplib, nlohmann/json, microprofile, open_source_archives). Dynarmic's tsl::robin_map comes from Tessil/robin-map v1.3.0-6 (054ec5a), since Dynarmic is not built. It links MoltenVK, listed separately.",
+   "cores": [
+    "azahar"
+   ],
+   "framework": "AzaharCore",
+   "texts": [
+    {
+     "title": "Azahar (GPL-2.0-or-later)",
+     "file": "licence-5e4c6cf26933.txt"
+    },
+    {
+     "title": "Azahar (GPL-3.0-or-later files)",
+     "file": "licence-138f7002b5cc.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-a77e81713ddf.txt"
+    },
+    {
+     "title": "GNU General Public License 3",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "amiitool (MIT)",
+     "file": "licence-7e166195f5a2.txt"
+    },
+    {
+     "title": "Boost Software License 1.0",
+     "file": "licence-c9bff7573892.txt"
+    },
+    {
+     "title": "Crypto++",
+     "file": "licence-5bb6b564ac9b.txt"
+    },
+    {
+     "title": "fmt",
+     "file": "licence-07580f2a3b35.txt"
+    },
+    {
+     "title": "FAAD2 (GPL-2.0)",
+     "file": "licence-d3baf3a54943.txt"
+    },
+    {
+     "title": "SoundTouch (LGPL-2.1)",
+     "file": "licence-84c6d82dc7de.txt"
+    },
+    {
+     "title": "Teakra",
+     "file": "licence-84ac887a2ae1.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "ENet",
+     "file": "licence-a29cd2466389.txt"
+    },
+    {
+     "title": "LibreSSL",
+     "file": "licence-5c63613f008f.txt"
+    },
+    {
+     "title": "LodePNG",
+     "file": "licence-bdafa318b8e6.txt"
+    },
+    {
+     "title": "glslang",
+     "file": "licence-adb783e734e9.txt"
+    },
+    {
+     "title": "sirit",
+     "file": "licence-85037eeef556.txt"
+    },
+    {
+     "title": "SPIRV-Headers",
+     "file": "licence-ff04ae7e6a46.txt"
+    },
+    {
+     "title": "Vulkan Memory Allocator",
+     "file": "licence-8d70e4cf2a99.txt"
+    },
+    {
+     "title": "Vulkan-Headers",
+     "file": "licence-ac24e5ea920e.txt"
+    },
+    {
+     "title": "Vulkan-Headers, Apache-2.0",
+     "file": "licence-cfc7749b96f6.txt"
+    },
+    {
+     "title": "Vulkan-Headers, MIT",
+     "file": "licence-1ca3502222d9.txt"
+    },
+    {
+     "title": "xxHash",
+     "file": "licence-6ffedbc0f787.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-eb2003e9338d.txt"
+    },
+    {
+     "title": "nihstro",
+     "file": "licence-27506f579df4.txt"
+    },
+    {
+     "title": "dds-ktx",
+     "file": "licence-70c7fbd0f0df.txt"
+    },
+    {
+     "title": "FFmpeg headers (LGPL-2.1-or-later)",
+     "file": "licence-b83d0487edaf.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-b634ab5640e2.txt"
+    },
+    {
+     "title": "cpp-httplib",
+     "file": "licence-e67d76c69da9.txt"
+    },
+    {
+     "title": "JSON for Modern C++",
+     "file": "licence-05b8ceeec265.txt"
+    },
+    {
+     "title": "MIT License (cpp-httplib, JSON for Modern C++)",
+     "file": "licence-fd80a26fbb3f.txt"
+    },
+    {
+     "title": "microprofile",
+     "file": "licence-257a8043356b.txt"
+    },
+    {
+     "title": "Open source system archives",
+     "file": "licence-c3b1c73f30bf.txt"
+    },
+    {
+     "title": "robin-map",
+     "file": "licence-11f2c685ba56.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
@@ -1038,7 +1186,8 @@
     "vktest",
     "mupen64plus_next",
     "ppsspp",
-    "flycast"
+    "flycast",
+    "azahar"
    ],
    "texts": [
     {
