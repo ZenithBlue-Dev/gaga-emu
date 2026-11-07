@@ -368,6 +368,16 @@ final class AppState: ObservableObject {
         defaultCores = snapshot?.defaultCores ?? [:]
         skins.loadDefault()
         if migrated != nil { save() }
+        wifi.onUploaded = { [weak self] names in
+            MainActor.assumeIsolated { self?.addUploads(names) }
+        }
+    }
+
+    /// A file uploaded again replaces its bytes on disk, so it must not become a second shelf entry.
+    func addUploads(_ names: [String]) {
+        for name in names where !games.contains(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }) {
+            importROM(at: romDirectory.appendingPathComponent(name))
+        }
     }
 
     var totalPlayTime: TimeInterval { games.reduce(0) { $0 + $1.playTime } }
@@ -416,16 +426,6 @@ final class AppState: ObservableObject {
         }
     }
 
-    func makeSession(for game: GameItem) throws -> GameSession {
-        let coreID = game.resolvedCoreID(defaults: defaultCores)
-        guard !coreID.isEmpty else { throw GameLaunchError.noCore }
-        guard let interface = GagaCoreRegistry_FindByID(coreID)?.pointee else {
-            throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
-        }
-        guard let romPath = game.resolvedROMPath(romDirectory: romDirectory) else {
-            throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
-        }
-        skins.hapticsEnabled = rumble
     #if DEBUG
     /// Runs the benchmark on `rom`, or on the generated test ROM. It stays out of the Library and play history.
     func runBenchmark(rom: URL? = nil, seconds: TimeInterval = BenchmarkRun.defaultSeconds) {
@@ -461,6 +461,16 @@ final class AppState: ObservableObject {
     }
     #endif
 
+    func makeSession(for game: GameItem) throws -> GameSession {
+        let coreID = game.resolvedCoreID(defaults: defaultCores)
+        guard !coreID.isEmpty else { throw GameLaunchError.noCore }
+        guard let interface = GagaCoreRegistry_FindByID(coreID)?.pointee else {
+            throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
+        }
+        guard let romPath = game.resolvedROMPath(romDirectory: romDirectory) else {
+            throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
+        }
+        skins.hapticsEnabled = rumble
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
         return try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,

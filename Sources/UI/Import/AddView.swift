@@ -114,7 +114,8 @@ struct AddView: View {
             Text("Off by default. Sends files from a browser over unencrypted local HTTP.")
                 .font(.footnote).foregroundStyle(AppTheme.muted)
         case .running(let host, let port, let pin):
-            Text("http://\(host):\(port)\nPIN \(pin)").font(.meta)
+            // Verbatim: a localized string formats the port with a thousands separator.
+            Text(verbatim: "http://\(host):\(port)\nPIN \(pin)").font(.meta)
             Text("Unencrypted local HTTP. Turn off when done.").font(.footnote).foregroundStyle(AppTheme.muted)
         case .failed(let message):
             Text(message).font(.footnote).foregroundStyle(AppTheme.muted)

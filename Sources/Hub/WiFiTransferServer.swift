@@ -19,6 +19,8 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
 
     public let romDirectory: URL
     public let port: UInt16
+    /// File names just written to `romDirectory`. Called on the main queue.
+    public var onUploaded: (([String]) -> Void)?
 
     private var listener: NWListener?
     private var pin: String = ""
@@ -185,6 +187,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
     private func finishUpload(_ connection: NWConnection, body: Data.SubSequence, contentType: String) {
         do {
             let saved = try Self.writeMultipart(Data(body), contentType: contentType, into: romDirectory)
+            DispatchQueue.main.async { self.onUploaded?(saved) }
             respond(connection, status: 200, contentType: "application/json",
                     body: "{\"ok\":true,\"files\":\(saved.count)}")
         } catch {
