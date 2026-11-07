@@ -219,6 +219,17 @@
       ]
     },
     {
+      "id": "beetle_wswan", "title": "Beetle Cygne", "cores": ["beetle_wswan"], "framework": "BeetleWswanCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later and MIT parts",
+      "source": "https://github.com/libretro/beetle-wswan-libretro, commit 4b01295",
+      "texts": [
+        { "title": "Cygne (GPL-2.0-or-later)", "from": "Cores/beetle_wswan/upstream/mednafen/wswan/gfx.c", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_wswan/upstream/COPYING" },
+        { "title": "Mednafen WonderSwan RTC (GPL-2.0-or-later)", "from": "Cores/beetle_wswan/upstream/mednafen/wswan/rtc.c", "comment": true },
+        { "title": "Blip_Buffer (LGPL-2.1-or-later)", "from": "Cores/beetle_wswan/upstream/mednafen/sound/Blip_Buffer.c", "comment": true },
+        { "title": "libretro-common", "from": "Cores/beetle_wswan/upstream/libretro-common/compat/compat_strl.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
