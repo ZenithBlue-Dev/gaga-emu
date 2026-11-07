@@ -304,6 +304,24 @@ public final class TouchSkinEngine: ObservableObject {
                 platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx"])
         }()
 
+        /// For pads with a second D-pad on the right, as on the Virtual Boy. That pad sends L2 up, L3 down,
+        /// R2 left and R3 right, the RetroPad buttons the cores read it from. A and B sit above it.
+        public static let twinPad: Layout = {
+            let b = ControllerManager.Button.self
+            let x: CGFloat = 0.8025, y: CGFloat = 0.405
+            return Layout(
+                id: "twin-pad", name: "Twin Pad", note: "A second pad on the right, with A and B above it.",
+                buttons: pad(topY: y) + shoulders(y: 0.02) + menu(y: 0.85) + [
+                    button("pad2up", x + w, y, w, h, b.l2, .dpup),
+                    button("pad2down", x + w, y + 2 * h, w, h, b.l3, .dpdown),
+                    button("pad2left", x, y + h, w, h, b.r2, .dpleft),
+                    button("pad2right", x + 2 * w, y + h, w, h, b.r3, .dpright),
+                    button("south", 0.8, 0.19, 0.08, 0.15, b.south, .circle),
+                    button("east", 0.9, 0.19, 0.08, 0.15, b.east, .circle)
+                ],
+                platforms: ["vb"])
+        }()
+
         /// DOSBox Pure opens its on-screen keyboard on L3. It sits in the space under L that every layout a
         /// typing platform can choose leaves free.
         static let keyboard = button("l3", 0.03, 0.2, 0.14, 0.12, ControllerManager.Button.l3, .rect)
@@ -313,11 +331,11 @@ public final class TouchSkinEngine: ObservableObject {
             GameSession.typingPlatforms.contains(platformID) ? buttons + [Self.keyboard] : buttons
         }
 
-        public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton]
+        public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton, .twinPad]
 
         /// The layout a platform starts on when the player has chosen none: the one shaped like its controller.
         /// Platforms added before milestone 8.x keep Standard.
-        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button"]
+        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button", "vb": "twin-pad"]
 
         static func defaultID(for platformID: String) -> String { platformDefaults[platformID] ?? standard.id }
 

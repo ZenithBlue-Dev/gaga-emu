@@ -26,7 +26,8 @@ enum LibretroThumbnails {
         "dreamcast": "Sega - Dreamcast",
         "dos": "DOS",
         "pce": "NEC - PC Engine - TurboGrafx 16",
-        "sgx": "NEC - PC Engine SuperGrafx"
+        "sgx": "NEC - PC Engine SuperGrafx",
+        "vb": "Nintendo - Virtual Boy"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.
