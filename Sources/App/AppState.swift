@@ -81,7 +81,7 @@ enum CoreCatalog {
             .init(id: "azahar", name: "Azahar", note: "Interpreter", recommended: true)
         ]),
         .init(id: "nds", name: "Nintendo DS", manufacturer: "Nintendo", cores: [
-            .init(id: "melonds", name: "melonDS DS", note: "Software renderer", recommended: true),
+            .init(id: "melonds_ds", name: "melonDS DS", note: "Software renderer", recommended: true),
             .init(id: "desmume", name: "DeSmuME", note: "Legacy hacks", recommended: false)
         ]),
         .init(id: "gba", name: "Game Boy Advance", manufacturer: "Nintendo", cores: [
@@ -179,7 +179,8 @@ enum StateMigration {
         "org.libretro.jgenesis": "jgenesis",
         "org.libretro.flycast": "flycast",
         "org.azahar.azahar": "azahar",
-        "org.libretro.melonds": "melonds",
+        "org.libretro.melonds": "melonds_ds",
+        "melonds": "melonds_ds", // The catalog ID before milestone 4.6.
         "org.libretro.desmume": "desmume",
         "org.libretro.mgba": "mgba",
         "org.libretro.gpsp": "gpsp",
