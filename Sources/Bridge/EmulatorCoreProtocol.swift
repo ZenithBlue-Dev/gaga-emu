@@ -333,6 +333,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
                     continuation.resume(throwing: EmulatorCoreError.instanceCreationFailed)
                     return
                 }
+                lastFatalMessage = nil
                 let ok: Bool
                 if let data = data {
                     ok = data.withUnsafeBytes { rawBuffer in
@@ -424,7 +425,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     /// One frame on the queue, for tests and frame stepping. Not for use while the timer runs.
     public func step(inputs: [GagaInputState]) {
         executionQueue.sync {
-            guard let inst = instance, let stepFn = coreInterface.step_frame else { return }
+            // After a fatal event the core may hold freed state (PPSSPP runs a null JIT after a failed boot).
+            guard lastFatalMessage == nil, let inst = instance, let stepFn = coreInterface.step_frame else { return }
             presentVideo = true
             playAudio = true
             var inArray = inputs
@@ -438,7 +440,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     /// Fast-forward runs `speed` whole frames per tick, so the timer's cadence and pausing stay the same.
     /// Only the last one is drawn, and audio is dropped until normal speed, so neither ring can back up.
     private func tickFrame() {
-        guard stepping, let inst = instance, let stepFn = coreInterface.step_frame else { return }
+        guard stepping, lastFatalMessage == nil, let inst = instance, let stepFn = coreInterface.step_frame else { return }
         inputLock.lock()
         let steps = speed
         inputLock.unlock()
