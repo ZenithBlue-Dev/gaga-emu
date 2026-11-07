@@ -46,6 +46,12 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | DOS / Win9x | DOSBox Pure (normal core) | Not seen. Public repo: `dosbox.pure` | DOSBox Staging, DOSBox-X | [GPL-2.0-or-later](https://codeberg.org/schelling/dosbox-pure), plus LGPL-2.1-or-later, BSD-3-Clause and MIT parts (section 5) | Software only; Voodoo runs in software and no OpenGL is linked | Built with `DISABLE_DYNAREC` and without `core_dyn_x86` or `core_dynrec`: the no-JIT gate and the forbidden-source check pass on both slices, and the dSYM lists the interpreter sources only. Merged from branch `core/dosbox_pure`, legal gate open | Active. Moved by its author from GitHub to Codeberg in October 2026 (section 5). Pinned to tag 1.0-preview7, `cdaea10ce8cac231bc341ca05d4c5e4e5fe0fbd5` | 2 |
 | Java ME | J2meJS | J2meJS | None | Unknown; upstream not identified | Unverified | **Unverified: spike required.** JS runtime path unknown (section 4) | Unknown | 2 |
 | Symbian | EKA2L1 | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases) list JIT modes for it | None | [GPL-3.0](https://github.com/EKA2L1/EKA2L1) | **Port needed.** [iOS path links OpenGLES.framework](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/drivers/CMakeLists.txt), which is not an accepted path. A Vulkan backend file exists; completeness unverified | **Unverified: spike required.** [dyncom interpreter is in the tree](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/cpu/CMakeLists.txt); a full no-JIT run is unproven | Active, last push 2026-11-06. README calls development a part-time hobby | 3 |
+| PC Engine / TurboGrafx-16 / PC Engine CD | Beetle PCE Fast | Beetle PCE (`mednafen.pce`, Backlog listing) | Beetle SuperGrafx | [GPL-2.0-or-later](https://github.com/libretro/beetle-pce-fast-libretro), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Static gate passes on both slices; macOS host harness checks pass; device pending. Built on branch `core/group-mednafen`, legal gate open. CD needs the player's `syscard3.pce` | Active. No release tags; pinned to master commit `2de1ce1c3f237b161c126c54ba407990bb86d1e9` (2026-10-30) | 1 |
+| SuperGrafx | Beetle SuperGrafx | Beetle PCE (`mednafen.pce`, Backlog listing) | None | [GPL-2.0-or-later](https://github.com/libretro/beetle-supergrafx-libretro), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | As PC Engine. Built on branch `core/group-mednafen`, legal gate open | Active. No release tags; pinned to master commit `9c11dcd213a79d57d2c86313971631af801f2cdc` (2026-10-06) | 1 |
+| Virtual Boy | Beetle VB | `mednafen.vb` (Backlog listing) | None | [GPL-2.0-or-later](https://github.com/libretro/beetle-vb-libretro), plus LGPL-2.1-or-later, MIT and SoftFloat parts (section 5) | Software. One eye, red on black; anaglyph and side-by-side 3D are core options left off | As PC Engine. Built on branch `core/group-mednafen`, legal gate open | Active. No release tags; pinned to master commit `d5ae54c8e23b573a3b34e888b2d48a588027e92c` (2026-10-12) | 1 |
+| Neo Geo Pocket / Color | Beetle NeoPop | `mednafen.ngp` (Backlog listing) | None | [GPL-2.0-or-later](https://github.com/libretro/beetle-ngp-libretro), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | As PC Engine. Built on branch `core/group-mednafen`, legal gate open. High-level BIOS, no SNK BIOS needed | Active. No release tags; pinned to master commit `a50d5ac288a81f2104ddf43195a4efdd15c72227` (2026-06-14) | 1 |
+| WonderSwan / Color | Beetle Cygne | `mednafen.wswan` (Backlog listing) | None | [GPL-2.0-or-later](https://github.com/libretro/beetle-wswan-libretro), plus LGPL-2.1-or-later and MIT parts (section 5) | Software. Vertical games turn upright on Select, in software | As PC Engine. Built on branch `core/group-mednafen`, legal gate open. No boot ROM needed | Active. No release tags; pinned to master commit `4b01295838ea89e3f1355bbe4cb5cf98aa6108cd` (2026-07-31) | 1 |
+| Pokémon Mini | PokeMini | `pokemini` (Backlog listing) | None | [GPL-3.0-or-later](https://github.com/libretro/PokeMini), plus MIT parts (section 5) | Software | As PC Engine. Built on branch `core/group-mednafen`, legal gate open. Free BIOS built in; the player's `bios.min` is optional | Active. No release tags; pinned to master commit `132111b76343559860532a1ccc094f93f1ed5650` (2026-07-31) | 1 |
 
 ### Renderer rules
 
@@ -345,6 +351,21 @@ Not compiled: `mupen64plus-rsp-paraLLEl` (`rsp_jit.cpp`, `jit_allocator`) and GN
 
 No PIF ROM, IPL3 or game is bundled. The PIF boot is upstream's HLE (`bootrom_hle.c`): it copies the cartridge's own boot block to RSP DMEM and jumps to it. The test cartridge `Sources/Debug/N64TestROM.swift` is GagaEmu's own MIPS program, booted that way.
 
+### Beetle (Mednafen) and PokeMini licence obligations
+
+Sources: the libretro repositories and commits in section 2, as unmodified submodules `Cores/<id>/upstream` for `beetle_pce_fast`, `beetle_supergrafx`, `beetle_vb`, `beetle_ngp`, `beetle_wswan` and `pokemini`. Each `<Core>Core.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. All six are built on branch `core/group-mednafen`, kept out of release builds by `GAGA_CORE_SET`, and must not ship until the legal gate above closes.
+
+| Part (as in each `sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| Mednafen and libretro glue (PCE, SuperGrafx, VB, NeoPop, Cygne), including files with no header, where the repository `COPYING` (GPL-2.0) applies | GPL-2.0-or-later (file headers) | The complete corresponding source, with the written offer or the source alongside. This is the gate above. |
+| PokeMini emulator, libretro glue and FreeBIOS | GPL-3.0-or-later (`LICENSE`, file headers) | As above, under GPL-3.0, including its installation-information terms for a user product. The submodule has the notice but not the full GPL-3.0 text; the app's licence page must carry it. |
+| Blip_Buffer, Stereo_Buffer, T6W28 | LGPL-2.1-or-later | The notice and source, or relinkable objects. Met by the GPL source offer above. |
+| Fuse Z80 core (NeoPop) | GPL-2.0-or-later | As the first row. |
+| SoftFloat (Virtual Boy FPU) | SoftFloat release 2 terms (keep the notice) | Reproduce the notice. |
+| `libretro-common`, dr_flac and other single-file libraries in the trees | MIT or public domain | Reproduce the MIT notice. |
+
+No BIOS, system card or boot ROM is bundled. PC Engine CD needs the player's own `syscard3.pce` in `GagaEmu/System` and is refused without it. NeoPop and Cygne need no BIOS; PokeMini runs its own free BIOS and uses the player's `bios.min` only if present. The test programs in `Sources/Debug` (`PCETestROM`, `VBTestROM`, `NGPTestROM`, `WSTestROM`, `PMTestROM`) are GagaEmu's own hand-assembled code with no licence string from any console maker.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -404,13 +425,11 @@ These repos exist. **Licence and no-JIT status are unchecked for all of them.** 
 
 Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790), with core names from the [public repo](https://github.com/Manic-EMU/ManicEMU/tree/main/Cores) where they could be matched by name. Core names are Manic's and are not GagaEmu picks.
 
-- **Nintendo:** Virtual Boy (`mednafen.vb`), Pokémon Mini (`pokemini`), Famicom Disk System
+- **Nintendo:** Famicom Disk System
 - **Sega:** Master System, Game Gear (`gearsystem`), SG-1000, 32X
-- **NEC:** PC Engine, TurboGrafx-16, TurboGrafx-CD, SuperGrafx (`mednafen.pce`)
-- **SNK:** Neo Geo Pocket, Neo Geo Pocket Color (`mednafen.ngp`)
 - **Atari:** 2600 (`stella`), 5200 (`atari800`), 7800 (`prosystem`), Jaguar (`virtualjaguar`), Lynx (`holani`)
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
-- **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
+- **Other:** DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
 ---
 
