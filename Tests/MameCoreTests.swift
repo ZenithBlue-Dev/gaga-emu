@@ -264,12 +264,14 @@ final class MameCoreTests: XCTestCase {
         var missing = GridleeTestSet.files()
         missing.removeFirst() // gridfnla.bin, the program.
         let notASet = "This file is not a MAME ROM set (a .zip named after the machine) for a machine in this build."
-        let cannotLoad = "MAME could not load this game."
+        // MAME's own auditor refuses the last two before MAME starts them (gaga_mame_refuse_load).
+        let missingFiles = "This ROM set is missing files that gridlee needs, such as gridfnla.bin. Its parent or BIOS set may be missing too."
+        let unknown = "This build of MAME has no machine named \"pacman\". A ROM set's file name must be the machine's short name."
         let cases = [(try write(Data(), as: "gridlee.zip", folder: "empty"), notASet),
                      (try write(Data((0..<0x6000).map { UInt8(truncatingIfNeeded: $0 &* 73) }), as: "gridlee.zip", folder: "noise"), notASet),
                      (try write(Data("-gridlee".utf8), as: "gridlee.cmd", folder: "cmd"), notASet), // A MAME command line.
-                     (try write(GridleeTestSet.zip(missing), as: "gridlee.zip", folder: "missing"), cannotLoad),
-                     (try write(GridleeTestSet.build(), as: "pacman.zip", folder: "unknown"), cannotLoad), // Not in drivers.flt.
+                     (try write(GridleeTestSet.zip(missing), as: "gridlee.zip", folder: "missing"), missingFiles),
+                     (try write(GridleeTestSet.build(), as: "pacman.zip", folder: "unknown"), unknown), // Not in drivers.flt.
                      (directory.appendingPathComponent("gone/gridlee.zip").path, "The game file could not be opened.")]
         for (path, message) in cases {
             let (core, capture) = try makeCore()

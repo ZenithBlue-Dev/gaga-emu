@@ -2,6 +2,8 @@
 // upstream files that open sockets (generate.py leaves them out of sources.txt).
 #include "emu.h"
 
+#include "audit.h"
+#include "drivenum.h"
 #include "emuopts.h"
 #include "fileio.h"
 #include "http.h"
@@ -18,6 +20,10 @@
 #include "plib/pdynlib.h"
 
 #include "sqlite3.h"
+
+#include <cctype>
+#include <cstdio>
+#include <cstring>
 
 // running_machine writes NVRAM files only when the machine stops, keeps nvram_filename() private, and its
 // nvram_save() skips a file it cannot open without saying so. An explicit instantiation may name a private
@@ -55,8 +61,68 @@ extern "C" bool gaga_mame_save_battery(void) {
 
 // Upstream's retro_deinit tears the game down while retro_load_ok is set, and never clears it, so the next
 // retro_deinit (the adapter's self test before the next game) would tear down the freed game again.
+// A load that failed inside MAME (a set with missing files, an unknown machine) returns without retro_finish,
+// so the machine manager and the half-started machine stay alive, and the next load reuses that manager: device
+// run 6 died there with "memory corruption of free block". Upstream's own frontend frees both after a failed
+// run (cli_frontend::execute, mame_machine_manager::execute), so this does too.
 extern bool retro_load_ok; // libretro_shared.h
-extern "C" void gaga_mame_after_deinit(void) { retro_load_ok = false; }
+void free_machineconfig(); // upstream/src/frontend/mame/mame.cpp
+void free_man();           // upstream/src/frontend/mame/clifront.cpp
+extern "C" void gaga_mame_after_deinit(void) {
+    mame_machine_manager* manager = retro_load_ok ? nullptr : mame_machine_manager::instance();
+    if (manager) {
+        if (manager->machine()) free_machineconfig();
+        free_man();
+    }
+    retro_load_ok = false;
+}
+
+// Checks a set against its machine's ROM list with MAME's own auditor before MAME starts it, so a set MAME
+// cannot run gets a message that says why and never reaches MAME's failed start. Wrong checksums are left to
+// MAME, which runs such a set and only warns. NULL when the set can start.
+extern "C" const char* gaga_mame_refuse_load(const char* system_dir, const char* rom_path) {
+    static std::string message;
+    // Only an archive is audited; anything else gets the adapter's own messages (is_rom, an unopenable file).
+    unsigned char magic[6] = {};
+    if (FILE* file = std::fopen(rom_path, "rb")) {
+        std::size_t const read = std::fread(magic, 1, sizeof(magic), file);
+        std::fclose(file);
+        bool const zip = read >= 4 && !std::memcmp(magic, "PK\3\4", 4);
+        bool const sevenzip = read == 6 && !std::memcmp(magic, "7z\xBC\xAF\x27\x1C", 6);
+        if (!zip && !sevenzip) return nullptr;
+    } else {
+        return nullptr;
+    }
+    try {
+        std::string const path(rom_path);
+        std::string::size_type const slash = path.find_last_of('/');
+        std::string const folder = slash == std::string::npos ? "." : path.substr(0, slash);
+        std::string name = path.substr(slash == std::string::npos ? 0 : slash + 1);
+        name = name.substr(0, name.find_last_of('.'));
+        for (char& c : name) c = char(std::tolower(static_cast<unsigned char>(c)));
+        if (name.empty() || name[0] == '_' || driver_list::find(name.c_str()) < 0) {
+            message = "This build of MAME has no machine named \"" + name + "\". A ROM set's file name must be the machine's short name.";
+            return message.c_str();
+        }
+        // The folders upstream's Set_Path_Option searches: the game's own, then System/mame/bios and System/mame/roms.
+        std::string const system = system_dir ? system_dir : "";
+        emu_options options;
+        options.set_value(OPTION_MEDIAPATH, folder + ";" + system + "/mame/bios;" + system + "/mame/roms", OPTION_PRIORITY_MAXIMUM);
+        driver_enumerator drivers(options, name.c_str());
+        if (!drivers.next()) return nullptr;
+        media_auditor auditor(drivers);
+        auditor.audit_media(AUDIT_VALIDATE_FAST);
+        for (media_auditor::audit_record const& record : auditor.records()) {
+            if (record.status() == media_auditor::audit_status::NOT_FOUND && record.substatus() == media_auditor::audit_substatus::NOT_FOUND) {
+                message = "This ROM set is missing files that " + name + " needs, such as " + record.name() + ". Its parent or BIOS set may be missing too.";
+                return message.c_str();
+            }
+        }
+    } catch (...) {
+        return nullptr; // The audit could not run; MAME's own load still checks the set.
+    }
+    return nullptr;
+}
 
 // The web server is off unless -http is passed, and this build never passes it.
 http_manager::http_manager(bool active, short, const char* root) : m_active(false), m_root(root ? root : "") {
