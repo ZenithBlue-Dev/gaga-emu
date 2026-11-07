@@ -15,8 +15,8 @@ The app today is a shell plus a mock core. No core frame reaches the screen, bec
 | Texture ring: three shared `MTLBuffer` slots, memcpy through `writeFrame` | built, no callers in `Sources` | `Sources/Metal/MetalTextureRing.swift` |
 | Single-pass renderer and seven MSL presets | built, used only by the preview | `Sources/Metal/MetalRenderer.swift`, `Shaders.metal` |
 | Shader preview canvas with a procedural texture | built | `Sources/Metal/ShaderManager.swift` |
-| Shader picker, Default tab | built | `Sources/UI/Settings/ShadersSettingsView.swift` |
-| Shader picker, RetroArch, Import and Custom tabs | stub: tabs exist, nothing can be added | same file |
+| Filter picker, built-in presets | built | `Sources/UI/Settings/FilterPickerView.swift` |
+| RetroArch, import and custom sources | planned: no UI until they exist | section 4 |
 | Game view presenting a core frame | planned | none |
 | Host-buffer path | planned | none |
 | Core-owned layer path | stub: `attach_metal_layer` is in the bridge, no core implements it, MoltenVK is not linked | `Sources/Bridge/GagaBridge.h:92` |
@@ -113,7 +113,7 @@ Two entries carry conditions from `docs/03`. N64 fails the no-JIT gate as config
 
 Seen in screenshot `0BF2D032`: a sheet with an edit button and a close button, a search field, the tabs Default, RetroArch, Import and Custom, a preview card with an image button, and a list where each row has a preview (eye) control and a separate selection control.
 
-Status in GagaEmu: search field, tabs, preview card and list are built. The edit button and image button are planned. The eye icon currently shows selection rather than acting as a separate preview control.
+Status in GagaEmu: the picker is an original split view, with the list on the left and a large preview on the right (`docs/06` section 3.4). There are no tabs, search field or eye icons.
 
 ### 3.1 Built-in presets
 
@@ -147,7 +147,7 @@ struct ShaderParameters {
 
 ### 3.3 Preview card
 
-`MetalPreviewCanvas` is an `MTKView` inside the sheet that runs the selected preset's real MSL pipeline over a procedural texture generated in `ShaderManager.swift:108-201`. No sample image is bundled. The pixel-art scene and image button are seen in screenshot `0BF2D032`; letting the user change the preview image is planned. A stale comment in `ShadersSettingsView.swift` still describes a stand-in preview and is tracked in `docs/07`.
+`MetalPreviewCanvas` is an `MTKView` inside the picker that runs the selected preset's real MSL pipeline over a procedural texture generated in `ShaderManager.swift:108-201`. No sample image is bundled. Letting the user change the preview image is planned.
 
 ### 3.4 Multi-pass chain (planned)
 
@@ -162,7 +162,7 @@ The rule against generating CPU code is separate from GPU shaders. No shipped co
 | Source | Mechanism | Status |
 |---|---|---|
 | Built-in presets | Bundled metallib, with `makeLibrary(source:)` as fallback (`MetalRenderer.swift:121`) | built |
-| Import tab, `.metal` | Runtime `makeLibrary(source:)` on a user-selected file. A compile failure shows the error and selects Original. | planned |
-| Import tab, `.slangp` and `.slang` | Needs a translation path from Slang to MSL, for example glslang and SPIRV-Cross. The tools and where they run are undecided. | planned |
-| RetroArch tab | Curated presets converted offline and bundled. Each preset's licence is recorded before it ships, since these are third-party works. | planned |
-| Custom tab | User-edited parameter sets over existing presets. The exact scope is undecided. | planned |
+| Import, `.metal` | Runtime `makeLibrary(source:)` on a user-selected file. A compile failure shows the error and selects Original. | planned |
+| Import, `.slangp` and `.slang` | Needs a translation path from Slang to MSL, for example glslang and SPIRV-Cross. The tools and where they run are undecided. | planned |
+| RetroArch presets | Curated presets converted offline and bundled. Each preset's licence is recorded before it ships, since these are third-party works. | planned |
+| Custom presets | User-edited parameter sets over existing presets. The exact scope is undecided. | planned |

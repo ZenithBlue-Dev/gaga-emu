@@ -208,7 +208,7 @@ S3 (`samba-s3-ui`) and S4 (`Bachata-S4-Dev`) are external sister projects. They 
 
 **Manic (seen in screenshot):** the Emulator Core list shows one core per platform, with the caption "switch cores by long-pressing a game in the library." Long-press is the only switching visible in the reference images. The alternates Manic offers are outside the images.
 
-**GagaEmu (design; shell code exists in `Sources/UI/Games/CoreSelectionSheet.swift`):** long-press a game to open the core sheet, with an option to set the choice as the platform default.
+**GagaEmu (design; shell code exists in `Sources/UI/Games/CorePickerSheet.swift`):** long-press a game to open the core sheet, with an option to set the choice as the platform default.
 
 ```
 ┌────────────────────────────────────────────────────────┐
