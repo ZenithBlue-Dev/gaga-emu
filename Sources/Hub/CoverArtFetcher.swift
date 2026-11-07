@@ -29,7 +29,8 @@ enum LibretroThumbnails {
         "gamegear": "Sega - Game Gear",
         "sg1000": "Sega - SG-1000",
         "atari2600": "Atari - 2600",
-        "atari7800": "Atari - 7800"
+        "atari7800": "Atari - 7800",
+        "lynx": "Atari - Lynx"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.

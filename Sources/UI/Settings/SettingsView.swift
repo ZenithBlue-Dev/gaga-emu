@@ -452,7 +452,8 @@ struct BIOSManagerView: View {
     private let required: [(String, String)] = [
         ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
-        ("firmware.bin", "DS firmware")
+        ("firmware.bin", "DS firmware"),
+        ("lynxboot.img", "Lynx boot ROM (optional: Handy emulates it)")
     ]
 
     var body: some View {

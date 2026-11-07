@@ -411,6 +411,9 @@ DEFINE_CORE_INTERFACE(Stella_GetInterface,        "stella",          "Stella",  
 #ifndef GAGA_HAS_PROSYSTEM
 DEFINE_CORE_INTERFACE(ProSystem_GetInterface,     "prosystem",       "ProSystem",         GAGA_CORE_EXCLUDED, "a78",      60.0,    31440)
 #endif
+#ifndef GAGA_HAS_HANDY
+DEFINE_CORE_INTERFACE(Handy_GetInterface,         "handy",           "Handy",             GAGA_CORE_EXCLUDED, "lnx",      60.0,    48000)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,      "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
@@ -442,6 +445,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Gearsystem_GetInterface,
     Stella_GetInterface,
     ProSystem_GetInterface,
+    Handy_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

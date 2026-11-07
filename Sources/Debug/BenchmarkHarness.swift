@@ -131,6 +131,7 @@ final class BenchmarkRun {
         case "mastersystem": (data, ext) = (SMSTestROM.build(), "sms")
         case "atari2600": (data, ext) = (Atari2600TestROM.build(), "a26")
         case "atari7800": (data, ext) = (Atari7800TestROM.build(), "a78")
+        case "lynx": (data, ext) = (LynxTestROM.build(), "lnx")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

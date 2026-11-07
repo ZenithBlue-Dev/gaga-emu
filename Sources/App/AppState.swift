@@ -131,6 +131,9 @@ enum CoreCatalog {
         .init(id: "atari7800", name: "Atari 7800", manufacturer: "Atari", cores: [
             .init(id: "prosystem", name: "ProSystem", note: "Default", recommended: true)
         ]),
+        .init(id: "lynx", name: "Atari Lynx", manufacturer: "Atari", cores: [
+            .init(id: "handy", name: "Handy", note: "Default", recommended: true)
+        ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
             .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
         ]),
@@ -215,6 +218,7 @@ enum CoreCatalog {
         // A 2600 image is often a .bin: platformID(forFile:) tells it from a Mega Drive ROM or a disc by content.
         case "a26": return "atari2600"
         case "a78": return "atari7800"
+        case "lnx": return "lynx"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

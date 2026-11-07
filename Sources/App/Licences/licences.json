@@ -826,6 +826,34 @@
    ]
   },
   {
+   "id": "handy",
+   "title": "Handy",
+   "licence": "Zlib",
+   "source": "https://github.com/libretro/libretro-handy, commit bc55d46",
+   "cores": [
+    "handy"
+   ],
+   "framework": "HandyCore",
+   "texts": [
+    {
+     "title": "Handy",
+     "file": "licence-c75a7fed8afe.txt"
+    },
+    {
+     "title": "Blip_Buffer",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

@@ -61,3 +61,6 @@
 [submodule "Cores/prosystem/upstream"]
 	path = Cores/prosystem/upstream
 	url = https://github.com/libretro/prosystem-libretro
+[submodule "Cores/handy/upstream"]
+	path = Cores/handy/upstream
+	url = https://github.com/libretro/libretro-handy

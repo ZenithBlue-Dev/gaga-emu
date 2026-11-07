@@ -200,6 +200,16 @@
       ]
     },
     {
+      "id": "handy", "title": "Handy", "cores": ["handy"], "framework": "HandyCore", "licence": "Zlib",
+      "source": "https://github.com/libretro/libretro-handy, commit bc55d46",
+      "texts": [
+        { "title": "Handy", "from": "Cores/handy/upstream/lynx/license.txt" },
+        { "title": "Blip_Buffer", "from": "Cores/handy/upstream/blip/Blip_Buffer.cpp", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "libretro-common", "from": "Cores/handy/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]

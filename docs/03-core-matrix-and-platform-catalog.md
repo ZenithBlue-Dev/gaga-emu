@@ -54,6 +54,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Master System / Game Gear / SG-1000 | Gearsystem | `gearsystem` | None | [GPL-3.0-or-later](https://github.com/drhelius/Gearsystem) (file headers: "version 3 of the License, or any later version"), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Z80 interpreter, no recompiler in the tree. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([drhelius/Gearsystem](https://github.com/drhelius/Gearsystem), `platforms/libretro`). Pinned to tag 3.9.24, `40b8eebab53007c976eb29755b1ef7925140c37f` | 1 |
 | Atari 2600 | Stella | `stella` | stella2014 (not built) | [GPL-2.0-or-later](https://github.com/stella-emu/stella) (`Copyright.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 6502 interpreter; the ARM interpreter for DPC+, CDF and ELF carts (Thumbulator, CortexM0) does not recompile. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([stella-emu/stella](https://github.com/stella-emu/stella), `src/os/libretro`). Pinned to release tag 7.0c, `c4016ea4891cb0f90979cb35182214af4c1cb4e7`. Chosen over [stella2014-libretro](https://github.com/libretro/stella2014-libretro), a 2014 snapshot (Stella 3.9.3) that libretro only keeps building: both are GPL-2, this one is maintained | 1 |
 | Atari 7800 | ProSystem | `prosystem` | None | [GPL-2.0-or-later](https://github.com/libretro/prosystem-libretro) (`License.txt`), plus zlib and MIT parts (section 5) | Software | 6502 (Sally) interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/prosystem-libretro](https://github.com/libretro/prosystem-libretro)), last push 2026-08-22, no tags. Pinned to `8a88014287c7a01cd568067e5a557d0a2b2a051f` | 1 |
+| Atari Lynx | Handy | `handy` | holani (not built) | [Zlib](https://github.com/libretro/libretro-handy) (`lynx/license.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 65C02 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-handy](https://github.com/libretro/libretro-handy)), last push 2026-04-20, no tags. Pinned to `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1`. Chosen over [holani-retro](https://github.com/LLeny/holani-retro): GPL-3.0 and Rust, which `scripts/build-core.sh` does not build | 1 |
 
 ### Renderer rules
 
@@ -395,6 +396,20 @@ Not compiled or not reachable: `.cdf` loading reads loose files named by the des
 
 No BIOS or game is bundled. The 7800 BIOS is optional: upstream opens `7800 BIOS (U).rom` (or `(E)` for a PAL cart) from the system folder if the player put one there, and boots the cart directly otherwise. The test cartridge `Sources/Debug/Atari7800TestROM.swift` is GagaEmu's own hand-assembled 6502 program.
 
+### Handy licence obligations
+
+Source: [github.com/libretro/libretro-handy](https://github.com/libretro/libretro-handy), libretro's port of K. Wilkins' Handy, commit `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1` (upstream has no tags), as the unmodified submodule `Cores/handy/upstream`. `Cores/handy/HandyCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/handy/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `lynx/` (65C02, Mikey, Suzy, cart, EEPROM, loader decryption), `libretro/` | Zlib (`lynx/license.txt`) | Keep the notice; mark altered sources (none are altered). |
+| `blip/` (Blip_Buffer, Stereo_Buffer) | LGPL-2.1-or-later (file headers) | Statically linked, so the player must be able to relink: satisfied by the source release the GPL cores already need; counsel to confirm. |
+| `libretro-common` (compat, file, streams, string, time, vfs) | MIT | Reproduce the notice. |
+
+`FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`. `stat` is imported (libretro-common's `path_is_valid`, for the boot ROM); it is covered by the app's File Timestamp reason C617.1.
+
+No boot ROM or game is bundled. `lynxboot.img` is the player's: upstream opens it from the system folder and otherwise emulates the boot ROM's loader (HLE), which still needs the cart's own signed loader. The BIOS Files screen lists it as optional. The test program `Sources/Debug/LynxTestROM.swift` is GagaEmu's own hand-assembled 65C02 in the BS93 homebrew format; it uses no Atari key.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -462,7 +477,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy).
 
 ---
 

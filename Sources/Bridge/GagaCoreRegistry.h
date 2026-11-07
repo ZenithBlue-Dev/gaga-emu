@@ -29,6 +29,7 @@ const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
 const GagaCoreInterface* Gearsystem_GetInterface(void);
 const GagaCoreInterface* Stella_GetInterface(void);
 const GagaCoreInterface* ProSystem_GetInterface(void);
+const GagaCoreInterface* Handy_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);
