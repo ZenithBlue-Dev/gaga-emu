@@ -144,7 +144,7 @@ Online play is not scheduled. It is not promised or gated until built, and its S
 | 4.3 | SNES: bsnes | planned | |
 | 4.4 | Genesis / Mega-CD: JGenesis | planned | Self-maintained iOS port. Upstream's frontend uses wgpu and iOS is not an official target. |
 | 4.5 | PS1: PCSX-ReARMed | planned | `DYNAREC=0`. |
-| 4.6 | DS: melonDS DS | planned | Software renderer. DSi camera is not promised. |
+| 4.6 | DS: melonDS DS | built, legal gate open, device benchmark pending | On branch `core/melonds_ds`, pinned to v1.4.0 `f394adba` (GPL-3.0-or-later), with each fetched dependency a pinned submodule (`docs/03` section 5). No JIT, no OpenGL, no networking compiled. melonDS's free BIOS and built-in firmware, direct boot; no Nintendo file. The two screens sit side by side, top screen left, and a finger on the lower screen in the picture reaches the core as the libretro pointer (bridge ABI 3). Runs a generated homebrew DS ROM (`Sources/Debug/NDSTestROM.swift`) on the Simulator: both screens, buttons including X and Y, touch, sound, EEPROM saves, save states and Action Replay cheats. A retail dump with an encrypted secure area needs Nintendo's BIOS, so the core shows its own error screen for one. DSi mode and DSi camera are not offered. Kept out of release builds by `GAGA_CORE_SET` until 4.0 closes. |
 | 4.7 | Arcade: MAME | planned | Audit for dynamic-recompiler paths. Libretro output path is unverified. |
 | 4.8 | DOS / Win9x: DOSBox Pure | planned | Normal core. The dynamic core must be compiled out, not only left unselected. |
 | 4.9 | Alternates | planned | Each one individually, once its gaps in `docs/03` section 3 are closed. |
