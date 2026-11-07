@@ -393,6 +393,10 @@ DEFINE_CORE_INTERFACE(DosboxPure_GetInterface,    "dosbox_pure",     "DOSBox Pur
 DEFINE_CORE_INTERFACE(Mame_GetInterface,          "mame",            "MAME",              GAGA_CORE_EXCLUDED, "zip|7z",   60.0,    48000)
 #endif
 
+#ifndef GAGA_HAS_BEETLE_SATURN
+DEFINE_CORE_INTERFACE(BeetleSaturn_GetInterface,  "beetle_saturn",   "Beetle Saturn",     GAGA_CORE_EXCLUDED, "cue|ccd|chd|toc|m3u", 59.8265, 44100)
+#endif
+
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
 #ifndef GAGA_HAS_JGENESIS
@@ -417,6 +421,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Jgenesis_GetInterface,
     PcsxReArmed_GetInterface,
     BeetlePsx_GetInterface,
+    BeetleSaturn_GetInterface,
     Gpsp_GetInterface,
     MelonDS_GetInterface,
     Mame_GetInterface,
