@@ -123,7 +123,7 @@ upstream/mupen64plus-rsp-hle/src/musyx.c
 upstream/mupen64plus-rsp-hle/src/re2.c
 upstream/mupen64plus-rsp-hle/src/plugin.c
 upstream/mupen64plus-rsp-cxd4/rsp.c
-upstream/libretro-common/libco/libco.c
+libco_gaga.c
 volk_gaga.c
 upstream/mupen64plus-video-paraLLEl/parallel-rdp/parallel-rdp/command_ring.cpp
 upstream/mupen64plus-video-paraLLEl/parallel-rdp/parallel-rdp/rdp_device.cpp

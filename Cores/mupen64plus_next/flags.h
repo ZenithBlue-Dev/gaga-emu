@@ -9,6 +9,9 @@
 // finds nothing (nogl.c) and the framework never imports dlopen.
 #define dlopen gaga_mupen_no_dlopen
 
+// libretro.c's cothread entry can return, which crashes libco on aarch64. libco_gaga.c wraps it.
+#define co_create gaga_co_create
+
 // zlib's zutil.h replaces fdopen with NULL when it thinks it is on classic Mac OS, which breaks the SDK's
 // stdio.h. Its #ifndef fdopen guard keeps the real one.
 #define fdopen fdopen
