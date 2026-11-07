@@ -27,13 +27,12 @@ build_slice() { # core dir sdk target
     local framework="$out/$CORE_FRAMEWORK.framework" binary="$out/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK"
     local sysroot source link_driver=clang objects=() link_extra=()
     sysroot=$(xcrun --sdk "$sdk" --show-sdk-path)
-    # A layer-path core links MoltenVK statically, so the framework carries its own Vulkan driver.
+    # A layer-path core links the one shared MoltenVK.framework, which the app embeds once (docs/06 section
+    # 2.5). Linking libMoltenVK.a into each core put two copies of MoltenVK's classes in the process.
     if [ "${CORE_USES_MOLTENVK:-}" = 1 ]; then
-        local slice=ios-arm64
-        [ "$sdk" = iphonesimulator ] && slice=ios-arm64_x86_64-simulator
         link_driver=clang++
-        link_extra=("$root/build/moltenvk/MoltenVK.xcframework/$slice/libMoltenVK.a" -framework Foundation
-            -framework Metal -framework QuartzCore -framework IOSurface -framework UIKit -framework CoreGraphics)
+        link_extra=(-F "$root/build/moltenvk/dynamic/$sdk" -framework MoltenVK -Wl,-rpath,@loader_path/..
+            -framework Foundation -framework Metal -framework QuartzCore -framework UIKit)
     fi
     rm -rf "$out"
     mkdir -p "$framework"

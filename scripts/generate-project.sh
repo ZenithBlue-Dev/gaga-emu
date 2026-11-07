@@ -35,7 +35,21 @@ for core in $core_set; do
 "
     defines+="        - GAGA_HAS_$(tr '[:lower:]' '[:upper:]' <<<"$core")=1
 "
+    # shellcheck source=/dev/null
+    [ "$(source "Cores/$core/core.env" && echo "${CORE_USES_MOLTENVK:-}")" != 1 ] || uses_moltenvk=1
 done
+# The layer-path cores share one MoltenVK.framework (docs/06 section 2.5). The app embeds it but does not
+# link it, so a build without those cores carries no MoltenVK.
+if [ -n "${uses_moltenvk:-}" ]; then
+    if [ ! -d build/moltenvk/dynamic/MoltenVK.xcframework ]; then
+        echo "build/moltenvk/dynamic/MoltenVK.xcframework is missing. Run: scripts/build-moltenvk.sh" >&2
+        exit 1
+    fi
+    dependencies+="      - framework: build/moltenvk/dynamic/MoltenVK.xcframework
+        embed: true
+        link: false
+"
+fi
 
 mkdir -p build
 cat >build/core-set.yml <<YAML

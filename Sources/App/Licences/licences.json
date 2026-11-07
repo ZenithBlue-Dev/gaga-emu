@@ -789,7 +789,7 @@
    "id": "moltenvk",
    "title": "MoltenVK",
    "licence": "Apache-2.0",
-   "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
+   "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Shipped once, as MoltenVK.framework, which every core that draws its own 3D picture links.",
    "cores": [
     "vktest",
     "mupen64plus_next"

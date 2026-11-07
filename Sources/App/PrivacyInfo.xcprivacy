@@ -62,7 +62,7 @@
                 <string>E174.1</string>
             </array>
         </dict>
-        <!-- 35F9.1: MoltenVK, linked by each layer-path core (Mupen64PlusNextCore, VkTestCore), imports
+        <!-- 35F9.1: MoltenVK.framework, which the layer-path cores (Mupen64PlusNextCore, VkTestCore) link, imports
              mach_absolute_time to time GPU work and frames inside the app. BeetleSaturnCore imports it through
              libretro-common's rtime and features_cpu, for elapsed-time counters inside the app. No boot time
              leaves the device. -->

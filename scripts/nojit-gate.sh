@@ -54,7 +54,7 @@ strings_for_framework() {
 }
 
 check_app() {
-    local app=$1 framework name binary env core
+    local app=$1 framework name binary env core links contents
     check_entitlements "$2"
     for env in "$root"/Cores/*/core.env; do
         # shellcheck source=/dev/null
@@ -74,12 +74,42 @@ check_app() {
     binary="$app/$(basename "$app" .app)"
     check_binary "$binary"
     [ ! -f "$binary.debug.dylib" ] || check_binary "$binary.debug.dylib"
+    local mvk_users=0 mvk_copies=()
     for framework in "$app"/Frameworks/*.framework; do
         [ -d "$framework" ] || continue
         name=$(basename "$framework" .framework)
         case "$name" in XC* | Testing) continue ;; esac
         check_binary "$framework/$name" "$(strings_for_framework "$name")"
+        # Read whole, not piped into grep -q: with pipefail an early grep exit fails the pipe and hides a hit.
+        links=$(otool -L "$framework/$name") contents=$(strings -a "$framework/$name")
+        if grep -q '@rpath/MoltenVK.framework/MoltenVK ' <<<"$links"; then mvk_users=$((mvk_users + 1)); fi
+        # A MoltenVK Objective-C class name. Two binaries with it put two copies of each class in the process.
+        if grep -qx 'MVKBlockObserver' <<<"$contents"; then mvk_copies+=("$name"); fi
     done
+    for binary in "$binary" "$binary.debug.dylib"; do
+        if [ -f "$binary" ] && grep -qx 'MVKBlockObserver' <<<"$(strings -a "$binary")"; then mvk_copies+=("$(basename "$binary")"); fi
+    done
+    check_moltenvk "$app" "$mvk_users" ${mvk_copies[@]+"${mvk_copies[@]}"}
+}
+
+# One MoltenVK per process (docs/06 section 2.5): only MoltenVK.framework holds its classes, and it is
+# embedded exactly when a core links it.
+check_moltenvk() {
+    local app=$1 users=$2
+    shift 2
+    if [ $# -gt 1 ] || { [ $# -eq 1 ] && [ "$1" != MoltenVK ]; }; then
+        echo "no-JIT gate: MoltenVK classes are defined in $*. Link MoltenVK.framework instead of libMoltenVK.a." >&2
+        return 1
+    fi
+    if [ "$users" -gt 0 ] && [ ! -f "$app/Frameworks/MoltenVK.framework/MoltenVK" ]; then
+        echo "no-JIT gate: a core links MoltenVK.framework, but $app does not embed it" >&2
+        return 1
+    fi
+    if [ "$users" -eq 0 ] && [ -e "$app/Frameworks/MoltenVK.framework" ]; then
+        echo "no-JIT gate: MoltenVK.framework is embedded in $app, but no core links it. Clean the build folder." >&2
+        return 1
+    fi
+    echo "no-JIT gate: MoltenVK copies: $#"
 }
 
 case "${1:-}" in
