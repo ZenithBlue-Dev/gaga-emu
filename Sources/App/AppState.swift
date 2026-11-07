@@ -40,71 +40,69 @@ struct CoreInfo: Identifiable, Equatable {
     var recommended: Bool
 }
 
-/// Static registry. Mirrors the core matrix in docs/03. No dlopen.
+/// Static registry. Defaults match docs/03 section 2; alternates are a subset of section 3.
+/// IDs are the C registry's short lowercase `core_id`, the only ID scheme. No dlopen.
 enum CoreCatalog {
     static let platforms: [PlatformInfo] = [
         .init(id: "ps1", name: "PlayStation", manufacturer: "Sony", cores: [
-            .init(id: "org.libretro.beetle-psx", name: "Beetle PSX HW", note: "PGXP, Metal", recommended: false),
-            .init(id: "org.libretro.pcsx-rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true),
-            .init(id: "org.libretro.swanstation", name: "SwanStation", note: "Rewind", recommended: false)
+            .init(id: "beetle_psx", name: "Beetle PSX HW", note: "PGXP, Vulkan", recommended: false),
+            .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true)
         ]),
         .init(id: "saturn", name: "Sega Saturn", manufacturer: "Sega", cores: [
-            .init(id: "org.libretro.beetle-saturn", name: "Beetle Saturn", note: "Cycle accuracy", recommended: true),
-            .init(id: "org.libretro.kronos", name: "Kronos", note: "Hardware rasterizer", recommended: false)
+            .init(id: "beetle_saturn", name: "Beetle Saturn", note: "Cycle accuracy", recommended: true)
         ]),
         .init(id: "megacd", name: "Mega-CD", manufacturer: "Sega", cores: [
-            .init(id: "org.libretro.jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true),
-            .init(id: "org.libretro.genesis-plus-gx", name: "Genesis Plus GX", note: "Broad compatibility", recommended: false)
+            .init(id: "jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true)
         ]),
         .init(id: "megadrive", name: "Mega Drive", manufacturer: "Sega", cores: [
-            .init(id: "org.libretro.genesis-plus-gx", name: "Genesis Plus GX", note: "Default", recommended: true),
-            .init(id: "org.libretro.picodrive", name: "Picodrive", note: "32X", recommended: false)
+            .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true)
         ]),
         .init(id: "dreamcast", name: "Dreamcast", manufacturer: "Sega", cores: [
-            .init(id: "org.libretro.flycast", name: "Flycast", note: "JITLess", recommended: true)
+            .init(id: "flycast", name: "Flycast", note: "JITLess", recommended: true)
         ]),
         .init(id: "n3ds", name: "Nintendo 3DS", manufacturer: "Nintendo", cores: [
-            .init(id: "org.azahar.azahar", name: "Azahar", note: "Interpreter", recommended: true)
+            .init(id: "azahar", name: "Azahar", note: "Interpreter", recommended: true)
         ]),
         .init(id: "nds", name: "Nintendo DS", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.melonds", name: "melonDS DS", note: "DSi, camera", recommended: true),
-            .init(id: "org.libretro.desmume", name: "DeSmuME", note: "Legacy hacks", recommended: false)
+            .init(id: "melonds", name: "melonDS DS", note: "Software renderer", recommended: true),
+            .init(id: "desmume", name: "DeSmuME", note: "Legacy hacks", recommended: false)
         ]),
         .init(id: "gba", name: "Game Boy Advance", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.mgba", name: "mGBA", note: "Accuracy", recommended: true),
-            .init(id: "org.libretro.gpsp", name: "gpSP", note: "Battery saver", recommended: false),
-            .init(id: "org.libretro.vba-m", name: "VBA-M", note: "ROM hacks", recommended: false)
+            .init(id: "mgba", name: "mGBA", note: "Accuracy", recommended: true),
+            .init(id: "gpsp", name: "gpSP", note: "Interpreter", recommended: false),
+            .init(id: "vba_m", name: "VBA-M", note: "ROM hacks", recommended: false)
         ]),
         .init(id: "gbc", name: "Game Boy Color", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.gambatte", name: "Gambatte", note: "Cycle accuracy", recommended: true),
-            .init(id: "org.libretro.sameboy", name: "SameBoy", note: "Audio accuracy", recommended: false)
+            .init(id: "gambatte", name: "Gambatte", note: "Cycle accuracy", recommended: true),
+            .init(id: "sameboy", name: "SameBoy", note: "Audio accuracy", recommended: false)
         ]),
         .init(id: "gb", name: "Game Boy", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.gambatte", name: "Gambatte", note: "Default", recommended: true)
+            .init(id: "gambatte", name: "Gambatte", note: "Default", recommended: true)
         ]),
         .init(id: "snes", name: "Super Famicom", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.bsnes", name: "bsnes", note: "Cycle accuracy", recommended: false),
-            .init(id: "org.libretro.snes9x", name: "Snes9x", note: "Fast", recommended: true)
+            .init(id: "bsnes", name: "bsnes", note: "Cycle accuracy", recommended: true)
         ]),
         .init(id: "nes", name: "NES", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.nestopia", name: "Nestopia UE", note: "Default", recommended: true),
-            .init(id: "org.libretro.fceumm", name: "FCEUmm", note: "Broad mappers", recommended: false)
+            .init(id: "nestopia", name: "Nestopia UE", note: "Default", recommended: true),
+            .init(id: "fceumm", name: "FCEUmm", note: "Broad mappers", recommended: false)
         ]),
         .init(id: "n64", name: "Nintendo 64", manufacturer: "Nintendo", cores: [
-            .init(id: "org.libretro.mupen64plus-next", name: "Mupen64Plus-Next", note: "GLideN64", recommended: true)
+            .init(id: "mupen64plus_next", name: "Mupen64Plus-Next", note: "ParaLLEl-RDP", recommended: true)
         ]),
         .init(id: "psp", name: "PSP", manufacturer: "Sony", cores: [
-            .init(id: "org.ppsspp.ppsspp", name: "PPSSPP", note: "IR interpreter", recommended: true)
+            .init(id: "ppsspp", name: "PPSSPP", note: "IR interpreter", recommended: true)
         ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
-            .init(id: "org.libretro.fbneo", name: "FBNeo", note: "CPS, Neo Geo", recommended: true),
-            .init(id: "org.libretro.mame", name: "MAME", note: "Wide catalog", recommended: false)
+            .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
         ]),
         .init(id: "dos", name: "MS-DOS", manufacturer: "Vintage", cores: [
-            .init(id: "org.libretro.dosbox-pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)
+            .init(id: "dosbox_pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)
         ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
-            .init(id: "org.j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
+            .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
+        ]),
+        .init(id: "symbian", name: "Symbian", manufacturer: "Vintage", cores: [
+            .init(id: "eka2l1", name: "EKA2L1", note: "Interpreter", recommended: true)
         ])
     ]
 
@@ -135,6 +133,62 @@ enum CoreCatalog {
         case "md", "gen", "sms": return "megadrive"
         default: return nil
         }
+    }
+}
+
+/// Upgrades values saved by older builds in state.json. Safe to run on every launch.
+enum StateMigration {
+    /// Reverse-DNS catalog IDs from before milestone 1.3.
+    static let legacyCoreIDs: [String: String] = [
+        "org.libretro.beetle-psx": "beetle_psx",
+        "org.libretro.pcsx-rearmed": "pcsx_rearmed",
+        "org.libretro.beetle-saturn": "beetle_saturn",
+        "org.libretro.jgenesis": "jgenesis",
+        "org.libretro.flycast": "flycast",
+        "org.azahar.azahar": "azahar",
+        "org.libretro.melonds": "melonds",
+        "org.libretro.desmume": "desmume",
+        "org.libretro.mgba": "mgba",
+        "org.libretro.gpsp": "gpsp",
+        "org.libretro.vba-m": "vba_m",
+        "org.libretro.gambatte": "gambatte",
+        "org.libretro.sameboy": "sameboy",
+        "org.libretro.bsnes": "bsnes",
+        "org.libretro.nestopia": "nestopia",
+        "org.libretro.fceumm": "fceumm",
+        "org.libretro.mupen64plus-next": "mupen64plus_next",
+        "org.ppsspp.ppsspp": "ppsspp",
+        "org.libretro.mame": "mame",
+        "org.libretro.dosbox-pure": "dosbox_pure",
+        "org.j2mejs": "j2mejs"
+    ]
+
+    /// Cores removed by docs/03 section 6. A choice of one falls back to the platform default.
+    static let removedCoreIDs: Set<String> = [
+        "org.libretro.swanstation", "org.libretro.kronos", "org.libretro.genesis-plus-gx",
+        "org.libretro.picodrive", "org.libretro.snes9x", "org.libretro.fbneo"
+    ]
+
+    /// nil means "no saved choice". Current and unknown IDs pass through untouched.
+    static func coreID(_ saved: String) -> String? {
+        removedCoreIDs.contains(saved) ? nil : legacyCoreIDs[saved] ?? saved
+    }
+
+    /// Returns the upgraded snapshot, or nil when nothing needed changing. Other fields are kept.
+    static func migrated(_ snapshot: AppState.Snapshot) -> AppState.Snapshot? {
+        var next = snapshot
+        var changed = false
+        for index in next.games.indices {
+            guard let saved = next.games[index].coreOverride, coreID(saved) != saved else { continue }
+            next.games[index].coreOverride = coreID(saved)
+            changed = true
+        }
+        let cores = next.defaultCores.compactMapValues(coreID)
+        if cores != next.defaultCores {
+            next.defaultCores = cores
+            changed = true
+        }
+        return changed ? next : nil
     }
 }
 
@@ -247,7 +301,9 @@ final class AppState: ObservableObject {
         romDirectory = root.appendingPathComponent("ROMs", isDirectory: true)
         storeURL = root.appendingPathComponent("state.json")
         wifi = WiFiTransferServer(romDirectory: romDirectory)
-        let snapshot = (try? Data(contentsOf: storeURL)).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) }
+        let stored = (try? Data(contentsOf: storeURL)).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) }
+        let migrated = stored.flatMap(StateMigration.migrated)
+        let snapshot = migrated ?? stored
         games = snapshot?.games ?? []
         history = snapshot?.history ?? []
         nickname = snapshot?.nickname ?? "Adventurer"
@@ -267,6 +323,7 @@ final class AppState: ObservableObject {
         shaderID = snapshot?.shaderID ?? "original"
         defaultCores = snapshot?.defaultCores ?? [:]
         skins.loadDefault()
+        if migrated != nil { save() }
     }
 
     var totalPlayTime: TimeInterval { games.reduce(0) { $0 + $1.playTime } }

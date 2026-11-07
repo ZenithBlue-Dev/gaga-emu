@@ -21,13 +21,13 @@ struct GagaEmuApp: App {
 #if DEBUG
 enum AppStateChecks {
     @MainActor static func run() {
-        assert(CoreCatalog.defaultCore(for: "gba") == "org.libretro.mgba")
-        assert(CoreCatalog.coreName("org.libretro.bsnes") == "bsnes")
+        assert(CoreCatalog.defaultCore(for: "gba") == "mgba")
+        assert(CoreCatalog.coreName("bsnes") == "bsnes")
         assert(CoreCatalog.platformID(forExtension: "gdi") == "dreamcast")
         let game = GameItem(id: UUID(), title: "Demo", platformID: "ps1", romPath: "/tmp/a.chd",
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,
                             isFavorite: false, shaderID: "original")
-        assert(game.resolvedCoreID == "org.libretro.pcsx-rearmed")
+        assert(game.resolvedCoreID == "pcsx_rearmed")
         WiFiTransferServerChecks.run()
         ClipboardImporterChecks.run()
         MultiDiscHelperChecks.run()

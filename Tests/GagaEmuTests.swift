@@ -205,6 +205,82 @@ final class GagaEmuTests: XCTestCase {
         audioManager.reset()
     }
 
+    // MARK: - Core Catalog Tests
+
+    func testCatalogMatchesDocs() {
+        let ids = CoreCatalog.platforms.flatMap(\.cores).map(\.id)
+        for id in ids {
+            XCTAssertNotNil(id.range(of: "^[a-z0-9_]+$", options: .regularExpression), "\(id) is not a core_id")
+        }
+        for excluded in ["snes9x", "genesis_plus_gx", "picodrive", "fbneo", "kronos", "swanstation"] {
+            XCTAssertFalse(ids.contains(excluded))
+        }
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), "bsnes")
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "megadrive"), "jgenesis")
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), "mame")
+
+        // Every registry stub resolves to a catalog row, so a saved ID always names a real core.
+        for index in 0..<GagaCoreRegistry_GetCount() {
+            let id = String(cString: GagaCoreRegistry_GetAtIndex(index)!.pointee.core_id)
+            if id != "mock" { XCTAssertTrue(ids.contains(id), "\(id) missing from CoreCatalog") }
+        }
+    }
+
+    // MARK: - state.json Migration Tests
+
+    /// A file as written by a build before milestone 1.3.
+    private let legacyStateJSON = """
+    {"games":[
+      {"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","title":"A","platformID":"gba","romPath":"/a.gba",
+       "coreOverride":"org.libretro.gpsp","playTime":120,"isFavorite":true,"shaderID":"crt-v1"},
+      {"id":"7F9619FF-8B86-D011-B42D-00C04FC964FF","title":"B","platformID":"snes","romPath":"/b.sfc",
+       "coreOverride":"org.libretro.snes9x","playTime":5,"isFavorite":false,"shaderID":"original"},
+      {"id":"8F9619FF-8B86-D011-B42D-00C04FC964FF","title":"C","platformID":"nes","romPath":"/c.nes",
+       "playTime":0,"isFavorite":false,"shaderID":"original"}
+    ],
+    "history":[],"nickname":"Sam","joined":0,"avatarIndex":2,"appearance":"dark","quickStart":false,
+    "autoSaveStates":false,"coverScraping":true,"airPlayFullscreen":false,"iCloudSync":false,
+    "autoFullScreen":true,"respectSilentMode":false,"rumble":false,"skinSoundEffects":true,
+    "language":"English","shaderID":"film",
+    "defaultCores":{"ps1":"org.libretro.beetle-psx","arcade":"org.libretro.fbneo","n3ds":"org.azahar.azahar"}}
+    """
+
+    func testStateMigrationUpgradesLegacyFile() throws {
+        let legacy = try JSONDecoder().decode(AppState.Snapshot.self, from: Data(legacyStateJSON.utf8))
+        let migrated = try XCTUnwrap(StateMigration.migrated(legacy))
+
+        XCTAssertEqual(migrated.games.map(\.coreOverride), ["gpsp", nil, nil])
+        XCTAssertEqual(migrated.defaultCores, ["ps1": "beetle_psx", "n3ds": "azahar"])
+
+        // Nothing else is touched.
+        XCTAssertEqual(migrated.games.map(\.title), ["A", "B", "C"])
+        XCTAssertEqual(migrated.games.map(\.playTime), [120, 5, 0])
+        XCTAssertEqual(migrated.games[0].isFavorite, true)
+        XCTAssertEqual(migrated.nickname, "Sam")
+        XCTAssertEqual(migrated.avatarIndex, 2)
+
+        // A game on a removed core now resolves to the platform default.
+        XCTAssertEqual(migrated.games[1].coreOverride ?? CoreCatalog.defaultCore(for: "snes"), "bsnes")
+
+        // Second launch: nothing left to do.
+        let reloaded = try JSONDecoder().decode(AppState.Snapshot.self, from: JSONEncoder().encode(migrated))
+        XCTAssertNil(StateMigration.migrated(reloaded))
+    }
+
+    func testStateMigrationKeepsCurrentAndUnknownIDs() {
+        XCTAssertEqual(StateMigration.coreID("mgba"), "mgba")
+        XCTAssertEqual(StateMigration.coreID("org.example.future"), "org.example.future")
+        XCTAssertEqual(StateMigration.coreID("org.libretro.vba-m"), "vba_m")
+        XCTAssertNil(StateMigration.coreID("org.libretro.genesis-plus-gx"))
+    }
+
+    func testEveryLegacyCoreIDMapsIntoTheCatalog() {
+        let ids = Set(CoreCatalog.platforms.flatMap(\.cores).map(\.id))
+        for (legacy, current) in StateMigration.legacyCoreIDs {
+            XCTAssertTrue(ids.contains(current), "\(legacy) maps to unknown \(current)")
+        }
+    }
+
     // MARK: - RomPatcher Tests
 
     func testRomPatcherIPS() throws {
