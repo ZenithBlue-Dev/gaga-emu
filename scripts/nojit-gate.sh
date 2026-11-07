@@ -7,6 +7,7 @@
 #   nojit-gate.sh --app <App.app> <entitlements plist>           Xcode build step: everything in a built app
 #   nojit-gate.sh --release-set "<core ids>"                     refuses a release set with a non-commercial core
 #   nojit-gate.sh --release-app <App.app>                        refuses an app that embeds a non-commercial core
+#   nojit-gate.sh --sideload-app <App.app>                       refuses a sideload app that links StoreKit
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -98,9 +99,34 @@ check_release_app() {
     echo "release gate: pass $(basename "$1")"
 }
 
+# A sideload app sells nothing (docs/03 section 5): its code links no StoreKit library and imports no StoreKit
+# symbol, so no purchase call can be reached. Covers the app, its debug dylib and any test bundle inside it.
+check_sideload_app() {
+    local binary imports links found=''
+    for binary in "$1/$(basename "$1" .app)" "$1/$(basename "$1" .app).debug.dylib" "$1"/PlugIns/*.xctest/*; do
+        [ -f "$binary" ] && [ -x "$binary" ] || continue
+        if ! links=$(otool -L "$binary") || ! imports=$(nm -u "$binary"); then
+            echo "sideload gate: cannot read $binary" >&2
+            return 1
+        fi
+        # The StoreKit libraries, Swift symbols of the StoreKit module (mangled "8StoreKit"), and SK classes and
+        # functions. GagaEmu's own StoreKitManager (mangled "15StoreKitManager") is not StoreKit.
+        found+=$( { grep -E 'StoreKit' <<<"$links"; grep -E '(^|[^0-9])8StoreKit|_StoreKit_SwiftUI|_OBJC_CLASS_\$_SK|^_SK' <<<"$imports"; } |
+            sed "s|^|$(basename "$binary"): |" || true)
+    done
+    if [ -n "$found" ]; then
+        echo "sideload gate: $1 links StoreKit, but a sideload build must sell nothing:" >&2
+        head -n 5 <<<"$found" >&2
+        return 1
+    fi
+    echo "sideload gate: pass $(basename "$1"), no StoreKit"
+}
+
 check_app() {
     local app=$1 framework name binary env core links contents
     check_entitlements "$2"
+    # GAGA_SIDELOAD is a build setting from scripts/generate-project.sh for GAGA_CORE_SET=sideload.
+    [ "${GAGA_SIDELOAD:-}" != 1 ] || check_sideload_app "$app"
     # Xcode passes build settings to this step. GAGA_RELEASE=1 comes from scripts/appstore_release.sh, and a
     # build that can sell (PAYWALL_ENABLED) is commercial, so neither may carry a non-commercial core.
     if [ "${GAGA_RELEASE:-}" = 1 ] || [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" PAYWALL_ENABLED "* ]]; then
@@ -167,6 +193,7 @@ case "${1:-}" in
     --app) check_app "${2:?usage: nojit-gate.sh --app <App.app> <plist>}" "${3:?usage: nojit-gate.sh --app <App.app> <plist>}" ;;
     --release-set) check_release_set "${2:-}" ;;
     --release-app) check_release_app "${2:?usage: nojit-gate.sh --release-app <App.app>}" ;;
+    --sideload-app) check_sideload_app "${2:?usage: nojit-gate.sh --sideload-app <App.app>}" ;;
     "") echo "usage: nojit-gate.sh <binary> [strings-regex]" >&2; exit 2 ;;
     *) check_binary "$1" "${2:-$default_strings}" ;;
 esac
