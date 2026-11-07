@@ -416,6 +416,9 @@ DEFINE_CORE_INTERFACE(BeetleNgp_GetInterface,    "beetle_ngp",      "Beetle NeoP
 #ifndef GAGA_HAS_BEETLE_WSWAN
 DEFINE_CORE_INTERFACE(BeetleWswan_GetInterface,  "beetle_wswan",    "Beetle WonderSwan", GAGA_CORE_EXCLUDED, "ws|wsc|pc2", 60.38, 44100)
 #endif
+#ifndef GAGA_HAS_POKEMINI
+DEFINE_CORE_INTERFACE(PokeMini_GetInterface,     "pokemini",        "PokeMini",          GAGA_CORE_EXCLUDED, "min", 60.0, 44100)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
@@ -448,6 +451,7 @@ static const CoreGetterFunc s_core_getters[] = {
     BeetleVb_GetInterface,
     BeetleNgp_GetInterface,
     BeetleWswan_GetInterface,
+    PokeMini_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

@@ -29,7 +29,8 @@ enum LibretroThumbnails {
         "sgx": "NEC - PC Engine SuperGrafx",
         "vb": "Nintendo - Virtual Boy",
         "ngp": "SNK - Neo Geo Pocket Color",
-        "ws": "Bandai - WonderSwan Color"
+        "ws": "Bandai - WonderSwan Color",
+        "pokemini": "Nintendo - Pokemon Mini"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.

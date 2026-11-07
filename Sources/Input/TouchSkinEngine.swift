@@ -301,7 +301,7 @@ public final class TouchSkinEngine: ObservableObject {
                     button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
                     button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
                 ],
-                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx", "ngp"])
+                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx", "ngp", "pokemini"])
         }()
 
         /// A second D-pad on the right, sending the RetroPad buttons the core reads it from, with A and B above.
@@ -351,7 +351,8 @@ public final class TouchSkinEngine: ObservableObject {
 
         /// The layout a platform starts on when the player has chosen none: the one shaped like its controller.
         /// Platforms added before milestone 8.x keep Standard.
-        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button", "vb": "twin-pad", "ngp": "two-button", "ws": "xy-pad"]
+        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button", "vb": "twin-pad", "ngp": "two-button", "ws": "xy-pad",
+                                                              "pokemini": "two-button"]
 
         static func defaultID(for platformID: String) -> String { platformDefaults[platformID] ?? standard.id }
 

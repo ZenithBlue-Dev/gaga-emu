@@ -453,7 +453,8 @@ struct BIOSManagerView: View {
         ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
         ("firmware.bin", "DS firmware"),
-        ("syscard3.pce", "PC Engine CD (System Card 3)")
+        ("syscard3.pce", "PC Engine CD (System Card 3)"),
+        ("bios.min", "Pokémon Mini (optional: a free BIOS is built in)")
     ]
 
     var body: some View {
