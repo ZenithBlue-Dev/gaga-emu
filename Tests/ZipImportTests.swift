@@ -132,6 +132,72 @@ final class ZipImportTests: XCTestCase {
         XCTAssertEqual(state.games.count, saved.count + 1)
     }
 
+    /// A 40 KiB ISO 9660 image whose primary volume descriptor (sector 16) names a PSP UMD.
+    static func pspISO() -> Data {
+        var iso = Data(count: 40960)
+        iso.replaceSubrange(32768..<32776, with: [1] + Array("CD001".utf8) + [1, 0])
+        iso.replaceSubrange(32776..<32784, with: Array("PSP GAME".utf8))
+        return iso
+    }
+
+    /// One deflated entry written as zip64: the central record's sizes and offset, and the end record's directory
+    /// size and offset, are all ones and live in the zip64 extra and the zip64 end record.
+    static func zip64(_ name: String, _ data: Data) throws -> Data {
+        func le(_ value: Int, _ bytes: Int) -> Data { Data((0..<bytes).map { UInt8(truncatingIfNeeded: value >> ($0 * 8)) }) }
+        let packed = try (data as NSData).compressed(using: .zlib) as Data, file = Data(name.utf8)
+        let crc = Int(RomPatcher.crc32(data)), ones = 0xFFFF_FFFF
+        var out = le(0x0403_4B50, 4) + le(45, 2) + le(0, 2) + le(8, 2) + le(0, 4) + le(crc, 4)
+        out += le(packed.count, 4) + le(data.count, 4) + le(file.count, 2) + le(0, 2) + file + packed
+        let extra = le(1, 2) + le(24, 2) + le(data.count, 8) + le(packed.count, 8) + le(0, 8)
+        let directory = le(0x0201_4B50, 4) + le(45, 2) + le(45, 2) + le(0, 2) + le(8, 2) + le(0, 4) + le(crc, 4)
+            + le(ones, 4) + le(ones, 4) + le(file.count, 2) + le(extra.count, 2) + le(0, 2) + le(0, 2) + le(0, 2)
+            + le(0, 4) + le(ones, 4) + file + extra
+        let start = out.count
+        out += directory
+        let record = out.count
+        out += le(0x0606_4B50, 4) + le(44, 8) + le(45, 2) + le(45, 2) + le(0, 4) + le(0, 4) + le(1, 8) + le(1, 8)
+            + le(directory.count, 8) + le(start, 8)
+        out += le(0x0706_4B50, 4) + le(0, 4) + le(record, 8) + le(1, 4)
+        out += le(0x0605_4B50, 4) + le(0xFFFF, 2) + le(0xFFFF, 2) + le(0xFFFF, 2) + le(0xFFFF, 2) + le(ones, 4) + le(ones, 4) + le(0, 2)
+        return out
+    }
+
+    func testZip64RecordsAreRead() throws {
+        let gba = GBATestROM.build()
+        let zip = dir.appendingPathComponent("big.zip")
+        try Self.zip64("Game.gba", gba).write(to: zip)
+        let entry = try XCTUnwrap(CoreCatalog.zipEntries(zip).first)
+        XCTAssertEqual(entry.size, gba.count)
+        XCTAssertEqual(entry.localHeaderOffset, 0)
+        XCTAssertEqual(CoreCatalog.platformID(forFile: zip), "gba")
+        let out = try CoreCatalog.extractZipEntry(entry, from: zip, to: dir.appendingPathComponent("Game.gba"), limit: 1 << 30)
+        XCTAssertEqual(try Data(contentsOf: out), gba)
+    }
+
+    /// An .iso names no platform by itself, so one in a zip or 7z is unpacked and placed by its sector 16, as a bare
+    /// .iso is (device run 5: a PSP UMD in a 7z named .zip stayed "unknown").
+    @MainActor
+    func testAnISOInAnArchiveIsPlacedByItsContents() throws {
+        let state = AppState()
+        let saved = state.games
+        let stem = "iso-\(UUID().uuidString)"
+        defer { cleanUp(state, saved, stem: stem) }
+        try FileManager.default.createDirectory(at: state.romDirectory, withIntermediateDirectories: true)
+        let iso = Self.pspISO()
+        XCTAssertNil(try platform("umd.zip", try Self.deflatedZip([("Game.iso", iso, nil)])), "nothing extracted yet")
+        for (suffix, archive) in [("zip", try Self.deflatedZip([("\(stem)-a.iso", iso, nil)])),
+                                  ("7z", SevenZipTestArchive.build([("\(stem)-b.iso", iso)])),
+                                  ("zip", try Self.zip64("\(stem)-c.iso", iso))] {
+            let url = state.romDirectory.appendingPathComponent("\(stem)-\(suffix)-\(archive.count).\(suffix)")
+            try archive.write(to: url)
+            let game = try XCTUnwrap(state.importROM(at: url), suffix)
+            XCTAssertEqual(game.platformID, "psp", suffix)
+            XCTAssertEqual(URL(fileURLWithPath: game.romPath).pathExtension, "iso", suffix)
+            XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: game.romPath)), iso, suffix)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path), "\(suffix): the copied archive is not kept")
+        }
+    }
+
     /// Restores the saved library and removes every ROM-folder file a test made.
     @MainActor
     private func cleanUp(_ state: AppState, _ saved: [GameItem], stem: String) {

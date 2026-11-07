@@ -379,7 +379,7 @@ enum CoreCatalog {
     static func zipPlatformID(_ url: URL) -> String? {
         let sevenZip = isSevenZip(url)
         let entries = sevenZip ? sevenZipEntries(url) : zipEntries(url)
-        if let rom = zipConsoleROM(entries) { return rom.platformID }
+        if let rom = zipConsoleROM(entries) { return rom.platformID == "disc" ? nil : rom.platformID }
         let names = entries.map(\.name)
         let exts = names.map { ($0 as NSString).pathExtension.lowercased() }
         if !sevenZip, exts.contains(where: { ["exe", "com", "bat", "conf"].contains($0) }) { return "dos" }
@@ -552,9 +552,16 @@ enum CoreCatalog {
         }
         guard files.count == 1, let entry = files.first else { return nil }
         let ext = (entry.name as NSString).pathExtension.lowercased()
-        // A .pbp serves PS1 and PSP alike and is placed by its contents, which a zip hides.
-        guard ext != "pbp", let id = platformID(forExtension: ext), id != "arcade", id != "dos", platform(id) != nil
-        else { return nil }
+        // A .pbp serves PS1 and PSP alike and is placed by its contents, which a zip hides. A lone .iso (PSP, PS1, a
+        // DOS CD and more) is "disc": the import unpacks it and places it by its sector 16, as a bare .iso.
+        let id: String
+        if ext == "iso" {
+            id = "disc"
+        } else {
+            guard ext != "pbp", let known = platformID(forExtension: ext), known != "arcade", known != "dos", platform(known) != nil
+            else { return nil }
+            id = known
+        }
         let parts = entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" })
         guard !entry.name.hasPrefix("/"), !entry.name.hasPrefix("\\"), parts.first?.hasSuffix(":") != true,
               !parts.contains("..") else { return .failure(.unsafeName) }
@@ -689,23 +696,58 @@ enum CoreCatalog {
         let bytes = [UInt8](tail)
         func u16(_ b: [UInt8], _ i: Int) -> Int { Int(b[i]) | Int(b[i + 1]) << 8 }
         func u32(_ b: [UInt8], _ i: Int) -> Int { u16(b, i) | u16(b, i + 2) << 16 }
+        func u64(_ b: [UInt8], _ i: Int) -> Int { u32(b, i) | u32(b, i + 4) << 32 }
         guard let end = stride(from: bytes.count - 22, through: 0, by: -1).first(where: {
             bytes[$0] == 0x50 && bytes[$0 + 1] == 0x4B && bytes[$0 + 2] == 5 && bytes[$0 + 3] == 6
         }) else { return [] }
-        let directorySize = u32(bytes, end + 12), directoryOffset = u32(bytes, end + 16)
-        guard directoryOffset + directorySize <= size, (try? handle.seek(toOffset: UInt64(directoryOffset))) != nil,
+        var directorySize = u32(bytes, end + 12), directoryOffset = u32(bytes, end + 16)
+        // Zip64 (APPNOTE 4.3.14): a locator 20 bytes before the end record points at the zip64 end record, which
+        // holds the directory's real size and offset when either overflows 32 bits.
+        if end >= 20, u32(bytes, end - 20) == 0x0706_4B50 {
+            let record = u64(bytes, end - 12)
+            guard record >= 0, record + 56 <= size, (try? handle.seek(toOffset: UInt64(record))) != nil,
+                  let data = try? handle.read(upToCount: 56), data.count == 56 else { return [] }
+            let zip64 = [UInt8](data)
+            guard u32(zip64, 0) == 0x0606_4B50 else { return [] }
+            directorySize = u64(zip64, 40)
+            directoryOffset = u64(zip64, 48)
+        }
+        guard directorySize >= 0, directoryOffset >= 0, directoryOffset + directorySize <= size,
+              (try? handle.seek(toOffset: UInt64(directoryOffset))) != nil,
               let directory = try? handle.read(upToCount: directorySize) else { return [] }
         let records = [UInt8](directory)
         var entries: [ZipEntry] = []
         var i = 0
         while i + 46 <= records.count, u32(records, i) == 0x0201_4B50 {
-            let nameLength = u16(records, i + 28)
-            let next = i + 46 + nameLength + u16(records, i + 30) + u16(records, i + 32)
-            guard i + 46 + nameLength <= records.count else { break }
+            let nameLength = u16(records, i + 28), extraLength = u16(records, i + 30)
+            let next = i + 46 + nameLength + extraLength + u16(records, i + 32)
+            guard i + 46 + nameLength + extraLength <= records.count else { break }
+            var size = u32(records, i + 24), compressedSize = u32(records, i + 20), offset = u32(records, i + 42)
+            // A field of all ones moved to the zip64 extra (ID 1), which holds only those, in this order.
+            var extra = i + 46 + nameLength
+            let extraEnd = extra + extraLength
+            while extra + 4 <= extraEnd {
+                let id = u16(records, extra), length = u16(records, extra + 2)
+                guard extra + 4 + length <= extraEnd else { break }
+                if id == 1 {
+                    var field = extra + 4
+                    let fieldEnd = field + length
+                    func take(_ value: inout Int) {
+                        guard value == 0xFFFF_FFFF, field + 8 <= fieldEnd else { return }
+                        value = u64(records, field)
+                        field += 8
+                    }
+                    take(&size)
+                    take(&compressedSize)
+                    take(&offset)
+                }
+                extra += 4 + length
+            }
+            guard size >= 0, compressedSize >= 0, offset >= 0 else { break }
             entries.append(ZipEntry(name: String(decoding: records[(i + 46)..<(i + 46 + nameLength)], as: UTF8.self),
                                     flags: u16(records, i + 8), method: u16(records, i + 10),
-                                    crc: UInt32(u32(records, i + 16)), compressedSize: u32(records, i + 20),
-                                    size: u32(records, i + 24), localHeaderOffset: u32(records, i + 42)))
+                                    crc: UInt32(u32(records, i + 16)), compressedSize: compressedSize,
+                                    size: size, localHeaderOffset: offset))
             i = next
         }
         return entries
