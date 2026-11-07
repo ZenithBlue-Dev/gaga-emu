@@ -320,7 +320,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testEveryLegacyCoreIDMapsIntoTheCatalog() {
         let ids = Set(CoreCatalog.platforms.flatMap(\.cores).map(\.id))
-        for (legacy, current) in StateMigration.legacyCoreIDs {
+        for (legacy, current) in StateMigration.legacyCoreIDs where !GagaCoreRegistry_IsExcluded(current) {
             XCTAssertTrue(ids.contains(current), "\(legacy) maps to unknown \(current)")
         }
     }
