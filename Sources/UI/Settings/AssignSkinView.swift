@@ -54,18 +54,32 @@ struct AssignSkinView: View {
                         Spacer(minLength: 12)
                         Picker(platform.name, selection: skin(platform.id)) {
                             ForEach(TouchSkinEngine.Layout.choices(for: platform.id)) { Text($0.name).tag($0.id) }
+                            if state.hasCustomSkin(platform.id) { Text("Custom").tag(TouchSkinEngine.customID) }
                         }
                         .labelsHidden()
+                        Button("Edit") { editing = EditTarget(id: platform.id) }
+                            .buttonStyle(QuietButtonStyle())
+                            .accessibilityLabel("Edit \(platform.name) skin")
                     }
                     .frame(minHeight: 44)
                     Rule()
                 }
             }
         }
+        .fullScreenCover(item: $editing) { SkinEditorView(platformID: $0.id) }
     }
 
+    @State private var editing: EditTarget?
+    private struct EditTarget: Identifiable { let id: String }
+
+    /// Custom shows only while its file exists; otherwise the platform's built-in choice.
     private func skin(_ platformID: String) -> Binding<String> {
-        Binding(get: { TouchSkinEngine.layoutID(game: nil, platform: state.platformSkins[platformID], platformID: platformID) },
+        Binding(get: {
+                    let chosen = state.platformSkins[platformID]
+                    return chosen == TouchSkinEngine.customID && state.hasCustomSkin(platformID)
+                        ? TouchSkinEngine.customID
+                        : TouchSkinEngine.layoutID(game: nil, platform: chosen, platformID: platformID)
+                },
                 set: { state.platformSkins[platformID] = $0 })
     }
 }

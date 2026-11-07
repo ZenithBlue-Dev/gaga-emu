@@ -34,7 +34,7 @@ public final class TouchSkinEngine: ObservableObject {
     }
 
     @Published public private(set) var skin: Skin?
-    @Published public var opacity: Double = 0.85
+    @Published public var opacity: Double = TouchSkinEngine.defaultOpacity
     @Published public var scale: Double = 1
     @Published public var hapticsEnabled = true
     @Published public var soundEnabled = true
@@ -79,18 +79,43 @@ public final class TouchSkinEngine: ObservableObject {
                     assets: assets, svg: nil)
     }
 
-    /// Flex skin: one JSON document with normalized frames and an inline SVG.
+    /// Flex skin: one JSON document with normalized frames and an inline SVG. Its opacity, when it has one,
+    /// replaces the drawn controls' opacity.
     public func loadFlex(from url: URL) throws {
-        let decoded = try JSONDecoder().decode(FlexSkin.self, from: Data(contentsOf: url))
+        let loaded = try Self.decodeFlex(Data(contentsOf: url), id: url.lastPathComponent)
+        opacity = loaded.opacity
+        skin = loaded
+    }
+
+    /// Reads a flex skin. `id` and `mask` are optional per button, so a skin that has only `input` names still
+    /// loads; the skin editor writes them so diagonals and second pads keep their combined masks.
+    static func decodeFlex(_ data: Data, id: String) throws -> Skin {
+        let decoded = try JSONDecoder().decode(FlexSkin.self, from: data)
         let buttons = decoded.buttons.compactMap { item -> Button? in
-            guard let mask = Self.mask(for: item.input) else { return nil }
-            return Button(id: item.input, frame: item.frame.rect, mask: mask,
+            guard let mask = item.mask ?? Self.mask(for: item.input) else { return nil }
+            return Button(id: item.id ?? item.input, frame: item.frame.rect, mask: mask,
                           asset: nil, shape: Button.Shape(rawValue: item.shape ?? "circle") ?? .circle)
         }
-        skin = Skin(id: url.lastPathComponent, name: decoded.name, format: .flex, buttons: buttons,
-                    opacity: opacity, scale: scale, landscape: decoded.landscape ?? true,
-                    assets: [:], svg: decoded.svg)
+        return Skin(id: id, name: decoded.name, format: .flex, buttons: buttons,
+                    opacity: min(max(decoded.opacity ?? defaultOpacity, minimumOpacity), 1), scale: 1,
+                    landscape: decoded.landscape ?? true, assets: [:], svg: decoded.svg)
     }
+
+    /// Writes the flex skin the skin editor saves: landscape only, no SVG, so controls draw as on a built-in.
+    static func encodeFlex(name: String, buttons: [Button], opacity: Double) throws -> Data {
+        let skin = FlexSkin(name: name, landscape: true, svg: nil, opacity: opacity, buttons: buttons.map {
+            FlexSkin.Button(input: $0.id, frame: Frame($0.frame), shape: $0.shape.rawValue, id: $0.id, mask: $0.mask)
+        })
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(skin)
+    }
+
+    public static let defaultOpacity = 0.85
+    /// Below this the outlines are too faint to find on the letterbox.
+    public static let minimumOpacity = 0.3
+    /// The Assign Skin choice that loads the platform's saved custom layout.
+    public static let customID = "custom"
 
     public func loadDefault() {
         loadBuiltIn(Layout.standard.id)
@@ -99,8 +124,38 @@ public final class TouchSkinEngine: ObservableObject {
     /// An unknown ID, say from a later build's state.json, gets the standard layout.
     public func loadBuiltIn(_ id: String, platformID: String = "") {
         let layout = Layout.builtIn.first { $0.id == id } ?? .standard
+        opacity = Self.defaultOpacity
         skin = Skin(id: layout.id, name: layout.name, format: .flex, buttons: layout.buttons(for: platformID),
                     opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil)
+    }
+
+    /// The smallest landscape phone's safe canvas in points (iPhone 17e), which sizes the 44pt check.
+    public static let smallestCanvas = CGSize(width: 750, height: 369)
+
+    /// Why a touch layout cannot be used, empty when it can: every button inside the canvas and inside the left
+    /// or right `controlBand`, at least 44pt on `smallestCanvas`, ids unique, and no two buttons overlapping.
+    static func problems(in buttons: [Button]) -> [String] {
+        var found: [String] = []
+        let band = controlBand
+        for button in buttons {
+            let name = label(for: button.id).spoken
+            let frame = button.frame
+            if frame.minX < 0 || frame.minY < 0 || frame.maxX > 1 || frame.maxY > 1 {
+                found.append("\(name) is off the screen.")
+            } else if !(frame.maxX <= band || frame.minX >= 1 - band) {
+                found.append("\(name) covers the picture.")
+            }
+            if frame.width * smallestCanvas.width < 44 || frame.height * smallestCanvas.height < 44 {
+                found.append("\(name) is smaller than 44 points.")
+            }
+        }
+        if Set(buttons.map(\.id)).count != buttons.count { found.append("Two buttons share a name.") }
+        for (index, a) in buttons.enumerated() {
+            for b in buttons[(index + 1)...] where a.frame.insetBy(dx: 0.0001, dy: 0.0001).intersects(b.frame) {
+                found.append("\(label(for: a.id).spoken) overlaps \(label(for: b.id).spoken).")
+            }
+        }
+        return found
     }
 
     /// Game choice, then platform choice, then the platform's own layout. A choice that no longer fits the
@@ -377,21 +432,30 @@ private struct DeltaInfo: Decodable {
     }
 }
 
-private struct FlexSkin: Decodable {
+private struct FlexSkin: Codable {
     let name: String
     let landscape: Bool?
     let svg: String?
+    var opacity: Double?
     let buttons: [Button]
-    struct Button: Decodable {
+    struct Button: Codable {
         let input: String
         let frame: Frame
         let shape: String?
+        var id: String?
+        var mask: UInt32?
     }
 }
 
-private struct Frame: Decodable {
+private struct Frame: Codable {
     let x, y, width, height: Double
     var rect: CGRect { CGRect(x: x, y: y, width: width, height: height) }
+}
+
+private extension Frame {
+    init(_ rect: CGRect) {
+        self.init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height)
+    }
 }
 
 #if DEBUG

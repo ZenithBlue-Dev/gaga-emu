@@ -992,6 +992,8 @@ final class AppState: ObservableObject {
     private var coverTask: Task<Void, Never>?
 
     var romDirectory: URL
+    /// Custom touch layouts from the skin editor, one flex skin per platform ID.
+    let skinDirectory: URL
     private let storeURL: URL
 
     struct Snapshot: Codable {
@@ -1030,6 +1032,7 @@ final class AppState: ObservableObject {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         romDirectory = root.appendingPathComponent("ROMs", isDirectory: true)
         storeURL = root.appendingPathComponent("state.json")
+        skinDirectory = root.appendingPathComponent("Skins", isDirectory: true)
         wifi = WiFiTransferServer(romDirectory: romDirectory)
         filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
         let stored = (try? Data(contentsOf: storeURL)).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) }
@@ -1103,6 +1106,48 @@ final class AppState: ObservableObject {
             }
         }
         return accepted
+    }
+
+    // MARK: Touch skins
+
+    func customSkinURL(_ platformID: String) -> URL {
+        skinDirectory.appendingPathComponent("\(platformID).json")
+    }
+
+    func hasCustomSkin(_ platformID: String) -> Bool {
+        FileManager.default.fileExists(atPath: customSkinURL(platformID).path)
+    }
+
+    /// The game's choice, then the platform's. Custom loads the saved layout; a missing or unreadable one falls
+    /// back to the platform's own built-in layout.
+    func applySkin(for game: GameItem) {
+        let platform = platformSkins[game.platformID]
+        if (game.skinID ?? platform) == TouchSkinEngine.customID {
+            do { return try skins.loadFlex(from: customSkinURL(game.platformID)) } catch {}
+        }
+        skins.loadBuiltIn(TouchSkinEngine.layoutID(game: game.skinID, platform: platform, platformID: game.platformID),
+                          platformID: game.platformID)
+    }
+
+    /// Saves the skin editor's layout as the platform's custom skin and chooses it. Throws, saving nothing,
+    /// when the layout fails `TouchSkinEngine.problems`.
+    func saveCustomSkin(_ buttons: [TouchSkinEngine.Button], opacity: Double, platformID: String) throws {
+        if let problem = TouchSkinEngine.problems(in: buttons).first { throw CustomSkinError(message: problem) }
+        let data = try TouchSkinEngine.encodeFlex(name: "Custom", buttons: buttons, opacity: opacity)
+        try FileManager.default.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
+        try data.write(to: customSkinURL(platformID), options: .atomic)
+        platformSkins[platformID] = TouchSkinEngine.customID
+    }
+
+    /// Deletes the platform's custom skin and returns it to its default layout.
+    func resetCustomSkin(_ platformID: String) {
+        try? FileManager.default.removeItem(at: customSkinURL(platformID))
+        if platformSkins[platformID] == TouchSkinEngine.customID { platformSkins[platformID] = nil }
+    }
+
+    struct CustomSkinError: LocalizedError {
+        let message: String
+        var errorDescription: String? { message }
     }
 
     /// Every import ends here: Files, drop, clipboard, download, WiFi Transfer and the Debug launch arguments.
@@ -1381,9 +1426,7 @@ final class AppState: ObservableObject {
         guard let romPath = game.resolvedROMPath(romDirectory: romDirectory) else {
             throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
         }
-        skins.loadBuiltIn(TouchSkinEngine.layoutID(game: game.skinID, platform: platformSkins[game.platformID],
-                                                   platformID: game.platformID),
-                          platformID: game.platformID)
+        applySkin(for: game)
         skins.hapticsEnabled = rumble
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
