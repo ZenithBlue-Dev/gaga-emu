@@ -3,8 +3,9 @@
 <plist version="1.0">
 <dict>
     <!-- No tracking, analytics or crash upload. One item leaves the device, and only with the Cover Art
-         toggle on (off by default): game titles, in request URLs to thumbnails.libretro.com, a third party
-         whose server logs the app cannot control. Hence declared, not linked to identity, for app function. -->
+         toggle on (off by default): game titles, in HTTPS request URLs to thumbnails.libretro.com
+         (CoverArtFetcher, an ephemeral session with no cookies), a third party whose server logs the app
+         cannot control. Hence declared, not linked to identity, for app function. -->
     <key>NSPrivacyTracking</key>
     <false/>
     <key>NSPrivacyTrackingDomains</key>
@@ -24,19 +25,50 @@
             </array>
         </dict>
     </array>
-    <!-- Declare each required-reason API when code adds it. MgbaCore imports fstat, for the size of its
-         own ROM and save files, GambatteCore imports stat, in libretro-common's file helpers, PcsxReArmedCore
-         imports stat and fstat, for the size of its own disc image and memory card files, BsnesCore imports
-         stat and fstat, in nall's file helpers, and SaveStore reads save state modification dates to list them. All of
-         these files are inside the app container. -->
+    <!-- Required-reason APIs, from `nm -u` on the app and every core framework (docs/06 section 3, step 11).
+         One manifest covers every GAGA_CORE_SET, so it declares what any core imports. -->
     <key>NSPrivacyAccessedAPITypes</key>
     <array>
+        <!-- AppState and ControllerManager keep settings in the app's own standard UserDefaults. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>CA92.1</string>
+            </array>
+        </dict>
+        <!-- SaveStore reads save state modification dates to list them, LibraryView reads a game file's
+             size with attributesOfItem, and the cores import stat, fstat or lstat for their own ROM, disc,
+             save and memory card files: MgbaCore, GambatteCore, PcsxReArmedCore, BsnesCore, MelonDSCore,
+             JgenesisCore, DosboxPureCore and MameCore. All of these files are inside the app container. -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
             <key>NSPrivacyAccessedAPITypeReasons</key>
             <array>
                 <string>C617.1</string>
+            </array>
+        </dict>
+        <!-- MameCore imports statfs and fstatfs, from the SQLite in MAME's Lua layer, which reads the volume
+             of a database file it is about to write (its flags and sector size), on the device. No Lua script
+             or plugin runs (docs/03 section 5), and nothing leaves the device. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>E174.1</string>
+            </array>
+        </dict>
+        <!-- VkTestCore, and every layer-path core after it, links MoltenVK, which imports mach_absolute_time
+             to time GPU work inside the app. No boot time leaves the device. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>35F9.1</string>
             </array>
         </dict>
     </array>
