@@ -9,7 +9,7 @@ import os
 /// Start it from Settings > About > Run Benchmark, or with the launch argument `-GagaBenchmark`. Options:
 /// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60` and
 /// `-GagaBenchmarkROM <file name in the ROM folder>`. With no ROM it generates the homebrew test ROM for
-/// GBA, GB or GBC, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
+/// GBA, GB, GBC or NES, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
 /// app shows on a device. The procedure is in docs/04 section 7.2.
 @MainActor
 final class BenchmarkRun {
