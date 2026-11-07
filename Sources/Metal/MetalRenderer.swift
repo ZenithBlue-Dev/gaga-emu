@@ -297,6 +297,13 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         lock.unlock()
     }
 
+    /// The last frame's size, for placing a finger on the picture.
+    public var contentSize: CGSize? {
+        lock.lock()
+        defer { lock.unlock() }
+        return customTexture.map { CGSize(width: $0.width, height: $0.height) }
+    }
+
     /// Sliders and the upscaler. Saved values pass through a clamp, because state.json is a file.
     public func apply(_ values: ShaderParameterValues) {
         uniforms.curvature = min(max(values.curvature, 0), 1)

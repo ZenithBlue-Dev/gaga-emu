@@ -387,11 +387,13 @@ DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX-ReARM
 #ifndef GAGA_HAS_BSNES
 DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             GAGA_CORE_EXCLUDED, "sfc|smc",  60.0988, 48000)
 #endif
+#ifndef GAGA_HAS_MELONDS_DS
+DEFINE_CORE_INTERFACE(MelonDS_GetInterface,       "melonds_ds",      "melonDS DS",        GAGA_CORE_EXCLUDED, "nds",      59.8261, 32728)
+#endif
 
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
 DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",          "0.0.0",  "md|smd|gen|bin|cue",  60.0, 48000)
-DEFINE_CORE_INTERFACE(MelonDS_GetInterface,       "melonds",         "melonDS DS",        "0.9.5",  "nds|dsi",             60.0, 44100)
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,        "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)

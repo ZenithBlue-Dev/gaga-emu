@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Writes a homebrew test ROM from Sources/Debug to a file, for import tests. The extension picks which:
-# .gba (GBATestROM), .gb or .gbc (GBTestROM), .nes (NESTestROM, with battery RAM), .sfc (SNESTestROM), .exe
-# (PS1TestEXE), or .cue (PS1TestEXE.disc, which also writes the .bin beside it).
-# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.exe|output.cue>
+# .gba (GBATestROM), .gb or .gbc (GBTestROM), .nes (NESTestROM, with battery RAM), .sfc (SNESTestROM), .nds
+# (NDSTestROM), .exe (PS1TestEXE), or .cue (PS1TestEXE.disc, which also writes the .bin beside it).
+# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.exe|output.cue>
 set -euo pipefail
-output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.exe|output.cue>}
+output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.exe|output.cue>}
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -22,11 +22,12 @@ case "cue":
     try disc.bin.write(to: bin)
     try Data(disc.cue(bin.lastPathComponent).utf8).write(to: url)
 case "sfc": try SNESTestROM.build().write(to: url)
+case "nds": try NDSTestROM.build().write(to: url)
 default: try GBATestROM.build().write(to: url)
 }
 SWIFT
-xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/GBATestROM.swift" "$root/Sources/Debug/GBTestROM.swift" \
-    "$root/Sources/Debug/NESTestROM.swift" "$root/Sources/Debug/SNESTestROM.swift" "$root/Sources/Debug/PS1TestEXE.swift" \
-    -o "$work/make-rom"
+xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAssembler.swift" "$root/Sources/Debug/GBATestROM.swift" \
+    "$root/Sources/Debug/GBTestROM.swift" "$root/Sources/Debug/NESTestROM.swift" "$root/Sources/Debug/SNESTestROM.swift" \
+    "$root/Sources/Debug/NDSTestROM.swift" "$root/Sources/Debug/PS1TestEXE.swift" -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

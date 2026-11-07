@@ -50,7 +50,8 @@ build_slice() { # core dir sdk target
         -o "$binary" "${objects[@]}"
     xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
 
-    # A bundle identifier allows no underscore, and the short version string only digits and dots.
+    # A bundle ID takes letters, digits, hyphens and dots only, so "_" in a core ID becomes "-", and the short
+    # version string only digits and dots.
     cat >"$framework/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -94,11 +95,17 @@ PLIST
         fi
         echo "forbidden sources ($sdk): none"
     fi
+    # The debug info keeps every name and source file the stripped binary drops, so this proves which
+    # files were compiled, not only what the binary still says.
+    if [ -n "${FORBIDDEN_DEBUG_STRINGS:-}" ]; then
+        "$root/scripts/nojit-gate.sh" "$out/$CORE_FRAMEWORK.framework.dSYM/Contents/Resources/DWARF/$CORE_FRAMEWORK" "$FORBIDDEN_DEBUG_STRINGS"
+    fi
 }
 
 build_core() {
     local core=$1 dir="$root/Cores/$1"
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
+    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS # Optional, so one core's value must not reach the next.
     # shellcheck source=/dev/null
     source "$dir/core.env"
 
@@ -110,6 +117,12 @@ build_core() {
     commit=$(git -C "$dir/upstream" rev-parse HEAD)
     if [ "$commit" != "$UPSTREAM_COMMIT" ]; then
         echo "Cores/$core/upstream is at $commit, but core.env pins $UPSTREAM_COMMIT" >&2
+        exit 1
+    fi
+    # Dependencies a core vendors in Cores/<id>/deps are pinned by the commit this repository records.
+    if hits=$(git -C "$root" submodule status -- "Cores/$core" | grep -v '^ '); then
+        echo "Cores/$core has submodules missing or not at the recorded commit. Run: git submodule update --init Cores/$core" >&2
+        echo "$hits" >&2
         exit 1
     fi
 

@@ -29,7 +29,7 @@ final class GagaEmuTests: XCTestCase {
         // Validate tier 2 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("pcsx_rearmed"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("beetle_psx"))
-        XCTAssertNotNil(GagaCoreRegistry_FindByID("melonds"))
+        XCTAssertNotNil(GagaCoreRegistry_FindByID("melonds_ds"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("flycast"))
 
         // Validate tier 3 cores

@@ -36,6 +36,9 @@ typedef struct {
     // Optional, for a core that cannot add a code to ones it already applied: takes every applied code
     // back out, keeping the core's list. Called before each retro_cheat_set.
     void (*unapply_cheats)(void);
+    // True when one cheat's lines must reach retro_cheat_set as one code, joined by '+', because the
+    // core's format spans lines (Action Replay DS conditionals). False: one index per line.
+    bool cheat_lines_are_one_code;
 } GagaLibretroCore;
 
 extern const GagaLibretroCore gaga_libretro_core;

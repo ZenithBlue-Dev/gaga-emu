@@ -23,7 +23,7 @@ struct GameView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
-                    GamePicture(session: session)
+                    GamePicture(session: session, takesTouch: true)
                         .padding(.horizontal, reserveBands ? geometry.size.width * TouchSkinEngine.controlBand : 0)
                         .ignoresSafeArea(edges: .vertical)
                         .accessibilityElement()
@@ -94,9 +94,12 @@ struct GameView: View {
 
 struct GamePicture: UIViewRepresentable {
     @ObservedObject var session: GameSession
+    /// The device's own picture, where a finger can land. Not the external screen's.
+    var takesTouch = false
 
     func makeUIView(context: Context) -> MTKView {
         let view = MTKView(frame: .zero, device: session.renderer.device)
+        if takesTouch { session.pictureView = view }
         view.delegate = session.renderer
         view.colorPixelFormat = .bgra8Unorm
         view.clearColor = MetalRenderer.letterboxColor
@@ -119,7 +122,7 @@ private struct TouchControls: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
-                TouchInputLayer { session.setTouches($0) }
+                TouchInputLayer { session.setTouches($0, windowPoints: $1) }
                     .accessibilityHidden(true)
                 ForEach(skins.skin?.buttons.filter { $0.shape != .hidden } ?? []) { button in
                     glyph(button)
@@ -176,9 +179,9 @@ private struct TouchControls: View {
     }
 }
 
-/// Reports every active finger as a normalized point, on every change.
+/// Reports every active finger as a normalized point, and in window coordinates, on every change.
 private struct TouchInputLayer: UIViewRepresentable {
-    let onTouches: ([CGPoint]) -> Void
+    let onTouches: ([CGPoint], [CGPoint]) -> Void
 
     func makeUIView(context: Context) -> TouchInputView { TouchInputView() }
 
@@ -186,7 +189,7 @@ private struct TouchInputLayer: UIViewRepresentable {
 }
 
 final class TouchInputView: UIView {
-    var onTouches: (([CGPoint]) -> Void)?
+    var onTouches: (([CGPoint], [CGPoint]) -> Void)?
     private var active = Set<UITouch>()
 
     override init(frame: CGRect) {
@@ -198,10 +201,11 @@ final class TouchInputView: UIView {
 
     private func report() {
         guard bounds.width > 0, bounds.height > 0 else { return }
-        onTouches?(active.map {
+        let touches = Array(active)
+        onTouches?(touches.map {
             let point = $0.location(in: self)
             return CGPoint(x: point.x / bounds.width, y: point.y / bounds.height)
-        })
+        }, touches.map { $0.location(in: nil) })
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {

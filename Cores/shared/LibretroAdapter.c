@@ -123,6 +123,8 @@ static bool lr_environment(unsigned command, void* data) {
         }
         return false;
     }
+    case RETRO_ENVIRONMENT_SET_VARIABLES:
+        return true; // Values come from the table above, but melonDS DS reads none until this succeeds.
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
         *(bool*)data = false;
         return true;
@@ -231,6 +233,11 @@ static int16_t lr_input_state(unsigned port, unsigned device, unsigned index, un
     if (device == RETRO_DEVICE_ANALOG && id <= RETRO_DEVICE_ID_ANALOG_Y) {
         if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT) return id == RETRO_DEVICE_ID_ANALOG_X ? input->left_x : input->left_y;
         if (index == RETRO_DEVICE_INDEX_ANALOG_RIGHT) return id == RETRO_DEVICE_ID_ANALOG_X ? input->right_x : input->right_y;
+    }
+    if (device == RETRO_DEVICE_POINTER && index == 0) { // One finger, already in libretro's pointer scale.
+        if (id == RETRO_DEVICE_ID_POINTER_X) return input->pointer_x;
+        if (id == RETRO_DEVICE_ID_POINTER_Y) return input->pointer_y;
+        if (id == RETRO_DEVICE_ID_POINTER_PRESSED) return input->pointer_down ? 1 : 0;
     }
     return 0;
 }
@@ -558,6 +565,11 @@ static void lr_apply_cheats(LrInstance* a) {
     for (size_t i = 0; i < a->cheat_count; ++i) {
         if (!a->cheats[i].enabled) continue;
         char* copy = strdup(a->cheats[i].code);
+        if (copy && gaga_libretro_core.cheat_lines_are_one_code) {
+            for (char* c = copy; *c; ++c) {
+                if (*c == '\n') *c = c[1] ? '+' : '\0'; // Cleaned codes end with a newline.
+            }
+        }
         char* cursor = NULL;
         for (char* line = copy ? strtok_r(copy, "\r\n", &cursor) : NULL; line; line = strtok_r(NULL, "\r\n", &cursor)) {
             if (gaga_libretro_core.unapply_cheats) gaga_libretro_core.unapply_cheats();
