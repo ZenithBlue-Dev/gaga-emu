@@ -258,7 +258,8 @@ final class GagaEmuTests: XCTestCase {
         var game = GameItem(id: UUID(), title: "Demo", platformID: "ps1", romPath: "/a.chd", coverPath: nil,
                             coreOverride: nil, playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
         // A build without PCSX-ReARMed (GAGA_CORE_SET) falls back to the platform's other core.
-        XCTAssertEqual(game.resolvedCoreID(defaults: [:]), GagaCoreRegistry_IsExcluded("pcsx_rearmed") ? "beetle_psx" : "pcsx_rearmed")
+        XCTAssertEqual(game.resolvedCoreID(defaults: [:]),
+                       GagaCoreRegistry_IsExcluded("pcsx_rearmed") ? CoreCatalog.platform("ps1")?.cores.first?.id ?? "" : "pcsx_rearmed")
         XCTAssertEqual(game.resolvedCoreID(defaults: ["ps1": "beetle_psx"]), "beetle_psx")
         game.coreOverride = "pcsx_rearmed"
         XCTAssertEqual(game.resolvedCoreID(defaults: ["ps1": "beetle_psx"]), "pcsx_rearmed")
