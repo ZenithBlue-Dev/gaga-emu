@@ -48,6 +48,29 @@ final class GagaEmuWalkTests: XCTestCase {
         element.tap()
     }
 
+    /// How long the launch import may take: a large `GAGA_WALK_ROM` archive is unpacked before it is listed.
+    private let importTimeout: TimeInterval = 180
+
+    /// The imported game, once the Library lists it (the import filters the Library to it). A failed import
+    /// shows an alert instead, and its text is the failure.
+    private func importedGame(_ app: XCUIApplication, _ what: String) -> XCUIElement {
+        let game = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", title)).firstMatch
+        let alert = app.alerts.firstMatch
+        let deadline = Date().addingTimeInterval(importTimeout)
+        while Date() < deadline {
+            if game.exists { return game }
+            if alert.exists {
+                snapshot("Import alert")
+                XCTFail("\(what): the import failed: " + ([alert.label] + alert.staticTexts.allElementsBoundByIndex.map(\.label)).joined(separator: " | "))
+                return game
+            }
+            sleep(1)
+        }
+        snapshot("No game")
+        XCTFail("\(what) was not in the Library after \(Int(importTimeout)) s, and no import alert appeared")
+        return game
+    }
+
     /// Settings > About > Licences.
     func testOpenLicences() {
         let app = launchApp()
@@ -61,8 +84,8 @@ final class GagaEmuWalkTests: XCTestCase {
     func testWalk() {
         var app = launchApp()
         snapshot("Library")
-        let play = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", title)).firstMatch
-        tap(play, "The \(title) game")
+        let play = importedGame(app, "The \(title) game")
+        play.tap()
         let pause = app.buttons["Pause game"]
         XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
         sleep(2)
@@ -90,7 +113,7 @@ final class GagaEmuWalkTests: XCTestCase {
 
         app.terminate()
         app = launchApp()
-        tap(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", title)).firstMatch, "The game after relaunch")
+        importedGame(app, "The game after relaunch").tap()
         tap(app.buttons["Pause game"], "Pause game after relaunch")
         tap(button(app, "Load State"), "Load State after relaunch")
         snapshot("Saves after relaunch")
