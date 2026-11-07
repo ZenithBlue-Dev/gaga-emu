@@ -97,7 +97,9 @@ enum CoreCatalog {
             .init(id: "gambatte", name: "Gambatte", note: "Default", recommended: true)
         ]),
         .init(id: "snes", name: "Super Famicom", manufacturer: "Nintendo", cores: [
-            .init(id: "bsnes", name: "bsnes", note: "Cycle accuracy", recommended: true)
+            .init(id: "bsnes", name: "bsnes", note: "Cycle accuracy", recommended: true),
+            // Sideload builds only: a non-commercial licence (docs/03 section 5). Hidden when excluded.
+            .init(id: "snes9x", name: "Snes9x", note: "Speed", recommended: false)
         ]),
         .init(id: "nes", name: "NES", manufacturer: "Nintendo", cores: [
             .init(id: "nestopia", name: "Nestopia UE", note: "Default", recommended: true),

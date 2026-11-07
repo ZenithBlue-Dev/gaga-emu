@@ -405,6 +405,12 @@ DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS"
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
 
+// Non-commercial licences (docs/03 section 5): only GAGA_CORE_SET=sideload links these, so every App Store
+// and TestFlight build has the refusing row and CoreCatalog hides the core.
+#ifndef GAGA_HAS_SNES9X
+DEFINE_CORE_INTERFACE(Snes9x_GetInterface,        "snes9x",          "Snes9x",            GAGA_CORE_EXCLUDED, "sfc|smc",  60.0988, 32040)
+#endif
+
 // ============================================================================
 // REGISTRY DISPATCH TABLE
 // ============================================================================
@@ -428,6 +434,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Flycast_GetInterface,
     Ppsspp_GetInterface,
     VkTest_GetInterface,
+    Snes9x_GetInterface, // After the default core of each platform, so FindByExtension keeps the default.
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

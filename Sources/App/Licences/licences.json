@@ -792,6 +792,30 @@
      "file": "licence-ea43b1de38a6.txt"
     }
    ]
+  },
+  {
+   "id": "snes9x",
+   "title": "Snes9x",
+   "licence": "Snes9x licence (non-commercial), with LGPL-2.1 and MIT parts",
+   "source": "https://github.com/libretro/snes9x, commit fae2fea. Sideload builds only: its licence forbids commercial use.",
+   "cores": [
+    "snes9x"
+   ],
+   "framework": "Snes9xCore",
+   "texts": [
+    {
+     "title": "Snes9x",
+     "file": "licence-70efeee282d8.txt"
+    },
+    {
+     "title": "snes_ntsc (LGPL-2.1)",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
   }
  ]
 }

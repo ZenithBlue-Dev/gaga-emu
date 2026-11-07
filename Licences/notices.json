@@ -185,6 +185,15 @@
         { "title": "Vulkan-Headers, MIT", "from": "build/moltenvk/licenses/Vulkan-Headers/LICENSES/MIT.txt" },
         { "title": "SPIRV-Headers", "from": "build/moltenvk/licenses/SPIRV-Headers/LICENSE" }
       ]
+    },
+    {
+      "id": "snes9x", "title": "Snes9x", "cores": ["snes9x"], "framework": "Snes9xCore", "licence": "Snes9x licence (non-commercial), with LGPL-2.1 and MIT parts",
+      "source": "https://github.com/libretro/snes9x, commit fae2fea. Sideload builds only: its licence forbids commercial use.",
+      "texts": [
+        { "title": "Snes9x", "from": "Cores/snes9x/upstream/LICENSE" },
+        { "title": "snes_ntsc (LGPL-2.1)", "from": "Cores/snes9x/upstream/filter/snes_ntsc-license.txt" },
+        { "title": "libretro-common", "from": "Cores/snes9x/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
     }
   ]
 }
