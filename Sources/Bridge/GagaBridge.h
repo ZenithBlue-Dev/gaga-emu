@@ -83,7 +83,17 @@ typedef enum {
     GAGA_EVENT_INFO    = 0,
     GAGA_EVENT_WARNING = 1,
     GAGA_EVENT_FATAL   = 2, // The host ends the session and shows the message.
+    GAGA_EVENT_RUMBLE  = 3, // Not a message: one motor's new strength, sent when it changes. message is NULL.
 } GagaEventSeverity;
+
+// A GAGA_EVENT_RUMBLE code: player port in bits 17-18, motor in bit 16, strength (0 off, 0xFFFF full) in bits 0-15.
+// The motors are libretro's: strong is the low-frequency one, weak the high-frequency one.
+typedef enum {
+    GAGA_RUMBLE_STRONG = 0,
+    GAGA_RUMBLE_WEAK   = 1,
+} GagaRumbleMotor;
+#define GAGA_RUMBLE_CODE(port, motor, strength) \
+    ((int32_t)((((uint32_t)(port) & 3u) << 17) | (((uint32_t)(motor) & 1u) << 16) | ((uint32_t)(strength) & 0xFFFFu)))
 
 // Bits 0 and 2 are kept for the host-buffer and output-texture paths (docs/06 section 2.4).
 typedef enum {
@@ -157,7 +167,8 @@ typedef struct GagaCoreInterface {
     void (*pause)(GagaInstance* inst);
     void (*resume)(GagaInstance* inst);
 
-    // Errors and events. A FATAL event during load_rom supplies the message the player sees.
+    // Errors and events. A FATAL event during load_rom supplies the message the player sees. A core that
+    // drives rumble sends RUMBLE events from step_frame.
     void (*set_event_callback)(GagaInstance* inst,
         void (*cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata), void* userdata);
 } GagaCoreInterface;
