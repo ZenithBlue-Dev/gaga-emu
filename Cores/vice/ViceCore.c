@@ -129,10 +129,32 @@ static const GagaLibretroVariable s_variables[] = {
     { NULL, NULL },
 };
 
+// libretro-core.c, whose header pulls in most of VICE. runstate is RUNSTATE_LOADED_CONTENT (1) after
+// retro_load_game when VICE already ran a game in this process, and RUNSTATE_RUNNING (2) otherwise.
+extern int runstate;
+extern void reload_restart(void);
+extern void update_geometry(int mode);
+extern int resources_set_defaults(void);
+
+// Upstream starts a second game in one process with a deferred emu_reset, which never runs ui_init_finalize again:
+// retro_init had cleared retro_ui_finalized, so every state save failed and the joystick ports stayed unset (device
+// run 5). RetroArch unloads the core between games, so upstream never meets this. Doing what the first start does
+// (retro_load_game, RUNSTATE_FIRST_START, after pre_main) makes each game start the same way.
+static const char* vice_finish_load(void) {
+    if (runstate == 1) {
+        resources_set_defaults();
+        reload_restart();
+        update_geometry(0);
+        runstate = 2;
+    }
+    return NULL;
+}
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "VICE",
     .game_kind = "a Commodore 64 game",
     .variables = s_variables,
+    .finish_load = vice_finish_load,
 };
 
 static char s_system_dir[1024];
