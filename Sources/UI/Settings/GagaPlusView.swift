@@ -1,3 +1,5 @@
+// The paywall. A sideload build (GAGA_SIDELOAD) has none: its non-commercial cores forbid selling it.
+#if !GAGA_SIDELOAD
 import StoreKit
 import SwiftUI
 
@@ -141,3 +143,4 @@ struct GagaPlusView: View {
         .init(productID: .lifetime, displayPrice: "—", price: 0, periodSuffix: "", intro: nil, subtitle: nil)
     ]
 }
+#endif

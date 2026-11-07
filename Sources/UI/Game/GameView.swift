@@ -361,7 +361,9 @@ private struct PauseMenu: View {
             }
         }
         .sheet(isPresented: $showCheats) { CheatsSheet(session: session) }
+        #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+        #endif
     }
 
     private func saveState() {

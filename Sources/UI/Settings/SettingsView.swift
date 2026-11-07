@@ -1,4 +1,6 @@
+#if !GAGA_SIDELOAD
 import StoreKit
+#endif
 import SwiftUI
 
 /// Two-pane settings. Only rows with working behaviour appear; docs/07 says what returns when.
@@ -65,7 +67,11 @@ struct SettingsView: View {
         case .graphics: GraphicsPane()
         case .controls: ControlsPane()
         case .storage: StoragePane()
+        #if GAGA_SIDELOAD
+        case .gagaPlus: EmptyView()
+        #else
         case .gagaPlus: GagaPlusPane()
+        #endif
         case .about: AboutPane()
         }
     }
@@ -168,7 +174,9 @@ private struct PlayPane: View {
             ToggleRow(title: "Auto Save State", note: "Saves when you quit or leave the app, and offers to resume when you next play.", isOn: $state.autoSaveStates)
         } else {
             ActionRow(title: "Auto Save State", value: "Plus", symbol: "lock") { showPlans = true }
+                #if !GAGA_SIDELOAD
                 .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+                #endif
         }
         Rule()
         ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen)
@@ -315,6 +323,7 @@ private struct StoragePane: View {
     }
 }
 
+#if !GAGA_SIDELOAD
 private struct GagaPlusPane: View {
     @EnvironmentObject private var store: StoreKitManager
     @State private var showPlans = false
@@ -326,7 +335,9 @@ private struct GagaPlusPane: View {
 
     var body: some View {
         ValueRow(title: "Status", value: status)
+            #if !GAGA_SIDELOAD
             .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+            #endif
         Rule()
         if store.entitlements.showsSubscribePrompts {
             ActionRow(title: "See Plans") { showPlans = true }
@@ -334,9 +345,13 @@ private struct GagaPlusPane: View {
         }
     }
 }
+#endif
 
 private struct AboutPane: View {
+    // App Store review is StoreKit; a sideload build is not on the App Store.
+    #if !GAGA_SIDELOAD
     @Environment(\.requestReview) private var requestReview
+    #endif
     @State private var showLicences = false
     #if DEBUG
     @EnvironmentObject private var state: AppState
@@ -358,8 +373,10 @@ private struct AboutPane: View {
         Rule()
         LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
         Rule()
+        #if !GAGA_SIDELOAD
         ActionRow(title: "Rate GagaEmu", symbol: "star") { requestReview() }
         Rule()
+        #endif
         ActionRow(title: "Licences") { showLicences = true }
             .fullScreenCover(isPresented: $showLicences) { LicencesView() }
         Rule()

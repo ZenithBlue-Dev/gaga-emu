@@ -88,7 +88,9 @@ struct FilterPickerView: View {
         }
         .foregroundStyle(AppTheme.ink)
         .background(AppTheme.paper.ignoresSafeArea())
+        #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+        #endif
         .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.importTypes) { result in
             switch result {
             case .success(let url): importFilter(url)

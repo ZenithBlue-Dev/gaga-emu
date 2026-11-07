@@ -560,6 +560,7 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(premium, StoreKitManager.premiumShaderIDs)
     }
 
+    #if !GAGA_SIDELOAD
     @MainActor
     func testOfferBadgesAndDisclosureMatchTheProduct() {
         XCTAssertNil(StoreKitManager.badge(for: .annual, intro: nil))
@@ -573,6 +574,7 @@ final class GagaEmuTests: XCTestCase {
                        "The trial is free. Renews after it ends unless you cancel. Cancel anytime.")
         XCTAssertNil(StoreKitManager.disclosure(for: .lifetime, intro: nil))
     }
+    #endif
 
     // MARK: - Design system
 
@@ -762,6 +764,20 @@ final class GagaEmuTests: XCTestCase {
     func testGateClosedInThisBuild() {
         XCTAssertFalse(PaywallGate.isOpen)
         XCTAssertTrue(StoreKitManager().canUseShader("geom-crt"))
+    }
+    #endif
+
+    #if GAGA_SIDELOAD
+    /// A sideload build sells nothing (docs/03 section 5): everything is unlocked and nothing prompts to subscribe.
+    @MainActor
+    func testSideloadUnlocksEverythingAndSellsNothing() {
+        XCTAssertFalse(PaywallGate.isOpen)
+        XCTAssertFalse(SettingsView.Category.visible.contains(.gagaPlus))
+        let store = StoreKitManager()
+        XCTAssertTrue(store.entitlements.premium)
+        XCTAssertFalse(store.entitlements.showsSubscribePrompts)
+        XCTAssertTrue(store.canUseAutoSaveState)
+        XCTAssertTrue(StoreKitManager.premiumShaderIDs.allSatisfy(store.canUseShader))
     }
     #endif
 

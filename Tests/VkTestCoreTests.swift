@@ -309,10 +309,12 @@ final class VkTestCoreTests: XCTestCase {
         XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "vktest", to: directory).pathExtension, "gagavk")
     }
 
+    #if !GAGA_SIDELOAD
     func testFilterStatementNamesLayerPathCores() {
         XCTAssertEqual(GagaPlusView.filterStatement(layerPathCores: []),
                        "Premium Filters work only on cores that draw through the app's filter chain.")
         XCTAssertEqual(GagaPlusView.filterStatement(layerPathCores: ["Vulkan Test"]),
                        "Premium Filters work only on cores that draw through the app's filter chain. Vulkan Test draws its own 3D picture, so filters do not apply there.")
     }
+    #endif
 }

@@ -21,9 +21,21 @@ for env in Cores/*/core.env; do
     known+=("$core")
     grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || commercial+=("$core")
 done
+sideload_settings='' sideload_tests=''
 case "${GAGA_CORE_SET:-}" in
     "") core_set=${commercial[*]} ;;
-    sideload) core_set=${known[*]} ;;
+    sideload)
+        core_set=${known[*]}
+        # A free build: GAGA_SIDELOAD compiles out StoreKit, the paywall and every purchase path, and
+        # nojit-gate.sh then refuses an app that still links StoreKit.
+        sideload_settings='      GAGA_SIDELOAD: "1"
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) GAGA_SIDELOAD
+'
+        sideload_tests='  GagaEmuTests:
+    settings:
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) GAGA_SIDELOAD
+'
+        ;;
     *) core_set=$GAGA_CORE_SET ;;
 esac
 
@@ -68,9 +80,9 @@ targets:
     dependencies:
 $dependencies    settings:
       GAGA_CORE_SET: "$core_set"
-      GCC_PREPROCESSOR_DEFINITIONS:
+$sideload_settings      GCC_PREPROCESSOR_DEFINITIONS:
         - \$(inherited)
-$defines
+$defines$sideload_tests
 YAML
 xcodegen generate
 echo "core set: $core_set"

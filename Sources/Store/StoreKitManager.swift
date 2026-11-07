@@ -1,5 +1,14 @@
 import Foundation
+#if !GAGA_SIDELOAD
 import StoreKit
+#endif
+
+// The sideload core set (GAGA_SIDELOAD, scripts/generate-project.sh) holds cores whose licences forbid
+// commercial use (docs/03 section 5), so that build sells nothing: StoreKit, the products and every purchase
+// path are compiled out, and every premium feature is free.
+#if GAGA_SIDELOAD && PAYWALL_ENABLED
+#error("A sideload build must not have a paywall: its non-commercial cores forbid selling it (docs/03 section 5).")
+#endif
 
 /// Paywall release gate (docs/06 section 4.5). Add the PAYWALL_ENABLED compilation condition in
 /// project.yml only when milestone 7.2 opens it. While closed: no Gaga Plus category, no premium labels, no limits.
@@ -16,6 +25,7 @@ public enum PaywallGate {
 @MainActor
 public final class StoreKitManager: ObservableObject {
 
+    #if !GAGA_SIDELOAD
     public enum ProductID: String, CaseIterable, Sendable {
         case monthly = "monthly.sub"
         case annual = "annual.sub"
@@ -45,6 +55,7 @@ public final class StoreKitManager: ObservableObject {
         public var badge: String? { StoreKitManager.badge(for: productID, intro: intro) }
         public var disclosure: String? { StoreKitManager.disclosure(for: productID, intro: intro) }
     }
+    #endif
 
     /// What a free account is allowed to do. Premium lifts every limit.
     public struct Entitlements: Equatable, Sendable {
@@ -71,6 +82,12 @@ public final class StoreKitManager: ObservableObject {
     /// Sell only what works. crt-deluxe replaces crt-royale, which is GPL (docs/05 section 5).
     public static let premiumShaderIDs: Set<String> = ["geom-crt", "geom-crt-border", "crt-deluxe", "anime4k"]
 
+    #if GAGA_SIDELOAD
+    /// Everything, always, with nothing to buy and no subscribe prompts.
+    @Published public private(set) var entitlements = Entitlements(premium: true, lifetime: true)
+
+    public init() {}
+    #else
     @Published public private(set) var offers: [Offer] = []
     @Published public private(set) var entitlements: Entitlements = .effective(.free)
     @Published public private(set) var isLoading = false
@@ -133,6 +150,7 @@ public final class StoreKitManager: ObservableObject {
         try? await AppStore.sync()
         entitlements = await Self.currentEntitlements()
     }
+    #endif
 
     // MARK: Gates
 
@@ -141,6 +159,7 @@ public final class StoreKitManager: ObservableObject {
         entitlements.premiumShaders || !Self.premiumShaderIDs.contains(id)
     }
 
+    #if !GAGA_SIDELOAD
     // MARK: Transactions
 
     private func handle(_ result: VerificationResult<Transaction>) async {
@@ -216,6 +235,7 @@ public final class StoreKitManager: ObservableObject {
         case .lifetime: return 2
         }
     }
+    #endif
 }
 
 #if DEBUG
