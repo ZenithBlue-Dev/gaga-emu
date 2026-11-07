@@ -114,14 +114,16 @@ final class BenchmarkRun {
 
     static func writeTestROM(platformID: String, to directory: URL) throws -> URL {
         let data: Data
+        var ext = platformID
         switch platformID {
         case "gba": data = GBATestROM.build()
         case "gb": data = GBTestROM.build()
         case "gbc": data = GBTestROM.build(color: true)
+        case "ps1": (data, ext) = (PS1TestEXE.build(), "exe") // PCSX-ReARMed boots a PS-EXE by its name.
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent("GagaBenchmark.\(platformID)")
+        let url = directory.appendingPathComponent("GagaBenchmark.\(ext)")
         try data.write(to: url)
         return url
     }
