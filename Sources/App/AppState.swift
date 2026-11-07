@@ -589,11 +589,13 @@ final class AppState: ObservableObject {
     }
 
     /// `-GagaImportROM <path>`: copies the file in as Files import does, so core work can add a game
-    /// without the UI. A file already in the Library is replaced on disk, not added twice.
+    /// without the UI. A file already in the Library is replaced on disk, not added twice. A relative path is
+    /// in Documents, where `devicectl device copy to` puts a file without knowing the container's path.
     func importROMIfRequested() {
         guard let path = UserDefaults.standard.string(forKey: "GagaImportROM") else { return }
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         do {
-            try importDebugROM(at: URL(fileURLWithPath: path))
+            try importDebugROM(at: path.hasPrefix("/") ? URL(fileURLWithPath: path) : documents.appendingPathComponent(path))
         } catch {
             launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
         }
