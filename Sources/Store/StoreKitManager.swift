@@ -2,7 +2,7 @@ import Foundation
 import StoreKit
 
 /// Paywall release gate (docs/06 section 4.5). Add the PAYWALL_ENABLED compilation condition in
-/// project.yml only when milestone 7.2 opens it. While closed: no banner, no premium labels, no limits.
+/// project.yml only when milestone 7.2 opens it. While closed: no Gaga Plus category, no premium labels, no limits.
 public enum PaywallGate {
     #if PAYWALL_ENABLED
     public static let isOpen = true
@@ -24,9 +24,9 @@ public final class StoreKitManager: ObservableObject {
         public var isSubscription: Bool { self != .lifetime }
         public var title: String {
             switch self {
-            case .monthly: return "Monthly Membership"
-            case .annual: return "Annual Membership"
-            case .lifetime: return "Lifetime Pass"
+            case .monthly: return "Monthly"
+            case .annual: return "Annual"
+            case .lifetime: return "Lifetime"
             }
         }
     }
@@ -192,7 +192,7 @@ public final class StoreKitManager: ObservableObject {
 
     /// Offer badges appear only when the product has that offer (docs/06 section 4.4).
     nonisolated static func badge(for id: ProductID, intro: IntroOffer?) -> String? {
-        if id == .lifetime { return "Best Value" }
+        if id == .lifetime { return "One payment" }
         switch intro {
         case .freeTrial: return "Free Trial"
         case .paid: return "Introductory Offer"
@@ -203,13 +203,15 @@ public final class StoreKitManager: ObservableObject {
     /// Text under the offers. It must match what the selected product actually offers.
     nonisolated static func disclosure(for id: ProductID, intro: IntroOffer?) -> String? {
         guard id.isSubscription else { return nil }
-        return intro == .freeTrial ? "No charges during trial period. Cancel anytime" : "Cancel anytime"
+        return intro == .freeTrial
+            ? "The trial is free. Renews after it ends unless you cancel. Cancel anytime."
+            : "Renews until you cancel. Cancel anytime."
     }
 
     private func rank(_ offer: Offer) -> Int {
         switch offer.productID {
-        case .annual: return 0
-        case .monthly: return 1
+        case .monthly: return 0
+        case .annual: return 1
         case .lifetime: return 2
         }
     }
