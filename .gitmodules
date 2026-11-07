@@ -67,3 +67,6 @@
 [submodule "Cores/beetle_wswan/upstream"]
 	path = Cores/beetle_wswan/upstream
 	url = https://github.com/libretro/beetle-wswan-libretro.git
+[submodule "Cores/pokemini/upstream"]
+	path = Cores/pokemini/upstream
+	url = https://github.com/libretro/PokeMini.git
