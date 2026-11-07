@@ -55,3 +55,6 @@
 [submodule "Cores/beetle_pce_fast/upstream"]
 	path = Cores/beetle_pce_fast/upstream
 	url = https://github.com/libretro/beetle-pce-fast-libretro.git
+[submodule "Cores/beetle_supergrafx/upstream"]
+	path = Cores/beetle_supergrafx/upstream
+	url = https://github.com/libretro/beetle-supergrafx-libretro.git
