@@ -1,0 +1,37 @@
+============================================================================
+
+   SSSS    tt          lll  lll
+  SS  SS   tt           ll   ll
+  SS     tttttt  eeee   ll   ll   aaaa
+   SSSS    tt   ee  ee  ll   ll      aa
+      SS   tt   eeeeee  ll   ll   aaaaa  --  "An Atari 2600 VCS Emulator"
+  SS  SS   tt   ee      ll   ll  aa  aa
+   SSSS     ttt  eeeee llll llll  aaaaa
+
+ Copyright (c) 1995-2024 by Bradford W. Mott, Stephen Anthony
+ and the Stella Team
+
+ See the file "License.txt" for information on usage and redistribution of
+ this file, and for a DISCLAIMER OF ALL WARRANTIES.
+============================================================================
+
+
+ Atari TIA NTSC video filter
+ Based on nes_ntsc 0.2.2. http://www.slack.net/~ant
+
+ Copyright (C) 2006-2009 Shay Green. This module is free software; you
+ can redistribute it and/or modify it under the terms of the GNU Lesser
+ General Public License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version. This
+ module is distributed in the hope that it will be useful, but WITHOUT ANY
+ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ details. You should have received a copy of the GNU Lesser General Public
+ License along with this module; if not, write to the Free Software Foundation,
+ Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+
+
+  The class is basically a thin wrapper around atari_ntsc_xxx structs
+  and methods, so that the rest of the codebase isn't affected by
+  updated versions of Blargg code.

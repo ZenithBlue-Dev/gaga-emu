@@ -31,7 +31,19 @@ enum LibretroThumbnails {
         "vb": "Nintendo - Virtual Boy",
         "ngp": "SNK - Neo Geo Pocket Color",
         "ws": "Bandai - WonderSwan Color",
-        "pokemini": "Nintendo - Pokemon Mini"
+        "pokemini": "Nintendo - Pokemon Mini",
+        "mastersystem": "Sega - Master System - Mark III",
+        "gamegear": "Sega - Game Gear",
+        "sg1000": "Sega - SG-1000",
+        "atari2600": "Atari - 2600",
+        "atari7800": "Atari - 7800",
+        "lynx": "Atari - Lynx",
+        "atari5200": "Atari - 5200",
+        "atari8bit": "Atari - 8-bit",
+        "jaguar": "Atari - Jaguar",
+        "c64": "Commodore - 64",
+        "amiga": "Commodore - Amiga",
+        "doom": "DOOM"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.

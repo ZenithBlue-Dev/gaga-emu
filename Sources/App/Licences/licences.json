@@ -1230,6 +1230,346 @@
    ]
   },
   {
+   "id": "gearsystem",
+   "title": "Gearsystem",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/drhelius/Gearsystem, tag 3.9.24, commit 40b8eeb",
+   "cores": [
+    "gearsystem"
+   ],
+   "framework": "GearsystemCore",
+   "texts": [
+    {
+     "title": "Gearsystem",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "Blip_Buffer and Sms_Apu (Shay Green)",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    }
+   ]
+  },
+  {
+   "id": "stella",
+   "title": "Stella",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/stella-emu/stella, tag 7.0c, commit c4016ea",
+   "cores": [
+    "stella"
+   ],
+   "framework": "StellaCore",
+   "texts": [
+    {
+     "title": "Stella",
+     "file": "licence-58530d09b6fc.txt"
+    },
+    {
+     "title": "Stella copyright",
+     "file": "licence-e2a32d2f6134.txt"
+    },
+    {
+     "title": "Atari NTSC filter (Blargg)",
+     "file": "licence-625001fc888c.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "JSON for Modern C++",
+     "file": "licence-50be9457e5c9.txt"
+    }
+   ]
+  },
+  {
+   "id": "prosystem",
+   "title": "ProSystem",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/prosystem-libretro, commit 8a88014",
+   "cores": [
+    "prosystem"
+   ],
+   "framework": "ProSystemCore",
+   "texts": [
+    {
+     "title": "ProSystem",
+     "file": "licence-63755afa640d.txt"
+    },
+    {
+     "title": "ProSystem copyright",
+     "file": "licence-3ca8587f45fd.txt"
+    },
+    {
+     "title": "BupBoop coretone (zlib)",
+     "file": "licence-a27b13569722.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "handy",
+   "title": "Handy",
+   "licence": "Zlib",
+   "source": "https://github.com/libretro/libretro-handy, commit bc55d46",
+   "cores": [
+    "handy"
+   ],
+   "framework": "HandyCore",
+   "texts": [
+    {
+     "title": "Handy",
+     "file": "licence-c75a7fed8afe.txt"
+    },
+    {
+     "title": "Blip_Buffer",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "atari800",
+   "title": "Atari800",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/libretro-atari800, commit 4e7fbc7",
+   "cores": [
+    "atari800"
+   ],
+   "framework": "Atari800Core",
+   "texts": [
+    {
+     "title": "Atari800",
+     "file": "licence-e6d6a009505e.txt"
+    },
+    {
+     "title": "Atari800 copyright",
+     "file": "licence-38a51bae0224.txt"
+    },
+    {
+     "title": "AltirraOS (XL/XE, 400/800, BASIC)",
+     "file": "licence-7af87f481330.txt"
+    },
+    {
+     "title": "AltirraOS 5200",
+     "file": "licence-68c8764b8431.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-d0f474ed713f.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "virtualjaguar",
+   "title": "Virtual Jaguar",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/libretro/virtualjaguar-libretro, tag v3.11.0, commit 3469608. Atari's boot ROMs in src/bios are not built.",
+   "cores": [
+    "virtualjaguar"
+   ],
+   "framework": "VirtualJaguarCore",
+   "texts": [
+    {
+     "title": "Virtual Jaguar",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "vice",
+   "title": "VICE",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/vice-libretro, commit 5ebe7d3, built as x64sc. Commodore's ROMs are not built.",
+   "cores": [
+    "vice"
+   ],
+   "framework": "ViceCore",
+   "texts": [
+    {
+     "title": "VICE",
+     "file": "licence-b8a2f73f743d.txt"
+    },
+    {
+     "title": "P64",
+     "file": "licence-68b75c23c710.txt"
+    },
+    {
+     "title": "libretro disk control",
+     "file": "licence-30382152b8f6.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-d0f474ed713f.txt"
+    },
+    {
+     "title": "7-Zip decoder",
+     "file": "licence-e598cb06c410.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "puae",
+   "title": "PUAE",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/libretro-uae, commit c1d1d49. WHDLoad's bundled Amiga files and the HRTmon ROM are not built.",
+   "cores": [
+    "puae"
+   ],
+   "framework": "PuaeCore",
+   "texts": [
+    {
+     "title": "PUAE",
+     "file": "licence-dcc100d4161c.txt"
+    },
+    {
+     "title": "AROS Kickstart replacement",
+     "file": "licence-546cbd419844.txt"
+    },
+    {
+     "title": "libretro disk control",
+     "file": "licence-30382152b8f6.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-d0f474ed713f.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "7-Zip decoder",
+     "file": "licence-e598cb06c410.txt"
+    },
+    {
+     "title": "SoftFloat",
+     "file": "licence-3d09aa82af8b.txt"
+    },
+    {
+     "title": "kjmp2",
+     "file": "licence-d10e40ce91ff.txt"
+    },
+    {
+     "title": "LHa for UNIX",
+     "file": "licence-b88abf23472e.txt"
+    },
+    {
+     "title": "DMS decompressor",
+     "file": "licence-81f31eb82ad9.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "prboom",
+   "title": "PrBoom",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/libretro/libretro-prboom, commit 4849268. Mostly GPL-2.0-or-later; src/sc88.c is GPL-3.0-or-later, so the whole is GPL-3.0-or-later. No game WAD is included.",
+   "cores": [
+    "prboom"
+   ],
+   "framework": "PrboomCore",
+   "texts": [
+    {
+     "title": "PrBoom (GPL-2.0-or-later), with prboom.wad",
+     "file": "licence-1cba07ce0f6d.txt"
+    },
+    {
+     "title": "GNU General Public License 3",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "SC-88 emulation",
+     "file": "licence-c20b3c13a233.txt"
+    },
+    {
+     "title": "Nuked-SC55",
+     "file": "licence-704d9d3c08f4.txt"
+    },
+    {
+     "title": "DOSBox OPL",
+     "file": "licence-8cd15f66dbce.txt"
+    },
+    {
+     "title": "UMAPINFO (LGPL, version 2 or later)",
+     "file": "licence-82616726a90a.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "Scanner",
+     "file": "licence-087cc0ade161.txt"
+    },
+    {
+     "title": "micromod",
+     "file": "licence-bcc3ec643ced.txt"
+    },
+    {
+     "title": "rvorbis and rmp3",
+     "file": "licence-f4d0ad4cbd63.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

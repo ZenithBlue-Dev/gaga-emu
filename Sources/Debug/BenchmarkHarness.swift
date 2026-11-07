@@ -135,6 +135,16 @@ final class BenchmarkRun {
         case "ngp": (data, ext) = (NGPTestROM.build(), "ngc")
         case "ws": (data, ext) = (WSTestROM.build(), "wsc")
         case "pokemini": (data, ext) = (PMTestROM.build(), "min")
+        case "mastersystem": (data, ext) = (SMSTestROM.build(), "sms")
+        case "atari2600": (data, ext) = (Atari2600TestROM.build(), "a26")
+        case "atari7800": (data, ext) = (Atari7800TestROM.build(), "a78")
+        case "lynx": (data, ext) = (LynxTestROM.build(), "lnx")
+        case "atari5200": (data, ext) = (Atari800TestROM.a52(), "a52")
+        case "atari8bit": (data, ext) = (Atari800TestROM.xex(), "xex")
+        case "jaguar": (data, ext) = (JaguarTestROM.build(), "j64")
+        case "c64": (data, ext) = (C64TestROM.crt(), "crt") // Still needs the player's KERNAL files to start.
+        case "amiga": (data, ext) = (AmigaTestROM.adf(), "adf")
+        case "doom": (data, ext) = (DoomTestWAD.wad(), "wad")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

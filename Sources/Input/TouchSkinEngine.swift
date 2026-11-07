@@ -301,7 +301,8 @@ public final class TouchSkinEngine: ObservableObject {
                     button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
                     button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
                 ],
-                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx", "ngp", "pokemini"])
+                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx", "ngp", "pokemini", "mastersystem", "gamegear", "sg1000", "atari2600",
+                            "atari7800", "lynx", "atari5200", "atari8bit", "c64", "amiga"])
         }()
 
         /// A second D-pad on the right, sending the RetroPad buttons the core reads it from, with A and B above.

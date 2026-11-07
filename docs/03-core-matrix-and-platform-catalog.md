@@ -52,6 +52,20 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | WonderSwan / Color | Beetle Cygne | `mednafen.wswan` (Backlog listing) | None | [GPL-2.0-or-later](https://github.com/libretro/beetle-wswan-libretro), plus LGPL-2.1-or-later and MIT parts (section 5) | Software. Vertical games turn upright on Select, in software | As PC Engine. Built on branch `core/group-mednafen`, legal gate open. No boot ROM needed | Active. No release tags; pinned to master commit `4b01295838ea89e3f1355bbe4cb5cf98aa6108cd` (2026-07-31) | 1 |
 | Pokémon Mini | PokeMini | `pokemini` (Backlog listing) | None | [GPL-3.0-or-later](https://github.com/libretro/PokeMini), plus MIT parts (section 5) | Software | As PC Engine. Built on branch `core/group-mednafen`, legal gate open. Free BIOS built in; the player's `bios.min` is optional | Active. No release tags; pinned to master commit `132111b76343559860532a1ccc094f93f1ed5650` (2026-07-31) | 1 |
 
+**Backlog cores, group-retro** (`docs/07` section 8.x). Rows from section 6's backlog, built on branch `core/group-retro`. Same columns; Manic's core is from its public repo.
+
+| Platform | GagaEmu default | Manic default (screenshot) | Alternates | Licence | Renderer path | No-JIT status | Upstream state | Load tier |
+|---|---|---|---|---|---|---|---|---|
+| Master System / Game Gear / SG-1000 | Gearsystem | `gearsystem` | None | [GPL-3.0-or-later](https://github.com/drhelius/Gearsystem) (file headers: "version 3 of the License, or any later version"), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Z80 interpreter, no recompiler in the tree. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([drhelius/Gearsystem](https://github.com/drhelius/Gearsystem), `platforms/libretro`). Pinned to tag 3.9.24, `40b8eebab53007c976eb29755b1ef7925140c37f` | 1 |
+| Atari 2600 | Stella | `stella` | stella2014 (not built) | [GPL-2.0-or-later](https://github.com/stella-emu/stella) (`Copyright.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 6502 interpreter; the ARM interpreter for DPC+, CDF and ELF carts (Thumbulator, CortexM0) does not recompile. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([stella-emu/stella](https://github.com/stella-emu/stella), `src/os/libretro`). Pinned to release tag 7.0c, `c4016ea4891cb0f90979cb35182214af4c1cb4e7`. Chosen over [stella2014-libretro](https://github.com/libretro/stella2014-libretro), a 2014 snapshot (Stella 3.9.3) that libretro only keeps building: both are GPL-2, this one is maintained | 1 |
+| Atari 7800 | ProSystem | `prosystem` | None | [GPL-2.0-or-later](https://github.com/libretro/prosystem-libretro) (`License.txt`), plus zlib and MIT parts (section 5) | Software | 6502 (Sally) interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/prosystem-libretro](https://github.com/libretro/prosystem-libretro)), last push 2026-08-22, no tags. Pinned to `8a88014287c7a01cd568067e5a557d0a2b2a051f` | 1 |
+| Atari Lynx | Handy | `handy` | holani (not built) | [Zlib](https://github.com/libretro/libretro-handy) (`lynx/license.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 65C02 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-handy](https://github.com/libretro/libretro-handy)), last push 2026-04-20, no tags. Pinned to `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1`. Chosen over [holani-retro](https://github.com/LLeny/holani-retro): GPL-3.0 and Rust, which `scripts/build-core.sh` does not build | 1 |
+| Atari 5200, Atari 8-bit | Atari800 | `atari800` | None | [GPL-2.0-or-later](https://github.com/libretro/libretro-atari800) (`atari800/COPYING`), plus all-permissive, Zlib and MIT parts (section 5) | Software | 6502 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-atari800](https://github.com/libretro/libretro-atari800)), last push 2026-09-01, no tags. Pinned to `4e7fbc73765c1a9670c7506616046ad1d4ccda51` | 1 |
+| Atari Jaguar | Virtual Jaguar | `virtualjaguar` | None (optional `jagboot.rom`) | [GPL-3.0-or-later](https://github.com/libretro/virtualjaguar-libretro) (`LICENSE`), plus BSD, MIT and public-domain parts (section 5) | Software | 68000, GPU and DSP interpreters. Heavy tier: a full-speed claim needs a device benchmark with real games. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro)). Pinned to tag `v3.11.0`, `34696082dbc0448caf23aa4ecb5ed40817cb8da0` | 3 |
+| Commodore 64 | VICE (x64sc) | `vice` | Player's `kernal-901227-03.bin`, `basic-901226-01.bin`, `chargen-901225-01.bin` | [GPL-2.0-or-later](https://github.com/libretro/vice-libretro) (`COPYING`), plus Zlib, MIT and public-domain parts (section 5) | Software | 6510, VIC-II and SID interpreters, cycle-exact. Static gate passes on both slices; runtime check passes on a macOS host harness with all-zero stand-in ROM files; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/vice-libretro](https://github.com/libretro/vice-libretro)), last push 2026-10-30, no tags. Pinned to `5ebe7d333ab15be57a9dde5f46c29a5bbd5f44f8` | 2 |
+| Amiga | PUAE | `puae` | None: upstream's built-in AROS Kickstart replacement. Player's `kick34005.A500` and `kick40068.A1200` optional | [GPL-2.0-or-later](https://github.com/libretro/libretro-uae) (`COPYING`), plus AROS Public License 1.1 (the AROS ROM), SoftFloat-2a, BSD, Zlib, MIT and public-domain parts (section 5) | Software | 68000 interpreter (no JIT source compiled), OCS/ECS chipset. Static gate passes on both slices; runtime check passes on a macOS host harness on AROS; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-uae](https://github.com/libretro/libretro-uae)), last commit 2026-11-04, no tags (`VERSION` 5.3.1). Pinned to `c1d1d49d5c7cdad2005e86f1cbb279d39e041efc` | 2 |
+| Doom (WAD) | PrBoom | `prboom` | None. The player's game WAD (an IWAD such as `doom2.wad` or `freedoom2.wad`, or a PWAD beside one); none bundled | [GPL-3.0-or-later](https://github.com/libretro/libretro-prboom) as a whole: mostly GPL-2.0-or-later (`COPYING`), `src/sc88.c` GPL-3.0-or-later, plus LGPL, BSD and MIT parts (section 5) | Software | Software renderer, no CPU to emulate. Static gate passes on both slices; runtime check passes on a macOS host harness with GagaEmu's generated IWAD; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-prboom](https://github.com/libretro/libretro-prboom)), last commit 2026-10-18, no tags (`v2.5.0` in `retro_get_system_info`). Pinned to `4849268e7342494193f2bbf2d0128a751cf58da7` | 1 |
+
 ### Renderer rules
 
 - **App UI, frame presentation and post-processing:** native Metal.
@@ -528,6 +542,151 @@ Source: [github.com/libretro/swanstation](https://github.com/libretro/swanstatio
 
 No Sony BIOS is bundled or fetched. With none in `GagaEmu/System`, the core boots the embedded OpenBIOS. It only takes a BIOS file whose hash it knows, so another system's 512 KiB BIOS (Saturn) is never used. Two limits found on the macOS harness: upstream starts a PS-EXE by patching a Sony BIOS at fixed offsets, so `.exe` files reach OpenBIOS's shell and do not run; and OpenBIOS did not boot the homebrew test disc, which has no licence sector. A player's own `scph5500.bin`, `scph5501.bin` or `scph5502.bin` (BIOS Files screen) runs both. Commercial discs on OpenBIOS are untested.
 
+### Gearsystem licence obligations
+
+Source: [github.com/drhelius/Gearsystem](https://github.com/drhelius/Gearsystem), the author's repository and the one libretro-super builds, tag 3.9.24, commit `40b8eebab53007c976eb29755b1ef7925140c37f`, as the unmodified submodule `Cores/gearsystem/upstream`. `Cores/gearsystem/GearsystemCore.c`, `nofm.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/gearsystem/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src` (Z80, VDP, mappers, I/O, link cable, YM2413 wrapper) and `platforms/libretro` | GPL-3.0-or-later (file headers; `LICENSE` is the GPL-3.0 text) | The complete corresponding source of the whole work, with the written offer or the source alongside, and no added restrictions. This is the gate above. |
+| `src/audio/Blip_Buffer.cpp`, `Sms_Apu.cpp`, `Stereo_Buffer.cpp` (Shay Green) | LGPL-2.1-or-later | Satisfied by the GPL source release; counsel to confirm. |
+| `platforms/shared/dependencies/miniz/miniz.c` | MIT | Reproduce the notice. |
+
+Not compiled: `src/audio/emu2413/emu2413.c`, the YM2413 FM emulation. It is Jarek Burczynski's MAME `ym2413.c` by way of Genesis Plus GX and its header states no licence, so `Cores/gearsystem/nofm.c` stands in with empty functions: FM music (Japanese Master System games only) is silent, the PSG plays. Also not compiled: the disassembler and VGM recorder (`GS_DISABLE_DISASSEMBLER`, `GS_DISABLE_VGMRECORDER`, as upstream's libretro makefile sets) and every desktop, iOS and imgui frontend. No socket, `dlopen` or thread is imported; the link cable runs two instances in one process.
+
+No BIOS or game is bundled. The `gearsystem_bios_sms` and `gearsystem_bios_gg` options stay "Disabled", so no Sega boot ROM is read. The test ROM `Sources/Debug/SMSTestROM.swift` is GagaEmu's own hand-assembled Z80 program.
+
+### Stella licence obligations
+
+Source: [github.com/stella-emu/stella](https://github.com/stella-emu/stella), the Stella team's repository, whose `src/os/libretro` is the target libretro-super builds as `stella`, tag 7.0c, commit `c4016ea4891cb0f90979cb35182214af4c1cb4e7`, as the unmodified submodule `Cores/stella/upstream`. `Cores/stella/StellaCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/stella/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src/emucore` (6507, TIA, RIOT, every cartridge scheme, Thumbulator, CortexM0, ELF), `src/common`, `src/os/libretro` | GPL-2.0-or-later (`Copyright.txt`; `License.txt` is the GPL-2.0 text) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `src/common/tv_filters/AtariNTSC.cxx` (Blargg's NTSC filter, updated) | LGPL-2.1-or-later (`AtariNTSC.hxx`) | Satisfied by the GPL source release; counsel to confirm. |
+| `src/lib/json` (nlohmann JSON, headers) | MIT | Reproduce the notice. |
+
+Not compiled or not reachable: `HTTP_LIB_SUPPORT` is not defined, so PlusROM carts get no network and `lib/httplib` is never included; no GUI, debugger, image or SQLite support is defined, so `lib/sqlite` is not compiled. `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym` and `mprotect`. `pthread_create` is imported by `EmulationWorker`, which the libretro target does not start.
+
+No BIOS or game is bundled; the 2600 has no BIOS. The test cartridge `Sources/Debug/Atari2600TestROM.swift` is GagaEmu's own hand-assembled 6502 program.
+
+### ProSystem licence obligations
+
+Source: [github.com/libretro/prosystem-libretro](https://github.com/libretro/prosystem-libretro), libretro's port of Greg Stanton's ProSystem, commit `8a88014287c7a01cd568067e5a557d0a2b2a051f` (upstream has no tags), as the unmodified submodule `Cores/prosystem/upstream`. `Cores/prosystem/ProSystemCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/prosystem/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `core/` (Sally 6502, MARIA, TIA, POKEY, RIOT, cartridge, database, libretro glue) | GPL-2.0-or-later (file headers; `License.txt` is the GPL-2.0 text) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `bupboop/coretone` (BupChip audio) | zlib (`bupboop/License.txt`) | Keep the notice; mark altered sources (none are altered). |
+| `libretro-common` (compat, file, streams, string, time, vfs) | MIT | Reproduce the notice. |
+
+Not compiled or not reachable: `.cdf` loading reads loose files named by the descriptor, but the app only offers `.a78`. `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`.
+
+No BIOS or game is bundled. The 7800 BIOS is optional: upstream opens `7800 BIOS (U).rom` (or `(E)` for a PAL cart) from the system folder if the player put one there, and boots the cart directly otherwise. The test cartridge `Sources/Debug/Atari7800TestROM.swift` is GagaEmu's own hand-assembled 6502 program.
+
+### Handy licence obligations
+
+Source: [github.com/libretro/libretro-handy](https://github.com/libretro/libretro-handy), libretro's port of K. Wilkins' Handy, commit `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1` (upstream has no tags), as the unmodified submodule `Cores/handy/upstream`. `Cores/handy/HandyCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/handy/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `lynx/` (65C02, Mikey, Suzy, cart, EEPROM, loader decryption), `libretro/` | Zlib (`lynx/license.txt`) | Keep the notice; mark altered sources (none are altered). |
+| `blip/` (Blip_Buffer, Stereo_Buffer) | LGPL-2.1-or-later (file headers) | Statically linked, so the player must be able to relink: satisfied by the source release the GPL cores already need; counsel to confirm. |
+| `libretro-common` (compat, file, streams, string, time, vfs) | MIT | Reproduce the notice. |
+
+`FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`. `stat` is imported (libretro-common's `path_is_valid`, for the boot ROM); it is covered by the app's File Timestamp reason C617.1.
+
+No boot ROM or game is bundled. `lynxboot.img` is the player's: upstream opens it from the system folder and otherwise emulates the boot ROM's loader (HLE), which still needs the cart's own signed loader. The BIOS Files screen lists it as optional. The test program `Sources/Debug/LynxTestROM.swift` is GagaEmu's own hand-assembled 65C02 in the BS93 homebrew format; it uses no Atari key.
+
+### Atari800 licence obligations
+
+Source: [github.com/libretro/libretro-atari800](https://github.com/libretro/libretro-atari800), libretro's port of Atari800, commit `4e7fbc73765c1a9670c7506616046ad1d4ccda51` (upstream has no tags), as the unmodified submodule `Cores/atari800/upstream`. `Cores/atari800/Atari800Core.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/atari800/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `atari800/src` (6502, ANTIC, GTIA, POKEY, PIA, SIO, cartridges, disks, tape), `libretro/` | GPL-2.0-or-later (`atari800/COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `atari800/src/roms/altirra*.c` (AltirraOS XL/XE, 400/800 and 5200 kernels, Altirra BASIC, 5200 charset) | All-permissive (FSF), Avery Lee | Keep the copyright notice and the permission notice. |
+| `deps/zlib` | Zlib | Keep the notice. |
+| `libretro/libretro-common` (compat, file, streams, string, time, vfs) | MIT | Reproduce the notice. |
+
+`FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`; the R: device stays off. The P: printer device is turned off by the bridge, so no print file is written, and `atari800_cfg` stays disabled, so no `atari800.cfg` is written. `stat`, `opendir` and `readdir` are imported (the system-folder ROM scan); `stat` is covered by the app's File Timestamp reason C617.1.
+
+No Atari ROM or game is bundled; the AltirraOS replacements are free software. Atari's own `5200.rom`, XL/XE OS (`atarixl.rom`), 400/800 OS and BASIC are the player's: upstream scans the system folder for them by checksum, under any name, and uses AltirraOS otherwise. The BIOS Files screen lists `5200.rom` and `atarixl.rom` as optional. The test programs `Sources/Debug/Atari800TestROM.swift` are GagaEmu's own hand-assembled 6502.
+
+### Virtual Jaguar licence obligations
+
+Source: [github.com/libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro), libretro's Virtual Jaguar, tag `v3.11.0`, commit `34696082dbc0448caf23aa4ecb5ed40817cb8da0`, as the unmodified submodule `Cores/virtualjaguar/upstream`. `Cores/virtualjaguar/VirtualJaguarCore.c`, `bios_stub.c`, `nonet_*.c`, `version.h` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/virtualjaguar/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src` (68000, TOM, JERRY, blitter, Object Processor, CD, EEPROM), `libretro.c` | GPL-3.0-or-later (`LICENSE`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `deps/libchdr` (`unity.c`) | BSD-3-Clause | Keep the notice. |
+| libchdr's zstd | BSD-3-Clause (dual GPL-2.0) | Keep the notice. |
+| libchdr's miniz | MIT | Keep the notice. |
+| libchdr's LZMA SDK | Public domain | None. |
+| `libretro-common` | MIT | Reproduce the notice. |
+
+Upstream's `src/bios/jag*.c` embed Atari's boot ROMs and are never compiled: `bios_stub.c` gives zeroed arrays of the same names, and `FORBIDDEN_SOURCES` in `core.env` fails the build if any of those files reaches the binary. JagLink TCP/UDP and the GDB stub are built from their socketless branches through `nonet_*.c`, and `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`. The bridge keeps netlink, voice chat, the GDB stub, texture dump and replace, and JGD off. `stat`, `lstat`, `opendir`, `readdir` and `localtime` are imported (libretro-common and the CD path); `stat` and `lstat` are covered by the app's File Timestamp reason C617.1.
+
+No boot ROM or game is bundled. Carts start by HLE; `jagboot.rom` is the player's and optional on the BIOS Files screen (the bridge leaves the BIOS option off). The test program `Sources/Debug/JaguarTestROM.swift` is GagaEmu's own hand-assembled 68000.
+
+### VICE licence obligations
+
+Source: [github.com/libretro/vice-libretro](https://github.com/libretro/vice-libretro), libretro's port of VICE 3.10, commit `5ebe7d333ab15be57a9dde5f46c29a5bbd5f44f8` (upstream has no tags), as the unmodified submodule `Cores/vice/upstream`, built as x64sc. `Cores/vice/ViceCore.c`, `vice_embedded.c`, `vice_sysfile.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/vice/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `vice/src` (6510, VIC-II, CIA, SID with reSID and reSID-fp, drives, cartridges, tape), `libretro/`, `retrodep/` | GPL-2.0-or-later (`COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `vice/src/lib/p64` | Zlib (Benjamin Rosseaux) | Keep the notice. |
+| `libretro/libretro-dc.c` | MIT | Reproduce the notice. |
+| `deps/libz` | Zlib | Keep the notice. |
+| `deps/7zip` | Public domain | None. |
+| `libretro-common` | MIT | Reproduce the notice. |
+
+Upstream compiles Commodore's KERNAL, BASIC, character and drive ROMs into the core (`include/embedded/*.h`, through `retrodep/embedded.c` and `retrodep/embedded/c64embedded.c`). GagaEmu builds neither file: `vice_embedded.c` answers "not embedded", `include/embedded` is not on the include path, and `FORBIDDEN_SOURCES` fails the build if any of them reaches the binary. A byte check of the built framework finds no KERNAL bytes. `vice_sysfile.c` builds upstream's `sysfile.c` so the player's ROM files are also found at the top of the system folder, where the BIOS Files screen lists them. `config.h` undefines `HAVE_NETWORK`, and `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`. `stat`, `access`, `opendir`, `readdir` and `localtime` are imported; `stat` is covered by the app's File Timestamp reason C617.1.
+
+No Commodore ROM or game is bundled. The player adds `kernal-901227-03.bin`, `basic-901226-01.bin` and `chargen-901225-01.bin` on the BIOS Files screen; without them the bridge refuses the game with a message, because upstream crashes. Upstream makes `<system>/vice` and writes its defaults there once (`vicerc-dump-C64SC`). Disk images are write-protected, so the player's files are never changed. The test cartridge `Sources/Debug/C64TestROM.swift` is GagaEmu's own hand-assembled 6502; the tests' stand-in ROM files are all zeros and never run.
+
+### PUAE licence obligations
+
+Source: [github.com/libretro/libretro-uae](https://github.com/libretro/libretro-uae), libretro's port of WinUAE/E-UAE (`VERSION` 5.3.1), commit `c1d1d49d5c7cdad2005e86f1cbb279d39e041efc` (upstream has no tags), as the unmodified submodule `Cores/puae/upstream`. `Cores/puae/PuaeCore.c`, `puae_stubs.c`, `puae_fpp_native.c`, `puae_cpuboard.c`, `puae_dlopen.c`, `retrodep/WHDLoad_*.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/puae/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `sources/src` (68000 interpreter, chipset, floppy, hard file, CD), `libretro/`, `retrodep/`, `deps/libmpeg2` | GPL-2.0-or-later (`COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `sources/src/aros.rom.c` (AROS Kickstart replacement, a ROM image built from AROS) | AROS Public License 1.1 (MPL-1.1 based) | Keep the notice and say where the AROS source is ([aros-development-team/AROS](https://github.com/aros-development-team/AROS)). Gate item: confirm the APL's source and notice terms for a binary-only image. |
+| `sources/src/softfloat`, `fpp_softfloat.c` | SoftFloat-2a, BSD-3-Clause (Fabrice Bellard), GPL-2.0-or-later | Reproduce the SoftFloat and BSD notices. |
+| `sources/src/archivers/mp2` (kjmp2) | Zlib | Keep the notice. |
+| `sources/src/archivers/lha` (LHa for UNIX) | Not stated in the tree (authors named in headers) | Gate item: the LHa for UNIX licence text is not in the upstream tree; confirm its terms or drop LHA archive support. |
+| `sources/src/archivers/dms` (xDMS), `deps/7zip` | Public domain | None. |
+| `sources/src/dsp3210`, other `archivers` | GPL-2.0-or-later (no header; the whole is GPL) | As the first row. |
+| `libretro/libretro-dc.c` | MIT | Reproduce the notice. |
+| `deps/libz` | Zlib | Keep the notice. |
+| `deps/libchdr`, `deps/zstd` | BSD-3-Clause | Reproduce the notice. |
+| `libretro-common` | MIT | Reproduce the notice. |
+
+Upstream also compiles WHDLoad's Amiga-side files (`retrodep/WHDLoad_files.zip.c`, `WHDLoad_prefs.gz.c`) and the HRTmon cartridge ROM (`sources/src/hrtmon.rom.c`), whose licences are unclear. GagaEmu builds empty stand-ins instead (`Cores/puae/retrodep/`, `puae_stubs.c`), and `FORBIDDEN_SOURCES` fails the build if the upstream files reach the binary. So `.lha` WHDLoad games are not offered. Three upstream files are wrapped after the source audit: `fpp_native.c` (its x87 code is never compiled on arm64), `cpuboard.c` (it switches a map-ROM area between read-only and read-write only for the JIT cache) and `caps/uae_dlopen.c` (built with `HAVE_DLOPEN` cleared, so the capsimg plug-in for IPF images is never loaded and IPF images do not load). `retrodep/mman.c`, which reserves memory for the JIT, is not built; `puae_stubs.c` keeps its one shared variable at 0. `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym` and `mprotect`; `pthread_create` and named semaphores (`sem_open`) are used by the hard-file, CD and serial threads. `stat`, `opendir`, `readdir`, `localtime`, `mkdir`, `rename` and `unlink` are imported; `stat` is covered by the app's File Timestamp reason C617.1.
+
+No Kickstart ROM or game is bundled. The core boots on AROS when no Kickstart is in the system folder; `kick34005.A500` and `kick40068.A1200` are the player's and optional on the BIOS Files screen. Floppies are write-protected and shared NVRAM is off, so the player's files are never changed; a host harness run left the system and save folders empty. The test floppy `Sources/Debug/AmigaTestROM.swift` is GagaEmu's own hand-assembled 68000 bootblock.
+
+### PrBoom licence obligations
+
+Source: [github.com/libretro/libretro-prboom](https://github.com/libretro/libretro-prboom), libretro's PrBoom (`v2.5.0`, with Heretic and Hexen support), commit `4849268e7342494193f2bbf2d0128a751cf58da7` (upstream has no tags), as the unmodified submodule `Cores/prboom/upstream`. `Cores/prboom/PrboomCore.c`, `prboom_memmap.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/prboom/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src` (Doom engine, `heretic/`, `hexen/`, `udmf.c`, DOSBox OPL `dbopl.c`, `opl.c`, Nuked-SC55 `sc55.c`), `libretro/libretro.c`, and `prboom.wad` compiled in as `src/prboom_wad_data.h` | GPL-2.0-or-later (`COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `src/sc88.c` (Roland SC-88 emulation, from gearmulator) | GPL-3.0-or-later | Makes the combined core GPL-3.0-or-later: the GPL-3.0 text, and the gate above under version 3. |
+| `src/u_mapinfo.c` | LGPL, version 2 or later | Keep the notice and the LGPL text; the source is offered with the rest. |
+| `src/scanner.c`, `src/u_scanner.c` | BSD-3-Clause (Braden Obrzut) | Reproduce the notice. |
+| `libretro-common/formats/mod/rmodtracker.c` (micromod) | BSD-3-Clause (Martin Cameron) | Reproduce the notice. |
+| `libretro-common/formats/vorbis/rvorbis.c`, `mp3/rmp3.c` | Derived from stb_vorbis (public domain or MIT) and minimp3 (CC0); the files carry no header | None beyond libretro-common's MIT notice. |
+| `libretro-common` (rest) | MIT | Reproduce the notice. |
+
+libretro-common's `memmap/memmap.c` is not built: it also holds helpers that map executable memory (`memprotect`, `memjit_alloc`). `prboom_memmap.c` gives its six address-reservation functions upstream's own answers for a platform without reservation, so `data_transfer.c` reads whole files, and `FORBIDDEN_SOURCES` fails the build if memmap.c reaches the binary. Built without `HAVE_THREADS`, so `rthreads` is not compiled, the threaded renderer and the SC-55/SC-88 workers run inline, and `FORBIDDEN_IMPORTS` refuses `pthread_create` with sockets, `dlopen`, `dlsym` and `mprotect`. FluidSynth (`WANT_FLUIDSYNTH`) is off, as upstream's default. `stat`, `opendir`, `readdir`, `mmap` (read-only, for WAD mapping, off by default), `mkdir`, `rename`, `remove`, `unlink` and `utimes` are imported; `stat` is covered by the app's File Timestamp reason C617.1.
+
+No game WAD is bundled: neither id Software's nor Freedoom's. The SC-55 and SC-88 synthesisers run only from Roland ROM files the player supplies (`sc55player.c` looks for them by name); none are bundled. Upstream writes `prboom.cfg` and savegames under `<save>/<game name>/`. The test IWAD `Sources/Debug/DoomTestWAD.swift` is GagaEmu's own: a one-room map, a palette, stripes and a square-wave sound, with no id Software or Freedoom lump.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -593,6 +752,8 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Atari:** 2600 (`stella`), 5200 (`atari800`), 7800 (`prosystem`), Jaguar (`virtualjaguar`), Lynx (`holani`)
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
+
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar); Commodore 64 (VICE x64sc); Amiga (PUAE); Doom WADs (PrBoom).
 
 ---
 

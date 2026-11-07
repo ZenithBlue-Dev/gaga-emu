@@ -109,3 +109,30 @@
 [submodule "Cores/fbneo/upstream"]
 	path = Cores/fbneo/upstream
 	url = https://github.com/libretro/FBNeo.git
+[submodule "Cores/gearsystem/upstream"]
+	path = Cores/gearsystem/upstream
+	url = https://github.com/drhelius/Gearsystem
+[submodule "Cores/stella/upstream"]
+	path = Cores/stella/upstream
+	url = https://github.com/stella-emu/stella
+[submodule "Cores/prosystem/upstream"]
+	path = Cores/prosystem/upstream
+	url = https://github.com/libretro/prosystem-libretro
+[submodule "Cores/handy/upstream"]
+	path = Cores/handy/upstream
+	url = https://github.com/libretro/libretro-handy
+[submodule "Cores/atari800/upstream"]
+	path = Cores/atari800/upstream
+	url = https://github.com/libretro/libretro-atari800
+[submodule "Cores/virtualjaguar/upstream"]
+	path = Cores/virtualjaguar/upstream
+	url = https://github.com/libretro/virtualjaguar-libretro
+[submodule "Cores/vice/upstream"]
+	path = Cores/vice/upstream
+	url = https://github.com/libretro/vice-libretro
+[submodule "Cores/puae/upstream"]
+	path = Cores/puae/upstream
+	url = https://github.com/libretro/libretro-uae
+[submodule "Cores/prboom/upstream"]
+	path = Cores/prboom/upstream
+	url = https://github.com/libretro/libretro-prboom.git

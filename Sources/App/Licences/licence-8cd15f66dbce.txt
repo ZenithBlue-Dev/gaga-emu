@@ -1,0 +1,44 @@
+  Copyright (C) 2002-2010  The DOSBox Team
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+
+
+ Chocolate Doom-related discussion:
+
+ This is the DosBox OPL emulator code (src/hardware/dbopl.cpp) r3635,
+ converted to C.  The bulk of the work was done using the minus-minus
+ script in the Chocolate Doom SVN repository, then the result tweaked
+ by hand until working.
+
+
+
+
+  DOSBox implementation of a combined Yamaha YMF262 and Yamaha YM3812 emulator.
+  Enabling the opl3 bit will switch the emulator to stereo opl3 output instead of regular mono opl2
+  Except for the table generation it's all integer math
+  Can choose different types of generators, using muls and bigger tables, try different ones for slower platforms
+  The generation was based on the MAME implementation but tried to have it use less memory and be faster in general
+  MAME uses much bigger envelope tables and this will be the biggest cause of it sounding different at times
+
+TODO Don't delay first operator 1 sample in opl3 mode
+TODO Maybe not use class method pointers but a regular function pointers with operator as first parameter
+TODO Fix panning for the Percussion channels, would any opl3 player use it and actually really change it though?
+TODO Check if having the same accuracy in all frequency multipliers sounds better or not
+
+DUNNO Keyon in 4op, switch to 2op without keyoff.
+
+
+ $Id: dbopl.cpp,v 1.10 2009-06-10 19:54:51 harekiet Exp $

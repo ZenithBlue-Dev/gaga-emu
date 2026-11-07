@@ -79,7 +79,6 @@ enum CoreCatalog {
             .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
             .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
         ]),
-        // Genesis Plus GX and PicoDrive also run the .sms and .gg files this platform takes; JGenesis runs Mega Drive only.
         .init(id: "megadrive", name: "Mega Drive", manufacturer: "Sega", cores: [
             .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true),
             .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
@@ -151,6 +150,50 @@ enum CoreCatalog {
         ]),
         .init(id: "dos", name: "MS-DOS", manufacturer: "Vintage", cores: [
             .init(id: "dosbox_pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)
+        ]),
+        // group-retro backlog platforms (docs/07 section 8.x). Genesis Plus GX and PicoDrive also run Master System,
+        // Game Gear and SG-1000 games in sideload builds.
+        .init(id: "mastersystem", name: "Master System", manufacturer: "Sega", cores: [
+            .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
+        ]),
+        .init(id: "gamegear", name: "Game Gear", manufacturer: "Sega", cores: [
+            .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
+        ]),
+        .init(id: "sg1000", name: "SG-1000", manufacturer: "Sega", cores: [
+            .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
+        ]),
+        .init(id: "atari2600", name: "Atari 2600", manufacturer: "Atari", cores: [
+            .init(id: "stella", name: "Stella", note: "Default", recommended: true)
+        ]),
+        .init(id: "atari7800", name: "Atari 7800", manufacturer: "Atari", cores: [
+            .init(id: "prosystem", name: "ProSystem", note: "Default", recommended: true)
+        ]),
+        .init(id: "lynx", name: "Atari Lynx", manufacturer: "Atari", cores: [
+            .init(id: "handy", name: "Handy", note: "Default", recommended: true)
+        ]),
+        .init(id: "atari5200", name: "Atari 5200", manufacturer: "Atari", cores: [
+            .init(id: "atari800", name: "Atari800", note: "Default", recommended: true)
+        ]),
+        .init(id: "atari8bit", name: "Atari 8-bit", manufacturer: "Atari", cores: [
+            .init(id: "atari800", name: "Atari800", note: "800XL", recommended: true)
+        ]),
+        .init(id: "jaguar", name: "Atari Jaguar", manufacturer: "Atari", cores: [
+            .init(id: "virtualjaguar", name: "Virtual Jaguar", note: "Heavy", recommended: true)
+        ]),
+        .init(id: "c64", name: "Commodore 64", manufacturer: "Commodore", cores: [
+            .init(id: "vice", name: "VICE", note: "x64sc", recommended: true)
+        ]),
+        .init(id: "amiga", name: "Amiga", manufacturer: "Commodore", cores: [
+            .init(id: "puae", name: "PUAE", note: "A500", recommended: true)
+        ]),
+        .init(id: "doom", name: "Doom", manufacturer: "id Software", cores: [
+            .init(id: "prboom", name: "PrBoom", note: "WAD", recommended: true)
         ])
     ] + debugPlatforms
 
@@ -184,7 +227,10 @@ enum CoreCatalog {
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "sega32x": "32X", "dreamcast": "DC", "n3ds": "3DS",
-                       "arcade": "ARC", "unknown": "ETC"]
+                       "arcade": "ARC", "unknown": "ETC",
+                       "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG", "atari2600": "2600",
+                       "atari7800": "7800", "atari5200": "5200", "atari8bit": "A8", "jaguar": "JAG", "c64": "C64", "amiga": "AMI",
+                       "doom": "WAD"]
         return special[id] ?? id.uppercased()
     }
 
@@ -222,7 +268,10 @@ enum CoreCatalog {
         case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
         case "cso", "elf": return "psp"
         case "gdi", "cdi": return "dreamcast"
-        case "md", "gen", "smd", "sms", "gg": return "megadrive"
+        case "md", "gen", "smd": return "megadrive"
+        case "sms": return "mastersystem"
+        case "gg": return "gamegear"
+        case "sg", "mv": return "sg1000"
         // A .ccd is a CloneCD disc, which only the PC Engine core opens. A PC Engine .cue is placed by its contents.
         case "pce", "ccd": return "pce"
         case "sgx": return "sgx"
@@ -232,6 +281,16 @@ enum CoreCatalog {
         case "min": return "pokemini"
         // PicoDrive is the only 32X core and sideload only, so an App Store set has no 32X platform and no .32x.
         case "32x": return platform("sega32x") == nil ? nil : "sega32x"
+        // A 2600 image is often a .bin: platformID(forFile:) tells it from a Mega Drive ROM or a disc by content.
+        case "a26": return "atari2600"
+        case "a78": return "atari7800"
+        case "lnx": return "lynx"
+        case "a52": return "atari5200"
+        case "xex", "atr", "xfd", "dcm", "atx": return "atari8bit"
+        case "j64", "jag": return "jaguar"
+        case "d64", "t64", "prg", "crt", "tap": return "c64"
+        case "adf", "hdf": return "amiga"
+        case "wad": return "doom"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
@@ -265,6 +324,7 @@ enum CoreCatalog {
     /// a .zip is placed by `zipPlatformID(_:)`, and a disc image is placed by `discPlatformID(_:)`.
     static func platformID(forFile url: URL) -> String? {
         let ext = url.pathExtension.lowercased()
+        if ext == "bin", let cartridge = binCartridgePlatformID(url) { return cartridge }
         if discExtensions.contains(ext) { return discPlatformID(url) }
         switch ext {
         case "exe":
@@ -309,6 +369,22 @@ enum CoreCatalog {
             !name.contains("/") && (ext.isEmpty || ext == "bin" || ext == "rom" || ext.contains(where: \.isNumber))
         }
         return !names.isEmpty && romLike ? "arcade" : nil
+    }
+
+    /// A cartridge dumped as .bin, or nil to try it as a disc. Mega Drive: "SEGA" at 0x100, its header. Atari 2600:
+    /// 2 to 32 KB in whole 2 KB banks, with no Sega header, and a reset vector (the image's last 4 bytes) that
+    /// has address line 12 set, as every 6507 cartridge's must.
+    static func binCartridgePlatformID(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let size = try? handle.seekToEnd(), size >= 0x104, (try? handle.seek(toOffset: 0)) != nil,
+              let head = try? handle.read(upToCount: 0x104) else { return nil }
+        // A Sega disc opens with "SEGA" (after 16 bytes of sync when raw) and has "SEGA" at 0x100 too; a cartridge opens with vectors.
+        if [0, 16].contains(where: { head.dropFirst($0).starts(with: "SEGA".utf8) }) { return nil }
+        if head.suffix(4).elementsEqual("SEGA".utf8) { return "megadrive" }
+        guard (2048...32768).contains(size), size % 2048 == 0, (try? handle.seek(toOffset: size - 4)) != nil,
+              let vector = try? handle.read(upToCount: 2), vector.count == 2 else { return nil }
+        return vector[vector.startIndex + 1] & 0x10 != 0 ? "atari2600" : nil
     }
 
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as

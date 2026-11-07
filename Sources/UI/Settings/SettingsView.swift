@@ -477,11 +477,19 @@ struct BIOSManagerView: View {
         ("bios_CD_U.bin", "Mega-CD (US)"), ("bios_CD_E.bin", "Mega-CD (EU)"), ("bios_CD_J.bin", "Mega-CD (JP)"),
         ("disksys.rom", "Famicom Disk System (Nestopia UE)"),
         ("syscard3.pce", "PC Engine CD (System Card 3)"),
-        ("bios.min", "Pokémon Mini (optional: a free BIOS is built in)")
+        ("bios.min", "Pokémon Mini (optional: a free BIOS is built in)"),
+        ("lynxboot.img", "Lynx boot ROM (optional: Handy emulates it)"),
+        ("5200.rom", "Atari 5200 BIOS (optional: AltirraOS built in)"),
+        ("atarixl.rom", "Atari XL/XE OS (optional: AltirraOS built in)"),
+        ("jagboot.rom", "Jaguar boot ROM (optional: Virtual Jaguar boots carts without it)"),
+        ("kernal-901227-03.bin", "C64 KERNAL"), ("basic-901226-01.bin", "C64 BASIC"),
+        ("chargen-901225-01.bin", "C64 character ROM"),
+        ("kick34005.A500", "Amiga Kickstart 1.3 (optional: AROS built in)"),
+        ("kick40068.A1200", "Amiga Kickstart 3.1 for A1200 hard disks (optional: AROS built in)")
     ]
 
     /// The byte sizes each name's core reads: PS1 and Saturn 512 KiB, DS ARM7 16 KiB, ARM9 4 KiB, DS firmware
-    /// 128, 256 or 512 KiB (melonDS), Mega-CD 128 KiB, FDS 8 KiB, PC Engine System Card 256 KiB, Pokemon Mini 4 KiB. Import treats a file of another size under that name as a game.
+    /// 128, 256 or 512 KiB (melonDS), Mega-CD 128 KiB, FDS 8 KiB, PC Engine System Card 256 KiB, Pokemon Mini 4 KiB, Lynx 512, 5200 2 KiB, XL/XE 16 KiB, Jaguar 128 KiB, C64 KERNAL and BASIC 8 KiB, character ROM 4 KiB, Kickstart 1.3 256 KiB and 3.1 512 KiB. Import treats a file of another size under that name as a game.
     static let sizes: [String: Set<Int>] = [
         "scph5500.bin": [512 << 10], "scph5501.bin": [512 << 10], "scph5502.bin": [512 << 10],
         "bios7.bin": [16 << 10], "bios9.bin": [4 << 10],
@@ -489,7 +497,10 @@ struct BIOSManagerView: View {
         "mpr-17933.bin": [512 << 10], "sega_101.bin": [512 << 10],
         "bios_CD_U.bin": [128 << 10], "bios_CD_E.bin": [128 << 10], "bios_CD_J.bin": [128 << 10],
         "disksys.rom": [8 << 10],
-        "syscard3.pce": [256 << 10], "bios.min": [4 << 10]
+        "syscard3.pce": [256 << 10], "bios.min": [4 << 10],
+        "lynxboot.img": [512], "5200.rom": [2 << 10], "atarixl.rom": [16 << 10], "jagboot.rom": [128 << 10],
+        "kernal-901227-03.bin": [8 << 10], "basic-901226-01.bin": [8 << 10], "chargen-901225-01.bin": [4 << 10],
+        "kick34005.A500": [256 << 10], "kick40068.A1200": [512 << 10]
     ]
 
     var body: some View {

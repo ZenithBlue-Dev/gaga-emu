@@ -15,7 +15,7 @@ struct AddView: View {
 
     private let romTypes: [UTType] = {
         var types: [UTType] = [.zip, .data, .item]
-        for ext in ["gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "nds", "3ds", "iso", "chd", "cue", "ccd", "toc", "bin", "pbp", "cso", "gdi", "cdi", "7z", "rar", "m3u", "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf", "pce", "sgx", "vb", "vboy", "ngp", "ngc", "ngpc", "npc", "ws", "wsc", "pc2", "min"] {
+        for ext in ["gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "nds", "3ds", "iso", "chd", "cue", "ccd", "toc", "bin", "pbp", "cso", "gdi", "cdi", "7z", "rar", "m3u", "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf", "pce", "sgx", "vb", "vboy", "ngp", "ngc", "ngpc", "npc", "ws", "wsc", "pc2", "min", "sms", "gg", "sg", "mv", "a26", "a78", "lnx", "a52", "xex", "atr", "xfd", "dcm", "atx", "j64", "jag", "d64", "t64", "prg", "crt", "tap", "adf", "hdf", "wad"] {
             if let type = UTType(filenameExtension: ext) { types.append(type) }
         }
         return types

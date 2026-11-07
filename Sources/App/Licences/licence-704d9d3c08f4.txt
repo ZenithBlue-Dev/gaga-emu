@@ -1,0 +1,25 @@
+ Roland SC-55 emulation in one C89 file.
+
+ A port of the Nuked-SC55 backend (https://github.com/jcmoyer/Nuked-SC55,
+ itself a fork of https://github.com/nukeykt/Nuked-SC55):
+
+ Copyright (C) 2021, 2024 nukeykt
+ Copyright (C) 2024-2026 J.C. Moyer
+
+ The H8/532 core, its timers and interrupt controller, the PCM chip and
+ the mkII's sub-MCU are carried over function for function.  The LCD,
+ the front panel and the JV-880 are not.
+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ MCU emulator for Roland Sound Canvas (SC-55mkII, SC-55), PCM chip
+ emulation; with thanks to John McMaster (https://siliconprawn.org)
+ for the PCM chip decap.

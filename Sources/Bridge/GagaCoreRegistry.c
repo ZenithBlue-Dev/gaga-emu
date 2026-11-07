@@ -448,6 +448,34 @@ DEFINE_CORE_INTERFACE(Fbneo_GetInterface,         "fbneo",           "FinalBurn 
 #ifndef GAGA_HAS_SWANSTATION
 DEFINE_CORE_INTERFACE(SwanStation_GetInterface,   "swanstation",     "SwanStation",       GAGA_CORE_EXCLUDED, "exe|psexe|cue|bin|img|iso|chd|pbp|ecm|mds|psf|m3u", 60.0, 44100)
 #endif
+// Backlog cores, group-retro (docs/07 section 8.x).
+#ifndef GAGA_HAS_GEARSYSTEM
+DEFINE_CORE_INTERFACE(Gearsystem_GetInterface,    "gearsystem",      "Gearsystem",        GAGA_CORE_EXCLUDED, "sms|gg|sg|mv", 59.9227, 44100)
+#endif
+#ifndef GAGA_HAS_STELLA
+DEFINE_CORE_INTERFACE(Stella_GetInterface,        "stella",          "Stella",            GAGA_CORE_EXCLUDED, "a26|bin",  60.0,    31440)
+#endif
+#ifndef GAGA_HAS_PROSYSTEM
+DEFINE_CORE_INTERFACE(ProSystem_GetInterface,     "prosystem",       "ProSystem",         GAGA_CORE_EXCLUDED, "a78",      60.0,    31440)
+#endif
+#ifndef GAGA_HAS_HANDY
+DEFINE_CORE_INTERFACE(Handy_GetInterface,         "handy",           "Handy",             GAGA_CORE_EXCLUDED, "lnx",      60.0,    48000)
+#endif
+#ifndef GAGA_HAS_ATARI800
+DEFINE_CORE_INTERFACE(Atari800_GetInterface,      "atari800",        "Atari800",          GAGA_CORE_EXCLUDED, "a52|xex|atr|xfd|dcm|atx", 59.92, 44100)
+#endif
+#ifndef GAGA_HAS_VIRTUALJAGUAR
+DEFINE_CORE_INTERFACE(VirtualJaguar_GetInterface, "virtualjaguar",   "Virtual Jaguar",    GAGA_CORE_EXCLUDED, "j64|jag",  60.05,   48044)
+#endif
+#ifndef GAGA_HAS_VICE
+DEFINE_CORE_INTERFACE(Vice_GetInterface,          "vice",            "VICE",              GAGA_CORE_EXCLUDED, "d64|t64|prg|crt|tap", 50.12, 48000)
+#endif
+#ifndef GAGA_HAS_PUAE
+DEFINE_CORE_INTERFACE(Puae_GetInterface,          "puae",            "PUAE",              GAGA_CORE_EXCLUDED, "adf|hdf",  50.0,    44100)
+#endif
+#ifndef GAGA_HAS_PRBOOM
+DEFINE_CORE_INTERFACE(Prboom_GetInterface,        "prboom",          "PrBoom",            GAGA_CORE_EXCLUDED, "wad",      60.0,    48000)
+#endif
 
 // ============================================================================
 // REGISTRY DISPATCH TABLE
@@ -479,6 +507,16 @@ static const CoreGetterFunc s_core_getters[] = {
     BeetleNgp_GetInterface,
     BeetleWswan_GetInterface,
     PokeMini_GetInterface,
+    // group-retro. Gearsystem before Genesis Plus GX and PicoDrive, so it keeps .sms, .gg and .sg.
+    Gearsystem_GetInterface,
+    Stella_GetInterface,
+    ProSystem_GetInterface,
+    Handy_GetInterface,
+    Atari800_GetInterface,
+    VirtualJaguar_GetInterface,
+    Vice_GetInterface,
+    Puae_GetInterface,
+    Prboom_GetInterface,
     Snes9x_GetInterface, // After the default core of each platform, so FindByExtension keeps the default.
     GenesisPlusGX_GetInterface,
     Picodrive_GetInterface,

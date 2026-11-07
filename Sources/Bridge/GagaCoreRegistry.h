@@ -38,6 +38,16 @@ const GagaCoreInterface* Snes9x_GetInterface(void);
 const GagaCoreInterface* GenesisPlusGX_GetInterface(void);
 const GagaCoreInterface* Picodrive_GetInterface(void);
 const GagaCoreInterface* Fbneo_GetInterface(void);
+// group-retro backlog cores (docs/07 section 8.x).
+const GagaCoreInterface* Gearsystem_GetInterface(void);
+const GagaCoreInterface* Stella_GetInterface(void);
+const GagaCoreInterface* ProSystem_GetInterface(void);
+const GagaCoreInterface* Handy_GetInterface(void);
+const GagaCoreInterface* Atari800_GetInterface(void);
+const GagaCoreInterface* VirtualJaguar_GetInterface(void);
+const GagaCoreInterface* Vice_GetInterface(void);
+const GagaCoreInterface* Puae_GetInterface(void);
+const GagaCoreInterface* Prboom_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

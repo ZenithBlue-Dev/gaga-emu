@@ -1,0 +1,21 @@
+ Roland SC-88 / SC-88VL / SC-88Pro emulation: see sc88.h.
+
+ A C89 port of 88emu (gearmulator, The Usual Suspects, commit 0764877,
+ October 2026): the H8/500 CPU core and H8/510 peripherals, the XP
+ sound chip with its effects DSP, the LSP insertion-effect chip, the
+ SC-88 and SC-88Pro boards and their MIDI sub-MCU.  Checked sample for
+ sample and state for state against the C++ on random programs, wave
+ ROMs and MIDI; the C++'s JIT compilers are not carried over, only its
+ interpreters.
+
+ Copyright (C) The Usual Suspects (C++ original)
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.

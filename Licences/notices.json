@@ -319,6 +319,118 @@
       ]
     },
     {
+      "id": "gearsystem", "title": "Gearsystem", "cores": ["gearsystem"], "framework": "GearsystemCore", "licence": "GPL-3.0-or-later",
+      "source": "https://github.com/drhelius/Gearsystem, tag 3.9.24, commit 40b8eeb",
+      "texts": [
+        { "title": "Gearsystem", "from": "Cores/gearsystem/upstream/LICENSE" },
+        { "title": "Blip_Buffer and Sms_Apu (Shay Green)", "from": "Cores/gearsystem/upstream/src/audio/Sms_Apu.cpp", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "miniz", "from": "Cores/gearsystem/upstream/platforms/shared/dependencies/miniz/miniz.c", "comment": true }
+      ]
+    },
+    {
+      "id": "stella", "title": "Stella", "cores": ["stella"], "framework": "StellaCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/stella-emu/stella, tag 7.0c, commit c4016ea",
+      "texts": [
+        { "title": "Stella", "from": "Cores/stella/upstream/License.txt" },
+        { "title": "Stella copyright", "from": "Cores/stella/upstream/Copyright.txt" },
+        { "title": "Atari NTSC filter (Blargg)", "from": "Cores/stella/upstream/src/common/tv_filters/AtariNTSC.hxx", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "JSON for Modern C++", "from": "Cores/stella/upstream/src/lib/json/LICENSE.MIT" }
+      ]
+    },
+    {
+      "id": "prosystem", "title": "ProSystem", "cores": ["prosystem"], "framework": "ProSystemCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/prosystem-libretro, commit 8a88014",
+      "texts": [
+        { "title": "ProSystem", "from": "Cores/prosystem/upstream/License.txt" },
+        { "title": "ProSystem copyright", "from": "Cores/prosystem/upstream/core/ProSystem.c", "comment": true },
+        { "title": "BupBoop coretone (zlib)", "from": "Cores/prosystem/upstream/bupboop/License.txt" },
+        { "title": "libretro-common", "from": "Cores/prosystem/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "handy", "title": "Handy", "cores": ["handy"], "framework": "HandyCore", "licence": "Zlib",
+      "source": "https://github.com/libretro/libretro-handy, commit bc55d46",
+      "texts": [
+        { "title": "Handy", "from": "Cores/handy/upstream/lynx/license.txt" },
+        { "title": "Blip_Buffer", "from": "Cores/handy/upstream/blip/Blip_Buffer.cpp", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "libretro-common", "from": "Cores/handy/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "atari800", "title": "Atari800", "cores": ["atari800"], "framework": "Atari800Core", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/libretro-atari800, commit 4e7fbc7",
+      "texts": [
+        { "title": "Atari800", "from": "Cores/atari800/upstream/atari800/COPYING" },
+        { "title": "Atari800 copyright", "from": "Cores/atari800/upstream/atari800/src/atari.c", "comment": true },
+        { "title": "AltirraOS (XL/XE, 400/800, BASIC)", "from": "Cores/atari800/upstream/atari800/src/roms/altirraos_xl.c", "comment": true },
+        { "title": "AltirraOS 5200", "from": "Cores/atari800/upstream/atari800/src/roms/altirra_5200_os.c", "comment": true },
+        { "title": "zlib", "from": "Cores/atari800/upstream/deps/zlib/zlib.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/atari800/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "virtualjaguar", "title": "Virtual Jaguar", "cores": ["virtualjaguar"], "framework": "VirtualJaguarCore", "licence": "GPL-3.0-or-later",
+      "source": "https://github.com/libretro/virtualjaguar-libretro, tag v3.11.0, commit 3469608. Atari's boot ROMs in src/bios are not built.",
+      "texts": [
+        { "title": "Virtual Jaguar", "from": "Cores/virtualjaguar/upstream/LICENSE" },
+        { "title": "libchdr", "from": "Cores/virtualjaguar/upstream/deps/libchdr/LICENSE.txt" },
+        { "title": "zstd", "from": "Cores/mame/upstream/3rdparty/zstd/LICENSE" },
+        { "title": "miniz", "from": "Cores/virtualjaguar/upstream/deps/libchdr/deps/miniz-3.1.1/miniz.c", "comment": true },
+        { "title": "LZMA SDK", "from": "Cores/virtualjaguar/upstream/deps/libchdr/deps/lzma-25.01/LICENSE" },
+        { "title": "libretro-common", "from": "Cores/virtualjaguar/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "vice", "title": "VICE", "cores": ["vice"], "framework": "ViceCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/vice-libretro, commit 5ebe7d3, built as x64sc. Commodore's ROMs are not built.",
+      "texts": [
+        { "title": "VICE", "from": "Cores/vice/upstream/COPYING" },
+        { "title": "P64", "from": "Cores/vice/upstream/vice/src/lib/p64/p64.c", "comment": true },
+        { "title": "libretro disk control", "from": "Cores/vice/upstream/libretro/libretro-dc.c", "comment": true },
+        { "title": "zlib", "from": "Cores/vice/upstream/deps/libz/zlib.h", "comment": true },
+        { "title": "7-Zip decoder", "text": "The 7-Zip decoder files in deps/7zip are in the public domain, as each file header says (Igor Pavlov).\n" },
+        { "title": "libretro-common", "from": "Cores/vice/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "puae", "title": "PUAE", "cores": ["puae"], "framework": "PuaeCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/libretro-uae, commit c1d1d49. WHDLoad's bundled Amiga files and the HRTmon ROM are not built.",
+      "texts": [
+        { "title": "PUAE", "from": "Cores/puae/upstream/COPYING" },
+        { "title": "AROS Kickstart replacement", "text": "PUAE's built-in Kickstart replacement (sources/src/aros.rom.c) is a build of AROS, Copyright (C) 1995-2026 The AROS Development Team, distributed under the AROS Public License, version 1.1. Source: https://github.com/aros-development-team/AROS\n" },
+        { "title": "libretro disk control", "from": "Cores/puae/upstream/libretro/libretro-dc.c", "comment": true },
+        { "title": "zlib", "from": "Cores/puae/upstream/deps/libz/zlib.h", "comment": true },
+        { "title": "libchdr", "from": "Cores/puae/upstream/deps/libchdr/LICENSE.txt" },
+        { "title": "zstd", "from": "Cores/puae/upstream/deps/zstd/LICENSE" },
+        { "title": "7-Zip decoder", "text": "The 7-Zip decoder files in deps/7zip are in the public domain, as each file header says (Igor Pavlov).\n" },
+        { "title": "SoftFloat", "from": "Cores/puae/upstream/sources/src/softfloat/softfloat.c", "lines": [27, 84] },
+        { "title": "kjmp2", "from": "Cores/puae/upstream/sources/src/archivers/mp2/kjmp2.c", "comment": true },
+        { "title": "LHa for UNIX", "text": "PUAE's LHA decompressor (sources/src/archivers/lha) is derived from LHa for UNIX, Copyright (C) 1989 Yooichi Tagawa, modified by Nobutaka Watazaki and others, after LHarc by H. Yoshizaki. The upstream tree carries no licence text for it.\n" },
+        { "title": "DMS decompressor", "text": "PUAE's DMS decompressor (sources/src/archivers/dms) is xDMS by Andre Rodrigues de la Rocha, in the public domain, as each file header says.\n" },
+        { "title": "libretro-common", "from": "Cores/puae/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "prboom", "title": "PrBoom", "cores": ["prboom"], "framework": "PrboomCore", "licence": "GPL-3.0-or-later",
+      "source": "https://github.com/libretro/libretro-prboom, commit 4849268. Mostly GPL-2.0-or-later; src/sc88.c is GPL-3.0-or-later, so the whole is GPL-3.0-or-later. No game WAD is included.",
+      "texts": [
+        { "title": "PrBoom (GPL-2.0-or-later), with prboom.wad", "from": "Cores/prboom/upstream/COPYING" },
+        { "title": "GNU General Public License 3", "from": "Cores/gearsystem/upstream/LICENSE" },
+        { "title": "SC-88 emulation", "from": "Cores/prboom/upstream/src/sc88.c", "comment": true },
+        { "title": "Nuked-SC55", "from": "Cores/prboom/upstream/src/sc55.c", "comment": true },
+        { "title": "DOSBox OPL", "from": "Cores/prboom/upstream/src/dbopl.c", "comment": true },
+        { "title": "UMAPINFO (LGPL, version 2 or later)", "from": "Cores/prboom/upstream/src/u_mapinfo.c", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "Scanner", "from": "Cores/prboom/upstream/src/scanner.c", "comment": true },
+        { "title": "micromod", "from": "Cores/prboom/upstream/libretro/libretro-common/formats/mod/rmodtracker.c", "lines": [4897, 4931] },
+        { "title": "rvorbis and rmp3", "text": "libretro-common's rvorbis is derived from stb_vorbis (Sean Barrett, public domain or MIT) and rmp3 from minimp3 (lieff, CC0).\n" },
+        { "title": "libretro-common", "from": "Cores/prboom/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
