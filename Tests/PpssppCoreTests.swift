@@ -133,7 +133,8 @@ final class PpssppCoreTests: GagaTestCase {
             run(core, frames: 4, buttons: UInt32(host.rawValue))
             try assertPicture(core, keys: psp)
         }
-        run(core, frames: 4)
+        // PPSSPP draws on its own thread, so the presented picture can trail input by a few frames.
+        run(core, frames: 8)
         try assertPicture(core)
         core.stop()
     }
@@ -164,15 +165,16 @@ final class PpssppCoreTests: GagaTestCase {
     func testStateRoundTripAndARefusedStateLeavesTheGameRunning() async throws {
         let (core, _) = try await loaded()
         let chord = UInt32(GAGA_BTN_SOUTH.rawValue | GAGA_BTN_EAST.rawValue)
+        // Eight release frames: the presented picture can trail input, as in the input test.
         run(core, frames: 3, buttons: chord)
-        run(core, frames: 3)
+        run(core, frames: 8)
         try assertPicture(core, toggle: true)
         let state = try core.saveState()
         run(core, frames: 3, buttons: chord)
-        run(core, frames: 3)
+        run(core, frames: 8)
         try assertPicture(core, toggle: false)
         try core.loadState(state)
-        run(core, frames: 3)
+        run(core, frames: 8)
         try assertPicture(core, toggle: true)
         XCTAssertThrowsError(try core.loadState(Data(repeating: 0, count: 3)))
         run(core, frames: 3)
