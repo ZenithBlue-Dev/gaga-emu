@@ -260,18 +260,24 @@ final class NestopiaCoreTests: XCTestCase {
         XCTAssertEqual(saves, [], "a refused file must not leave a save behind")
     }
 
-    /// No FDS BIOS ships, so a disk image is refused with a message, not a crash or a black screen.
-    func testADiskImageIsRefused() async throws {
-        let disk = directory.appendingPathComponent("disk.fds")
-        try Data([0x46, 0x44, 0x53, 0x1A, 1] + [UInt8](repeating: 0, count: 65500)).write(to: disk)
-        let (core, _) = try makeCore()
-        do {
-            try await core.loadROM(path: disk.path)
-            XCTFail("loaded a disk image")
-        } catch {
-            XCTAssertEqual(error.localizedDescription, "This file is not an NES cartridge image.")
+    /// No FDS BIOS ships. The system folder is this test's own empty folder, so a disk says which file it needs,
+    /// and a disk under a cartridge name, which Nestopia would load with no BIOS, says what to call it.
+    func testADiskImageWithoutItsBIOSOrItsNameIsRefused() async throws {
+        let bytes = Data([0x46, 0x44, 0x53, 0x1A, 1] + [UInt8](repeating: 0, count: 65500))
+        let cases = [("disk.fds", "This Famicom Disk System game needs the disk BIOS file disksys.rom. GagaEmu does not include one."),
+                     ("disk.nes", "This Famicom Disk System disk needs a file name ending in .fds.")]
+        for (name, message) in cases {
+            let disk = directory.appendingPathComponent(name)
+            try bytes.write(to: disk)
+            let (core, _) = try makeCore()
+            do {
+                try await core.loadROM(path: disk.path)
+                XCTFail("loaded \(name)")
+            } catch {
+                XCTAssertEqual(error.localizedDescription, message, name)
+            }
+            core.stop()
         }
-        core.stop()
     }
 
     func testAnUnwritableSaveFolderRefusesToRun() async throws {

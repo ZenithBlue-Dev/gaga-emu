@@ -28,15 +28,30 @@ static const GagaLibretroVariable s_variables[] = {
 
 // iNES and NES 2.0 both start with "NES\x1A", an fwNES FDS image with "FDS\x1A", and a headerless FDS
 // image with its first block, "\x01*NINTENDO-HVC*". Nestopia checks the rest itself.
+static bool nestopia_is_disk(const uint8_t data[16]) {
+    return memcmp(data, "FDS\x1A", 4) == 0 || memcmp(data, "\x01*NINTENDO-HVC*", 15) == 0;
+}
+
 static bool nestopia_is_rom(const uint8_t* data, size_t size) {
-    return size > 16 && (memcmp(data, "NES\x1A", 4) == 0 || memcmp(data, "FDS\x1A", 4) == 0 ||
-                         memcmp(data, "\x01*NINTENDO-HVC*", 15) == 0);
+    return size > 16 && (memcmp(data, "NES\x1A", 4) == 0 || nestopia_is_disk(data));
 }
 
 // libretro.cpp opens a disk only for a path ending in .fds, and fails without saying why when the BIOS is missing.
+// A disk under another name reaches the cartridge path, where Nestopia sets no BIOS and fails without a reason.
 static const char* nestopia_refuse_load(const char* system_dir, const char* rom_path) {
     const char* ext = strrchr(rom_path, '.');
-    if (!ext || strcasecmp(ext, ".fds") != 0) return NULL;
+    if (!ext || strcasecmp(ext, ".fds") != 0) {
+        uint8_t head[16] = { 0 };
+        FILE* file = fopen(rom_path, "rb");
+        if (file) {
+            size_t got = fread(head, 1, sizeof(head), file);
+            fclose(file);
+            if (got == sizeof(head) && nestopia_is_disk(head)) {
+                return "This Famicom Disk System disk needs a file name ending in .fds.";
+            }
+        }
+        return NULL;
+    }
     char path[4096];
     if (snprintf(path, sizeof(path), "%s/disksys.rom", system_dir) < (int)sizeof(path) && access(path, R_OK) == 0) return NULL;
     return "This Famicom Disk System game needs the disk BIOS file disksys.rom. GagaEmu does not include one.";
