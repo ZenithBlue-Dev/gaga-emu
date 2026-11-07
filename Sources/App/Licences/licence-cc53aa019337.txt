@@ -1,0 +1,5 @@
+crt-lottes (crt/shaders/crt-lottes.slang): "PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER by Timothy Lottes"
+
+lcd3x (handheld/shaders/lcd3x.slang): "Author: Gigaherz, License: Public domain"
+
+sharp-bilinear (pixel-art-scaling/shaders/sharp-bilinear.slang): "Author: Themaister, License: Public domain"

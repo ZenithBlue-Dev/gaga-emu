@@ -1,0 +1,173 @@
+{
+  "about": "Source list for Settings > About > Licences. scripts/generate-licences.py reads it and writes Sources/App/Licences. A component with cores is shown only when one of those cores is linked (GAGA_CORE_SET); one without cores is in every build. framework names the core framework a component covers, so the test can check every embedded framework has a notice. docs/03 section 5 and docs/05 section 5 record why each part is here.",
+  "components": [
+    {
+      "id": "anime4k", "title": "Anime4K", "licence": "MIT",
+      "source": "https://github.com/bloc97/Anime4K, commit 28535a4. Ported to Metal as the Anime4K upscaler.",
+      "texts": [{ "title": "Anime4K", "from": "Sources/Metal/Anime4K.metal", "comment": true }]
+    },
+    {
+      "id": "community-shaders", "title": "Community filters", "licence": "Public domain",
+      "source": "https://github.com/libretro/slang-shaders, commit 3685eda. Converted to Metal.",
+      "texts": [{ "title": "crt-lottes, lcd3x, sharp-bilinear", "text": "crt-lottes (crt/shaders/crt-lottes.slang): \"PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER by Timothy Lottes\"\n\nlcd3x (handheld/shaders/lcd3x.slang): \"Author: Gigaherz, License: Public domain\"\n\nsharp-bilinear (pixel-art-scaling/shaders/sharp-bilinear.slang): \"Author: Themaister, License: Public domain\"\n" }]
+    },
+    {
+      "id": "mgba", "title": "mGBA", "cores": ["mgba"], "framework": "MgbaCore", "licence": "MPL-2.0",
+      "source": "https://github.com/mgba-emu/mgba, tag 0.10.5, commit 26b7884. The source of every MPL file is at that URL and commit; none is changed.",
+      "texts": [
+        { "title": "mGBA", "from": "Cores/mgba/upstream/LICENSE" },
+        { "title": "inih", "from": "Cores/mgba/upstream/res/licenses/inih.txt" }
+      ]
+    },
+    {
+      "id": "gambatte", "title": "Gambatte", "cores": ["gambatte"], "framework": "GambatteCore", "licence": "GPL-2.0",
+      "source": "https://github.com/libretro/gambatte-libretro, commit 77f2567",
+      "texts": [
+        { "title": "Gambatte", "from": "Cores/gambatte/upstream/COPYING" },
+        { "title": "libretro-common", "from": "Cores/gambatte/upstream/libgambatte/libretro-common/file/file_path.c", "comment": true },
+        { "title": "blipper", "from": "Cores/gambatte/upstream/libgambatte/libretro/blipper.c", "comment": true }
+      ]
+    },
+    {
+      "id": "nestopia", "title": "Nestopia UE", "cores": ["nestopia"], "framework": "NestopiaCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/nestopia, commit f1e02d1",
+      "texts": [
+        { "title": "Nestopia", "from": "Cores/nestopia/upstream/COPYING" },
+        { "title": "nes_ntsc", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "libretro-common", "from": "Cores/nestopia/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "pcsx_rearmed", "title": "PCSX-ReARMed", "cores": ["pcsx_rearmed"], "framework": "PcsxReArmedCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/pcsx_rearmed, commit 7b0e8f8",
+      "texts": [
+        { "title": "PCSX-ReARMed", "from": "Cores/pcsx_rearmed/upstream/COPYING" },
+        { "title": "gte_divider (from MAME)", "from": "Cores/pcsx_rearmed/upstream/libpcsxcore/gte_divider.c", "comment": true },
+        { "title": "libchdr", "from": "Cores/pcsx_rearmed/upstream/deps/libchdr/LICENSE.txt" },
+        { "title": "zstd", "from": "Cores/mame/upstream/3rdparty/zstd/LICENSE" },
+        { "title": "miniz", "from": "Cores/pcsx_rearmed/upstream/deps/libchdr/deps/miniz-3.1.2/miniz.c", "comment": true },
+        { "title": "LZMA SDK", "from": "Cores/pcsx_rearmed/upstream/deps/libchdr/deps/lzma-26.02/LICENSE" },
+        { "title": "libretro-common", "from": "Cores/pcsx_rearmed/upstream/deps/libretro-common/include/libretro.h", "comment": true }
+      ]
+    },
+    {
+      "id": "bsnes", "title": "bsnes", "cores": ["bsnes"], "framework": "BsnesCore", "licence": "GPL-3.0-or-later",
+      "source": "https://github.com/libretro/bsnes-libretro, commit b51612a",
+      "texts": [
+        { "title": "bsnes and nall", "from": "Cores/bsnes/upstream/LICENSE.txt" },
+        { "title": "SameBoy", "from": "Cores/bsnes/upstream/bsnes/gb/LICENSE" },
+        { "title": "libretro.h", "from": "Cores/bsnes/upstream/bsnes/target-libretro/libretro.h", "comment": true },
+        { "title": "LZMA SDK", "text": "The LZMA SDK files in bsnes/lzma are in the public domain, as each file header says (Igor Pavlov).\n" }
+      ]
+    },
+    {
+      "id": "melonds_ds", "title": "melonDS DS", "cores": ["melonds_ds"], "framework": "MelonDSCore", "licence": "GPL-3.0-or-later",
+      "source": "https://github.com/JesseTG/melonds-ds, tag v1.4.0, commit f394adb; melonDS fork commit 16f127d",
+      "texts": [
+        { "title": "melonDS DS", "from": "Cores/melonds_ds/upstream/LICENSE" },
+        { "title": "Open Sans", "text": "Copyright 2020 The Open Sans Project Authors (https://github.com/googlefonts/opensans)\n\nThis Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org\n\n-----------------------------------------------------------\nSIL OPEN FONT LICENSE Version 1.1 - 26 February 2007\n-----------------------------------------------------------\n\nPREAMBLE\nThe goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others.\n\nThe OFL allows the licensed fonts to be used, studied, modified and redistributed freely as long as they are not sold by themselves. The fonts, including any derivative works, can be bundled, embedded, redistributed and/or sold with any software provided that any reserved names are not used by derivative works. The fonts and derivatives, however, cannot be released under any other type of license. The requirement for fonts to remain under this license does not apply to any document created using the fonts or their derivatives.\n\nDEFINITIONS\n\"Font Software\" refers to the set of files released by the Copyright Holder(s) under this license and clearly marked as such. This may include source files, build scripts and documentation.\n\n\"Reserved Font Name\" refers to any names specified as such after the copyright statement(s).\n\n\"Original Version\" refers to the collection of Font Software components as distributed by the Copyright Holder(s).\n\n\"Modified Version\" refers to any derivative made by adding to, deleting, or substituting -- in part or in whole -- any of the components of the Original Version, by changing formats or by porting the Font Software to a new environment.\n\n\"Author\" refers to any designer, engineer, programmer, technical writer or other person who contributed to the Font Software.\n\nPERMISSION & CONDITIONS\nPermission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the following conditions:\n\n1) Neither the Font Software nor any of its individual components, in Original or Modified Versions, may be sold by itself.\n\n2) Original or Modified Versions of the Font Software may be bundled, redistributed and/or sold with any software, provided that each copy contains the above copyright notice and this license. These can be included either as stand-alone text files, human-readable headers or in the appropriate machine-readable metadata fields within text or binary files as long as those fields can be easily viewed by the user.\n\n3) No Modified Version of the Font Software may use the Reserved Font Name(s) unless explicit written permission is granted by the corresponding Copyright Holder. This restriction only applies to the primary font name as presented to the users.\n\n4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font Software shall not be used to promote, endorse or advertise any Modified Version, except to acknowledge the contribution(s) of the Copyright Holder(s) and the Author(s) or with their explicit written permission.\n\n5) The Font Software, modified or unmodified, in part or in whole, must be distributed entirely under this license, and must not be distributed under any other license. The requirement for fonts to remain under this license does not apply to any document created using the Font Software.\n\nTERMINATION\nThis license becomes null and void if any of the above conditions are not met.\n\nDISCLAIMER\nTHE FONT SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.\n" },
+        { "title": "FreeBIOS", "from": "Cores/melonds_ds/deps/melonDS/src/FreeBIOS.cpp", "comment": true },
+        { "title": "Teakra", "from": "Cores/melonds_ds/deps/melonDS/src/teakra/LICENSE" },
+        { "title": "FatFs", "from": "Cores/melonds_ds/deps/melonDS/src/fatfs/LICENSE.txt" },
+        { "title": "blip_buf", "from": "Cores/melonds_ds/deps/melonDS/src/blip-buf/blip_buf.c", "comment": true },
+        { "title": "xxHash", "from": "Cores/melonds_ds/deps/melonDS/src/xxhash/xxhash.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/melonds_ds/deps/libretro-common/file/file_path.c", "comment": true },
+        { "title": "libretro-common CRC32", "from": "Cores/melonds_ds/deps/libretro-common/encodings/encoding_crc32.c", "comment": true },
+        { "title": "fmt", "from": "Cores/melonds_ds/deps/fmt/LICENSE" },
+        { "title": "GLM", "from": "Cores/melonds_ds/deps/glm/copying.txt" },
+        { "title": "yamc", "from": "Cores/melonds_ds/deps/yamc/LICENSE" },
+        { "title": "date", "from": "Cores/melonds_ds/deps/date/LICENSE.txt" },
+        { "title": "span-lite", "from": "Cores/melonds_ds/deps/span-lite/LICENSE.txt" },
+        { "title": "pntr", "from": "Cores/melonds_ds/deps/pntr/LICENSE.md" }
+      ]
+    },
+    {
+      "id": "jgenesis", "title": "JGenesis", "cores": ["jgenesis"], "framework": "JgenesisCore", "licence": "GPL-3.0",
+      "source": "https://github.com/jsgroth/jgenesis, tag v0.14.1, commit cbe7f12, with GagaEmu's shim crate jgenesis-gaga",
+      "texts": [{ "title": "JGenesis and jgenesis-gaga", "from": "Cores/jgenesis/upstream/LICENSE" }]
+    },
+    {
+      "id": "jgenesis-crates", "title": "Rust crates in JGenesis", "cores": ["jgenesis"], "licence": "MIT, Apache-2.0, BSD-3-Clause, Zlib",
+      "source": "crates.io, as pinned by Cores/jgenesis/shim/Cargo.lock. A crate offered under several licences is used under MIT where MIT is one of them.",
+      "crates": [
+        "chd 0.3.4", "zstd-sys 2.0.16+zstd.1.5.7", "claxon 0.4.3", "zlib-rs 0.6.3",
+        "bincode 2.0.1", "lzma-rs-perf-exp 0.2.1", "macro_rules_attribute 0.1.3", "ruzstd 0.8.3", "twox-hash 2.1.2", "winnow 1.0.3",
+        "aho-corasick 1.1.4", "byteorder 1.5.0", "memchr 2.8.2",
+        "bytemuck 1.25.0", "ext-trait 1.0.1", "extension-traits 1.0.1", "lending-iterator 0.1.7", "never-say-never 6.6.666", "nougat 0.2.4", "polonius-the-crab 0.2.1",
+        "arrayvec 0.7.6", "bitreader 0.3.11", "cfg-if 1.0.4", "chacha20 0.10.0", "crc 3.4.0", "crc-catalog 2.5.0", "deranged 0.5.8", "equivalent 1.0.2",
+        "flate2 1.1.9", "getrandom 0.4.3", "hashbrown 0.17.1", "indexmap 2.14.0", "libc 0.2.186", "log 0.4.33", "multiversion 0.8.0",
+        "num 0.4.3", "num-bigint 0.4.6", "num-complex 0.4.6", "num-conv 0.2.2", "num-integer 0.1.46", "num-iter 0.1.45", "num-rational 0.4.2", "num-traits 0.2.19",
+        "powerfmt 0.2.0", "rand 0.10.1", "rand_core 0.10.1", "regex 1.13.1", "regex-automata 0.4.16", "regex-syntax 0.8.11", "rustc-hash 2.1.2",
+        "serde 1.0.228", "serde_core 1.0.228", "serde_spanned 1.1.1", "target-features 0.1.6", "text_io 0.1.13", "thiserror 2.0.18", "time 0.3.49", "time-core 0.1.9",
+        "toml 1.1.2", "toml_datetime 1.1.1", "toml_parser 1.1.2", "toml_writer 1.1.1", "unty 0.0.4", "zstd-safe 7.2.4"
+      ],
+      "texts": [
+        { "title": "zstd (bundled in zstd-sys)", "crate": "zstd-sys 2.0.16+zstd.1.5.7", "file": "zstd/LICENSE" },
+        { "title": "Rust standard library (std, core, alloc, panic_unwind)", "text": "Copyright (c) The Rust Project Contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.\n" }
+      ]
+    },
+    {
+      "id": "dosbox_pure", "title": "DOSBox Pure", "cores": ["dosbox_pure"], "framework": "DosboxPureCore", "licence": "GPL-2.0-or-later",
+      "source": "https://codeberg.org/schelling/dosbox-pure, tag 1.0-preview7, commit cdaea10",
+      "texts": [
+        { "title": "DOSBox Pure", "from": "Cores/dosbox_pure/upstream/LICENSE" },
+        { "title": "Nuked OPL3", "from": "Cores/dosbox_pure/upstream/src/hardware/nukedopl3.cpp", "comment": true },
+        { "title": "Munt mt32emu", "from": "Cores/dosbox_pure/upstream/src/gui/mt32emu.h", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "SAA1099 and SN76496 (from MAME)", "text": "saa1099.cpp: copyright-holders Juergen Buchmueller, Manuel Abadia. sn76496.cpp: copyright-holders Nicola Salmoria. Both under the 3-Clause BSD License:\n\nRedistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n\n1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.\n\n2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n\n3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n" },
+        { "title": "TinySoundFont", "from": "Cores/dosbox_pure/upstream/src/gui/tsf.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/dosbox_pure/upstream/libretro-common/include/libretro.h", "comment": true },
+        { "title": "keyb2joypad", "text": "keyb2joypad.cpp, the key-to-pad table, is used by DOSBox Pure with the permission of its authors.\n" }
+      ]
+    },
+    {
+      "id": "mame", "title": "MAME", "cores": ["mame"], "framework": "MameCore", "licence": "GPL-2.0-or-later, most files BSD-3-Clause",
+      "source": "https://github.com/libretro/mame, commit 5f5a077 (MAME 0.289). MAME is a registered trademark of Gregory Ember.",
+      "texts": [
+        { "title": "The MAME License", "from": "Cores/mame/upstream/docs/source/license.rst" },
+        { "title": "GNU General Public License 2", "from": "Cores/mame/upstream/COPYING" },
+        { "title": "MAME BSD-3-Clause files", "text": "Copyright (c) MAMEDev and contributors, as each file's copyright-holders line names.\n\nRedistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n\n1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.\n\n2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n\n3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n" },
+        { "title": "path_to_regex", "from": "Cores/mame/upstream/src/lib/util/path_to_regex.cpp", "comment": true },
+        { "title": "zlib", "from": "Cores/mame/upstream/3rdparty/zlib/LICENSE" },
+        { "title": "zstd", "from": "Cores/mame/upstream/3rdparty/zstd/LICENSE" },
+        { "title": "FLAC", "from": "Cores/mame/upstream/3rdparty/flac/COPYING.Xiph" },
+        { "title": "libjpeg (Independent JPEG Group)", "from": "Cores/mame/upstream/3rdparty/libjpeg/README", "lines": [100, 156] },
+        { "title": "Expat", "from": "Cores/mame/upstream/3rdparty/expat/COPYING" },
+        { "title": "utf8proc", "from": "Cores/mame/upstream/3rdparty/utf8proc/LICENSE.md" },
+        { "title": "Lua", "from": "Cores/mame/upstream/3rdparty/lua/src/lua.h", "lines": [498, 523] },
+        { "title": "LuaFileSystem", "from": "Cores/mame/upstream/3rdparty/luafilesystem/LICENSE" },
+        { "title": "lua-zlib", "from": "Cores/mame/upstream/3rdparty/lua-zlib/README", "lines": [1, 30] },
+        { "title": "LuaSQLite3", "from": "Cores/mame/upstream/3rdparty/lsqlite3/lsqlite3.c", "comment": true },
+        { "title": "lua-linenoise", "from": "Cores/mame/upstream/3rdparty/lua-linenoise/linenoise.c", "comment": true },
+        { "title": "linenoise", "from": "Cores/mame/upstream/3rdparty/linenoise/linenoise.c", "comment": true },
+        { "title": "SoftFloat 3", "from": "Cores/mame/upstream/3rdparty/softfloat3/COPYING.txt" },
+        { "title": "ymfm", "from": "Cores/mame/upstream/3rdparty/ymfm/LICENSE" },
+        { "title": "sol2", "from": "Cores/mame/upstream/3rdparty/sol2/sol/sol.hpp", "comment": true },
+        { "title": "pugixml", "from": "Cores/mame/upstream/3rdparty/pugixml/readme.txt", "lines": [27, 50] },
+        { "title": "RapidJSON", "from": "Cores/mame/upstream/3rdparty/rapidjson/license.txt" },
+        { "title": "GLM", "from": "Cores/mame/upstream/3rdparty/glm/copying.txt" },
+        { "title": "Asio", "from": "Cores/mame/upstream/3rdparty/asio/LICENSE_1_0.txt" },
+        { "title": "NanoSVG", "from": "Cores/mame/upstream/3rdparty/nanosvg/LICENSE.txt" },
+        { "title": "LZMA SDK and SQLite", "text": "The LZMA SDK (3rdparty/lzma) is in the public domain (Igor Pavlov). SQLite (3rdparty/sqlite3) is in the public domain.\n" }
+      ]
+    },
+    {
+      "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
+      "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
+      "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
+    },
+    {
+      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest"], "licence": "Apache-2.0",
+      "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
+      "texts": [
+        { "title": "MoltenVK", "from": "build/moltenvk/LICENSE" },
+        { "title": "SPIRV-Cross", "from": "build/moltenvk/licenses/SPIRV-Cross/LICENSE" },
+        { "title": "SPIRV-Tools", "from": "build/moltenvk/licenses/SPIRV-Tools/LICENSE" },
+        { "title": "cereal", "from": "build/moltenvk/licenses/cereal/LICENSE" },
+        { "title": "Vulkan-Headers", "from": "build/moltenvk/licenses/Vulkan-Headers/LICENSE.md" },
+        { "title": "Vulkan-Headers, MIT", "from": "build/moltenvk/licenses/Vulkan-Headers/LICENSES/MIT.txt" },
+        { "title": "SPIRV-Headers", "from": "build/moltenvk/licenses/SPIRV-Headers/LICENSE" }
+      ]
+    }
+  ]
+}

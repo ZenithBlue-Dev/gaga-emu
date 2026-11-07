@@ -1,0 +1,109 @@
+ linenoise.c -- guerrilla line editing library against the idea that a
+ line editing lib needs to be 20,000 lines of C code.
+
+ You can find the latest source code at:
+
+   http://github.com/msteveb/linenoise
+   (forked from http://github.com/antirez/linenoise)
+
+ Does a number of crazy assumptions that happen to be true in 99.9999% of
+ the 2010 UNIX computers around.
+
+ ------------------------------------------------------------------------
+
+ Copyright (c) 2010, Salvatore Sanfilippo <antirez at gmail dot com>
+ Copyright (c) 2010, Pieter Noordhuis <pcnoordhuis at gmail dot com>
+ Copyright (c) 2011, Steve Bennett <steveb at workware dot net dot au>
+
+ All rights reserved.
+
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+
+  *  Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+
+  *  Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ ------------------------------------------------------------------------
+
+ References:
+ - http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+ - http://www.3waylabs.com/nw/WWW/products/wizcon/vt220.html
+
+ Bloat:
+ - Completion?
+
+ Unix/termios
+ ------------
+ List of escape sequences used by this program, we do everything just
+ a few sequences. In order to be so cheap we may have some
+ flickering effect with some slow terminal, but the lesser sequences
+ the more compatible.
+
+ EL (Erase Line)
+    Sequence: ESC [ 0 K
+    Effect: clear from cursor to end of line
+
+ CUF (CUrsor Forward)
+    Sequence: ESC [ n C
+    Effect: moves cursor forward n chars
+
+ CR (Carriage Return)
+    Sequence: \r
+    Effect: moves cursor to column 1
+
+ The following are used to clear the screen: ESC [ H ESC [ 2 J
+ This is actually composed of two sequences:
+
+ cursorhome
+    Sequence: ESC [ H
+    Effect: moves the cursor to upper left corner
+
+ ED2 (Clear entire screen)
+    Sequence: ESC [ 2 J
+    Effect: clear the whole screen
+
+ == For highlighting control characters, we also use the following two ==
+ SO (enter StandOut)
+    Sequence: ESC [ 7 m
+    Effect: Uses some standout mode such as reverse video
+
+ SE (Standout End)
+    Sequence: ESC [ 0 m
+    Effect: Exit standout mode
+
+ == Only used if TIOCGWINSZ fails ==
+ DSR/CPR (Report cursor position)
+    Sequence: ESC [ 6 n
+    Effect: reports current cursor position as ESC [ NNN ; MMM R
+
+ == Only used in multiline mode ==
+ CUU (Cursor Up)
+    Sequence: ESC [ n A
+    Effect: moves cursor up n chars.
+
+ CUD (Cursor Down)
+    Sequence: ESC [ n B
+    Effect: moves cursor down n chars.
+
+ win32/console
+ -------------
+ If __MINGW32__ is defined, the win32 console API is used.
+ This could probably be made to work for the msvc compiler too.
+ This support based in part on work by Jon Griffiths.

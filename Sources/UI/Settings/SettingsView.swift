@@ -337,6 +337,7 @@ private struct GagaPlusPane: View {
 
 private struct AboutPane: View {
     @Environment(\.requestReview) private var requestReview
+    @State private var showLicences = false
     #if DEBUG
     @EnvironmentObject private var state: AppState
     #endif
@@ -358,6 +359,9 @@ private struct AboutPane: View {
         LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
         Rule()
         ActionRow(title: "Rate GagaEmu", symbol: "star") { requestReview() }
+        Rule()
+        ActionRow(title: "Licences") { showLicences = true }
+            .fullScreenCover(isPresented: $showLicences) { LicencesView() }
         Rule()
         #if DEBUG
         ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer") { state.runBenchmark() }

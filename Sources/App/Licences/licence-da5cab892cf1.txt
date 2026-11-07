@@ -1,0 +1,39 @@
+ Copyright (C) 2013 - Hans-Kristian Arntzen
+
+ Permission is hereby granted, free of charge,
+ to any person obtaining a copy of this software and
+ associated documentation files (the "Software"),
+ to deal in the Software without restriction,
+ including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software,
+ and to permit persons to whom the Software is furnished to do so,
+ subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included
+ in all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ IN THE SOFTWARE.
+
+
+
+ Note (2026 audit): the upstream blipper synthesized its Kaiser-windowed
+ sinc filter bank at runtime using double-precision libm (besseli0, sinc,
+ sqrt, sin) and then quantized the result to int16. That made the exact
+ int16 taps a function of the host libm and floating-point rounding mode,
+ and dragged libm / floating point into an otherwise pure-integer audio
+ path. The synthesis (blipper_create_sinc / _prefilter_sinc /
+ _interleave_sinc / _quantize_sinc and the besseli0 / sinc / kaiser_window
+ helpers) has been removed and the resulting coefficients are baked as a
+ const int16 table in blipper_filter_bank.h. The optional floating-point
+ build (BLIPPER_FIXED_POINT 0 / BLIPPER_REAL_T) and the performance-timing
+ code (which used double get_time()) have also been removed. This TU now
+ contains no floating point and no libm dependency, and produces output
+ that is bit-identical on every target.

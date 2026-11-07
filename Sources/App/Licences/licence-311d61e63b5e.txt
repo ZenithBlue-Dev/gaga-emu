@@ -1,0 +1,1 @@
+keyb2joypad.cpp, the key-to-pad table, is used by DOSBox Pure with the permission of its authors.

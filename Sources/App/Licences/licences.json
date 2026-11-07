@@ -1,0 +1,740 @@
+{
+ "components": [
+  {
+   "id": "anime4k",
+   "title": "Anime4K",
+   "licence": "MIT",
+   "source": "https://github.com/bloc97/Anime4K, commit 28535a4. Ported to Metal as the Anime4K upscaler.",
+   "cores": [],
+   "texts": [
+    {
+     "title": "Anime4K",
+     "file": "licence-7a66909c2c87.txt"
+    }
+   ]
+  },
+  {
+   "id": "community-shaders",
+   "title": "Community filters",
+   "licence": "Public domain",
+   "source": "https://github.com/libretro/slang-shaders, commit 3685eda. Converted to Metal.",
+   "cores": [],
+   "texts": [
+    {
+     "title": "crt-lottes, lcd3x, sharp-bilinear",
+     "file": "licence-cc53aa019337.txt"
+    }
+   ]
+  },
+  {
+   "id": "mgba",
+   "title": "mGBA",
+   "licence": "MPL-2.0",
+   "source": "https://github.com/mgba-emu/mgba, tag 0.10.5, commit 26b7884. The source of every MPL file is at that URL and commit; none is changed.",
+   "cores": [
+    "mgba"
+   ],
+   "framework": "MgbaCore",
+   "texts": [
+    {
+     "title": "mGBA",
+     "file": "licence-fab3dd6bdab2.txt"
+    },
+    {
+     "title": "inih",
+     "file": "licence-9ae3b39e83e9.txt"
+    }
+   ]
+  },
+  {
+   "id": "gambatte",
+   "title": "Gambatte",
+   "licence": "GPL-2.0",
+   "source": "https://github.com/libretro/gambatte-libretro, commit 77f2567",
+   "cores": [
+    "gambatte"
+   ],
+   "framework": "GambatteCore",
+   "texts": [
+    {
+     "title": "Gambatte",
+     "file": "licence-ab15fd526bd8.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    },
+    {
+     "title": "blipper",
+     "file": "licence-da5cab892cf1.txt"
+    }
+   ]
+  },
+  {
+   "id": "nestopia",
+   "title": "Nestopia UE",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/nestopia, commit f1e02d1",
+   "cores": [
+    "nestopia"
+   ],
+   "framework": "NestopiaCore",
+   "texts": [
+    {
+     "title": "Nestopia",
+     "file": "licence-df84246204e3.txt"
+    },
+    {
+     "title": "nes_ntsc",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "pcsx_rearmed",
+   "title": "PCSX-ReARMed",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/pcsx_rearmed, commit 7b0e8f8",
+   "cores": [
+    "pcsx_rearmed"
+   ],
+   "framework": "PcsxReArmedCore",
+   "texts": [
+    {
+     "title": "PCSX-ReARMed",
+     "file": "licence-0efb4db8000c.txt"
+    },
+    {
+     "title": "gte_divider (from MAME)",
+     "file": "licence-9a347a40161c.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-f38c560d46af.txt"
+    }
+   ]
+  },
+  {
+   "id": "bsnes",
+   "title": "bsnes",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/libretro/bsnes-libretro, commit b51612a",
+   "cores": [
+    "bsnes"
+   ],
+   "framework": "BsnesCore",
+   "texts": [
+    {
+     "title": "bsnes and nall",
+     "file": "licence-0f054caebeba.txt"
+    },
+    {
+     "title": "SameBoy",
+     "file": "licence-0cd679b37b3a.txt"
+    },
+    {
+     "title": "libretro.h",
+     "file": "licence-f38c560d46af.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-1ea32e160213.txt"
+    }
+   ]
+  },
+  {
+   "id": "melonds_ds",
+   "title": "melonDS DS",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/JesseTG/melonds-ds, tag v1.4.0, commit f394adb; melonDS fork commit 16f127d",
+   "cores": [
+    "melonds_ds"
+   ],
+   "framework": "MelonDSCore",
+   "texts": [
+    {
+     "title": "melonDS DS",
+     "file": "licence-3972dc9744f6.txt"
+    },
+    {
+     "title": "Open Sans",
+     "file": "licence-d517383cb747.txt"
+    },
+    {
+     "title": "FreeBIOS",
+     "file": "licence-b1c36ae0d4b9.txt"
+    },
+    {
+     "title": "Teakra",
+     "file": "licence-84ac887a2ae1.txt"
+    },
+    {
+     "title": "FatFs",
+     "file": "licence-b896e32fb2cd.txt"
+    },
+    {
+     "title": "blip_buf",
+     "file": "licence-07af1c140ecf.txt"
+    },
+    {
+     "title": "xxHash",
+     "file": "licence-ff700c80e8f7.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    },
+    {
+     "title": "libretro-common CRC32",
+     "file": "licence-289169334e9a.txt"
+    },
+    {
+     "title": "fmt",
+     "file": "licence-a65fcc5a1095.txt"
+    },
+    {
+     "title": "GLM",
+     "file": "licence-62d2d642c7d0.txt"
+    },
+    {
+     "title": "yamc",
+     "file": "licence-df70b7496720.txt"
+    },
+    {
+     "title": "date",
+     "file": "licence-c90f6c00fb96.txt"
+    },
+    {
+     "title": "span-lite",
+     "file": "licence-c9bff7573892.txt"
+    },
+    {
+     "title": "pntr",
+     "file": "licence-ae3f7492114b.txt"
+    }
+   ]
+  },
+  {
+   "id": "jgenesis",
+   "title": "JGenesis",
+   "licence": "GPL-3.0",
+   "source": "https://github.com/jsgroth/jgenesis, tag v0.14.1, commit cbe7f12, with GagaEmu's shim crate jgenesis-gaga",
+   "cores": [
+    "jgenesis"
+   ],
+   "framework": "JgenesisCore",
+   "texts": [
+    {
+     "title": "JGenesis and jgenesis-gaga",
+     "file": "licence-3972dc9744f6.txt"
+    }
+   ]
+  },
+  {
+   "id": "jgenesis-crates",
+   "title": "Rust crates in JGenesis",
+   "licence": "MIT, Apache-2.0, BSD-3-Clause, Zlib",
+   "source": "crates.io, as pinned by Cores/jgenesis/shim/Cargo.lock. A crate offered under several licences is used under MIT where MIT is one of them.",
+   "cores": [
+    "jgenesis"
+   ],
+   "texts": [
+    {
+     "title": "chd 0.3.4 (BSD-3-Clause)",
+     "file": "licence-01461f9ab277.txt"
+    },
+    {
+     "title": "zstd-sys 2.0.16+zstd.1.5.7 (MIT/Apache-2.0)",
+     "file": "licence-129e8edef29e.txt"
+    },
+    {
+     "title": "claxon 0.4.3 (Apache-2.0)",
+     "file": "licence-cfc7749b96f6.txt"
+    },
+    {
+     "title": "zlib-rs 0.6.3 (Zlib)",
+     "file": "licence-e72111c52b7d.txt"
+    },
+    {
+     "title": "bincode 2.0.1 (MIT)",
+     "file": "licence-90d7e0626340.txt"
+    },
+    {
+     "title": "lzma-rs-perf-exp 0.2.1 (MIT)",
+     "file": "licence-ad9f07faa5f6.txt"
+    },
+    {
+     "title": "macro_rules_attribute 0.1.3 (MIT)",
+     "file": "licence-603fb27ef326.txt"
+    },
+    {
+     "title": "ruzstd 0.8.3 (MIT)",
+     "file": "licence-d715eb0d9cfe.txt"
+    },
+    {
+     "title": "twox-hash 2.1.2 (MIT)",
+     "file": "licence-f59bcb1c0265.txt"
+    },
+    {
+     "title": "winnow 1.0.3 (MIT)",
+     "file": "licence-cb5aedb296c5.txt"
+    },
+    {
+     "title": "aho-corasick 1.1.4 (Unlicense OR MIT)",
+     "file": "licence-0f96a83840e1.txt"
+    },
+    {
+     "title": "byteorder 1.5.0 (Unlicense OR MIT)",
+     "file": "licence-0f96a83840e1.txt"
+    },
+    {
+     "title": "memchr 2.8.2 (Unlicense OR MIT)",
+     "file": "licence-0f96a83840e1.txt"
+    },
+    {
+     "title": "bytemuck 1.25.0 (Zlib OR Apache-2.0 OR MIT)",
+     "file": "licence-9df9ba60a11a.txt"
+    },
+    {
+     "title": "ext-trait 1.0.1 (Zlib OR MIT OR Apache-2.0)",
+     "file": "licence-e8d3901c2874.txt"
+    },
+    {
+     "title": "extension-traits 1.0.1 (Zlib OR MIT OR Apache-2.0)",
+     "file": "licence-3901ebeb4aa1.txt"
+    },
+    {
+     "title": "lending-iterator 0.1.7 (Zlib OR MIT OR Apache-2.0)",
+     "file": "licence-3ffde8c8cdeb.txt"
+    },
+    {
+     "title": "never-say-never 6.6.666 (Zlib OR MIT OR Apache-2.0)",
+     "file": "licence-e8d3901c2874.txt"
+    },
+    {
+     "title": "nougat 0.2.4 (Zlib OR MIT OR Apache-2.0)",
+     "file": "licence-3ffde8c8cdeb.txt"
+    },
+    {
+     "title": "polonius-the-crab 0.2.1 (Zlib OR MIT OR Apache-2.0)",
+     "file": "licence-3ffde8c8cdeb.txt"
+    },
+    {
+     "title": "arrayvec 0.7.6 (MIT OR Apache-2.0)",
+     "file": "licence-4da95ec4ecb6.txt"
+    },
+    {
+     "title": "bitreader 0.3.11 (MIT OR Apache-2.0)",
+     "file": "licence-8583712ee2b0.txt"
+    },
+    {
+     "title": "cfg-if 1.0.4 (MIT OR Apache-2.0)",
+     "file": "licence-378f5840b258.txt"
+    },
+    {
+     "title": "chacha20 0.10.0 (MIT OR Apache-2.0)",
+     "file": "licence-b8c6939380a4.txt"
+    },
+    {
+     "title": "crc 3.4.0 (MIT OR Apache-2.0)",
+     "file": "licence-3488679340a4.txt"
+    },
+    {
+     "title": "crc-catalog 2.5.0 (MIT OR Apache-2.0)",
+     "file": "licence-bbda7b98a493.txt"
+    },
+    {
+     "title": "deranged 0.5.8 (MIT OR Apache-2.0)",
+     "file": "licence-231c837c45eb.txt"
+    },
+    {
+     "title": "equivalent 1.0.2 (Apache-2.0 OR MIT)",
+     "file": "licence-7365cc8878a1.txt"
+    },
+    {
+     "title": "flate2 1.1.9 (MIT OR Apache-2.0)",
+     "file": "licence-025436edff4c.txt"
+    },
+    {
+     "title": "getrandom 0.4.3 (MIT OR Apache-2.0)",
+     "file": "licence-523a42c25d24.txt"
+    },
+    {
+     "title": "hashbrown 0.17.1 (MIT OR Apache-2.0)",
+     "file": "licence-ff8f68cb076c.txt"
+    },
+    {
+     "title": "indexmap 2.14.0 (Apache-2.0 OR MIT)",
+     "file": "licence-ecc269ef87fd.txt"
+    },
+    {
+     "title": "libc 0.2.186 (MIT OR Apache-2.0)",
+     "file": "licence-123a331b5dbf.txt"
+    },
+    {
+     "title": "log 0.4.33 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "multiversion 0.8.0 (MIT OR Apache-2.0)",
+     "file": "licence-3c92a19e5417.txt"
+    },
+    {
+     "title": "num 0.4.3 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "num-bigint 0.4.6 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "num-complex 0.4.6 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "num-conv 0.2.2 (MIT OR Apache-2.0)",
+     "file": "licence-e2e245f2b566.txt"
+    },
+    {
+     "title": "num-integer 0.1.46 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "num-iter 0.1.45 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "num-rational 0.4.2 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "num-traits 0.2.19 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "powerfmt 0.2.0 (MIT OR Apache-2.0)",
+     "file": "licence-070dbc7dda03.txt"
+    },
+    {
+     "title": "rand 0.10.1 (MIT OR Apache-2.0)",
+     "file": "licence-209fbbe0ad52.txt"
+    },
+    {
+     "title": "rand_core 0.10.1 (MIT OR Apache-2.0)",
+     "file": "licence-8b6e9feec03e.txt"
+    },
+    {
+     "title": "regex 1.13.1 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "regex-automata 0.4.16 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "regex-syntax 0.8.11 (MIT OR Apache-2.0)",
+     "file": "licence-6485b8ed310d.txt"
+    },
+    {
+     "title": "rustc-hash 2.1.2 (Apache-2.0 OR MIT)",
+     "file": "licence-30fefc3a7d6a.txt"
+    },
+    {
+     "title": "serde 1.0.228 (MIT OR Apache-2.0)",
+     "file": "licence-23f18e03dc49.txt"
+    },
+    {
+     "title": "serde_core 1.0.228 (MIT OR Apache-2.0)",
+     "file": "licence-23f18e03dc49.txt"
+    },
+    {
+     "title": "serde_spanned 1.1.1 (MIT OR Apache-2.0)",
+     "file": "licence-6efb0476a1cc.txt"
+    },
+    {
+     "title": "target-features 0.1.6 (MIT OR Apache-2.0)",
+     "file": "licence-6cfe51b21bd3.txt"
+    },
+    {
+     "title": "text_io 0.1.13 (MIT OR Apache-2.0)",
+     "file": "licence-6ef1eec0b0aa.txt"
+    },
+    {
+     "title": "thiserror 2.0.18 (MIT OR Apache-2.0)",
+     "file": "licence-23f18e03dc49.txt"
+    },
+    {
+     "title": "time 0.3.49 (MIT OR Apache-2.0)",
+     "file": "licence-2537228d9a1b.txt"
+    },
+    {
+     "title": "time-core 0.1.9 (MIT OR Apache-2.0)",
+     "file": "licence-2537228d9a1b.txt"
+    },
+    {
+     "title": "toml 1.1.2 (MIT OR Apache-2.0)",
+     "file": "licence-6efb0476a1cc.txt"
+    },
+    {
+     "title": "toml_datetime 1.1.1 (MIT OR Apache-2.0)",
+     "file": "licence-6efb0476a1cc.txt"
+    },
+    {
+     "title": "toml_parser 1.1.2 (MIT OR Apache-2.0)",
+     "file": "licence-6efb0476a1cc.txt"
+    },
+    {
+     "title": "toml_writer 1.1.1 (MIT OR Apache-2.0)",
+     "file": "licence-6efb0476a1cc.txt"
+    },
+    {
+     "title": "unty 0.0.4 (MIT OR Apache-2.0)",
+     "file": "licence-fa520317a5a6.txt"
+    },
+    {
+     "title": "zstd-safe 7.2.4 (MIT OR Apache-2.0)",
+     "file": "licence-129e8edef29e.txt"
+    },
+    {
+     "title": "zstd (bundled in zstd-sys)",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "Rust standard library (std, core, alloc, panic_unwind)",
+     "file": "licence-e372598bc454.txt"
+    }
+   ]
+  },
+  {
+   "id": "dosbox_pure",
+   "title": "DOSBox Pure",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://codeberg.org/schelling/dosbox-pure, tag 1.0-preview7, commit cdaea10",
+   "cores": [
+    "dosbox_pure"
+   ],
+   "framework": "DosboxPureCore",
+   "texts": [
+    {
+     "title": "DOSBox Pure",
+     "file": "licence-61e092274776.txt"
+    },
+    {
+     "title": "Nuked OPL3",
+     "file": "licence-90de97b577d6.txt"
+    },
+    {
+     "title": "Munt mt32emu",
+     "file": "licence-133628f6096c.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "SAA1099 and SN76496 (from MAME)",
+     "file": "licence-b73d1bb98957.txt"
+    },
+    {
+     "title": "TinySoundFont",
+     "file": "licence-a9cd575e8d5a.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-682cbba24e7a.txt"
+    },
+    {
+     "title": "keyb2joypad",
+     "file": "licence-311d61e63b5e.txt"
+    }
+   ]
+  },
+  {
+   "id": "mame",
+   "title": "MAME",
+   "licence": "GPL-2.0-or-later, most files BSD-3-Clause",
+   "source": "https://github.com/libretro/mame, commit 5f5a077 (MAME 0.289). MAME is a registered trademark of Gregory Ember.",
+   "cores": [
+    "mame"
+   ],
+   "framework": "MameCore",
+   "texts": [
+    {
+     "title": "The MAME License",
+     "file": "licence-9a9bd33b049f.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-60e9b2e1e083.txt"
+    },
+    {
+     "title": "MAME BSD-3-Clause files",
+     "file": "licence-34042efc9b43.txt"
+    },
+    {
+     "title": "path_to_regex",
+     "file": "licence-ecf7b65abe23.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-e32ff4e00d9d.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "FLAC",
+     "file": "licence-12600ea1a7af.txt"
+    },
+    {
+     "title": "libjpeg (Independent JPEG Group)",
+     "file": "licence-f83dd2ee4494.txt"
+    },
+    {
+     "title": "Expat",
+     "file": "licence-31b15de82aa1.txt"
+    },
+    {
+     "title": "utf8proc",
+     "file": "licence-3b510150d34f.txt"
+    },
+    {
+     "title": "Lua",
+     "file": "licence-b43ce432aaf9.txt"
+    },
+    {
+     "title": "LuaFileSystem",
+     "file": "licence-beb2c9eed646.txt"
+    },
+    {
+     "title": "lua-zlib",
+     "file": "licence-debd8f5f2c0f.txt"
+    },
+    {
+     "title": "LuaSQLite3",
+     "file": "licence-b7a89316a23d.txt"
+    },
+    {
+     "title": "lua-linenoise",
+     "file": "licence-dadbd35c1352.txt"
+    },
+    {
+     "title": "linenoise",
+     "file": "licence-9185466ad1fc.txt"
+    },
+    {
+     "title": "SoftFloat 3",
+     "file": "licence-145ea96b4a4a.txt"
+    },
+    {
+     "title": "ymfm",
+     "file": "licence-2d2e9213c170.txt"
+    },
+    {
+     "title": "sol2",
+     "file": "licence-c4d317e4f1b7.txt"
+    },
+    {
+     "title": "pugixml",
+     "file": "licence-5be7eb2adffc.txt"
+    },
+    {
+     "title": "RapidJSON",
+     "file": "licence-a140e5d46fe7.txt"
+    },
+    {
+     "title": "GLM",
+     "file": "licence-696f75dafded.txt"
+    },
+    {
+     "title": "Asio",
+     "file": "licence-c9bff7573892.txt"
+    },
+    {
+     "title": "NanoSVG",
+     "file": "licence-05013ed66432.txt"
+    },
+    {
+     "title": "LZMA SDK and SQLite",
+     "file": "licence-4409e237b969.txt"
+    }
+   ]
+  },
+  {
+   "id": "vktest",
+   "title": "Vulkan Test core",
+   "licence": "GagaEmu",
+   "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
+   "cores": [
+    "vktest"
+   ],
+   "framework": "VkTestCore",
+   "texts": [
+    {
+     "title": "Vulkan Test core",
+     "file": "licence-cc9a25c682f8.txt"
+    }
+   ]
+  },
+  {
+   "id": "moltenvk",
+   "title": "MoltenVK",
+   "licence": "Apache-2.0",
+   "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
+   "cores": [
+    "vktest"
+   ],
+   "texts": [
+    {
+     "title": "MoltenVK",
+     "file": "licence-cfc7749b96f6.txt"
+    },
+    {
+     "title": "SPIRV-Cross",
+     "file": "licence-cfc7749b96f6.txt"
+    },
+    {
+     "title": "SPIRV-Tools",
+     "file": "licence-cfc7749b96f6.txt"
+    },
+    {
+     "title": "cereal",
+     "file": "licence-58604a126af6.txt"
+    },
+    {
+     "title": "Vulkan-Headers",
+     "file": "licence-95ad366d23fa.txt"
+    },
+    {
+     "title": "Vulkan-Headers, MIT",
+     "file": "licence-1ca3502222d9.txt"
+    },
+    {
+     "title": "SPIRV-Headers",
+     "file": "licence-ea43b1de38a6.txt"
+    }
+   ]
+  }
+ ]
+}
