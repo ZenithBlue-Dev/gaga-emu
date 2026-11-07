@@ -183,7 +183,7 @@ Source: [github.com/libretro/nestopia](https://github.com/libretro/nestopia), th
 | `libretro/libretro-common` (11 compiled files) | MIT | Reproduce each copyright notice and the permission notice. |
 | `libretro/libretro.cpp` and the headers it includes, `nesfont.h`, `nstdatabase.hpp` (the cartridge database, compiled in) and `palettes.hpp` | No header; the repository's `COPYING` is GPL-2.0 | Treat as GPL-2.0. |
 
-No file outside these groups is compiled, and the build fetches nothing. `NST_NO_ZLIB` is upstream's own define: states are never compressed and no zlib is linked. The FDS disk BIOS (`disksys.rom`) is not bundled and `.fds` is not offered, so only cartridges run. `NstHomebrew.cpp` imports `exit` for an exit port that only the `Api::Homebrew` interface turns on, which `libretro.cpp` never calls. The test ROM is GagaEmu's own generated program (`Sources/Debug/NESTestROM.swift`).
+No file outside these groups is compiled, and the build fetches nothing. `NST_NO_ZLIB` is upstream's own define: states are never compressed and no zlib is linked. The FDS disk BIOS (`disksys.rom`) is not bundled. `.fds` is offered: the player puts their own `disksys.rom` in `GagaEmu/System` (listed on the BIOS Files screen), and a disk without it is refused with a message. Side A is inserted at power-on (`nestopia_fds_auto_insert`). `NstHomebrew.cpp` imports `exit` for an exit port that only the `Api::Homebrew` interface turns on, which `libretro.cpp` never calls. The test ROM is GagaEmu's own generated program (`Sources/Debug/NESTestROM.swift`).
 
 ### PCSX-ReARMed licence obligations
 

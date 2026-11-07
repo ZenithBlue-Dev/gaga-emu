@@ -454,7 +454,8 @@ struct BIOSManagerView: View {
         ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
         ("firmware.bin", "DS firmware"),
-        ("mpr-17933.bin", "Saturn (US, EU)"), ("sega_101.bin", "Saturn (JP)")
+        ("mpr-17933.bin", "Saturn (US, EU)"), ("sega_101.bin", "Saturn (JP)"),
+        ("disksys.rom", "Famicom Disk System (Nestopia UE)")
     ]
 
     var body: some View {
