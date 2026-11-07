@@ -41,6 +41,7 @@ final class VkTestCoreTests: GagaTestCase {
         var hadPixels = false
         var left: [Int16] = []
         var fatal: String?
+        var rumble: [RumbleManager.Change] = []
     }
 
     private func makeCore() throws -> (GagaCoreWrapper, Capture) {
@@ -54,7 +55,10 @@ final class VkTestCoreTests: GagaTestCase {
         core.onAudioPacket = { packet in
             for index in stride(from: 0, to: packet.samples.count, by: Int(packet.channels)) { capture.left.append(packet.samples[index]) }
         }
-        core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
+        core.onEvent = { event in
+            if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message }
+            if event.severity == GAGA_EVENT_RUMBLE { capture.rumble.append(RumbleManager.Change(code: event.code)) }
+        }
         return (core, capture)
     }
 
@@ -184,6 +188,21 @@ final class VkTestCoreTests: GagaTestCase {
         XCTAssertEqual(capture.left.count, 30 * 800)
         XCTAssertEqual(capture.left.max(), 3000)
         XCTAssertEqual(capture.left.min(), -3000)
+        core.stop()
+    }
+
+    /// The core's set_rumble_state reaches the host through the adapter as one event per change, after the frame.
+    func testSetRumbleStateBecomesRumbleEvents() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 3)
+        XCTAssertEqual(capture.rumble, [], "a motor that stays off sends nothing")
+        run(core, frames: 3, buttons: UInt32(GAGA_BTN_EAST.rawValue | GAGA_BTN_SOUTH.rawValue))
+        XCTAssertEqual(capture.rumble, [.init(port: 1, motor: .strong, strength: 0xFFFF), .init(port: 1, motor: .weak, strength: 0x8000)],
+                       "each change once, with its port and motor")
+        capture.rumble = []
+        run(core, frames: 1)
+        XCTAssertEqual(capture.rumble, [.init(port: 1, motor: .strong, strength: 0), .init(port: 1, motor: .weak, strength: 0)])
+        XCTAssertNil(capture.fatal)
         core.stop()
     }
 
