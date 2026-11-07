@@ -1,23 +1,29 @@
 import Foundation
-import Combine
 import CoreGraphics
 
 // MARK: - Core Errors
 
 public enum EmulatorCoreError: LocalizedError {
     case instanceCreationFailed
+    case abiMismatch(found: UInt32, expected: UInt32)
+    case selfTestFailed(String)
     case romLoadFailed(String)
     case saveStateFailed(String)
     case loadStateFailed(String)
     case coreNotLoaded
     case invalidPixelFormat(UInt32)
+    case invalidFrame(width: Int, height: Int, pitch: Int)
 
     public var errorDescription: String? {
         switch self {
         case .instanceCreationFailed:
-            return "Failed to allocate emulator core instance."
-        case .romLoadFailed(let path):
-            return "Failed to load ROM at \(path)."
+            return "The emulator core could not start."
+        case .abiMismatch(let found, let expected):
+            return "This core was built for bridge version \(found), but the app needs version \(expected)."
+        case .selfTestFailed(let reason):
+            return reason
+        case .romLoadFailed(let reason):
+            return reason
         case .saveStateFailed(let path):
             return "Failed to save state to \(path)."
         case .loadStateFailed(let path):
@@ -25,13 +31,16 @@ public enum EmulatorCoreError: LocalizedError {
         case .coreNotLoaded:
             return "No emulator core instance is currently loaded."
         case .invalidPixelFormat(let fmt):
-            return "Unsupported pixel format ID: \(fmt)."
+            return "The core sent an unsupported pixel format (\(fmt))."
+        case .invalidFrame(let width, let height, let pitch):
+            return "The core sent an invalid frame (\(width) by \(height), pitch \(pitch))."
         }
     }
 }
 
 // MARK: - Video Frame Structure
 
+/// `pixelData` is valid only during the callback.
 public struct VideoFrame {
     public let pixelData: UnsafeRawPointer?
     public let width: Int
@@ -65,6 +74,7 @@ public protocol EmulatorCoreProtocol: AnyObject {
     func reset()
     func start()
     func pause()
+    func resume()
     func stop()
     func step(inputs: [GagaInputState])
 
@@ -80,24 +90,42 @@ public protocol EmulatorCoreProtocol: AnyObject {
 
 // MARK: - GagaCoreWrapper Implementation
 
-public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
+/// Owns one core instance. Every call into the core runs on `executionQueue`, so `executionQueue.sync`
+/// is a barrier: when it returns, no frame is in flight. Control methods are for one thread at a time
+/// (the main actor in the app) and must never run on `executionQueue`, or the barrier deadlocks.
+///
+/// Lifetime: callbacks hold this object unretained. They fire only on the queue during a core call, and
+/// every block on the queue retains `self`, so `self` outlives them. `stop` is the normal teardown; the
+/// frame timer retains `self` until then.
+public final class GagaCoreWrapper: EmulatorCoreProtocol {
+    public typealias Event = (severity: GagaEventSeverity, code: Int32, message: String)
+
     private let coreInterface: GagaCoreInterface
     private var instance: OpaquePointer?
     private let systemDirectory: String
     private let saveDirectory: String
 
-    @Published public private(set) var isRunning: Bool = false
-    @Published public private(set) var isLoaded: Bool = false
+    public private(set) var isRunning: Bool = false
+    public private(set) var isLoaded: Bool = false
 
+    /// Set these before `start`. All three run on `executionQueue`.
     public var onVideoFrame: ((VideoFrame) -> Void)?
     public var onAudioPacket: ((AudioPacket) -> Void)?
+    public var onEvent: ((Event) -> Void)?
+    /// Last chance to change player 1's input for this frame (TriggerPro). Gets the frame number.
+    public var playerOneFilter: ((GagaInputState, Int) -> GagaInputState)?
 
-    private var playerInputs: [GagaInputState] = Array(repeating: GagaInputState(), count: 4)
     private let inputLock = NSLock()
+    private var playerInputs: [GagaInputState] = Array(repeating: GagaInputState(), count: 4)
+    private var framesStepped = 0
+    private var lastButtons: UInt32 = 0
 
     private let executionQueue = DispatchQueue(label: "com.zenithblue.gagaemu.core.execution", qos: .userInteractive)
     private var frameTimer: DispatchSourceTimer?
-    private var isStepping: Bool = false
+    private var hasPaused = false
+    // Queue only.
+    private var stepping = false
+    private var lastFatalMessage: String?
 
     // MARK: - Metadata Accessors
 
@@ -126,9 +154,28 @@ public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
         return coreInterface.native_sample_rate > 0 ? coreInterface.native_sample_rate : 44100
     }
 
+    /// Frames stepped so far and the player 1 buttons the core last saw, after any filter.
+    public var stats: (frames: Int, buttons: UInt32) {
+        inputLock.lock()
+        defer { inputLock.unlock() }
+        return (framesStepped, lastButtons)
+    }
+
     // MARK: - Initialization
 
-    public init(interface: GagaCoreInterface, systemDirectory: String? = nil, saveDirectory: String? = nil) {
+    /// Refuses a core with the wrong ABI or a failing self-test before creating anything.
+    public init(interface: GagaCoreInterface, systemDirectory: String? = nil, saveDirectory: String? = nil) throws {
+        guard interface.abi_version == GAGA_BRIDGE_ABI_VERSION else {
+            throw EmulatorCoreError.abiMismatch(found: interface.abi_version, expected: GAGA_BRIDGE_ABI_VERSION)
+        }
+        if let selfTest = interface.self_test {
+            var error = [CChar](repeating: 0, count: 256)
+            guard selfTest(&error, error.count) else {
+                let reason = String(cString: error)
+                throw EmulatorCoreError.selfTestFailed(reason.isEmpty ? "The core failed its self-test." : reason)
+            }
+        }
+
         self.coreInterface = interface
 
         let fileManager = FileManager.default
@@ -141,19 +188,16 @@ public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
         try? fileManager.createDirectory(atPath: self.systemDirectory, withIntermediateDirectories: true)
         try? fileManager.createDirectory(atPath: self.saveDirectory, withIntermediateDirectories: true)
 
-        setupInstance()
+        try setupInstance()
     }
 
     deinit {
-        stop()
-        if let inst = instance {
-            coreInterface.destroy(inst)
-            instance = nil
-        }
+        // Nothing can be running: every queued block and the frame timer retain self.
+        destroyInstance()
     }
 
-    private func setupInstance() {
-        guard let createFn = coreInterface.create else { return }
+    private func setupInstance() throws {
+        guard let createFn = coreInterface.create else { throw EmulatorCoreError.instanceCreationFailed }
 
         let instPtr = self.systemDirectory.withCString { sysC in
             self.saveDirectory.withCString { saveC in
@@ -161,29 +205,25 @@ public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
             }
         }
 
-        guard let validInst = instPtr else { return }
+        guard let validInst = instPtr else { throw EmulatorCoreError.instanceCreationFailed }
         self.instance = validInst
 
-        // Register Video Callback
         let selfPtr = Unmanaged.passUnretained(self).toOpaque()
 
         coreInterface.set_video_callback(validInst, { rawFrame, userdata in
             guard let rawFrame = rawFrame, let userdata = userdata else { return }
             let wrapper = Unmanaged<GagaCoreWrapper>.fromOpaque(userdata).takeUnretainedValue()
 
-            let rawFmt = rawFrame.pointee.pixel_format
-            let fmt = GagaPixelFormat(rawValue: rawFmt)
             let frame = VideoFrame(
                 pixelData: rawFrame.pointee.pixel_data,
                 width: Int(rawFrame.pointee.width),
                 height: Int(rawFrame.pointee.height),
                 pitch: rawFrame.pointee.pitch,
-                pixelFormat: fmt
+                pixelFormat: GagaPixelFormat(rawValue: rawFrame.pointee.pixel_format)
             )
             wrapper.onVideoFrame?(frame)
         }, selfPtr)
 
-        // Register Audio Callback
         coreInterface.set_audio_callback(validInst, { rawAudio, userdata in
             guard let rawAudio = rawAudio, let userdata = userdata else { return }
             let wrapper = Unmanaged<GagaCoreWrapper>.fromOpaque(userdata).takeUnretainedValue()
@@ -202,87 +242,142 @@ public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
             )
             wrapper.onAudioPacket?(packet)
         }, selfPtr)
+
+        coreInterface.set_event_callback?(validInst, { severity, code, message, userdata in
+            guard let userdata = userdata else { return }
+            let wrapper = Unmanaged<GagaCoreWrapper>.fromOpaque(userdata).takeUnretainedValue()
+            let text = message.map { String(cString: $0) } ?? ""
+            if severity == GAGA_EVENT_FATAL { wrapper.lastFatalMessage = text }
+            wrapper.onEvent?((severity, code, text))
+        }, selfPtr)
+    }
+
+    /// Clears the callbacks first: the wrapper may be in deinit, and a late callback must not reach it.
+    private func destroyInstance() {
+        guard let inst = instance else { return }
+        coreInterface.set_video_callback(inst, nil, nil)
+        coreInterface.set_audio_callback(inst, nil, nil)
+        coreInterface.set_event_callback?(inst, nil, nil)
+        coreInterface.destroy(inst)
+        instance = nil
     }
 
     // MARK: - Lifecycle Controls
 
     public func loadROM(path: String, data: Data? = nil) async throws {
-        guard let inst = instance, let loadFn = coreInterface.load_rom else {
-            throw EmulatorCoreError.instanceCreationFailed
-        }
-
-        let success: Bool
-        if let data = data {
-            success = data.withUnsafeBytes { rawBuffer in
-                path.withCString { pathC in
-                    loadFn(inst, pathC, rawBuffer.baseAddress, rawBuffer.count)
+        let success: Bool = try await withCheckedThrowingContinuation { continuation in
+            executionQueue.async { [self] in
+                guard let inst = instance, let loadFn = coreInterface.load_rom else {
+                    continuation.resume(throwing: EmulatorCoreError.instanceCreationFailed)
+                    return
                 }
-            }
-        } else {
-            success = path.withCString { pathC in
-                loadFn(inst, pathC, nil, 0)
+                let ok: Bool
+                if let data = data {
+                    ok = data.withUnsafeBytes { rawBuffer in
+                        path.withCString { pathC in
+                            loadFn(inst, pathC, rawBuffer.baseAddress, rawBuffer.count)
+                        }
+                    }
+                } else {
+                    ok = path.withCString { pathC in
+                        loadFn(inst, pathC, nil, 0)
+                    }
+                }
+                continuation.resume(returning: ok)
             }
         }
 
         if !success {
-            throw EmulatorCoreError.romLoadFailed(path)
+            let reason = executionQueue.sync { lastFatalMessage }
+            throw EmulatorCoreError.romLoadFailed(reason ?? "The core could not load this game file.")
         }
 
-        await MainActor.run {
-            self.isLoaded = true
-        }
+        isLoaded = true
     }
 
     public func reset() {
-        guard let inst = instance, let resetFn = coreInterface.reset else { return }
         executionQueue.sync {
-            resetFn(inst)
+            if let inst = instance { coreInterface.reset?(inst) }
         }
     }
 
     public func start() {
         guard isLoaded, !isRunning else { return }
         isRunning = true
+        executionQueue.sync { stepping = true }
 
-        let interval = 1.0 / targetFPS
-        let timer = DispatchSource.makeTimerSource(queue: executionQueue)
-        timer.schedule(deadline: .now(), repeating: interval, leeway: .milliseconds(1))
-        timer.setEventHandler { [weak self] in
-            self?.tickFrame()
-        }
-        self.frameTimer = timer
+        // The timer holds its cadence from the deadline, so the rate does not drift, and a slow frame
+        // merges missed fires rather than bursting to catch up.
+        let timer = DispatchSource.makeTimerSource(flags: .strict, queue: executionQueue)
+        timer.schedule(deadline: .now(), repeating: 1.0 / targetFPS, leeway: .milliseconds(1))
+        timer.setEventHandler { [self] in tickFrame() }
+        frameTimer = timer
         timer.resume()
     }
 
+    /// Returns with no frame in flight.
     public func pause() {
         guard isRunning else { return }
         isRunning = false
+        hasPaused = true
         frameTimer?.cancel()
         frameTimer = nil
-    }
-
-    public func stop() {
-        pause()
-        isLoaded = false
-    }
-
-    public func step(inputs: [GagaInputState]) {
-        guard let inst = instance, let stepFn = coreInterface.step_frame else { return }
-        var inArray = inputs
-        while inArray.count < 4 {
-            inArray.append(GagaInputState())
+        executionQueue.sync {
+            stepping = false
+            if let inst = instance { coreInterface.pause?(inst) }
         }
-        stepFn(inst, &inArray, UInt32(min(inputs.count, 4)))
+    }
+
+    public func resume() {
+        guard isLoaded, !isRunning, hasPaused else { return }
+        executionQueue.sync {
+            if let inst = instance { coreInterface.resume?(inst) }
+        }
+        start()
+    }
+
+    /// Stops and destroys the instance. Safe to call twice. The wrapper is finished afterwards.
+    public func stop() {
+        isRunning = false
+        isLoaded = false
+        frameTimer?.cancel()
+        frameTimer = nil
+        executionQueue.sync {
+            stepping = false
+            destroyInstance()
+            onVideoFrame = nil
+            onAudioPacket = nil
+            onEvent = nil
+            playerOneFilter = nil
+        }
+    }
+
+    /// One frame on the queue, for tests and frame stepping. Not for use while the timer runs.
+    public func step(inputs: [GagaInputState]) {
+        executionQueue.sync {
+            guard let inst = instance, let stepFn = coreInterface.step_frame else { return }
+            var inArray = inputs
+            while inArray.count < 4 {
+                inArray.append(GagaInputState())
+            }
+            stepFn(inst, inArray, UInt32(min(inputs.count, 4)))
+        }
     }
 
     private func tickFrame() {
-        guard isRunning, let inst = instance, let stepFn = coreInterface.step_frame else { return }
-        var currentInputs: [GagaInputState]
+        guard stepping, let inst = instance, let stepFn = coreInterface.step_frame else { return }
         inputLock.lock()
-        currentInputs = playerInputs
+        var currentInputs = playerInputs
+        let frame = framesStepped
         inputLock.unlock()
 
-        stepFn(inst, &currentInputs, 4)
+        if let filter = playerOneFilter { currentInputs[0] = filter(currentInputs[0], frame) }
+        stepFn(inst, currentInputs, 4)
+
+        inputLock.lock()
+        framesStepped += 1
+        lastButtons = currentInputs[0].buttons
+        inputLock.unlock()
     }
 
     public func setInput(player: Int, state: GagaInputState) {
@@ -292,24 +387,16 @@ public final class GagaCoreWrapper: ObservableObject, EmulatorCoreProtocol {
         inputLock.unlock()
     }
 
-private struct UncheckedInstance: @unchecked Sendable {
-    let pointer: OpaquePointer
-}
-
     // MARK: - Save States
 
     public func saveState(to path: String) async throws {
-        guard let inst = instance, let saveFn = coreInterface.save_state_file else {
-            throw EmulatorCoreError.coreNotLoaded
-        }
-
-        let sendableInst = UncheckedInstance(pointer: inst)
-        let success = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
-            executionQueue.async {
-                let ok = path.withCString { pathC in
-                    saveFn(sendableInst.pointer, pathC)
+        let success: Bool = await withCheckedContinuation { continuation in
+            executionQueue.async { [self] in
+                guard let inst = instance, let saveFn = coreInterface.save_state_file else {
+                    continuation.resume(returning: false)
+                    return
                 }
-                continuation.resume(returning: ok)
+                continuation.resume(returning: path.withCString { saveFn(inst, $0) })
             }
         }
 
@@ -319,17 +406,13 @@ private struct UncheckedInstance: @unchecked Sendable {
     }
 
     public func loadState(from path: String) async throws {
-        guard let inst = instance, let loadFn = coreInterface.load_state_file else {
-            throw EmulatorCoreError.coreNotLoaded
-        }
-
-        let sendableInst = UncheckedInstance(pointer: inst)
-        let success = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, Error>) in
-            executionQueue.async {
-                let ok = path.withCString { pathC in
-                    loadFn(sendableInst.pointer, pathC)
+        let success: Bool = await withCheckedContinuation { continuation in
+            executionQueue.async { [self] in
+                guard let inst = instance, let loadFn = coreInterface.load_state_file else {
+                    continuation.resume(returning: false)
+                    return
                 }
-                continuation.resume(returning: ok)
+                continuation.resume(returning: path.withCString { loadFn(inst, $0) })
             }
         }
 
@@ -341,14 +424,18 @@ private struct UncheckedInstance: @unchecked Sendable {
     // MARK: - Cheats & Metal Layer
 
     public func applyCheat(index: UInt32, enabled: Bool, code: String) {
-        guard let inst = instance, let cheatFn = coreInterface.apply_cheat else { return }
-        code.withCString { codeC in
-            cheatFn(inst, index, enabled, codeC)
+        executionQueue.sync {
+            guard let inst = instance, let cheatFn = coreInterface.apply_cheat else { return }
+            code.withCString { codeC in
+                cheatFn(inst, index, enabled, codeC)
+            }
         }
     }
 
     public func attachMetalLayer(_ caMetalLayer: UnsafeMutableRawPointer) -> Bool {
-        guard let inst = instance, let attachFn = coreInterface.attach_metal_layer else { return false }
-        return attachFn(inst, caMetalLayer)
+        executionQueue.sync {
+            guard let inst = instance, let attachFn = coreInterface.attach_metal_layer else { return false }
+            return attachFn(inst, caMetalLayer)
+        }
     }
 }

@@ -17,19 +17,35 @@
 #define MOCK_SAMPLE_RATE 44100
 #define MOCK_FPS 60.0
 
+#define MOCK_SMALL_WIDTH 160
+#define MOCK_SMALL_HEIGHT 144
+
+enum { MOCK_EVENT_PAUSED = 1, MOCK_EVENT_RESUMED = 2, MOCK_EVENT_STEP_WHILE_PAUSED = 3, MOCK_EVENT_BAD_ROM = 4 };
+
 typedef struct {
     char system_dir[512];
     char save_dir[512];
     uint32_t frame_counter;
     double audio_phase;
     uint32_t framebuffer[MOCK_WIDTH * MOCK_HEIGHT];
+    uint16_t framebuffer565[MOCK_WIDTH * MOCK_HEIGHT];
     int16_t audio_buffer[(MOCK_SAMPLE_RATE / 60 + 16) * 2]; // Stereo
     void (*video_cb)(const GagaFrameDescriptor* frame, void* userdata);
     void* video_userdata;
     void (*audio_cb)(const GagaAudioDescriptor* audio, void* userdata);
     void* audio_userdata;
+    void (*event_cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata);
+    void* event_userdata;
     bool rom_loaded;
+    bool paused;
+    uint32_t last_buttons;
+    uint32_t pixel_format; // Start cycles it
+    bool small_frame;      // Select toggles it
 } MockCoreInstance;
+
+static void mock_emit(MockCoreInstance* m, GagaEventSeverity severity, int32_t code, const char* message) {
+    if (m->event_cb) m->event_cb(severity, code, message, m->event_userdata);
+}
 
 static GagaInstance* mock_create(const char* system_dir, const char* save_dir) {
     MockCoreInstance* inst = (MockCoreInstance*)calloc(1, sizeof(MockCoreInstance));
@@ -39,6 +55,7 @@ static GagaInstance* mock_create(const char* system_dir, const char* save_dir) {
     inst->frame_counter = 0;
     inst->audio_phase = 0.0;
     inst->rom_loaded = false;
+    inst->pixel_format = GAGA_PIXEL_FORMAT_RGBA8888;
     return (GagaInstance*)inst;
 }
 
@@ -49,11 +66,26 @@ static void mock_destroy(GagaInstance* inst) {
 }
 
 static bool mock_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_data, size_t rom_size) {
-    (void)rom_path;
-    (void)rom_data;
-    (void)rom_size;
     MockCoreInstance* m = (MockCoreInstance*)inst;
     if (!m) return false;
+
+    // Any non-empty file is a "ROM", so the host's load failure path can be exercised for real.
+    size_t size = rom_data ? rom_size : 0;
+    if (!rom_data && rom_path) {
+        FILE* fp = fopen(rom_path, "rb");
+        if (fp) {
+            if (fseek(fp, 0, SEEK_END) == 0) {
+                long end = ftell(fp);
+                size = end > 0 ? (size_t)end : 0;
+            }
+            fclose(fp);
+        }
+    }
+    if (size == 0) {
+        mock_emit(m, GAGA_EVENT_FATAL, MOCK_EVENT_BAD_ROM, "The game file is empty or unreadable.");
+        return false;
+    }
+
     m->rom_loaded = true;
     m->frame_counter = 0;
     m->audio_phase = 0.0;
@@ -71,10 +103,25 @@ static void mock_step_frame(GagaInstance* inst, const GagaInputState inputs[4], 
     MockCoreInstance* m = (MockCoreInstance*)inst;
     if (!m) return;
 
+    // Contract check: the host must not step between pause and resume.
+    if (m->paused) {
+        mock_emit(m, GAGA_EVENT_FATAL, MOCK_EVENT_STEP_WHILE_PAUSED, "step_frame ran while paused.");
+        return;
+    }
+
     uint32_t buttons = 0;
     if (inputs && player_count > 0) {
         buttons = inputs[0].buttons;
     }
+
+    // Start cycles the pixel format and Select toggles the frame size, on the press only.
+    uint32_t pressed = buttons & ~m->last_buttons;
+    m->last_buttons = buttons;
+    if (pressed & GAGA_BTN_START) m->pixel_format = (m->pixel_format + 1) % 3;
+    if (pressed & GAGA_BTN_SELECT) m->small_frame = !m->small_frame;
+
+    uint32_t width = m->small_frame ? MOCK_SMALL_WIDTH : MOCK_WIDTH;
+    uint32_t height = m->small_frame ? MOCK_SMALL_HEIGHT : MOCK_HEIGHT;
 
     m->frame_counter++;
     uint32_t fc = m->frame_counter;
@@ -84,8 +131,8 @@ static void mock_step_frame(GagaInstance* inst, const GagaInputState inputs[4], 
     uint8_t red_boost = (buttons & (GAGA_BTN_SOUTH | GAGA_BTN_EAST)) ? 80 : 0;
     uint8_t blue_boost = (buttons & (GAGA_BTN_WEST | GAGA_BTN_NORTH)) ? 80 : 0;
 
-    for (uint32_t y = 0; y < MOCK_HEIGHT; ++y) {
-        for (uint32_t x = 0; x < MOCK_WIDTH; ++x) {
+    for (uint32_t y = 0; y < height; ++y) {
+        for (uint32_t x = 0; x < width; ++x) {
             uint8_t r = (uint8_t)(((x + fc * 2) & 0xFF) + red_boost);
             uint8_t g = (uint8_t)((y + fc) & 0xFF);
             uint8_t b = (uint8_t)(((x + y + fc * 3) & 0xFF) + blue_boost);
@@ -93,25 +140,33 @@ static void mock_step_frame(GagaInstance* inst, const GagaInputState inputs[4], 
 
             // Draw a center indicator box when any D-Pad button is pressed
             if ((buttons & (GAGA_BTN_UP | GAGA_BTN_DOWN | GAGA_BTN_LEFT | GAGA_BTN_RIGHT)) &&
-                x >= 118 && x <= 138 && y >= 102 && y <= 122) {
+                x + 10 >= width / 2 && x <= width / 2 + 10 && y + 10 >= height / 2 && y <= height / 2 + 10) {
                 r = 255; g = 255; b = 255;
             }
 
-            // Standard Little-Endian RGBA / BGRA
-            m->framebuffer[y * MOCK_WIDTH + x] = ((uint32_t)a << 24) |
-                                                 ((uint32_t)b << 16) |
-                                                 ((uint32_t)g << 8)  |
-                                                 ((uint32_t)r);
+            // Rows keep the full buffer's stride, so the small frame has a pitch wider than its width.
+            if (m->pixel_format == GAGA_PIXEL_FORMAT_RGB565) {
+                m->framebuffer565[y * MOCK_WIDTH + x] = (uint16_t)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
+            } else if (m->pixel_format == GAGA_PIXEL_FORMAT_XRGB8888) {
+                m->framebuffer[y * MOCK_WIDTH + x] = ((uint32_t)r << 16) | ((uint32_t)g << 8) | (uint32_t)b;
+            } else {
+                // Little-endian RGBA in memory
+                m->framebuffer[y * MOCK_WIDTH + x] = ((uint32_t)a << 24) |
+                                                     ((uint32_t)b << 16) |
+                                                     ((uint32_t)g << 8)  |
+                                                     ((uint32_t)r);
+            }
         }
     }
 
     if (m->video_cb) {
+        bool is565 = m->pixel_format == GAGA_PIXEL_FORMAT_RGB565;
         GagaFrameDescriptor frame;
-        frame.pixel_data = m->framebuffer;
-        frame.width = MOCK_WIDTH;
-        frame.height = MOCK_HEIGHT;
-        frame.pitch = MOCK_WIDTH * sizeof(uint32_t);
-        frame.pixel_format = GAGA_PIXEL_FORMAT_RGBA8888;
+        frame.pixel_data = is565 ? (const void*)m->framebuffer565 : (const void*)m->framebuffer;
+        frame.width = width;
+        frame.height = height;
+        frame.pitch = MOCK_WIDTH * (is565 ? sizeof(uint16_t) : sizeof(uint32_t));
+        frame.pixel_format = m->pixel_format;
         m->video_cb(&frame, m->video_userdata);
     }
 
@@ -197,7 +252,36 @@ static void mock_apply_cheat(GagaInstance* inst, uint32_t index, bool enabled, c
     (void)code;
 }
 
+static bool mock_self_test(char* error, size_t error_capacity) {
+    (void)error;
+    (void)error_capacity;
+    return true;
+}
+
+static void mock_pause(GagaInstance* inst) {
+    MockCoreInstance* m = (MockCoreInstance*)inst;
+    if (!m) return;
+    m->paused = true;
+    mock_emit(m, GAGA_EVENT_INFO, MOCK_EVENT_PAUSED, "paused");
+}
+
+static void mock_resume(GagaInstance* inst) {
+    MockCoreInstance* m = (MockCoreInstance*)inst;
+    if (!m) return;
+    m->paused = false;
+    mock_emit(m, GAGA_EVENT_INFO, MOCK_EVENT_RESUMED, "resumed");
+}
+
+static void mock_set_event_callback(GagaInstance* inst,
+                                    void (*cb)(GagaEventSeverity, int32_t, const char*, void*), void* userdata) {
+    MockCoreInstance* m = (MockCoreInstance*)inst;
+    if (!m) return;
+    m->event_cb = cb;
+    m->event_userdata = userdata;
+}
+
 static const GagaCoreInterface s_mock_interface = {
+    .abi_version = GAGA_BRIDGE_ABI_VERSION,
     .core_id = "mock",
     .core_name = "Mock Validation Core",
     .core_version = "1.0.0",
@@ -215,6 +299,10 @@ static const GagaCoreInterface s_mock_interface = {
     .save_state_file = mock_save_state_file,
     .load_state_file = mock_load_state_file,
     .apply_cheat = mock_apply_cheat,
+    .self_test = mock_self_test,
+    .pause = mock_pause,
+    .resume = mock_resume,
+    .set_event_callback = mock_set_event_callback,
 };
 
 const GagaCoreInterface* MockCore_GetInterface(void) {
@@ -251,10 +339,20 @@ static void stub_set_audio_callback(GagaInstance* i, void (*cb)(const GagaAudioD
 static bool stub_save_state_file(GagaInstance* i, const char* p) { (void)i; (void)p; return true; }
 static bool stub_load_state_file(GagaInstance* i, const char* p) { (void)i; (void)p; return true; }
 static void stub_apply_cheat(GagaInstance* i, uint32_t idx, bool en, const char* c) { (void)i; (void)idx; (void)en; (void)c; }
+static void stub_pause(GagaInstance* i) { (void)i; }
+static void stub_resume(GagaInstance* i) { (void)i; }
+static void stub_set_event_callback(GagaInstance* i, void (*cb)(GagaEventSeverity, int32_t, const char*, void*), void* u) { (void)i; (void)cb; (void)u; }
+
+// A stub emits no frames, so it must fail here rather than show a black screen.
+static bool stub_self_test(char* error, size_t error_capacity) {
+    if (error && error_capacity > 0) snprintf(error, error_capacity, "This core is not part of this build yet.");
+    return false;
+}
 
 #define DEFINE_CORE_INTERFACE(getter, id, name, ver, ext, fps, sr) \
 __attribute__((weak)) const GagaCoreInterface* getter(void) { \
     static const GagaCoreInterface s_interface = { \
+        .abi_version = GAGA_BRIDGE_ABI_VERSION, \
         .core_id = id, \
         .core_name = name, \
         .core_version = ver, \
@@ -272,6 +370,10 @@ __attribute__((weak)) const GagaCoreInterface* getter(void) { \
         .save_state_file = stub_save_state_file, \
         .load_state_file = stub_load_state_file, \
         .apply_cheat = stub_apply_cheat, \
+        .self_test = stub_self_test, \
+        .pause = stub_pause, \
+        .resume = stub_resume, \
+        .set_event_callback = stub_set_event_callback, \
     }; \
     return &s_interface; \
 }

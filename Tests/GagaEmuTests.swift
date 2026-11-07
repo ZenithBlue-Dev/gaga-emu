@@ -114,7 +114,7 @@ final class GagaEmuTests: XCTestCase {
             return
         }
 
-        let wrapper = GagaCoreWrapper(interface: mockInterface)
+        let wrapper = try GagaCoreWrapper(interface: mockInterface)
         XCTAssertEqual(wrapper.coreID, "mock")
         XCTAssertEqual(wrapper.targetFPS, 60.0)
         XCTAssertEqual(wrapper.nativeSampleRate, 44100)

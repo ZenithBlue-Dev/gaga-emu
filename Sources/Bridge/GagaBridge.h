@@ -9,6 +9,9 @@
 extern "C" {
 #endif
 
+// Bump on any change to GagaCoreInterface. The host refuses a core built for another version.
+#define GAGA_BRIDGE_ABI_VERSION 1u
+
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
 
@@ -68,8 +71,21 @@ typedef struct {
     uint8_t        channels;    // 1 = mono, 2 = stereo
 } GagaAudioDescriptor;
 
+typedef enum {
+    GAGA_EVENT_INFO    = 0,
+    GAGA_EVENT_WARNING = 1,
+    GAGA_EVENT_FATAL   = 2, // The host ends the session and shows the message.
+} GagaEventSeverity;
+
+// Threading contract. The host makes every instance call on one serial queue, never concurrently.
+// Video, audio and event callbacks must fire on that queue, inside a host call to the core. A core
+// with worker threads marshals to step_frame. Descriptor pointers and event messages are valid only
+// during the callback. No callback may fire after destroy returns.
+
 // Core Lifecycle Interface
 typedef struct GagaCoreInterface {
+    // Stays the first member, so the host can read it before trusting the rest of the table.
+    uint32_t    abi_version;          // GAGA_BRIDGE_ABI_VERSION
     const char* core_id;
     const char* core_name;
     const char* core_version;
@@ -101,6 +117,17 @@ typedef struct GagaCoreInterface {
 
     // Cheats
     void (*apply_cheat)(GagaInstance* inst, uint32_t index, bool enabled, const char* code);
+
+    // Runs with no instance or game. Returns false and fills error on failure.
+    bool (*self_test)(char* error, size_t error_capacity);
+
+    // The host pauses before the app leaves the foreground. No step_frame runs between the two.
+    void (*pause)(GagaInstance* inst);
+    void (*resume)(GagaInstance* inst);
+
+    // Errors and events. A FATAL event during load_rom supplies the message the player sees.
+    void (*set_event_callback)(GagaInstance* inst,
+        void (*cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata), void* userdata);
 } GagaCoreInterface;
 
 #ifdef __cplusplus
