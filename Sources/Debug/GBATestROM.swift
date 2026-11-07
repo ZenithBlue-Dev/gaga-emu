@@ -12,6 +12,10 @@ import Foundation
 /// - Waits on VBlankIntrWait (SWI 5) each frame, so it hangs if BIOS interrupt handling does not work.
 /// - PSG channel 1 plays a steady square tone at about 440 Hz.
 /// - SRAM: "GAGA" at offset 0, and a boot counter at offset 4, incremented once per boot.
+/// - Toggle cell, x 0 to 15 on the same rows: pressing L and R together flips it between white and the
+///   band colour. The flag lives only in a CPU register, so it proves a save state restored the CPU.
+/// - Cheat cell, x 16 to 31: white for a frame after anything writes a non-zero byte to `cheatAddress`,
+///   which the program clears each frame, so a cheat shows while it is on and stops when it is off.
 enum GBATestROM {
     static let width = 240
     static let height = 160
@@ -26,6 +30,8 @@ enum GBATestROM {
     static let toneHertz = 131072.0 / Double(2048 - 1750)
     static let sramMagic: [UInt8] = Array("GAGA".utf8)
     static let sramBootCounterOffset = 4
+    static let cheatAddress: UInt32 = 0x02000000
+    static let toggleChord: UInt32 = 0x300 // L and R, in KEYINPUT order.
 
     /// mGBA widens BGR555 to 8 bits per channel by repeating the top bits.
     static func rgb8(_ bgr555: UInt16) -> (r: UInt8, g: UInt8, b: UInt8) {
@@ -34,10 +40,12 @@ enum GBATestROM {
     }
 
     /// Expected BGR555 at a pixel, with `keys` as a KEYINPUT-order mask of held keys.
-    static func expectedColor(x: Int, y: Int, keys: UInt32) -> UInt16 {
+    static func expectedColor(x: Int, y: Int, keys: UInt32, toggle: Bool = false, cheat: Bool = false) -> UInt16 {
         let cellRange = cellOriginX..<(cellOriginX + cellWidth * keyCount)
-        if (cellOriginY..<(cellOriginY + cellHeight)).contains(y), cellRange.contains(x) {
-            return keys & (1 << UInt32((x - cellOriginX) / cellWidth)) != 0 ? 0x7FFF : 0
+        if (cellOriginY..<(cellOriginY + cellHeight)).contains(y) {
+            if cellRange.contains(x) { return keys & (1 << UInt32((x - cellOriginX) / cellWidth)) != 0 ? 0x7FFF : 0 }
+            if toggle, x < cellWidth { return 0x7FFF }
+            if cheat, (cellWidth..<cellWidth * 2).contains(x) { return 0x7FFF }
         }
         return bandColors[y / bandHeight]
     }
@@ -115,7 +123,23 @@ enum GBATestROM {
         a.load32(r10, 0x7FFF)
         a.mov(r11, 0)
         a.add(r5, r4, 0x100)
+        a.mov(r6, 0) // Bit 0: the toggle. Bit 1: the chord was held last frame.
         let row = 0x06000000 + UInt32((cellOriginY * width + cellOriginX) * 2)
+
+        // Fills one cell at r9 with r1. Uses r2, r3 and r12.
+        func drawCell() {
+            a.movReg(r3, r9)
+            a.mov(r2, UInt32(cellHeight))
+            let rowStart = a.here
+            a.mov(r12, UInt32(cellWidth))
+            let cellPixel = a.here
+            a.strhPost(r1, r3, 2)
+            a.subs(r12, r12, 1)
+            a.branch(to: cellPixel, cond: .ne)
+            a.add(r3, r3, UInt32((width - cellWidth) * 2))
+            a.subs(r2, r2, 1)
+            a.branch(to: rowStart, cond: .ne)
+        }
 
         let frame = a.here
         a.swi(0x050000) // VBlankIntrWait.
@@ -127,21 +151,36 @@ enum GBATestROM {
         a.tst(r1, 1)
         a.movReg(r1, r10, cond: .eq)
         a.movReg(r1, r11, cond: .ne)
-        a.movReg(r3, r9)
-        a.mov(r2, UInt32(cellHeight))
-        let rowStart = a.here
-        a.mov(r12, UInt32(cellWidth))
-        let cellPixel = a.here
-        a.strhPost(r1, r3, 2)
-        a.subs(r12, r12, 1)
-        a.branch(to: cellPixel, cond: .ne)
-        a.add(r3, r3, UInt32((width - cellWidth) * 2))
-        a.subs(r2, r2, 1)
-        a.branch(to: rowStart, cond: .ne)
+        drawCell()
         a.add(r9, r9, UInt32(cellWidth * 2))
         a.add(r8, r8, 1)
         a.cmp(r8, UInt32(keyCount))
         a.branch(to: cell, cond: .ne)
+
+        // Flip the toggle on the press of the chord only.
+        a.ands(r1, r7, toggleChord)
+        a.mov(r1, 2, cond: .eq)
+        a.mov(r1, 0, cond: .ne)
+        a.bicReg(r2, r1, r6)
+        a.tst(r2, 2)
+        a.eor(r6, r6, 1, cond: .ne)
+        a.and(r6, r6, 1)
+        a.orrReg(r6, r6, r1)
+
+        a.load32(r9, 0x06000000 + UInt32(cellOriginY * width * 2))
+        a.load32(r1, UInt32(bandColors[0]))
+        a.tst(r6, 1)
+        a.movReg(r1, r10, cond: .ne)
+        drawCell()
+
+        a.add(r9, r9, UInt32(cellWidth * 2))
+        a.load32(r3, cheatAddress)
+        a.ldrb(r2, r3, 0)
+        a.strb(r11, r3, 0)
+        a.load32(r1, UInt32(bandColors[0]))
+        a.cmp(r2, 0)
+        a.movReg(r1, r10, cond: .ne)
+        drawCell()
         a.branch(to: frame)
 
         return image(code: a.bytes, start: start)
@@ -201,6 +240,11 @@ enum GBATestROM {
         mutating func cmp(_ rn: Int, _ value: UInt32) { alu(0x15, rd: 0, rn: rn, value) }
         mutating func tst(_ rn: Int, _ value: UInt32) { alu(0x11, rd: 0, rn: rn, value) }
         private mutating func orr(_ rd: Int, _ rn: Int, _ value: UInt32) { alu(0x18, rd: rd, rn: rn, value) }
+        mutating func ands(_ rd: Int, _ rn: Int, _ value: UInt32) { alu(0x01, rd: rd, rn: rn, value) }
+        mutating func and(_ rd: Int, _ rn: Int, _ value: UInt32) { alu(0x00, rd: rd, rn: rn, value) }
+        mutating func eor(_ rd: Int, _ rn: Int, _ value: UInt32, cond: Cond = .always) { alu(0x02, rd: rd, rn: rn, value, cond: cond) }
+        mutating func bicReg(_ rd: Int, _ rn: Int, _ rm: Int) { word(0xE1C00000 | UInt32(rn) << 16 | UInt32(rd) << 12 | UInt32(rm)) }
+        mutating func orrReg(_ rd: Int, _ rn: Int, _ rm: Int) { word(0xE1800000 | UInt32(rn) << 16 | UInt32(rd) << 12 | UInt32(rm)) }
 
         /// mov and orr, one byte at a time. ARMv4 has no movw, and this avoids a literal pool.
         mutating func load32(_ rd: Int, _ value: UInt32) {

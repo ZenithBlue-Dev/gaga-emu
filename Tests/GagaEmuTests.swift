@@ -95,13 +95,12 @@ final class GagaEmuTests: XCTestCase {
         mockInterface.pointee.step_frame(inst, &inputs, 1)
 
         // Test save and load state
-        let statePath = NSTemporaryDirectory() + "mock_test.state"
-        let saved = mockInterface.pointee.save_state_file(inst, statePath)
-        XCTAssertTrue(saved, "Save state should succeed")
-
-        let loaded = mockInterface.pointee.load_state_file(inst, statePath)
-        XCTAssertTrue(loaded, "Load state should succeed")
-        try? FileManager.default.removeItem(atPath: statePath)
+        let size = mockInterface.pointee.state_size(inst)
+        XCTAssertGreaterThan(size, 0)
+        var state = [UInt8](repeating: 0, count: size)
+        XCTAssertTrue(mockInterface.pointee.save_state(inst, &state, size), "Save state should succeed")
+        XCTAssertTrue(mockInterface.pointee.load_state(inst, state, size, nil, 0), "Load state should succeed")
+        XCTAssertFalse(mockInterface.pointee.load_state(inst, state, size - 1, nil, 0), "A short state is refused")
 
         mockInterface.pointee.destroy(inst)
     }

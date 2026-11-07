@@ -1,3 +1,6 @@
+import GameController
+import Metal
+import UIKit
 import XCTest
 @testable import GagaEmu
 
@@ -73,11 +76,12 @@ final class MgbaCoreTests: XCTestCase {
         for _ in 0..<frames { core.step(inputs: [input]) }
     }
 
-    private func assertPicture(_ capture: Capture, keys: UInt32, file: StaticString = #filePath, line: UInt = #line) {
+    private func assertPicture(_ capture: Capture, keys: UInt32, toggle: Bool = false, cheat: Bool = false,
+                               file: StaticString = #filePath, line: UInt = #line) {
         var wrong = 0
         for y in 0..<GBATestROM.height {
             for x in 0..<GBATestROM.width {
-                let want = GBATestROM.rgb8(GBATestROM.expectedColor(x: x, y: y, keys: keys))
+                let want = GBATestROM.rgb8(GBATestROM.expectedColor(x: x, y: y, keys: keys, toggle: toggle, cheat: cheat))
                 let got = capture.pixel(x: x, y: y)
                 if got.r != want.r || got.g != want.g || got.b != want.b || got.a != 0xFF { wrong += 1 }
             }
@@ -331,6 +335,577 @@ final class MgbaCoreTests: XCTestCase {
             XCTAssertNotNil(record[key], key)
         }
         XCTAssertEqual(record["codeGenViolations"] as? [String], [])
+    }
+
+    // MARK: - Audio replacement
+
+    /// Our blip buffer must carry the tone and not add its own. A square wave has no even harmonics.
+    func testResampledAudioIsACleanTone() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 120)
+        core.stop()
+        let tone = capture.left.dropFirst(capture.left.count / 2).map(Double.init)
+        let mean = tone.reduce(0, +) / Double(tone.count)
+        func power(_ hertz: Double) -> Double {
+            let w = 2 * Double.pi * hertz / 32768
+            var previous = 0.0, older = 0.0
+            for sample in tone {
+                (previous, older) = (sample - mean + 2 * cos(w) * previous - older, previous)
+            }
+            return previous * previous + older * older - 2 * cos(w) * previous * older
+        }
+        let fundamental = power(GBATestROM.toneHertz)
+        XCTAssertGreaterThan(fundamental, 0)
+        XCTAssertLessThan(power(GBATestROM.toneHertz * 2), fundamental * 0.02, "no even harmonic")
+        XCTAssertLessThan(power(GBATestROM.toneHertz * 1.37), fundamental * 0.02, "nothing between harmonics")
+    }
+
+    // MARK: - Save states
+
+    private let chord = UInt32(GAGA_BTN_L1.rawValue | GAGA_BTN_R1.rawValue)
+
+    /// Press and release the L and R chord, then leave a frame for the program to draw the result.
+    private func flipToggle(_ core: GagaCoreWrapper) {
+        run(core, frames: 2, buttons: chord)
+        run(core, frames: 3)
+    }
+
+    func testStateVersionIsTheOneInTheCoresBytes() async throws {
+        let (core, _) = try await loaded()
+        run(core, frames: 2)
+        let state = try core.saveState()
+        XCTAssertEqual(state.prefix(4).reversed().reduce(UInt32(0)) { $0 << 8 | UInt32($1) }, core.stateVersion)
+        core.stop()
+    }
+
+    func testRoundTripPlaysBackExactlyAndRestoresTheCPU() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        flipToggle(core)
+        assertPicture(capture, keys: 0, toggle: true)
+        let state = try core.saveState()
+
+        // The same scripted input from the same state must give the same frames, byte for byte.
+        func script() -> [[UInt8]] {
+            (0..<30).map { frame in
+                run(core, frames: 1, buttons: frame % 7 == 0 ? UInt32(GAGA_BTN_EAST.rawValue) : frame == 15 ? chord : 0)
+                return capture.pixels
+            }
+        }
+        let first = script()
+        assertPicture(capture, keys: 0, toggle: false)
+        try core.loadState(state)
+        let second = script()
+        XCTAssertEqual(first, second)
+
+        // The flag is only in r6, so this proves CPU registers came back, not just memory.
+        try core.loadState(state)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0, toggle: true)
+        flipToggle(core)
+        assertPicture(capture, keys: 0, toggle: false)
+        core.stop()
+    }
+
+    func testBadFilesAreRefusedBeforeACoreSeesThem() async throws {
+        let (core, _) = try await loaded()
+        run(core, frames: 2)
+        let payload = try core.saveState()
+        core.stop()
+        let version = interface.state_version
+        let good = SaveStateFile.encode(payload: payload, coreID: "mgba", stateVersion: version)
+        XCTAssertEqual(try SaveStateFile.decode(good, coreID: "mgba", stateVersion: version), payload)
+
+        func assertRefused(_ file: Data, _ expected: SaveStateError, line: UInt = #line) {
+            XCTAssertThrowsError(try SaveStateFile.decode(file, coreID: "mgba", stateVersion: version), line: line) {
+                XCTAssertEqual($0 as? SaveStateError, expected, line: line)
+            }
+        }
+        var flipped = good
+        flipped[flipped.count - 100] ^= 0x40
+        assertRefused(flipped, .damaged)
+        var hashHit = good
+        hashHit[60] ^= 1
+        assertRefused(hashHit, .damaged)
+        assertRefused(good.prefix(good.count - 1), .incomplete)
+        assertRefused(good.prefix(SaveStateFile.headerSize), .incomplete)
+        assertRefused(good.prefix(20), .incomplete)
+        assertRefused(good + [0], .incomplete)
+        assertRefused(Data(), .notAState)
+        assertRefused(Data("GAGA".utf8), .notAState)
+        assertRefused(Data(repeating: 0x41, count: 4096), .notAState)
+        assertRefused(SaveStateFile.encode(payload: payload, coreID: "mock", stateVersion: version), .otherCore("mock"))
+        assertRefused(SaveStateFile.encode(payload: payload, coreID: "mgba", stateVersion: version + 1), .otherVersion)
+        var format = good
+        format[8] = 9
+        assertRefused(format, .otherVersion)
+    }
+
+    /// Past the host's checks, the core must refuse too, and the game must carry on exactly where it was.
+    func testCoreRefusesBadStatesAndTheGameKeepsRunning() async throws {
+        let otherROM = directory.appendingPathComponent("other.gba")
+        var other = [UInt8](GBATestROM.build())
+        other[other.count - 1] = 0x55
+        try Data(other).write(to: otherROM)
+        let foreign = try GagaCoreWrapper(interface: interface, systemDirectory: directory.path, saveDirectory: directory.path)
+        try await foreign.loadROM(path: otherROM.path)
+        foreign.step(inputs: [GagaInputState()])
+        let otherGame = try foreign.saveState()
+        foreign.stop()
+
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        flipToggle(core)
+        let state = try core.saveState()
+        var wrongVersion = state
+        wrongVersion[0] ^= 0xFF
+
+        let mock = MockCore_GetInterface()!.pointee
+        let mockCore = try GagaCoreWrapper(interface: mock, systemDirectory: directory.path, saveDirectory: directory.path)
+        let mockState = try mockCore.saveState()
+        mockCore.stop()
+
+        let cases: [(Data, String)] = [
+            (otherGame, "This save state belongs to another game or another version of this game."),
+            (mockState, "This save state is the wrong size for mGBA."),
+            (state.prefix(state.count - 1), "This save state is the wrong size for mGBA."),
+            (Data(), "This save state is the wrong size for mGBA."),
+            (wrongVersion, "This save state belongs to another game or another version of this game."),
+        ]
+        for (bad, message) in cases {
+            XCTAssertThrowsError(try core.loadState(bad)) {
+                XCTAssertEqual($0.localizedDescription, message)
+            }
+            run(core, frames: 3)
+            XCTAssertNil(capture.fatal)
+            assertPicture(capture, keys: 0, toggle: true)
+        }
+        flipToggle(core)
+        assertPicture(capture, keys: 0, toggle: false)
+        core.stop()
+    }
+
+    // MARK: - Files
+
+    func testAtomicWriteLeavesTheOldFileOnFailure() throws {
+        let folder = directory.appendingPathComponent("locked")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent("state")
+        try AtomicFile.write(Data("old".utf8), to: file)
+        try AtomicFile.write(Data("new".utf8), to: file)
+        XCTAssertEqual(try Data(contentsOf: file), Data("new".utf8))
+
+        chmod(folder.path, 0o555)
+        defer { chmod(folder.path, 0o755) }
+        XCTAssertThrowsError(try AtomicFile.write(Data("broken".utf8), to: file))
+        XCTAssertEqual(try Data(contentsOf: file), Data("new".utf8))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), ["state"], "no temp file left")
+
+        // Rename fails because the target is a folder: the temp file must not survive that either.
+        chmod(folder.path, 0o755)
+        let blocked = folder.appendingPathComponent("blocked")
+        try FileManager.default.createDirectory(at: blocked, withIntermediateDirectories: true)
+        XCTAssertThrowsError(try AtomicFile.write(Data("x".utf8), to: blocked))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted(), ["blocked", "state"])
+    }
+
+    func testStoreListsWholeSlotsAndClearsAKilledWrite() throws {
+        let store = SaveStore(directory: directory.appendingPathComponent("store"))
+        XCTAssertEqual(store.slots(), [])
+        let one = try store.writeState(Data("a".utf8), thumbnail: Data("png".utf8), auto: false)
+        try store.writeState(Data("b".utf8), thumbnail: nil, auto: true)
+        try store.writeState(Data("c".utf8), thumbnail: nil, auto: true)
+        XCTAssertEqual(store.slots().count, 2, "one auto slot, overwritten")
+        XCTAssertEqual(store.manualCount, 1)
+        XCTAssertEqual(try Data(contentsOf: try XCTUnwrap(store.autoSlot).url), Data("c".utf8))
+
+        let leftover = one.url.deletingLastPathComponent().appendingPathComponent(".state.tmp-1")
+        try Data("half".utf8).write(to: leftover)
+        XCTAssertEqual(store.slots().count, 2, "a killed write is not a slot")
+        try store.writeState(Data("d".utf8), thumbnail: nil, auto: false)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: leftover.path), "the next write clears it")
+
+        try store.delete(one)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: one.url.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: one.thumbnailURL.path))
+        XCTAssertEqual(store.manualCount, 1)
+
+        try store.saveCheats([CheatEntry(id: 1, name: "n", code: "c", enabled: true)])
+        try Data("sav".utf8).write(to: store.directory.appendingPathComponent("game.sav"))
+        XCTAssertEqual(store.batterySaves().map(\.lastPathComponent), ["game.sav"], "only what the game wrote is exported")
+    }
+
+    // MARK: - Fast-forward
+
+    func testFastForwardRunsWholeFramesDrawsTheLastAndDropsAudio() async throws {
+        let (core, _) = try makeCore()
+        final class Counts { var video = 0, audio = 0 }
+        let counts = Counts()
+        core.onVideoFrame = { _ in counts.video += 1 }
+        core.onAudioPacket = { _ in counts.audio += 1 }
+        try await core.loadROM(path: romPath)
+        core.setSpeed(3)
+        core.start()
+        try await Task.sleep(for: .milliseconds(500))
+        core.pause()
+        let fastFrames = core.stats.frames
+        XCTAssertGreaterThan(fastFrames, 45, "faster than the 30 frames normal speed gives in this time")
+        XCTAssertEqual(fastFrames, counts.video * 3, "only the last frame of a tick is drawn")
+        XCTAssertEqual(counts.audio, 0, "audio is dropped, so its ring cannot back up")
+
+        core.setSpeed(1)
+        counts.video = 0
+        core.resume()
+        try await Task.sleep(for: .milliseconds(300))
+        core.pause()
+        XCTAssertEqual(core.stats.frames - fastFrames, counts.video, "normal speed draws every frame")
+        XCTAssertGreaterThan(counts.audio, 0, "audio comes back")
+        core.stop()
+    }
+
+    // MARK: - Cheats
+
+    private func codes(_ value: UInt32) -> [String] {
+        let address = GBATestROM.cheatAddress
+        func tea(_ first: UInt32, _ second: UInt32, _ seeds: [UInt32]) -> String {
+            var a = first, b = second, sum: UInt32 = 0
+            for _ in 0..<32 {
+                sum &+= 0x9E3779B9
+                a &+= ((b << 4) &+ seeds[0]) ^ (b &+ sum) ^ ((b >> 5) &+ seeds[1])
+                b &+= ((a << 4) &+ seeds[2]) ^ (a &+ sum) ^ ((a >> 5) &+ seeds[3])
+            }
+            return String(format: "%08X %08X", a, b)
+        }
+        return [
+            String(format: "%08X:%02X", address, value), // VBA.
+            String(format: "3%07X %04X", address, value), // CodeBreaker.
+            tea(address, value, [0x09F4FBBD, 0x9681884A, 0x352027E9, 0xF3DEE5A7]), // GameShark.
+            tea(0x00200000, value, [0x7AA9648F, 0x7FAE6994, 0xC0EFAAD5, 0x42712C57]), // Action Replay.
+        ]
+    }
+
+    func testEveryCodeFormatWorks() async throws {
+        for code in codes(1) {
+            let (core, capture) = try await loaded()
+            run(core, frames: 12)
+            assertPicture(capture, keys: 0)
+            try core.addCheat(id: 1, code: code, enabled: true)
+            run(core, frames: 3)
+            XCTAssertEqual(capture.pixel(x: 20, y: 10).g, 0xFF, "\(code) has no effect")
+            assertPicture(capture, keys: 0, cheat: true)
+            core.stop()
+        }
+    }
+
+    func testCheatsSwitchOffAndComeOut() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        try core.addCheat(id: 1, code: codes(1)[0], enabled: false)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0)
+        core.setCheat(id: 1, enabled: true)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0, cheat: true)
+        core.setCheat(id: 1, enabled: false)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0)
+        core.setCheat(id: 1, enabled: true)
+        core.removeCheat(id: 1)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0)
+        core.removeCheat(id: 99) // Unknown IDs are harmless.
+        core.setCheat(id: 99, enabled: true)
+        try core.addCheat(id: 2, code: "\(codes(0)[0])\n\(codes(1)[0])", enabled: true)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0, cheat: true)
+        core.stop()
+    }
+
+    func testInvalidCodesGetAMessageAndAddNothing() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        let cases = [("", "Enter a cheat code."), ("   \n ", "Enter a cheat code."),
+                     ("ZZZZ", "mGBA does not recognise this code: ZZZZ"),
+                     ("hello world", "mGBA does not recognise this code: hello world"),
+                     ("\(codes(1)[0])\nnope", "mGBA does not recognise this code: nope")]
+        for (code, message) in cases {
+            XCTAssertThrowsError(try core.addCheat(id: 1, code: code, enabled: true), code) {
+                XCTAssertEqual($0.localizedDescription, message)
+            }
+            run(core, frames: 3)
+            assertPicture(capture, keys: 0)
+        }
+        // The refused ID stays free.
+        try core.addCheat(id: 1, code: codes(1)[0], enabled: true)
+        run(core, frames: 3)
+        assertPicture(capture, keys: 0, cheat: true)
+        core.stop()
+    }
+
+    // MARK: - Session
+
+    @MainActor
+    private func mgbaSession(folder: String = "saves",
+                             entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .effective(.free, gateOpen: false) })
+    async throws -> GameSession {
+        let skins = TouchSkinEngine()
+        skins.loadDefault()
+        skins.hapticsEnabled = false
+        skins.soundEnabled = false
+        let controllers = ControllerManager(defaults: UserDefaults(suiteName: "session-\(UUID().uuidString)")!)
+        controllers.devices = []
+        let game = GameItem(id: UUID(), title: "Homebrew", platformID: "gba", romPath: romPath, coverPath: nil,
+                            coreOverride: "mgba", playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
+        let session = try GameSession(game: game, interface: interface, romPath: romPath, audio: AudioEngineManager(),
+                                      controllers: controllers, skins: skins, bindings: [], shaderID: "original",
+                                      respectSilentMode: false, saveDirectory: directory.appendingPathComponent(folder),
+                                      entitlements: entitlements)
+        try await session.prepare()
+        session.run()
+        return session
+    }
+
+    @MainActor
+    private func waitForFrames(_ session: GameSession, _ count: Int = 15) async throws {
+        // No view draws in a test, so stand in for the renderer, which frees a ring slot per drawn frame.
+        let queue = try XCTUnwrap(MTLCreateSystemDefaultDevice()?.makeCommandQueue())
+        let target = session.stats.frames + count
+        let deadline = Date().addingTimeInterval(10)
+        while session.stats.frames < target, Date() < deadline {
+            let buffer = try XCTUnwrap(queue.makeCommandBuffer())
+            session.ring.attachCompletion(to: buffer)
+            buffer.commit()
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertGreaterThanOrEqual(session.stats.frames, target)
+    }
+
+    /// RGB at a point of a state's thumbnail.
+    private func thumbnailPixel(_ slot: SaveSlot, x: Int, y: Int) throws -> (r: UInt8, g: UInt8, b: UInt8) {
+        let image = try XCTUnwrap(UIImage(contentsOfFile: slot.thumbnailURL.path)?.cgImage)
+        XCTAssertEqual(image.width, GBATestROM.width)
+        XCTAssertEqual(image.height, GBATestROM.height)
+        var rgba = [UInt8](repeating: 0, count: 4)
+        let context = try XCTUnwrap(CGContext(data: &rgba, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
+        return (rgba[0], rgba[1], rgba[2])
+    }
+
+    @MainActor
+    func testFreeLimitsHoldWithTheGateOpen() async throws {
+        let session = try await mgbaSession(entitlements: { .effective(.free, gateOpen: true) })
+        defer { session.stop() }
+        try await waitForFrames(session)
+        for _ in 0..<3 { try session.saveState() }
+        XCTAssertThrowsError(try session.saveState()) {
+            XCTAssertEqual($0 as? SaveStateError, .limitReached(3))
+        }
+        XCTAssertEqual(session.saves.manualCount, 3)
+        try session.saves.delete(try XCTUnwrap(session.saves.slots().first))
+        XCTAssertNoThrow(try session.saveState(), "deleting one frees a slot")
+
+        XCTAssertEqual(session.fastForwardSpeeds, [1, 2])
+        session.setFastForward(5)
+        XCTAssertEqual(session.fastForward, 2, "clamped to the limit")
+        session.toggleFastForward()
+        XCTAssertEqual(session.fastForward, 1)
+        session.toggleFastForward()
+        XCTAssertEqual(session.fastForward, 2)
+
+        let code = codes(1)[0]
+        for index in 0..<3 { try session.addCheat(name: "Cheat \(index)", code: code) }
+        XCTAssertFalse(session.canAddCheat)
+        XCTAssertThrowsError(try session.addCheat(name: "One more", code: code)) {
+            XCTAssertEqual($0.localizedDescription, "You have 3 cheats, the most without Gaga Plus. Remove one to add another.")
+        }
+        XCTAssertEqual(session.cheats.count, 3)
+        XCTAssertFalse(StoreKitManager.Entitlements.effective(.free, gateOpen: true).autoSaveState)
+    }
+
+    @MainActor
+    func testClosedGateLiftsTheLimits() async throws {
+        let session = try await mgbaSession()
+        defer { session.stop() }
+        try await waitForFrames(session)
+        for _ in 0..<4 { try session.saveState() }
+        XCTAssertEqual(session.saves.manualCount, 4)
+        for index in 0..<4 { try session.addCheat(name: "Cheat \(index)", code: codes(1)[0]) }
+        XCTAssertEqual(session.fastForwardSpeeds, [1, 2, 3, 5])
+        session.setFastForward(5)
+        XCTAssertEqual(session.fastForward, 5)
+        session.setFastForward(4)
+        XCTAssertEqual(session.fastForward, 3, "only offered speeds")
+        XCTAssertTrue(StoreKitManager.Entitlements.effective(.free, gateOpen: false).autoSaveState)
+    }
+
+    @MainActor
+    func testSessionSavesLoadsAndRefusesADamagedFile() async throws {
+        let session = try await mgbaSession()
+        defer { session.stop() }
+        try await waitForFrames(session)
+        let slot = try session.saveState()
+        XCTAssertFalse(slot.isAuto)
+        let red = try thumbnailPixel(slot, x: 120, y: 30)
+        XCTAssertEqual([red.r, red.g, red.b], [0xFF, 0, 0], "the thumbnail is the picture")
+        XCTAssertEqual(try thumbnailPixel(slot, x: 48, y: 10).r, 0, "and a current one, with the key cells drawn")
+        try session.loadState(slot)
+
+        var file = try Data(contentsOf: slot.url)
+        file[file.count - 1] ^= 1
+        try file.write(to: slot.url)
+        let before = session.stats.frames
+        XCTAssertThrowsError(try session.loadState(slot)) {
+            XCTAssertEqual($0 as? SaveStateError, .damaged)
+        }
+        try await waitForFrames(session)
+        XCTAssertGreaterThan(session.stats.frames, before)
+        XCTAssertEqual(session.phase, .running)
+    }
+
+    @MainActor
+    func testCheatListIsPerGameAndComesBack() async throws {
+        let first = try await mgbaSession()
+        try await waitForFrames(first)
+        XCTAssertThrowsError(try first.addCheat(name: "Bad", code: "ZZZZ"))
+        XCTAssertEqual(first.cheats, [], "a refused code is not stored")
+        try first.addCheat(name: "On", code: codes(1)[0])
+        try first.addCheat(name: "Off", code: "\(codes(2)[0])\n\(codes(2)[0])")
+        let off = try XCTUnwrap(first.cheats.last)
+        try first.setCheat(off, enabled: false)
+        first.stop()
+
+        let second = try await mgbaSession()
+        defer { second.stop() }
+        XCTAssertEqual(second.cheats.map(\.name), ["On", "Off"])
+        XCTAssertEqual(second.cheats.map(\.enabled), [true, false])
+        try await waitForFrames(second)
+        let slot = try second.saveState()
+        XCTAssertEqual(try thumbnailPixel(slot, x: 20, y: 10).g, 0xFF, "the stored cheat is back on in the core")
+        try second.removeCheat(try XCTUnwrap(second.cheats.first))
+        XCTAssertEqual(second.saves.cheats().map(\.name), ["Off"])
+        try await waitForFrames(second)
+        XCTAssertEqual(try thumbnailPixel(try second.saveState(), x: 20, y: 10).g, 0)
+
+        let other = try await mgbaSession(folder: "another game")
+        defer { other.stop() }
+        XCTAssertEqual(other.cheats, [])
+    }
+
+    @MainActor
+    func testAutoSaveOnQuitAndBackgroundButNotOnFailure() async throws {
+        let off = try await mgbaSession(folder: "off")
+        try await waitForFrames(off)
+        off.stop()
+        XCTAssertNil(off.saves.autoSlot, "off by default, so the gate and the toggle decide")
+
+        let failing = try await mgbaSession(folder: "failing")
+        failing.autoSaveEnabled = { true }
+        try await waitForFrames(failing)
+        failing.stop(message: "The core stopped.")
+        XCTAssertNil(failing.saves.autoSlot, "a failure must not overwrite a good auto save")
+
+        let session = try await mgbaSession()
+        session.autoSaveEnabled = { true }
+        try await waitForFrames(session)
+        NotificationCenter.default.post(name: UIApplication.didEnterBackgroundNotification, object: nil)
+        let first = try XCTUnwrap(session.saves.autoSlot)
+        XCTAssertEqual(session.saves.manualCount, 0)
+        session.stop()
+        let second = try XCTUnwrap(session.saves.autoSlot)
+        XCTAssertGreaterThanOrEqual(second.date, first.date)
+
+        let resumed = try await mgbaSession()
+        defer { resumed.stop() }
+        try resumed.loadState(second)
+        XCTAssertNil(resumed.notice)
+    }
+
+    @MainActor
+    func testBatterySaveIsOnDiskWhilePaused() async throws {
+        let session = try await mgbaSession()
+        defer { session.stop() }
+        try await waitForFrames(session)
+        session.pause(.menu)
+        let file = session.saves.directory.appendingPathComponent("homebrew.sav")
+        XCTAssertEqual(Array(try Data(contentsOf: file).prefix(4)), GBATestROM.sramMagic)
+        XCTAssertEqual(session.saves.batterySaves().map(\.lastPathComponent), ["homebrew.sav"])
+    }
+
+    // MARK: - Controllers
+
+    @MainActor
+    func testASilentControllerDoesNotHideTouchAndUnassignPersists() throws {
+        let suite = "controllers-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let manager = ControllerManager(defaults: defaults)
+        manager.devices = []
+        let pad = GCController.withExtendedGamepad()
+        manager.attach(pad)
+        let device = try XCTUnwrap(manager.devices.first)
+        XCTAssertEqual(device.slot, 0)
+        XCTAssertTrue(manager.touchOwnsPlayerOne, "connected but silent")
+        _ = manager.sample()
+        XCTAssertTrue(manager.touchOwnsPlayerOne, "still silent after a read")
+
+        pad.extendedGamepad?.leftThumbstick.xAxis.setValue(0.1)
+        _ = manager.sample()
+        XCTAssertTrue(manager.touchOwnsPlayerOne, "stick drift is not input")
+
+        pad.extendedGamepad?.buttonA.setValue(1)
+        XCTAssertNotEqual(manager.sample()[0].buttons, 0)
+        XCTAssertFalse(manager.touchOwnsPlayerOne, "first real input takes over")
+        pad.extendedGamepad?.buttonA.setValue(0)
+        _ = manager.sample()
+        XCTAssertFalse(manager.touchOwnsPlayerOne, "and keeps it")
+
+        manager.assign(device.id, to: nil)
+        XCTAssertTrue(manager.touchOwnsPlayerOne)
+
+        let relaunched = ControllerManager(defaults: defaults)
+        relaunched.devices = []
+        relaunched.attach(GCController.withExtendedGamepad())
+        XCTAssertNil(try XCTUnwrap(relaunched.devices.first).slot, "Unassign survives a relaunch")
+        relaunched.assign(try XCTUnwrap(relaunched.devices.first).id, to: 0)
+
+        let again = ControllerManager(defaults: defaults)
+        again.devices = []
+        again.attach(GCController.withExtendedGamepad())
+        XCTAssertEqual(try XCTUnwrap(again.devices.first).slot, 0, "assigning clears it")
+    }
+
+    @MainActor
+    func testControllerPairOpensAndClosesTheMenu() async throws {
+        let manager = ControllerManager(defaults: try XCTUnwrap(UserDefaults(suiteName: "pair-\(UUID().uuidString)")))
+        manager.devices = []
+        let pad = GCController.withExtendedGamepad()
+        manager.attach(pad)
+        let gamepad = try XCTUnwrap(pad.extendedGamepad)
+        gamepad.buttonMenu.setValue(1)
+        var state = manager.sample()[0]
+        XCTAssertFalse(state.openMenu, "Menu alone is Start")
+        XCTAssertEqual(state.buttons, ControllerManager.Button.start)
+        if let options = gamepad.buttonOptions {
+            options.setValue(1)
+            state = manager.sample()[0]
+            XCTAssertTrue(state.openMenu)
+            XCTAssertEqual(state.buttons, 0, "the pair never reaches the game")
+        }
+
+        let session = try await mgbaSession()
+        defer { session.stop() }
+        session.menuPair(held: true)
+        XCTAssertTrue(session.menuOpen)
+        session.menuPair(held: true)
+        XCTAssertTrue(session.menuOpen, "holding does not flicker")
+        session.menuPair(held: false)
+        XCTAssertTrue(session.menuOpen)
+        session.menuPair(held: true)
+        XCTAssertFalse(session.menuOpen)
+        session.menuPair(held: false)
+        XCTAssertEqual(session.phase, .running)
     }
 }
 

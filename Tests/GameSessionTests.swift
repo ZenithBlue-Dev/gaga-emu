@@ -234,7 +234,7 @@ final class GameSessionTests: XCTestCase {
         var wrong = mock
         wrong.abi_version = GAGA_BRIDGE_ABI_VERSION + 1
         XCTAssertThrowsError(try GagaCoreWrapper(interface: wrong)) {
-            XCTAssertEqual($0.localizedDescription, "This core was built for bridge version 2, but the app needs version 1.")
+            XCTAssertEqual($0.localizedDescription, "This core was built for bridge version 3, but the app needs version 2.")
         }
 
         let session = try makeSession(interface: wrong)
@@ -438,7 +438,7 @@ final class GameSessionTests: XCTestCase {
 
     func testControllerInPlayerOneSlotTakesOverFromTouch() async throws {
         let session = try await started()
-        controllers.devices = [.init(id: "pad", name: "Pad", kind: .mfi, vendor: "", slot: 0)]
+        controllers.devices = [.init(id: "pad", name: "Pad", kind: .mfi, vendor: "", slot: 0, hasSentInput: true)]
         XCTAssertFalse(controllers.touchOwnsPlayerOne, "GameView hides the controls on this")
         session.setTouches([try center(of: "up")])
         try await waitForFrames(session, 2)
