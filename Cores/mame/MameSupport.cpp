@@ -3,6 +3,7 @@
 #include "emu.h"
 
 #include "emuopts.h"
+#include "fileio.h"
 #include "http.h"
 #include "mame.h"
 #include "server_http.hpp"
@@ -18,29 +19,44 @@
 
 #include "sqlite3.h"
 
-// running_machine writes NVRAM files only when the machine stops, and keeps nvram_save() private. An
-// explicit instantiation may name a private member, so this reaches it without editing upstream.
+// running_machine writes NVRAM files only when the machine stops, keeps nvram_filename() private, and its
+// nvram_save() skips a file it cannot open without saying so. An explicit instantiation may name a private
+// member, so this reaches it without editing upstream.
 namespace {
-void nvram_save(running_machine& machine);
-template <void (running_machine::*Member)()> struct nvram_save_access {
-    friend void nvram_save(running_machine& machine) { (machine.*Member)(); }
+std::string nvram_filename(running_machine const& machine, device_t& device);
+template <std::string (running_machine::*Member)(device_t&) const> struct nvram_filename_access {
+    friend std::string nvram_filename(running_machine const& machine, device_t& device) { return (machine.*Member)(device); }
 };
-template struct nvram_save_access<&running_machine::nvram_save>;
+template struct nvram_filename_access<&running_machine::nvram_filename>;
 } // namespace
 
 // Writes every NVRAM device's file into nvram_directory (the save_dir the adapter was given, plus
-// "mame/nvram"), as MAME does on exit. False without a running machine or when a file cannot be written.
+// "mame/nvram"), as running_machine::nvram_save() does on exit. False without a running machine or when a
+// file cannot be written, so the adapter refuses a game whose progress would never reach disk.
 extern "C" bool gaga_mame_save_battery(void) {
     mame_machine_manager* manager = mame_machine_manager::instance();
     running_machine* machine = manager ? manager->machine() : nullptr;
     if (!machine) return false;
     try {
-        nvram_save(*machine);
+        for (device_nvram_interface& nvram : nvram_interface_enumerator(machine->root_device())) {
+            if (!nvram.nvram_can_save()) continue;
+            emu_file file(machine->options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+            if (file.open(nvram_filename(*machine, nvram.device()))) return false;
+            bool const saved = nvram.nvram_save(file);
+            if (!saved || file.size() == 0) file.remove_on_close(); // As upstream: no empty files.
+            file.close();
+            if (!saved) return false;
+        }
     } catch (...) {
         return false;
     }
     return true;
 }
+
+// Upstream's retro_deinit tears the game down while retro_load_ok is set, and never clears it, so the next
+// retro_deinit (the adapter's self test before the next game) would tear down the freed game again.
+extern bool retro_load_ok; // libretro_shared.h
+extern "C" void gaga_mame_after_deinit(void) { retro_load_ok = false; }
 
 // The web server is off unless -http is passed, and this build never passes it.
 http_manager::http_manager(bool active, short, const char* root) : m_active(false), m_root(root ? root : "") {

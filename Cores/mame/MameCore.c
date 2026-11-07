@@ -6,6 +6,7 @@
 #include <string.h>
 
 bool gaga_mame_save_battery(void); // MameSupport.cpp
+void gaga_mame_after_deinit(void);
 
 // Option values are upstream's spelling (libretro_core_options.h). MAME runs on the host's queue alone
 // (no work-queue threads), reads no ini file, and rotates vertical games itself, because the adapter
@@ -21,6 +22,7 @@ static const GagaLibretroVariable s_variables[] = {
     { "mame_mame_paths_enable", "disabled" },
     { "mame_auto_save", "disabled" },
     { "mame_softlists_enable", "disabled" },
+    { "mame_media_type", "rom" }, // Start the set as a machine. Unset, upstream passes the folder's name as one.
     { "mame_mouse_enable", "disabled" },
     { "mame_lightgun_mode", "none" },
     { "mame_rotation_mode", "internal" },
@@ -44,6 +46,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .variables = s_variables,
     .is_rom = mame_is_rom,
     .save_battery = gaga_mame_save_battery,
+    .after_deinit = gaga_mame_after_deinit,
 };
 
 // No cheats: upstream's retro_cheat_set does nothing, and MAME's own cheat engine reads cheat.dat files.
