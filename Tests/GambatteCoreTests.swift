@@ -605,8 +605,8 @@ final class GambatteCoreTests: XCTestCase {
     func testBenchmarkTestROMFollowsThePlatform() throws {
         XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "gbc", to: directory).pathExtension, "gbc")
         XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "gba", to: directory).pathExtension, "gba")
-        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "nes", to: directory)) {
-            XCTAssertEqual($0.localizedDescription, "No test ROM is generated for nes. Pass -GagaBenchmarkROM.")
+        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "snes", to: directory)) {
+            XCTAssertEqual($0.localizedDescription, "No test ROM is generated for snes. Pass -GagaBenchmarkROM.")
         }
     }
 
