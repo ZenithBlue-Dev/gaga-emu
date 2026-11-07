@@ -124,7 +124,7 @@ build_core() {
     local core=$1 dir="$root/Cores/$1"
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
     # Optional, so one core's value must not reach the next.
-    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS
+    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS SOURCE_AUDIT_REVIEWED
     # shellcheck source=/dev/null
     source "$dir/core.env"
 
@@ -149,8 +149,12 @@ build_core() {
         exit 1
     fi
 
-    # Source audit, docs/04 section 8. A hit needs a read and a per-core decision, not a silent build.
-    if hits=$(cd "$dir" && xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit' <sources.txt); then
+    # Source audit, docs/04 section 8. A hit needs a read and a per-core decision, not a silent build. The
+    # decision is SOURCE_AUDIT_REVIEWED in core.env: file:line: prefixes, so a new pin's moved lines fail again.
+    # Status is not used: xargs fails whenever one of its grep batches finds nothing, even if another found a hit.
+    hits=$(cd "$dir" && xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit' <sources.txt || true)
+    hits=$(printf '%s\n' "$hits" | grep -vE "${SOURCE_AUDIT_REVIEWED:-^\$}" | grep -v '^$' || true)
+    if [ -n "$hits" ]; then
         echo "Source audit found code-generation calls in Cores/$core:" >&2
         echo "$hits" >&2
         exit 1
