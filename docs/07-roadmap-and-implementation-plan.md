@@ -25,7 +25,7 @@ This document is canonical for phases and status. `docs/03` is canonical for the
 | 1 | Bring the code in line with the docs, and redesign the UI | built | Every milestone in section 4 closed |
 | 2 | First game session with one real core | 2.1 to 2.8a and 2.10 built; 2.9 built, device benchmark pending | mGBA runs a game end to end on a device, and the paywall release gate can open |
 | 3 | Shader chain and library features | built except 3.6 (deferred), 3.10 and the iCloud half of 3.11 (blocked); AirPlay built, unverified | Listed features work in a game session |
-| 4 | Software-rendered cores | 4.1 built, legal gate open; the rest planned | Each core meets section 2. Starts behind the legal gate. |
+| 4 | Software-rendered cores | 4.1 and 4.5 built, legal gate open; the rest planned | Each core meets section 2. Starts behind the legal gate. |
 | 5 | Vulkan on MoltenVK | planned | Layer path works, and each core meets section 2 |
 | 6 | High-load cores and spikes | planned | Each core meets section 2, or its row leaves `docs/03` |
 | 7 | App Store submission qualification | planned | Checklist passes on the submitted binary |
@@ -143,7 +143,7 @@ Online play is not scheduled. It is not promised or gated until built, and its S
 | 4.2 | NES: Nestopia | planned | |
 | 4.3 | SNES: bsnes | planned | |
 | 4.4 | Genesis / Mega-CD: JGenesis | planned | Self-maintained iOS port. Upstream's frontend uses wgpu and iOS is not an official target. |
-| 4.5 | PS1: PCSX-ReARMed | planned | `DYNAREC=0`. |
+| 4.5 | PS1: PCSX-ReARMed | built, legal gate open, device benchmark pending | On branch `core/pcsx_rearmed`, pinned to `7b0e8f8f` (GPL-2.0-or-later, `docs/03` section 5). Interpreter only: `DRC_DISABLE`, no new_dynarec, lightrec or lightning source, proved by the forbidden-source check on both slices. Software `gpu_neon` on its C SIMD path; HLE BIOS, no Sony BIOS. Runs a generated PS-EXE (`Sources/Debug/PS1TestEXE.swift`) that draws through GP0, reads the pad, plays an SPU tone and counts boots on the memory card, which persists as the battery save. Save states and GameShark cheats (types 30 and 80, among others) work. A generated cue and bin disc and a Multi-Disc Helper `.m3u` boot. Kept out of release builds by `GAGA_CORE_SET` until 4.0 closes. |
 | 4.6 | DS: melonDS DS | planned | Software renderer. DSi camera is not promised. |
 | 4.7 | Arcade: MAME | planned | Audit for dynamic-recompiler paths. Libretro output path is unverified. |
 | 4.8 | DOS / Win9x: DOSBox Pure | planned | Normal core. The dynamic core must be compiled out, not only left unselected. |
