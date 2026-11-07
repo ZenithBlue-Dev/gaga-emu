@@ -172,8 +172,8 @@ Online play is not scheduled. It is not promised or gated until built, and its S
 | 6.1 | Saturn: Beetle Saturn | built, legal gate open, device pending | Branch `core/saturn`. Beetle Saturn at `30f4c120`, interpreter only, texture path. Needs the player's BIOS (`mpr-17933.bin` or `sega_101.bin`), refused with a message otherwise. Discs with `SEGA SEGASATURN` import as Saturn. 6.0 is not needed to build; RAM use on device is unmeasured, and a save state is about 6.8 MB. |
 | 6.2 | Dreamcast: Flycast JIT-less fork | planned | Name and maintain the fork first. Upstream dropped iOS support, and the fork source was not located. |
 | 6.3 | 3DS: Azahar (experimental) | planned | `use_cpu_jit` and `use_shader_jit` must be off and compiled out, and `shader_jit_a64_compiler` must not ship. Vulkan on MoltenVK, or the software renderer. PICA200 path per `docs/03` section 4: fragment shaders use `spv_fs_shader_gen.cpp`. No SPIR-V vertex generator was found; the vertex path appears to go through GLSL, which is inferred from file names and not traced. |
-| 6.4 | **J2meJS spike** | planned | Establish the source, licence and JS runtime path, and whether that path uses any JIT that counts against the no-JIT rule. No upstream repo has been identified. |
-| 6.5 | Java ME: J2meJS | planned | Only if 6.4 passes. |
+| 6.4 | **J2meJS spike** | failed, 2026-11-07 (branch `core/j2me`, docs only) | Source: [Rosabis/J2meJS](https://github.com/Rosabis/J2meJS), the PluotSorbet fork that Manic credits. Licence: GPL-2.0. The JS runtime is in-process JavaScriptCore with no JIT, and it passes: the VM ran a homebrew benchmark under `jsc --useJIT=false`, about 19 times slower than with the JIT (`docs/04` 7.1). It fails on source. The repo ships build output and a prebuilt `classes.jar` with no Java or TypeScript sources, and that jar mixes GPL-2.0-only phoneME with GPL-3.0 FreeJ2ME, so GagaEmu cannot meet the GPL source obligation. The alternatives also fail (`docs/03` section 4 and section 6). Upstream PluotSorbet (archived 2017) needs a browser-API shim and a revived Emscripten and TypeScript 1.8 build, and has no M3G. FreeJ2ME needs a JRE with AWT, and none runs interpreter-only on iOS. SquirrelJME NanoCoat is unfinished by its own roadmap. The row left `docs/03`. To reopen, either get the J2meJS authors' complete sources or have the owner approve the PluotSorbet port. |
+| 6.5 | Java ME: J2meJS | dropped | 6.4 failed. No bridge, importer, keypad layout or tests were built. |
 | 6.6 | **EKA2L1 renderer spike** | planned | The iOS path links OpenGLES.framework, which is not an accepted path. Prove a Vulkan or software renderer works, and that the dyncom interpreter runs games. |
 | 6.7 | Symbian: EKA2L1 | planned | Only if 6.6 passes. |
 
@@ -214,7 +214,7 @@ A failed spike removes the platform's row from `docs/03`.
 | Saturn | 6.1 |
 | Dreamcast | 6.2 |
 | 3DS | 6.3 |
-| Java ME | 6.4 then 6.5 |
+| Java ME | Out: 6.4 failed (`docs/03` section 6) |
 | Symbian | 6.6 then 6.7 |
 
 ---

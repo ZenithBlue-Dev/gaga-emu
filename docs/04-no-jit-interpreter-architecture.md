@@ -440,13 +440,13 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | 3DS | Azahar | ARM11 MPCore | Not audited | `use_cpu_jit` and `use_shader_jit` default to true and must be off and compiled out (`docs/03`). Experimental | 3 | Target (unmeasured) |
 | Arcade | MAME | Per driver (the 28 machines in `Cores/mame/drivers.flt`; the test machine gridlee is a 6809) | Audited at `5f5a0774` (0.289): none of the 28 machines has a recompiling CPU, so no DRC file is compiled at all, `drcbe_c` included. `FORBIDDEN_SOURCES` refuses `drcbex64.cpp`, `drcbearm64.cpp` and `3rdparty/asmjit`, and `osdlib_retro.cpp` (executable memory) is replaced by `Cores/mame/MameOsdLib.cpp` | No DRC, no asmjit, no work-queue threads (`mame_thread_mode` disabled), no sockets, `dlopen` or `mprotect` (`Cores/mame/core.env`) | 2 | Measured on the owner's iPhone (iPhone 17, iPhone18,3, iOS 27.2), 2026-11-07, build `9a4fa23`, one 30 s run after 5 s warm-up on the generated `gridlee.zip` set, Debug host with Release core, thermal nominal throughout: 60.00 fps, 1% low 56.9, core CPU 2.99 ms per frame mean, 3.13 p95, 3.33 p99, wall 3.02 ms mean, peak footprint 208 MB, 0 audio underruns, 22 of 2098 video frames dropped, no generated code. One run of one 6809 machine, not the three of section 7.2. Built, legal gate open. Load varies widely by driver, so one tier cannot describe every set |
 | Arcade | MAME | Per driver | Not audited | Recompiler paths off; audit per driver | 2 | Target (unmeasured). Load varies widely by driver, so one tier cannot describe every set |
-| Java ME | J2meJS | JVM bytecode | Spike | No-JIT and JS runtime path unverified | 2 | Target (unmeasured). Spike first |
 | Symbian | EKA2L1 | ARM | Spike | Interpreter unverified | 3 | Target (unmeasured). Spike first |
 
 **Research, not shipping and not promised.**
 
 - **Dolphin (GameCube, Wii).** Gekko is based on the PowerPC 750CXe. Upstream reports about 30 fps (50% speed) for Mario Kart Wii on an iPhone 16 Pro Max without JIT, on default settings (<https://oatmealdome.me/?p=1695>). This is a data point about Dolphin, not a GagaEmu target.
 - **PS2.** S2 is reference code. Its repository holds no device benchmark.
+- **Java ME (out, `docs/07` 6.4).** The J2meJS VM runs in JavaScriptCore with no JIT (system `jsc --useJIT=false` on a macOS host, Apple M6, 2026-11-07). On a homebrew CLDC benchmark it was about 19 times slower than with the JIT: 3.1 s against 0.165 s, and about 73 ms per per-pixel 176x208 frame. This is a host measure, not a device benchmark. The row left for source and porting reasons (`docs/03` section 4), not speed.
 
 **External sister projects, never catalog rows or frame producers.** S3 and S4 are measured evidence for technique only. On an iPhone 17, S3 reached 59.8 fps at nominal to fair in PS3 game B at a 60 fps cap, with 1% low 44-45 (`S3 log B:192`), and about 8-10 fps in PS3 game A (`S3 log A:623-625`).
 

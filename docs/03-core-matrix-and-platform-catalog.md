@@ -44,7 +44,6 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | 3DS | Azahar (experimental) | Azahar | None | [GPL-3.0](https://raw.githubusercontent.com/azahar-emu/azahar/master/LICENSE.txt) | Vulkan via MoltenVK ([README](https://raw.githubusercontent.com/azahar-emu/azahar/master/README.md): Vulkan 1.1 or GLES 3.2; GLES is not accepted), or software | Unverified end to end. Interpreter present (`arm/dyncom`). [`use_cpu_jit` and `use_shader_jit`](https://raw.githubusercontent.com/azahar-emu/azahar/master/src/common/settings.h) default to true and must be off and compiled out | Active, last push 2026-11-06. [CMake](https://raw.githubusercontent.com/azahar-emu/azahar/master/CMakeLists.txt) has an iOS path | 3 |
 | Arcade | MAME (libretro fork, 28 machines) | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases): MAME in the App Store version | None | [GPL-2.0-or-later](https://www.mamedev.org/legal.html) as a whole, most files BSD-3-Clause, plus GPL-2.0+, LGPL-2.1+, CC0, MIT, zlib, IJG, BSL-1.0 and public-domain parts (section 5) | Software (libretro frame, `mame_alternate_renderer` off) | Static gate and the forbidden-source check pass on both slices: no DRC back end (not even `drcbe_c`), no asmjit, no `osdlib_retro.cpp`, no sockets, `dlopen` or `mprotect` imports. Merged from branch `core/mame` at bridge ABI 5, legal gate open | Active, last push 2026-11-07 ([libretro/mame](https://github.com/libretro/mame)). No tag for 0.289; pinned to master commit `5f5a07748ce5c239c4118463ce8e6473743d4859` | 2 |
 | DOS / Win9x | DOSBox Pure (normal core) | Not seen. Public repo: `dosbox.pure` | DOSBox Staging, DOSBox-X | [GPL-2.0-or-later](https://codeberg.org/schelling/dosbox-pure), plus LGPL-2.1-or-later, BSD-3-Clause and MIT parts (section 5) | Software only; Voodoo runs in software and no OpenGL is linked | Built with `DISABLE_DYNAREC` and without `core_dyn_x86` or `core_dynrec`: the no-JIT gate and the forbidden-source check pass on both slices, and the dSYM lists the interpreter sources only. Merged from branch `core/dosbox_pure`, legal gate open | Active. Moved by its author from GitHub to Codeberg in October 2026 (section 5). Pinned to tag 1.0-preview7, `cdaea10ce8cac231bc341ca05d4c5e4e5fe0fbd5` | 2 |
-| Java ME | J2meJS | J2meJS | None | Unknown; upstream not identified | Unverified | **Unverified: spike required.** JS runtime path unknown (section 4) | Unknown | 2 |
 | Symbian | EKA2L1 | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases) list JIT modes for it | None | [GPL-3.0](https://github.com/EKA2L1/EKA2L1) | **Port needed.** [iOS path links OpenGLES.framework](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/drivers/CMakeLists.txt), which is not an accepted path. A Vulkan backend file exists; completeness unverified | **Unverified: spike required.** [dyncom interpreter is in the tree](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/cpu/CMakeLists.txt); a full no-JIT run is unproven | Active, last push 2026-11-06. README calls development a part-time hobby | 3 |
 
 ### Renderer rules
@@ -98,7 +97,22 @@ Only sourced claims appear here. Expected performance is a target (unmeasured); 
 - **PS1 (Beetle PSX HW):** PGXP is documented as "Parallel/Precision Geometry Transform Pipeline". Upscaling runs on the GL or Vulkan renderer, not directly on Metal.
 - **PSP (PPSSPP):** the [CPU modes](https://raw.githubusercontent.com/hrydgard/ppsspp/master/Core/ConfigValues.h) are `CPUCore` values, not a build flag. Use `IR_INTERPRETER`, not the plain `INTERPRETER`. The developer states iOS devices are ["generally fast enough to run nearly all PSP games at full speed"](https://www.ppsspp.org/news/live-on-app-store/) without JIT. A native Metal build means integrating outside libretro.
 - **Dreamcast:** tier 3 is deliberate. [Anecdotal reports](https://mjtsai.com/blog/?p=48998) describe struggling on iPhone 16 Pro and running well on M4 iPad. No benchmark was found. Provenance's JIT-free update was reported stuck in App Review in August 2025.
-- **Java ME (J2meJS):** the name is seen in the screenshot, and release notes mention J2meJS. No upstream repo was identified. [mozilla/pluotsorbet](https://github.com/mozilla/pluotsorbet) (GPL-2.0, archived) is a possible origin only. The spike must establish the source, licence, JS runtime path (for example whether it runs in a web view), and whether that path uses any JIT that counts against the no-JIT rule.
+- **Java ME:** the 6.4 spike failed, so the row left the matrix (`docs/07` 6.4). The reasons:
+  - **J2meJS has no corresponding source.** Manic's [v1.9.0 notes](https://github.com/Manic-EMU/ManicEMU/releases) name J2meJS, "based on Mozilla's PluotSorbet", and credit zixing131 and Rosabis. Its repo is [Rosabis/J2meJS](https://github.com/Rosabis/J2meJS) (GPL-2.0, last push 2026-10-31, checked at `5cad51de`).
+    - The repo holds build output only: `bld/j2me.js`, `bld/main-all.js`, an Emscripten `bld/native.js` and a prebuilt `java/classes.jar`. There are no TypeScript or Java sources.
+    - `classes.jar` has 1,778 entries and no `.java` file. Its phoneME MIDP classes are "GNU General Public License version 2 only". It also bundles FreeJ2ME classes (`org/recompile/*`, GPL-3.0) and ObjectWeb ASM.
+    - GagaEmu could not meet the GPL source obligation for what it ships. A GPL-2.0-only part also sits next to a GPL-3.0 one. No other fork found holds the sources for the M3G and vendor-API additions: `zixing131/pluotsorbet-Reborn` is upstream unchanged, and `zixing131/pluotsorbet-Next` has no M3G.
+    - The repo's `java/jar/` folder also carries commercial game JARs. They were not used.
+  - **The JS runtime passes the no-JIT test.** A homebrew CLDC benchmark (`fib(24)`, a sieve, 30 per-pixel 176x208 frames, `StringBuffer` churn) ran on macOS in the system `jsc` with `--useJIT=false`. It used the J2meJS VM build and upstream's `shell/`.
+    - Results, three runs each: total 3.09 to 3.16 s with no JIT, against 0.165 s with the JIT, about 19 times slower. `fib(24)` took 134 to 142 ms, and one per-pixel frame about 73 ms.
+    - This is a Mac host, not a device measure.
+    - The VM turns hot Java methods into JS source through `new Function`. JSC interprets that source, so no native code is made. In-process `JSContext` on iOS runs without a JIT.
+    - The JS runtime path is not the blocker.
+  - **Upstream PluotSorbet would be a port, not a core integration.** [mozilla/pluotsorbet](https://github.com/mozilla/pluotsorbet) has full source at `46ee3e78`. It is archived and was last pushed 2017-02-17. Its licences are GPL-2.0-only (phoneME Java), Apache-2.0 (the JS VM), MIT (`vm/` from node-jvm, Relooper) and Boehm GC.
+    - Its MIDP layer needs a browser. It uses the DOM, canvas 2D for lcdui (`midp/gfx.js`), IndexedDB for RMS and files (`libs/fs.js`), HTML and Web Audio (`midp/media.js`) and DOM text input (`midp/text_editor.js`). `JSContext` has none of these, so a native canvas 2D, font, image-decode, storage and audio shim would be needed.
+    - The build needs Emscripten (Boehm.js and Relooper to asm.js), TypeScript 1.8 `--out`, Closure, Soot and a SpiderMonkey shell. Only `javac` 21 and `node` are on this Mac, and `javac` 21 cannot target the `-source 1.3` the Makefile uses.
+    - It has no M3G (JSR 184) or Mascot Capsule, and it was built for Firefox OS apps, not games.
+    - A web view would provide the browser APIs. It would not fix the source or porting problems, and it does not fit the core texture path.
 - **Symbian (EKA2L1):** the spike must prove the dyncom interpreter runs games and that a Vulkan or software renderer exists. If either fails, the row is out under the renderer rules.
 
 ---
@@ -383,7 +397,8 @@ No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, 
 | FBNeo | [Non-commercial licence](https://raw.githubusercontent.com/finalburnneo/FBNeo/master/src/license.txt). Manic lists it as [sideload only](https://github.com/Manic-EMU/ManicEMU/releases) |
 | PicoDrive | [Non-commercial licence](https://raw.githubusercontent.com/notaz/picodrive/master/COPYING) |
 | Play! | [Requires JIT](https://raw.githubusercontent.com/jpd002/Play-/master/README.md): crashes on game launch without it |
-| FreeJ2ME | [Needs a Java runtime](https://raw.githubusercontent.com/hex007/freej2me/master/README.md) |
+| FreeJ2ME | [Needs a Java runtime](https://raw.githubusercontent.com/hex007/freej2me/master/README.md) with AWT: its `PlatformGraphics` draws through `java.awt.Graphics2D` and `BufferedImage`. GPL-3.0, plus ObjectWeb ASM. No embeddable interpreter-only JRE with AWT was found for iOS. [miniJVM](https://github.com/digitalgust/miniJVM) runs on iOS as an interpreter, with an optional SLJIT JIT, but has only "a minimal bootstrap class library" and no `java.awt`. HotSpot `-Xint` still generates its template interpreter at startup. The libretro FreeJ2ME core needs the same JRE. Manic's FreeJ2ME uses CheerpJ, a proprietary runtime that needs a network connection |
+| J2meJS ([Rosabis/J2meJS](https://github.com/Rosabis/J2meJS)) | Ships build output with no corresponding source, and mixes GPL-2.0-only phoneME classes with GPL-3.0 FreeJ2ME classes (section 4, Java ME). Its JS runtime passes the no-JIT test |
 | Kronos | [Requires OpenGL 4.3 compute](https://docs.libretro.com/library/kronos/) |
 | Citra | [Shut down in March 2024](https://pcgamer.com/software/nintendo-3ds-emulator-citra-taken-offline-as-collateral-damage-in-yuzu-settlement/). Azahar replaces it |
 | Panda3DS | Fails the no-JIT rule today. CPU is Dynarmic (a recompiler) in the [CMake path checked](https://raw.githubusercontent.com/wheremyfoodat/Panda3DS/master/CMakeLists.txt); no interpreter was found |
@@ -405,7 +420,7 @@ Not in the App Store binary and not promised.
 
 ### Candidates, not in the plan
 
-These repos exist. **Licence and no-JIT status are unchecked for all of them.** None is adopted until both are checked and it passes section 5.
+These repos exist. **Licence and no-JIT status are unchecked for all of them, except where the Java ME row says otherwise.** None is adopted until both are checked and it passes section 5.
 
 | Platform | Candidate |
 |---|---|
@@ -416,6 +431,7 @@ These repos exist. **Licence and no-JIT status are unchecked for all of them.** 
 | DOS | [dosbox-core](https://github.com/libretro/dosbox-core) |
 | Arcade | [mame2003-plus](https://github.com/libretro/mame2003-plus-libretro). Older MAME licensing is a known concern; check before any use |
 | PS2 (research only) | [ARMSX2](https://github.com/ARMSX2/ARMSX2) (GitHub reports GPL-3.0; no-JIT unchecked) |
+| Java ME | Two candidates, checked by the 6.4 spike; neither is adopted.<br>[PluotSorbet](https://github.com/mozilla/pluotsorbet): licence and no-JIT checked. Adopting it means a port: a native browser-API shim for `JSContext` and a revived 2017 build (section 4).<br>[SquirrelJME](https://github.com/SquirrelJME/SquirrelJME) (MPL-2.0, NanoCoat C runtime, libretro target listing iOS): its own `route.mkd` still has the libretro frontend, GC and reference correctness, software `float`/`double`/`long` and save states open, and the last release is 0.2.0 (2018). Revisit when 0.4.0 ships |
 
 ### Backlog: seen in Manic listing, not planned for v1
 
