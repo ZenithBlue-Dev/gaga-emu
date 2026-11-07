@@ -55,3 +55,6 @@
 [submodule "Cores/beetle_saturn/upstream"]
 	path = Cores/beetle_saturn/upstream
 	url = https://github.com/libretro/beetle-saturn-libretro
+[submodule "Cores/ppsspp/upstream"]
+	path = Cores/ppsspp/upstream
+	url = https://github.com/hrydgard/ppsspp.git

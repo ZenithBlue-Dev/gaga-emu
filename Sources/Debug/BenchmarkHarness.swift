@@ -126,6 +126,7 @@ final class BenchmarkRun {
         case "megadrive": (data, ext) = (MDTestROM.build(), "md")
         case "vktest": (data, ext) = (VkTestROM.build(), "gagavk")
         case "dos": (data, ext) = (DOSTestCOM.build(), "com")
+        case "psp": (data, ext) = (PSPTestELF.build(), "elf")
         case "arcade": (data, name, ext) = (GridleeTestSet.build(), GridleeTestSet.machine, "zip") // MAME finds the machine by name.
         case "n64": (data, ext) = (N64TestROM.build(), "z64")
         default: throw NoTestROM(platformID: platformID)

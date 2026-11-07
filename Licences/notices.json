@@ -180,12 +180,49 @@
       ]
     },
     {
+      "id": "ppsspp", "title": "PPSSPP", "cores": ["ppsspp"], "framework": "PpssppCore", "licence": "GPL-3.0 as a whole: GPL-2.0-or-later, with GPL-3.0, Apache-2.0, LGPL-2.1, BSD, MIT and public domain parts",
+      "source": "https://github.com/hrydgard/ppsspp, tag v1.20.4, commit fa50bb1, with the submodules that tag records. It links MoltenVK, listed separately.",
+      "texts": [
+        { "title": "PPSSPP (GPL-2.0-or-later)", "from": "Cores/ppsspp/upstream/LICENSE.TXT" },
+        { "title": "GNU General Public License 3 (aemu_postoffice, xBRZ)", "from": "Cores/ppsspp/upstream/ext/aemu_postoffice/gpl-3.0.txt" },
+        { "title": "xBRZ", "from": "Cores/ppsspp/upstream/ext/xbrz/xbrz.cpp", "comment": true },
+        { "title": "libkirk", "from": "Cores/ppsspp/upstream/ext/libkirk/bn.c", "comment": true },
+        { "title": "ATRAC3 decoder (from FFmpeg)", "from": "Cores/ppsspp/upstream/ext/at3_standalone/atrac3.cpp", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "SPIRV-Cross", "from": "Cores/ppsspp/upstream/ext/SPIRV-Cross/LICENSE" },
+        { "title": "cpu_features", "from": "Cores/ppsspp/upstream/ext/cpu_features/LICENSE" },
+        { "title": "Basis Universal", "from": "Cores/ppsspp/upstream/ext/basis_universal/basisu_transcoder.cpp", "comment": true },
+        { "title": "glslang", "from": "Cores/ppsspp/upstream/ext/glslang/LICENSE.txt" },
+        { "title": "libzip", "from": "Cores/ppsspp/upstream/ext/libzip/zip_add.c", "comment": true },
+        { "title": "Snappy", "from": "Cores/ppsspp/upstream/ext/snappy/COPYING" },
+        { "title": "SFMT", "from": "Cores/ppsspp/upstream/ext/sfmt19937/SFMT.c", "comment": true },
+        { "title": "libchdr", "from": "Cores/ppsspp/upstream/ext/libchdr/LICENSE.txt" },
+        { "title": "zstd", "from": "Cores/ppsspp/upstream/ext/zstd/LICENSE" },
+        { "title": "udis86", "from": "Cores/ppsspp/upstream/ext/udis86/LICENSE" },
+        { "title": "xxHash", "from": "Cores/ppsspp/upstream/ext/xxhash.c", "comment": true },
+        { "title": "armips", "from": "Cores/ppsspp/upstream/ext/armips/LICENSE.txt" },
+        { "title": "rcheevos", "from": "Cores/ppsspp/upstream/ext/rcheevos/LICENSE" },
+        { "title": "Lua", "from": "Cores/ppsspp/upstream/ext/lua/lua.h", "lines": [498, 523] },
+        { "title": "gason", "from": "Cores/ppsspp/upstream/ext/gason/LICENSE" },
+        { "title": "pugixml", "from": "Cores/ppsspp/upstream/ext/pugixml/pugixml.cpp", "comment": true },
+        { "title": "Vulkan Memory Allocator", "from": "Cores/ppsspp/upstream/ext/vma/vk_mem_alloc.h", "comment": true },
+        { "title": "CityHash", "from": "Cores/ppsspp/upstream/ext/cityhash/COPYING" },
+        { "title": "RapidJSON", "from": "Cores/ppsspp/upstream/ext/rapidjson/license.txt" },
+        { "title": "disarm", "from": "Cores/ppsspp/upstream/ext/disarm.cpp", "comment": true },
+        { "title": "RISC-V disassembler", "from": "Cores/ppsspp/upstream/ext/riscv-disas.cpp", "comment": true },
+        { "title": "LoongArch disassembler", "from": "Cores/ppsspp/upstream/ext/loongarch-disasm.cpp", "comment": true },
+        { "title": "libpng", "from": "Cores/ppsspp/upstream/ext/libpng17/png.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/ppsspp/upstream/libretro/libretro-common/include/libretro.h", "comment": true },
+        { "title": "LZMA SDK, jpgd, jpge and minimp3", "text": "The LZMA SDK (ext/lzma-sdk and libchdr's deps/lzma-24.05) is in the public domain (Igor Pavlov). jpgd and jpge (ext/jpge) are in the public domain (Rich Geldreich). minimp3 (ext/minimp3) is under CC0-1.0.\n" }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
     },
     {
-      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next"], "licence": "Apache-2.0",
+      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next", "ppsspp"], "licence": "Apache-2.0",
       "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Shipped once, as MoltenVK.framework, which every core that draws its own 3D picture links.",
       "texts": [
         { "title": "MoltenVK", "from": "build/moltenvk/LICENSE" },

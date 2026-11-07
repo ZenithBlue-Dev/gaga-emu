@@ -1,0 +1,1 @@
+The LZMA SDK (ext/lzma-sdk and libchdr's deps/lzma-24.05) is in the public domain (Igor Pavlov). jpgd and jpge (ext/jpge) are in the public domain (Rich Geldreich). minimp3 (ext/minimp3) is under CC0-1.0.

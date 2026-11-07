@@ -770,6 +770,142 @@
    ]
   },
   {
+   "id": "ppsspp",
+   "title": "PPSSPP",
+   "licence": "GPL-3.0 as a whole: GPL-2.0-or-later, with GPL-3.0, Apache-2.0, LGPL-2.1, BSD, MIT and public domain parts",
+   "source": "https://github.com/hrydgard/ppsspp, tag v1.20.4, commit fa50bb1, with the submodules that tag records. It links MoltenVK, listed separately.",
+   "cores": [
+    "ppsspp"
+   ],
+   "framework": "PpssppCore",
+   "texts": [
+    {
+     "title": "PPSSPP (GPL-2.0-or-later)",
+     "file": "licence-ff265754cbb2.txt"
+    },
+    {
+     "title": "GNU General Public License 3 (aemu_postoffice, xBRZ)",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "xBRZ",
+     "file": "licence-30fd1ada2150.txt"
+    },
+    {
+     "title": "libkirk",
+     "file": "licence-e2cc8baf7b74.txt"
+    },
+    {
+     "title": "ATRAC3 decoder (from FFmpeg)",
+     "file": "licence-6b8e7180b7b9.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "SPIRV-Cross",
+     "file": "licence-cfc7749b96f6.txt"
+    },
+    {
+     "title": "cpu_features",
+     "file": "licence-af272c1b4dd0.txt"
+    },
+    {
+     "title": "Basis Universal",
+     "file": "licence-641efa65bae0.txt"
+    },
+    {
+     "title": "glslang",
+     "file": "licence-adb783e734e9.txt"
+    },
+    {
+     "title": "libzip",
+     "file": "licence-a978fad371d0.txt"
+    },
+    {
+     "title": "Snappy",
+     "file": "licence-5221a36a801b.txt"
+    },
+    {
+     "title": "SFMT",
+     "file": "licence-64f743e0dcf6.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "udis86",
+     "file": "licence-1070640aab24.txt"
+    },
+    {
+     "title": "xxHash",
+     "file": "licence-7074a60fb72f.txt"
+    },
+    {
+     "title": "armips",
+     "file": "licence-791ff46884cd.txt"
+    },
+    {
+     "title": "rcheevos",
+     "file": "licence-bf820c034966.txt"
+    },
+    {
+     "title": "Lua",
+     "file": "licence-b43ce432aaf9.txt"
+    },
+    {
+     "title": "gason",
+     "file": "licence-a9a5c0646d67.txt"
+    },
+    {
+     "title": "pugixml",
+     "file": "licence-e23048df3b35.txt"
+    },
+    {
+     "title": "Vulkan Memory Allocator",
+     "file": "licence-0ac1ad525eba.txt"
+    },
+    {
+     "title": "CityHash",
+     "file": "licence-3ed00dd93c75.txt"
+    },
+    {
+     "title": "RapidJSON",
+     "file": "licence-a140e5d46fe7.txt"
+    },
+    {
+     "title": "disarm",
+     "file": "licence-ad42acd3337e.txt"
+    },
+    {
+     "title": "RISC-V disassembler",
+     "file": "licence-7761bdda68ff.txt"
+    },
+    {
+     "title": "LoongArch disassembler",
+     "file": "licence-242cdc49b222.txt"
+    },
+    {
+     "title": "libpng",
+     "file": "licence-364042283864.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-f38c560d46af.txt"
+    },
+    {
+     "title": "LZMA SDK, jpgd, jpge and minimp3",
+     "file": "licence-ee25266b7c4a.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
@@ -792,7 +928,8 @@
    "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Shipped once, as MoltenVK.framework, which every core that draws its own 3D picture links.",
    "cores": [
     "vktest",
-    "mupen64plus_next"
+    "mupen64plus_next",
+    "ppsspp"
    ],
    "texts": [
     {
