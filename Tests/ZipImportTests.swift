@@ -207,7 +207,8 @@ final class ZipImportTests: XCTestCase {
         try Data(repeating: 3, count: 1 << 20).write(to: rom)
         XCTAssertNotNil(state.importROM(at: rom))
         XCTAssertEqual(try Data(contentsOf: system), kept)
-        XCTAssertEqual(Set(BIOSManagerView.sizes.keys), Set(BIOSManagerView.required.map(\.0)), "every BIOS has its sizes")
+        XCTAssertEqual(Set(BIOSManagerView.sizes.keys), Set(BIOSManagerView.required.map(\.0) + BIOSManagerView.snesFirmware.map(\.0)),
+                       "every BIOS has its sizes")
     }
 
     @MainActor
