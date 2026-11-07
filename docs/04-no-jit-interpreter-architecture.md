@@ -417,7 +417,7 @@ A tier is expected CPU load, not delivery order. `docs/07` may schedule differen
 | 2 | Full guest speed for most titles on a current device. Title-dependent |
 | 3 | Experimental. No full-speed promise. Results recorded per title |
 
-This document sets no CPU device floor, because no benchmark supports one. The A14 GPU floor is a separate graphics decision (`docs/05`). It is stated but not enforced; milestone 1.16 in `docs/07` is the runtime check.
+This document sets no CPU device floor, because no benchmark supports one. GPU support is a separate graphics decision (`docs/05`): A14 required for layer-path 3D cores; 2D cores have no such floor.
 
 ### 7.1 Core table
 

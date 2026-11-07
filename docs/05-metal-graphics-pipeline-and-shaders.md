@@ -34,11 +34,11 @@ The app today is a shell plus a mock core. No core frame reaches the screen, bec
 4. GLES-only and desktop-GL-only renderers are not an accepted path. Such a core needs a Vulkan, Metal or software renderer, or it is out. libretro has no Metal context type: its enum stops at OpenGL variants, Vulkan, Direct3D and RSX ([libretro.h](https://raw.githubusercontent.com/libretro/libretro-common/master/include/libretro.h)).
 5. PS3 and PS4 are external sister projects (S3, S4). They are never catalog rows or frame producers here. S2 and PS2 are non-shipping research.
 
-### GPU floor
+### GPU support
 
-The GPU floor is A14 (Apple7), the lowest family with Metal 3 ([Metal Feature Set Tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf)). Metal 4 is optional and never baseline with iOS 17.0 as the minimum.
+A14 required for layer-path 3D cores; 2D cores have no such floor. A14 (Apple7) is the lowest family with Metal 3 ([Metal Feature Set Tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf)). Metal 4 is optional and never baseline with iOS 17.0 as the minimum.
 
-This floor is a design decision and is not enforced yet. iOS 17.0 also runs on A12 and A13, `Info.plist` requires only `arm64` and `metal`, and no code in `Sources` uses a Metal 3 API. Milestone 1.16 in `docs/07` tracks a runtime check using `device.supportsFamily(.apple7)`.
+The app does not refuse older devices. iOS 17.0 also runs on A12 and A13, `Info.plist` requires only `arm64` and `metal`, and no code in `Sources` uses a Metal 3 API, so 2D cores run on any Metal device. `GPUFloor.supportsLayerPathCores` (`device.supportsFamily(.apple7)`, in `Sources/Metal/MetalRenderer.swift`) is the check future layer-path cores gate on, with `GPUFloor.layerPathMessage` as the user-facing text (milestone 5.1).
 
 ---
 

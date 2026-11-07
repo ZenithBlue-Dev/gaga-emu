@@ -18,7 +18,7 @@ The App Store binary contains exactly the platforms in the master matrix. There 
 - PS3 and PS4 are never catalog rows or frame producers (section 7).
 - GameCube, Wii and PS2 are non-shipping research and are not promised (section 6).
 
-**GPU floor:** A14 or newer (Apple7), the first chip listed with Metal 3. Metal 4 is optional and never the baseline. [Metal Feature Set Tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf) The deployment target stays iOS 17.0 (`project.yml:5`). No code in `Sources/` checks the GPU family yet, so the floor is stated but not enforced. Milestone 1.16 in `docs/07` is the runtime check.
+**GPU support:** A14 required for layer-path 3D cores; 2D cores have no such floor. A14 (Apple7) is the first chip listed with Metal 3. Metal 4 is optional and never the baseline. [Metal Feature Set Tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf) The deployment target stays iOS 17.0 (`project.yml:5`). `GPUFloor.supportsLayerPathCores` in `Sources/Metal/MetalRenderer.swift` is the check layer-path cores gate on (milestone 5.1).
 
 ---
 

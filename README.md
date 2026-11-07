@@ -15,7 +15,7 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
 
 2. **Metal Graphics Pipeline**:
    - App UI, frame presentation and the host post-process chain use native Metal. 3D cores use Vulkan on statically linked MoltenVK to `CAMetalLayer` (design), and a native Metal backend is allowed where upstream has one. GLES-only and desktop-GL-only renderers are not accepted.
-   - GPU floor: A14 (Apple7, Metal 3). This is stated but not enforced yet, because iOS 17.0 also runs on A12 and A13. Milestone 1.16 in `docs/07` is the runtime check.
+   - GPU: A14 required for layer-path 3D cores; 2D cores have no such floor. Apple7 is the family, checked by `GPUFloor.supportsLayerPathCores`. iOS 17.0 also runs on A12 and A13, which can still run 2D cores.
    - 2D and software cores copy each frame into a triple-buffered shared `MTLBuffer` ring, with textures from `MTLBuffer.makeTexture(descriptor:offset:bytesPerRow:)`. The copy path is not zero copy; only the planned host-buffer path may be described that way.
    - Built-in MSL presets with live preview (Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT, Film). They run only in the preview today, because no core frame reaches the renderer.
    - Planned: community Slang presets converted offline, runtime `.metal` import, and `.slangp` import once a translation path exists.

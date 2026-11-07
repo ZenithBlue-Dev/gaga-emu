@@ -184,6 +184,11 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertFalse(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer())))
     }
 
+    func testGPUFloorChecksApple7() {
+        guard let device = MTLCreateSystemDefaultDevice() else { return }
+        XCTAssertEqual(GPUFloor.supportsLayerPathCores(device), device.supportsFamily(.apple7))
+    }
+
     // MARK: - Metal Renderer & Shader Manager Tests
 
     func testShaderPresetsAndUniforms() {
