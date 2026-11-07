@@ -2,7 +2,7 @@
 
 This document is canonical for the bridge API and the premium and in-app purchase spec. `docs/03` is canonical for the core list, `docs/04` for interpreter design and tiers, `docs/05` for graphics, and `docs/07` for phases and status.
 
-Manic EMU facts are marked by source. "Seen in screenshot" names the image in `maniac-emu-reference-images/`, and "GagaEmu design" means the choice is ours. This document does not claim parity with Manic EMU.
+Manic EMU is a feature reference only, tracked in `docs/02`. Nothing in this document copies its UI.
 
 ---
 
@@ -25,7 +25,7 @@ Status comes from reading the code, not from a device test.
 ```
  ┌─────────────────────────────────────────────────────────────────────┐
  │ SwiftUI app (built)                                                 │
- │ Games, Import, Settings, ControllerManager, StoreKitManager         │
+ │ Library, Add, Settings, ControllerManager, StoreKitManager          │
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ EmulatorCoreProtocol, GagaCoreWrapper
                                  │ (built, used only by tests)
@@ -267,106 +267,137 @@ Status: planned. Today everything compiles into the app target, and no framework
 
 ## 3. Screen Specifications
 
-### 3.1 Games tab
+The UI is an original design named "Paper and ink": a quiet game shelf, flat and print-like. No other app is a visual reference. There is no glass, blur, gradient, mascot, RPG flavour or floating tab bar. System controls such as context menus and confirmation dialogs keep the look iOS gives them.
 
-**Header** (seen in screenshot `FC11608F`): controller button on the left, logo in the centre, Play History button on the right. Status: built.
+The app is **landscape only** on iPhone and iPad, left and right. Status: built, unless a row says otherwise.
 
-**Empty state** (seen in screenshot `FC11608F`): "Welcome to MANIC EMU's World", then "Tap the [import icon] button to import", a star divider, a "Join Discord for assistance" pill and an "Ensure game ROMs are legally obtained" pill. GagaEmu has no Discord pill, because no invite exists. There is no hero illustration and no import button on this screen; the "Your adventure begins here!" hero belongs to the Import tab. GagaEmu uses its own name in the welcome line. Status: built.
+### Design system
 
-**Controllers panel** (seen in screenshot `026FA2CF`): a side panel that slides in from the left while the main view stays visible at the right edge. It has help and more buttons, a "Touch Control" row with a "Player 1" picker, and a controller illustration. Status: content built, presented as a `.sheet` in `MainTabView`. Manic's side panel is not copied; the UI redesign decides the presentation (`docs/07` 1.13).
+Tokens live in `Sources/App/AppTheme.swift` (`Palette`, `AppTheme`) and follow the system appearance. There is no appearance or theme setting. `state.appearance` is kept only so old `state.json` files decode.
 
-**Play History panel** (seen in screenshot `E2946B38`): slides in from the opposite side, with the main view visible at the left edge. The empty state shows crossed swords, "No Play History" and an "Import Games" button. Status: content built, also presented as a `.sheet`, pending the UI redesign.
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| paper | `#F4EFE6` | `#16140F` | Screen background |
+| surface | `#FBF8F2` | `#211E18` | Rail, cover placeholders |
+| ink | `#1C1A17` | `#EDE6D8` | Text |
+| muted | `#6B655B` | `#A79F90` | Secondary text and glyphs |
+| rule | `#D9D1C2` | `#3A352C` | Hairlines |
+| accent | `#BF3D18` | `#F0683F` | Accent text and glyphs. Vermilion adjusted so it meets AA on paper and surface. |
+| accentFill | `#E4572E` | `#E4572E` | Vermilion fill for primary buttons and selected chips |
+| onAccent | `#1C1A17` | `#1C1A17` | Text on accentFill |
 
-**Populated library** (GagaEmu design; no populated library appears in the reference images): a "Recently Played" carousel, platform filter chips and a game grid. Tap launches and long-press opens the menu below. Status: built, but launch only records state.
+- **Contrast:** text and accent colours meet WCAG AA in both modes. `testPaletteTextMeetsAA` checks every pair.
+- **Type:** New York (`.serif`) for screen titles and large game titles, SF Pro for body text, monospaced for metadata such as platform code, play time and file size. All text uses Dynamic Type text styles. Columns scroll, so larger sizes do not clip. Only the rail caps its text size, at `xxLarge`, and offers the large content viewer instead.
+- **Shape:** 6pt corners at most, and hairline rules instead of shadows and cards. Covers have a 3pt colour spine on the left, keyed by platform, and always carry the platform code as text.
+- **Motion:** a 0.15s fade between screens, removed under Reduce Motion.
+- **Accessibility:** icon-only and cover controls have VoiceOver labels, targets are at least 44pt, and selected states also change weight, shape or glyph, so colour is never the only cue.
 
-**Long-press menu.** This is the single definition of the menu; other docs point here. The only source fact is the caption "switch cores by long-pressing a game in the library" (seen in screenshot `DE9D26E2`). Everything else is GagaEmu design.
+### Landscape and safe areas
+
+`UISupportedInterfaceOrientations` and its `~ipad` variant list landscape left and right. iPad apps must support all orientations unless they require full screen, so `UIRequiresFullScreen` is set. Apple has deprecated that key and says the compatibility mode will go in a future release. When it does, the app needs a landscape-shaped minimum window size or another migration (TN3192). `docs/07` 7.6 tracks the check.
+
+Backgrounds extend under the notch, Dynamic Island and home indicator. Content stays inside the safe area on whichever side the hardware sits. iPhone height is about 375 to 440pt, so persistent chrome stays small.
+
+### Navigation
+
+A left rail about 72pt wide holds Library, Add and Settings as icon plus small label. The selected item uses the accent colour, bold text and a 3pt bar. There is no tab bar.
+
+### 3.1 Library
+
+**Left column** (about 240pt on iPhone): the Continue panel. It shows the most recently played game, or the newest import when nothing has been played: cover, title, last played and a large Play button pinned to the bottom of the panel.
+
+**Right side:** platform filter chips and search on one compact row, then horizontally scrolling shelves per platform. Chips are All, Recent (once something has been played) and each platform present in the library. A filter with no matches shows a line and Show All Games.
+
+**Play history** is the Continue panel plus the Recent filter. It is not a separate panel. `AppState.history` still records sessions, and Settings > Play counts them.
+
+**Empty state:** one typographic line, "The shelf is empty.", and an Add Games button.
+
+Tapping a cover plays, as does the Play button. Status: stub, because `AppState.launch` only records state until Phase 2.
+
+**Long-press menu.** This is the single definition of the menu; other docs point here.
 
 | Action | Behaviour | Status |
 |---|---|---|
-| Launch | Starts a game session | stub: records state only (`AppState.launch`) |
-| Switch Core | Opens the core sheet, with an option to set the platform default (`docs/03` section 8) | built |
-| Select Shader | Opens the Shaders sheet | built |
-| Manage Saves | Save state slots with thumbnails | planned |
-| Edit Metadata | Title and cover art | built for the title, as a "Rename" action; cover art planned |
-| Toggle Favorite | Marks the game as a favourite | built |
-| Export Save | Shares the battery save and states | planned |
-| Delete | Removes the game from the library | built |
+| Play | Starts a game session | stub: records state only (`AppState.launch`) |
+| Change Core | Opens the core picker, with an option to set the platform default (`docs/03` section 8) | built |
+| Choose Filter | Opens the filter picker for this game | built: stored on the game; no session reads it yet |
+| Manage Saves | Save state slots with thumbnails | planned: the sheet states that no saves exist yet. 2.6 fills it. |
+| Edit Details | Title and favorite, plus platform, core, file size and play time as read-only metadata | built; cover art planned |
+| Delete | Asks for confirmation, then removes the game and its play history from the library. The file stays in the ROM folder. | built |
 
-### 3.2 Import tab
+Exporting a battery save and states is planned with 2.6 and has no menu item yet.
 
-Seen in screenshots `A59F001A` and `443B8BE2`. The header has a plus button on the left and a group of cloud-download, help and more buttons on the right, over the "Your adventure begins here!" hero. Screenshots do not show what those buttons do. Status: hero built; header buttons planned, scope to be decided.
+### 3.2 Add
 
-| Tool | Behaviour | Status |
+Two columns.
+
+**Left:** a large Choose from Files action and a drag-and-drop target. The drop handler covers the whole screen, and other screens do not accept drops.
+
+**Right:** the other sources, then the ROM legal notice as plain small text.
+
+| Source | Behaviour |
+|---|---|
+| Choose from Files | System document picker, including iCloud Drive. |
+| WiFi Transfer | LAN upload server, **off by default**, started only by the user's toggle. Each start creates a fresh 4-digit PIN. Port 8080. The PIN is required for every write, and uploads are capped at 2 GiB with sanitized file names (`Sources/Hub/WiFiTransferServer.swift`). |
+| Read Clipboard | **Tap only**: `ClipboardImporter.scan` is called from the row and never automatically. |
+| Multi-Disc Helper | Groups disc files into one `.m3u` entry. |
+| Patch a ROM | IPS, BPS and UPS patches, in memory, on a copy of the source. IPS RLE records are supported. |
+
+**Security note on WiFi transfer.** Traffic is plain HTTP, so the PIN and files cross the local network unencrypted, and the Add screen and upload page say so. A 4-digit PIN has only 10,000 values, so `PINAttemptLimiter` bounds guessing: every 5th wrong PIN locks the server for a minute, and the 15th stops it until the user restarts it with a new PIN. The PIN is accepted only in the `X-Gaga-Pin` header, never the query string. The server stays off by default and should stay on only while the user is transferring. `NSLocalNetworkUsageDescription` is present in `Info.plist` and names WiFi transfer only.
+
+### 3.3 Settings
+
+Two panes: categories on the left, the selected category on the right. Only rows that work appear.
+
+| Category | Rows | Status |
 |---|---|---|
-| Files | System document picker, including iCloud Drive (screenshot `443B8BE2` shows Recents, Shared and Browse). | built |
-| WiFi | LAN upload server, **off by default**, started only by the user's toggle. Each start creates a fresh 4-digit PIN. Port 8080. The PIN is required for every write, and uploads are capped at 2 GiB with sanitized file names (`Sources/Hub/WiFiTransferServer.swift`). | built |
-| Read Clipboard | **Tap only**: `ClipboardImporter.scan` is called from the button and never automatically. Supports files copied from macOS or the Files app. | built |
-| MultiDisc Helper | Groups disc files into one `.m3u` entry. | built |
-| RomPatcher | IPS, BPS and UPS patches, in memory, on a copy of the source. IPS RLE records are supported. | built |
-| Drag & Drop | Drop target on the Import tab (`onDrop`). The screenshot's wording says any interface; app-wide coverage is planned. | built |
-
-**Security note on WiFi transfer.** Traffic is plain HTTP, so the PIN and files cross the local network unencrypted, and the Import tab and upload page say so. A 4-digit PIN has only 10,000 values, so `PINAttemptLimiter` bounds guessing: every 5th wrong PIN locks the server for a minute, and the 15th stops it until the user restarts it with a new PIN. The PIN is accepted only in the `X-Gaga-Pin` header, never the query string. The server stays off by default and should stay on only while the user is transferring. `NSLocalNetworkUsageDescription` is present in `Info.plist`.
-
-### 3.3 Settings tab
-
-**Top of screen** (seen in screenshot `F7ADD189`): a membership banner reading "Unlock MANIC EMU membership" with "You are the protagonist of this story" and a "50% Off" pill, followed by the "Adventurer Card" with Nickname, Play Time, Joined and an avatar. Status: both built, with GagaEmu's name in the banner. Banner behaviour follows section 4.
-
-The tables below use the labels seen in the screenshots. A row marked hidden has no working behaviour yet and returns in the milestone noted in `docs/07`. Saved values for hidden rows stay in `state.json`.
-
-**General** (seen in `F7ADD189`, `44F4AEE0`)
-
-| Row | GagaEmu behaviour | Status |
-|---|---|---|
-| Appearance | Dark, Light and System | built |
-| Theme | App icons, theme colours, boxart settings, console ordering | hidden |
-| Quick Start | Skip preparation page | hidden |
-| Auto Save States | Automatic save states. Premium item, section 4. | hidden |
-| Assign Skin | Choose a touch skin. `TouchSkinEngine` loads `.deltaskin` and flex (JSON and SVG) skins. | hidden |
-| Cover Scraping | OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration | hidden |
-
-**Advanced** (seen in `44F4AEE0`, `C4E3779B`, `8A17681E`)
-
-| Row | GagaEmu behaviour | Status |
-|---|---|---|
-| AirPlay Fullscreen | Full-screen mirroring | hidden |
-| iCloud Sync | Save sync | hidden |
-| Auto Full Screen | Enters full screen when a controller connects | hidden |
-| BIOS | Lists BIOS files and shows SHA-1 once imported | built |
-| Respect Silent Mode | Plays audio only when not in silent mode | hidden |
-| Online Play Settings | Not promised. Netplay is not gated or promised until built. | hidden |
-| Rumble | Device vibration during certain events | hidden |
-| Skin Sound Effects | Sound on touch skin presses | hidden |
-| RetroAchievements | Sign-in and achievements | hidden |
-| TriggerPro | "Create and manage advanced custom buttons." | built: editor and logic, no session to apply it |
-| JIT | **Deliberately dropped.** Manic shows this row (`C4E3779B`). GagaEmu ships no JIT, so there is nothing to configure, and the row must not be added. | not applicable |
-| Shaders | `docs/05` section 3 | built |
-| Emulator Core | Lists platforms with their current core (seen in `3D38E22D`, `DE9D26E2`). GagaEmu's defaults come from `docs/03`, not from Manic's list. | built |
-
-**Support** (seen in `8A17681E`). Scope is a GagaEmu decision.
-
-| Row | Scope decision | Status |
-|---|---|---|
-| FAQ | Keep | built: link to `support.html` on the site, which is its "Support & FAQ" page |
-| Feedback | Keep | built: link to `support.html`, because the App Store metadata has no support email |
-| Join QQ Channel | Out of v1 unless the owner runs a channel. | removed |
-| Join Discord | Keep only with a real invite. None exists. | removed, with the pills |
-
-**Others** (seen in `8A17681E`, `9EFF77AC`). Scope is a GagaEmu decision.
-
-| Row | Scope decision | Status |
-|---|---|---|
-| About Us | Keep | hidden |
-| Share Gaga-Emu | Keep, using the system share sheet | hidden |
-| Clear Cache | Keep. Asks for confirmation, then removes the Caches directory. | built |
-| Reset Tips | Keep once the app has dismissible tips; hide until then | hidden |
-| Language | Keep once a second localisation exists; English only until then | hidden |
-| Terms of Service | Keep; required | built: Apple's standard EULA, because the site has no terms page |
-| Privacy Policy | Keep; required | built: link to `privacy.html` on the site |
-| Featured Items | Dropped. GagaEmu has no catalogue to feature. | removed |
-| More from Manic | Dropped. This is Manic's cross-promotion; GagaEmu has no equivalent. | not built |
-| Rate Us | Keep, using the system review prompt, after a real core runs. Reword the "5-star" copy. | hidden |
+| Play | Total play time and session count, read-only | built |
+| Library | Game count, BIOS Files, default core per platform | built |
+| Graphics | Default Filter, which opens the filter picker | built |
+| Controls | Touch Control, connected controllers with their player slot, TriggerPro | built: no session to feed |
+| Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
+| Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
+| About | Version, Support and FAQ, Feedback, Terms of Service, Privacy Policy | built: Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
 
 All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
+
+There is no profile card, nickname, avatar or membership banner. `nickname`, `joined` and `avatarIndex` stay in `state.json` so saved data still loads.
+
+**Rows not shown yet.** Each has no working behaviour today. Saved values stay in `state.json`.
+
+| Row | Home when it returns | Returns with |
+|---|---|---|
+| Quick Start, Auto Full Screen | Play | 2.1 |
+| Respect Silent Mode | Play | 2.3 |
+| Rumble, Skin Sound Effects | Controls | 2.4 |
+| Auto Save States | Play | 2.6, gated by `canUseAutoSaveState` |
+| Rate Us | About | 2.9 |
+| Cover Scraping | Library | 3.8 |
+| Assign Skin | Controls | 3.9 |
+| RetroAchievements | Play | 3.10 |
+| AirPlay Fullscreen | Graphics | 3.11 |
+| iCloud Sync | Storage | 3.11 |
+| About Us (licence notices) | About | 7.5 |
+| Share Gaga-Emu | About | 7.6 |
+| Reset Tips | About | When the app has dismissible tips |
+| Language | About | When a second localisation exists |
+| Online Play | Play | Not scheduled. Netplay is not promised or gated until built. |
+
+There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Theme and Appearance are gone, because the palette is fixed and follows the system.
+
+### 3.4 Filter and core pickers
+
+**Filter picker** (`FilterPickerView`): a split view with the list on the left and a large live preview on the right. Opened from a game it sets that game's filter; opened from Graphics it sets the default for new games. Premium filters show a Plus label and open Gaga Plus when locked, only while the gate is open. The planned sources in `docs/05` section 4 have no UI until they exist.
+
+**Core picker** (`CorePickerSheet`): a simple list sheet for one game, with an action that also makes the choice the platform default. A file of unknown type says no cores are available.
+
+### 3.5 Gaga Plus
+
+The paywall is named Gaga Plus (`GagaPlusView`). Two columns: benefits on the left in plain language, plans on the right as Monthly, Annual and Lifetime. Requirements and logic are in section 4.
+
+### 3.6 App icon
+
+An ink game cover with a vermilion spine on paper, drawn by `scripts/make_app_icon.py`. Original artwork with no third-party imagery. It needs owner sign-off before submission.
 
 ---
 
@@ -380,11 +411,11 @@ Three products with existing IDs, from `Sources/Store/StoreKitManager.swift`:
 
 | Product ID | Label | Type |
 |---|---|---|
-| `monthly.sub` | Monthly Membership | Auto-renewing subscription |
-| `annual.sub` | Annual Membership | Auto-renewing subscription |
-| `lifetime.pass` | Lifetime Pass | Non-consumable, one-time payment |
+| `monthly.sub` | Monthly | Auto-renewing subscription |
+| `annual.sub` | Annual | Auto-renewing subscription |
+| `lifetime.pass` | Lifetime | Non-consumable, one-time payment |
 
-The labels match screenshot `0596EA12`. Prices always come from `Product.displayPrice` and are never hard-coded. Prices in the screenshot are Manic's and do not apply here.
+Prices always come from `Product.displayPrice` and are never hard-coded.
 
 ### 4.2 What stays free
 
@@ -392,21 +423,21 @@ Emulation stays free: every core, ROM import, saves, baseline shaders and local 
 
 ### 4.3 What premium adds
 
-Premium is the five items on Manic's paywall (seen in screenshot `0596EA12`). Free-tier numbers are GagaEmu policy and are not Manic facts.
+Premium is five items. Free-tier numbers are GagaEmu policy.
 
 | Paywall item | Free | Premium | Enforced in code today |
 |---|---|---|---|
-| Higher fast-forward speed | 2x | 5x | No: `maxFastForward` has no caller and no fast-forward exists. The screenshot's card is partly hidden, so Manic's multiplier is unconfirmed, and "5x Speed" is GagaEmu's value. |
+| Higher fast-forward speed | 2x | 5x | No: `maxFastForward` has no caller and no fast-forward exists. |
 | Unlimited Save States | 3 | Unlimited | No: `canAddSaveState` has no caller and no save state UI exists. |
 | Unlimited Cheat Codes | 3 | Unlimited | No: `canAddCheat` has no caller and no cheat UI exists. |
-| Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film | Geom CRT, Geom CRT Border | Yes: `canUseShader` in `ShadersSettingsView.swift:65`. |
+| Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film | Geom CRT, Geom CRT Border | Yes: `canUseShader` in `FilterPickerView.swift`. |
 | Auto Save State | Off | Available | Gate exists: `canUseAutoSaveState`. Its row is hidden until 2.6. |
 
 **Sell only what works.** `anime4k` and `crt-royale` are not premium items until implemented (milestone 3.4): neither is in `premiumShaderIDs` or `ShaderCatalog`. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
 
 ### 4.4 Paywall requirements
 
-| Requirement | Status in `MembershipPaywallView.swift` |
+| Requirement | Status in `GagaPlusView.swift` |
 |---|---|
 | Restore Purchases | built: `AppStore.sync` |
 | Redeem Offer | built: system offer-code redemption (`offerCodeRedemption`) |
@@ -418,11 +449,11 @@ Premium is the five items on Manic's paywall (seen in screenshot `0596EA12`). Fr
 | Entitlement from StoreKit 2 `Transaction.currentEntitlements` | built (`StoreKitManager.currentEntitlements`) |
 | Lifetime owners never see subscribe prompts | built: `Entitlements.showsSubscribePrompts` |
 
-Offer badges come from `StoreKitManager.badge`, which needs an intro offer configured in App Store Connect that the user is eligible for. The "50% Off" badge and banner pill are gone.
+Offer badges come from `StoreKitManager.badge`, which needs an intro offer configured in App Store Connect that the user is eligible for. Lifetime always shows its own "One payment" label.
 
 ### 4.5 Release gate
 
-The paywall stays off in submitted builds until a real core runs end to end. While it is off, the banner is hidden and premium limits are lifted, so no shipped feature sits behind a purchase the user cannot make. The one switch is the `PAYWALL_ENABLED` compilation condition (`PaywallGate`, `project.yml`), absent today; `docs/07` 7.2 opens it. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist.
+The paywall stays off in submitted builds until a real core runs end to end. While it is off, the Gaga Plus category and premium labels are hidden and premium limits are lifted, so no shipped feature sits behind a purchase the user cannot make. The one switch is the `PAYWALL_ENABLED` compilation condition (`PaywallGate`, `project.yml`), absent today; `docs/07` 7.2 opens it. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist.
 
 ---
 
