@@ -234,7 +234,7 @@ final class GameSessionTests: XCTestCase {
         var wrong = mock
         wrong.abi_version = GAGA_BRIDGE_ABI_VERSION + 1
         XCTAssertThrowsError(try GagaCoreWrapper(interface: wrong)) {
-            XCTAssertEqual($0.localizedDescription, "This core was built for bridge version 4, but the app needs version 3.")
+            XCTAssertEqual($0.localizedDescription, "This core was built for bridge version 5, but the app needs version 4.")
         }
 
         let session = try makeSession(interface: wrong)

@@ -197,12 +197,6 @@ static void mock_step_frame(GagaInstance* inst, const GagaInputState inputs[4], 
     }
 }
 
-static bool mock_attach_metal_layer(GagaInstance* inst, void* ca_metal_layer) {
-    (void)inst;
-    (void)ca_metal_layer;
-    return true;
-}
-
 static void mock_set_video_callback(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor* frame, void* userdata), void* userdata) {
     MockCoreInstance* m = (MockCoreInstance*)inst;
     if (!m) return;
@@ -289,7 +283,6 @@ static const GagaCoreInterface s_mock_interface = {
     .load_rom = mock_load_rom,
     .reset = mock_reset,
     .step_frame = mock_step_frame,
-    .attach_metal_layer = mock_attach_metal_layer,
     .set_video_callback = mock_set_video_callback,
     .set_audio_callback = mock_set_audio_callback,
     .state_version = 1,
@@ -330,7 +323,6 @@ static bool stub_load_rom(GagaInstance* i, const char* p, const void* d, size_t 
 
 static void stub_reset(GagaInstance* i) { (void)i; }
 static void stub_step_frame(GagaInstance* i, const GagaInputState in[4], uint32_t c) { (void)i; (void)in; (void)c; }
-static bool stub_attach_metal_layer(GagaInstance* i, void* l) { (void)i; (void)l; return true; }
 static void stub_set_video_callback(GagaInstance* i, void (*cb)(const GagaFrameDescriptor*, void*), void* u) { (void)i; (void)cb; (void)u; }
 static void stub_set_audio_callback(GagaInstance* i, void (*cb)(const GagaAudioDescriptor*, void*), void* u) { (void)i; (void)cb; (void)u; }
 static void stub_pause(GagaInstance* i) { (void)i; }
@@ -358,7 +350,6 @@ __attribute__((weak)) const GagaCoreInterface* getter(void) { \
         .load_rom = stub_load_rom, \
         .reset = stub_reset, \
         .step_frame = stub_step_frame, \
-        .attach_metal_layer = stub_attach_metal_layer, \
         .set_video_callback = stub_set_video_callback, \
         .set_audio_callback = stub_set_audio_callback, \
         .self_test = stub_self_test, \

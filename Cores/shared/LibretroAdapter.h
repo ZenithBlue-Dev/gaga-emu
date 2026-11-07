@@ -4,7 +4,8 @@
 // libretro cores keep their state in globals and their callbacks take no userdata, so a framework can
 // run one instance at a time: `create` returns NULL while another is alive. The host runs one session.
 //
-// Software-rendered cores only. RETRO_ENVIRONMENT_SET_HW_RENDER is refused.
+// RETRO_ENVIRONMENT_SET_HW_RENDER is refused, so a core renders in software, unless the core's build
+// adds LibretroVulkan.c for a Vulkan context on the layer path (LibretroVulkan.h).
 #ifndef GAGA_LIBRETRO_ADAPTER_H
 #define GAGA_LIBRETRO_ADAPTER_H
 
@@ -48,7 +49,6 @@ void gaga_lr_destroy(GagaInstance* inst);
 bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_data, size_t rom_size);
 void gaga_lr_reset(GagaInstance* inst);
 void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
-bool gaga_lr_attach_metal_layer(GagaInstance* inst, void* layer);
 void gaga_lr_set_video_callback(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor*, void*), void* userdata);
 void gaga_lr_set_audio_callback(GagaInstance* inst, void (*cb)(const GagaAudioDescriptor*, void*), void* userdata);
 size_t gaga_lr_state_size(GagaInstance* inst);
@@ -71,7 +71,6 @@ void gaga_lr_set_event_callback(GagaInstance* inst, void (*cb)(GagaEventSeverity
     .load_rom = gaga_lr_load_rom, \
     .reset = gaga_lr_reset, \
     .step_frame = gaga_lr_step_frame, \
-    .attach_metal_layer = gaga_lr_attach_metal_layer, \
     .set_video_callback = gaga_lr_set_video_callback, \
     .set_audio_callback = gaga_lr_set_audio_callback, \
     .state_size = gaga_lr_state_size, \

@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 3u
+#define GAGA_BRIDGE_ABI_VERSION 4u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -61,7 +61,7 @@ typedef enum {
 
 // Video frame descriptor emitted to Metal
 typedef struct {
-    const void* pixel_data;   // Valid for 2D software cores; NULL for 3D hardware cores
+    const void* pixel_data;   // NULL from a layer-path core, which sends the size of each frame it presents
     uint32_t    width;
     uint32_t    height;
     size_t      pitch;
@@ -82,6 +82,11 @@ typedef enum {
     GAGA_EVENT_FATAL   = 2, // The host ends the session and shows the message.
 } GagaEventSeverity;
 
+// Bits 0 and 2 are kept for the host-buffer and output-texture paths (docs/06 section 2.4).
+typedef enum {
+    GAGA_CORE_CAP_METAL_LAYER = 1u << 1, // Presents to an attached CAMetalLayer. Host shaders do not run.
+} GagaCoreCapability;
+
 // Threading contract. The host makes every instance call on one serial queue, never concurrently.
 // Video, audio and event callbacks must fire on that queue, inside a host call to the core. A core
 // with worker threads marshals to step_frame. Descriptor pointers and event messages are valid only
@@ -97,6 +102,7 @@ typedef struct GagaCoreInterface {
     const char* supported_extensions; // e.g. "gba|bin|zip"
     double      target_fps;           // e.g. 59.7275 (GBA), 60.0, 50.0 (PAL)
     uint32_t    native_sample_rate;   // Core master audio rate
+    uint32_t    capabilities;         // GagaCoreCapability bits
 
     // Instance lifecycle
     GagaInstance* (*create)(const char* system_dir, const char* save_dir);
@@ -109,8 +115,15 @@ typedef struct GagaCoreInterface {
     // Execution slice (supports up to 4 local controller inputs)
     void (*step_frame)(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
 
-    // Layer attachment for 3D cores (Beetle PSX HW, PPSSPP, Azahar). No core implements it yet.
-    bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer);
+    // Layer path, for a core with GAGA_CORE_CAP_METAL_LAYER. The host attaches its CAMetalLayer with the
+    // drawable size in pixels, and again whenever that size changes. Frames stepped while no layer is
+    // attached render but are not shown. Detach returns with no GPU work using the layer.
+    bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer,
+                               uint32_t width_px, uint32_t height_px, float content_scale);
+    void (*detach_metal_layer)(GagaInstance* inst);
+    // Copies the frame last presented, at the size the core rendered it, as BGRA8 rows of width * 4
+    // bytes, and sets width and height. False if there is none or capacity is short. For thumbnails and tests.
+    bool (*read_layer_pixels)(GagaInstance* inst, void* pixels, size_t capacity, uint32_t* width, uint32_t* height);
 
     // Audio & Video callbacks
     void (*set_video_callback)(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor* frame, void* userdata), void* userdata);

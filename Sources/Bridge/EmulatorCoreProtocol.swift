@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import QuartzCore
 
 // MARK: - Core Errors
 
@@ -89,7 +90,10 @@ public protocol EmulatorCoreProtocol: AnyObject {
     func removeCheat(id: UInt32)
     func setCheat(id: UInt32, enabled: Bool)
     func setSpeed(_ multiplier: Int)
-    func attachMetalLayer(_ caMetalLayer: UnsafeMutableRawPointer) -> Bool
+    var usesMetalLayer: Bool { get }
+    func attachMetalLayer(_ layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat) -> Bool
+    func detachMetalLayer()
+    func readLayerPixels() -> (pixels: Data, width: Int, height: Int)?
 
     var onVideoFrame: ((VideoFrame) -> Void)? { get set }
     var onAudioPacket: ((AudioPacket) -> Void)? { get set }
@@ -528,10 +532,34 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         }
     }
 
-    public func attachMetalLayer(_ caMetalLayer: UnsafeMutableRawPointer) -> Bool {
+    /// True for a layer-path core: it presents to a CAMetalLayer itself, so host shaders do not run.
+    public var usesMetalLayer: Bool { coreInterface.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue != 0 }
+
+    /// Call again with the new size whenever the layer's drawable size changes. The layer must outlive
+    /// the attachment: detach before releasing it.
+    public func attachMetalLayer(_ layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat) -> Bool {
         executionQueue.sync {
             guard let inst = instance, let attachFn = coreInterface.attach_metal_layer else { return false }
-            return attachFn(inst, caMetalLayer)
+            return attachFn(inst, Unmanaged.passUnretained(layer).toOpaque(), UInt32(width), UInt32(height), Float(scale))
+        }
+    }
+
+    public func detachMetalLayer() {
+        executionQueue.sync {
+            if let inst = instance { coreInterface.detach_metal_layer?(inst) }
+        }
+    }
+
+    /// The frame a layer-path core last presented, as BGRA8 rows of `width * 4` bytes.
+    public func readLayerPixels() -> (pixels: Data, width: Int, height: Int)? {
+        executionQueue.sync {
+            guard let inst = instance, let readFn = coreInterface.read_layer_pixels else { return nil }
+            var width: UInt32 = 0, height: UInt32 = 0
+            _ = readFn(inst, nil, 0, &width, &height) // Asks the size.
+            guard width > 0, height > 0 else { return nil }
+            var pixels = Data(count: Int(width) * Int(height) * 4)
+            let read = pixels.withUnsafeMutableBytes { readFn(inst, $0.baseAddress, $0.count, &width, &height) }
+            return read ? (pixels, Int(width), Int(height)) : nil
         }
     }
 }
