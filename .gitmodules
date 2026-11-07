@@ -4,3 +4,30 @@
 [submodule "Cores/gambatte/upstream"]
 	path = Cores/gambatte/upstream
 	url = https://github.com/libretro/gambatte-libretro.git
+[submodule "Cores/melonds_ds/upstream"]
+	path = Cores/melonds_ds/upstream
+	url = https://github.com/JesseTG/melonds-ds.git
+[submodule "Cores/melonds_ds/deps/melonDS"]
+	path = Cores/melonds_ds/deps/melonDS
+	url = https://github.com/JesseTG/melonDS.git
+[submodule "Cores/melonds_ds/deps/libretro-common"]
+	path = Cores/melonds_ds/deps/libretro-common
+	url = https://github.com/libretro/libretro-common.git
+[submodule "Cores/melonds_ds/deps/pntr"]
+	path = Cores/melonds_ds/deps/pntr
+	url = https://github.com/robloach/pntr.git
+[submodule "Cores/melonds_ds/deps/fmt"]
+	path = Cores/melonds_ds/deps/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "Cores/melonds_ds/deps/yamc"]
+	path = Cores/melonds_ds/deps/yamc
+	url = https://github.com/yohhoy/yamc.git
+[submodule "Cores/melonds_ds/deps/span-lite"]
+	path = Cores/melonds_ds/deps/span-lite
+	url = https://github.com/martinmoene/span-lite.git
+[submodule "Cores/melonds_ds/deps/date"]
+	path = Cores/melonds_ds/deps/date
+	url = https://github.com/HowardHinnant/date.git
+[submodule "Cores/melonds_ds/deps/glm"]
+	path = Cores/melonds_ds/deps/glm
+	url = https://github.com/g-truc/glm.git
