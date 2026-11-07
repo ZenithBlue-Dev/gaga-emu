@@ -324,7 +324,11 @@ final class MgbaCoreTests: XCTestCase {
         let url = try XCTUnwrap(written)
         defer { try? FileManager.default.removeItem(at: url) }
         let record = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        #if targetEnvironment(simulator)
         XCTAssertEqual(record["label"] as? String, "simulator, not a performance measure")
+        #else
+        XCTAssertEqual(record["label"] as? String, "measured")
+        #endif
         XCTAssertGreaterThan(try XCTUnwrap(record["frames"] as? Int), 60)
         XCTAssertEqual(try XCTUnwrap(record["fps"] as? Double), 59.7275, accuracy: 6)
         XCTAssertEqual(record["interrupted"] as? Bool, false)

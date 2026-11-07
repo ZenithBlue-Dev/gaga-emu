@@ -568,7 +568,8 @@ final class AppState: ObservableObject {
     func importROMIfRequested() {
         guard let path = UserDefaults.standard.string(forKey: "GagaImportROM") else { return }
         do {
-            try importDebugROM(at: URL(fileURLWithPath: path))
+            // "~" is the app's container, whose path changes with each device install.
+            try importDebugROM(at: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
         } catch {
             launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
         }
