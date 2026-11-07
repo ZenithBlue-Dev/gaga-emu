@@ -76,3 +76,9 @@
 [submodule "Cores/flycast/deps/asio"]
 	path = Cores/flycast/deps/asio
 	url = https://github.com/flyinghead/asio.git
+[submodule "Cores/azahar/upstream"]
+	path = Cores/azahar/upstream
+	url = https://github.com/azahar-emu/azahar.git
+[submodule "Cores/azahar/deps/robin-map"]
+	path = Cores/azahar/deps/robin-map
+	url = https://github.com/Tessil/robin-map.git
