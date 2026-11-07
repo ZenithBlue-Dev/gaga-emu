@@ -179,6 +179,17 @@
       ]
     },
     {
+      "id": "stella", "title": "Stella", "cores": ["stella"], "framework": "StellaCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/stella-emu/stella, tag 7.0c, commit c4016ea",
+      "texts": [
+        { "title": "Stella", "from": "Cores/stella/upstream/License.txt" },
+        { "title": "Stella copyright", "from": "Cores/stella/upstream/Copyright.txt" },
+        { "title": "Atari NTSC filter (Blargg)", "from": "Cores/stella/upstream/src/common/tv_filters/AtariNTSC.hxx", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "JSON for Modern C++", "from": "Cores/stella/upstream/src/lib/json/LICENSE.MIT" }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]

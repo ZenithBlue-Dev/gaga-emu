@@ -405,6 +405,9 @@ DEFINE_CORE_INTERFACE(Mupen64PlusNext_GetInterface, "mupen64plus_next", "Mupen64
 #ifndef GAGA_HAS_GEARSYSTEM
 DEFINE_CORE_INTERFACE(Gearsystem_GetInterface,    "gearsystem",      "Gearsystem",        GAGA_CORE_EXCLUDED, "sms|gg|sg|mv", 59.9227, 44100)
 #endif
+#ifndef GAGA_HAS_STELLA
+DEFINE_CORE_INTERFACE(Stella_GetInterface,        "stella",          "Stella",            GAGA_CORE_EXCLUDED, "a26|bin",  60.0,    31440)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,      "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
@@ -434,6 +437,7 @@ static const CoreGetterFunc s_core_getters[] = {
     VkTest_GetInterface,
     // group-retro
     Gearsystem_GetInterface,
+    Stella_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

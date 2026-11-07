@@ -129,6 +129,7 @@ final class BenchmarkRun {
         case "arcade": (data, name, ext) = (GridleeTestSet.build(), GridleeTestSet.machine, "zip") // MAME finds the machine by name.
         case "n64": (data, ext) = (N64TestROM.build(), "z64")
         case "mastersystem": (data, ext) = (SMSTestROM.build(), "sms")
+        case "atari2600": (data, ext) = (Atari2600TestROM.build(), "a26")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

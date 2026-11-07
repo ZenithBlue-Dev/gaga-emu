@@ -766,6 +766,38 @@
    ]
   },
   {
+   "id": "stella",
+   "title": "Stella",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/stella-emu/stella, tag 7.0c, commit c4016ea",
+   "cores": [
+    "stella"
+   ],
+   "framework": "StellaCore",
+   "texts": [
+    {
+     "title": "Stella",
+     "file": "licence-58530d09b6fc.txt"
+    },
+    {
+     "title": "Stella copyright",
+     "file": "licence-e2a32d2f6134.txt"
+    },
+    {
+     "title": "Atari NTSC filter (Blargg)",
+     "file": "licence-625001fc888c.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "JSON for Modern C++",
+     "file": "licence-50be9457e5c9.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

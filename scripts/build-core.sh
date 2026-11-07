@@ -13,7 +13,7 @@ min_ios=17.0
 # include paths in core.env stay relative to it.
 if [ "${1:-}" = --compile-one ]; then
     source=$2 object="$COMPILE_OUT/obj/$2.o" tool=clang flags=$CORE_CFLAGS
-    case "$source" in *.cpp | *.cc) tool=clang++ flags=$CORE_CXXFLAGS ;; esac
+    case "$source" in *.cpp | *.cc | *.cxx) tool=clang++ flags=$CORE_CXXFLAGS ;; esac
     mkdir -p "$(dirname "$object")"
     # shellcheck disable=SC2086 # the flag strings are word lists.
     exec xcrun --sdk "$COMPILE_SDK" "$tool" -target "$COMPILE_TARGET" -isysroot "$COMPILE_SYSROOT" -g \
@@ -47,7 +47,7 @@ build_slice() { # core dir sdk target
 
     while IFS= read -r source; do
         objects+=("$out/obj/$source.o")
-        case "$source" in *.cpp | *.cc) link_driver=clang++ ;; esac
+        case "$source" in *.cpp | *.cc | *.cxx) link_driver=clang++ ;; esac
     done <"$dir/sources.txt"
 
     # Optional: a Rust part of the core, a static library linked with the bridge sources (Cores/jgenesis).

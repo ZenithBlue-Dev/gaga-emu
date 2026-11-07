@@ -52,6 +52,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Platform | GagaEmu default | Manic default (screenshot) | Alternates | Licence | Renderer path | No-JIT status | Upstream state | Load tier |
 |---|---|---|---|---|---|---|---|---|
 | Master System / Game Gear / SG-1000 | Gearsystem | `gearsystem` | None | [GPL-3.0-or-later](https://github.com/drhelius/Gearsystem) (file headers: "version 3 of the License, or any later version"), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Z80 interpreter, no recompiler in the tree. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([drhelius/Gearsystem](https://github.com/drhelius/Gearsystem), `platforms/libretro`). Pinned to tag 3.9.24, `40b8eebab53007c976eb29755b1ef7925140c37f` | 1 |
+| Atari 2600 | Stella | `stella` | stella2014 (not built) | [GPL-2.0-or-later](https://github.com/stella-emu/stella) (`Copyright.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 6502 interpreter; the ARM interpreter for DPC+, CDF and ELF carts (Thumbulator, CortexM0) does not recompile. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([stella-emu/stella](https://github.com/stella-emu/stella), `src/os/libretro`). Pinned to release tag 7.0c, `c4016ea4891cb0f90979cb35182214af4c1cb4e7`. Chosen over [stella2014-libretro](https://github.com/libretro/stella2014-libretro), a 2014 snapshot (Stella 3.9.3) that libretro only keeps building: both are GPL-2, this one is maintained | 1 |
 
 ### Renderer rules
 
@@ -365,6 +366,20 @@ Not compiled: `src/audio/emu2413/emu2413.c`, the YM2413 FM emulation. It is Jare
 
 No BIOS or game is bundled. The `gearsystem_bios_sms` and `gearsystem_bios_gg` options stay "Disabled", so no Sega boot ROM is read. The test ROM `Sources/Debug/SMSTestROM.swift` is GagaEmu's own hand-assembled Z80 program.
 
+### Stella licence obligations
+
+Source: [github.com/stella-emu/stella](https://github.com/stella-emu/stella), the Stella team's repository, whose `src/os/libretro` is the target libretro-super builds as `stella`, tag 7.0c, commit `c4016ea4891cb0f90979cb35182214af4c1cb4e7`, as the unmodified submodule `Cores/stella/upstream`. `Cores/stella/StellaCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/stella/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src/emucore` (6507, TIA, RIOT, every cartridge scheme, Thumbulator, CortexM0, ELF), `src/common`, `src/os/libretro` | GPL-2.0-or-later (`Copyright.txt`; `License.txt` is the GPL-2.0 text) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `src/common/tv_filters/AtariNTSC.cxx` (Blargg's NTSC filter, updated) | LGPL-2.1-or-later (`AtariNTSC.hxx`) | Satisfied by the GPL source release; counsel to confirm. |
+| `src/lib/json` (nlohmann JSON, headers) | MIT | Reproduce the notice. |
+
+Not compiled or not reachable: `HTTP_LIB_SUPPORT` is not defined, so PlusROM carts get no network and `lib/httplib` is never included; no GUI, debugger, image or SQLite support is defined, so `lib/sqlite` is not compiled. `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym` and `mprotect`. `pthread_create` is imported by `EmulationWorker`, which the libretro target does not start.
+
+No BIOS or game is bundled; the 2600 has no BIOS. The test cartridge `Sources/Debug/Atari2600TestROM.swift` is GagaEmu's own hand-assembled 6502 program.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -432,7 +447,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella).
 
 ---
 

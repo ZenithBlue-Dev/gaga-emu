@@ -55,3 +55,6 @@
 [submodule "Cores/gearsystem/upstream"]
 	path = Cores/gearsystem/upstream
 	url = https://github.com/drhelius/Gearsystem
+[submodule "Cores/stella/upstream"]
+	path = Cores/stella/upstream
+	url = https://github.com/stella-emu/stella

@@ -300,7 +300,7 @@ public final class TouchSkinEngine: ObservableObject {
                     button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
                     button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
                 ],
-                platforms: ["gba", "gb", "gbc", "nes", "mastersystem", "gamegear", "sg1000"])
+                platforms: ["gba", "gb", "gbc", "nes", "mastersystem", "gamegear", "sg1000", "atari2600"])
         }()
 
         /// DOSBox Pure opens its on-screen keyboard on L3. It sits in the space under L that every layout a

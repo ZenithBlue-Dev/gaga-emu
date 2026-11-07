@@ -125,6 +125,9 @@ enum CoreCatalog {
         .init(id: "sg1000", name: "SG-1000", manufacturer: "Sega", cores: [
             .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true)
         ]),
+        .init(id: "atari2600", name: "Atari 2600", manufacturer: "Atari", cores: [
+            .init(id: "stella", name: "Stella", note: "Default", recommended: true)
+        ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
             .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
         ]),
@@ -164,7 +167,7 @@ enum CoreCatalog {
     static func platformCode(_ id: String) -> String {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
                        "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC",
-                       "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG"]
+                       "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG", "atari2600": "2600"]
         return special[id] ?? id.uppercased()
     }
 
@@ -205,6 +208,8 @@ enum CoreCatalog {
         case "sms": return "mastersystem"
         case "gg": return "gamegear"
         case "sg", "mv": return "sg1000"
+        // A 2600 image is often a .bin: platformID(forFile:) tells it from a Mega Drive ROM or a disc by content.
+        case "a26": return "atari2600"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
@@ -230,6 +235,7 @@ enum CoreCatalog {
     /// and a disc image is placed by `discPlatformID(_:)`.
     static func platformID(forFile url: URL) -> String? {
         let ext = url.pathExtension.lowercased()
+        if ext == "bin", let cartridge = binCartridgePlatformID(url) { return cartridge }
         if discExtensions.contains(ext) { return discPlatformID(url) }
         switch ext {
         case "exe":
@@ -256,6 +262,20 @@ enum CoreCatalog {
             !name.contains("/") && (ext.isEmpty || ext == "bin" || ext == "rom" || ext.contains(where: \.isNumber))
         }
         return !names.isEmpty && romLike ? "arcade" : nil
+    }
+
+    /// A cartridge dumped as .bin, or nil to try it as a disc. Mega Drive: "SEGA" at 0x100, its header. Atari 2600:
+    /// 2 to 32 KB in whole 2 KB banks, with no Sega header, and a reset vector (the image's last 4 bytes) that
+    /// has address line 12 set, as every 6507 cartridge's must.
+    static func binCartridgePlatformID(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        guard let size = try? handle.seekToEnd(), size >= 0x104, (try? handle.seek(toOffset: 0)) != nil,
+              let head = try? handle.read(upToCount: 0x104) else { return nil }
+        if head.suffix(4).elementsEqual("SEGA".utf8) { return "megadrive" }
+        guard (2048...32768).contains(size), size % 2048 == 0, (try? handle.seek(toOffset: size - 4)) != nil,
+              let vector = try? handle.read(upToCount: 2), vector.count == 2 else { return nil }
+        return vector[vector.startIndex + 1] & 0x10 != 0 ? "atari2600" : nil
     }
 
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
