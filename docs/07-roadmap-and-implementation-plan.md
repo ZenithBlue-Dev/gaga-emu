@@ -174,8 +174,8 @@ Online play is not scheduled. It is not promised or gated until built, and its S
 | 6.3 | 3DS: Azahar (experimental) | planned | `use_cpu_jit` and `use_shader_jit` must be off and compiled out, and `shader_jit_a64_compiler` must not ship. Vulkan on MoltenVK, or the software renderer. PICA200 path per `docs/03` section 4: fragment shaders use `spv_fs_shader_gen.cpp`. No SPIR-V vertex generator was found; the vertex path appears to go through GLSL, which is inferred from file names and not traced. |
 | 6.4 | **J2meJS spike** | planned | Establish the source, licence and JS runtime path, and whether that path uses any JIT that counts against the no-JIT rule. No upstream repo has been identified. |
 | 6.5 | Java ME: J2meJS | planned | Only if 6.4 passes. |
-| 6.6 | **EKA2L1 renderer spike** | planned | The iOS path links OpenGLES.framework, which is not an accepted path. Prove a Vulkan or software renderer works, and that the dyncom interpreter runs games. |
-| 6.7 | Symbian: EKA2L1 | planned | Only if 6.6 passes. |
+| 6.6 | **EKA2L1 renderer spike** | failed, not viable | **Verdict: no accepted renderer path exists.** Audited upstream EKA2L1 `master` at `62f0180e` (2026-11-07), GPL-3.0, on branch `core/eka2l1`. `graphic_api` has only `opengl` and `vulkan`, and `create_graphics_driver` plus the buffer, texture, shader, framebuffer and input-descriptor factories build only the OpenGL backend (`src/emu/drivers/src/graphics/backend/ogl`, about 3,800 lines), which on iOS links OpenGLES.framework. `vulkan/graphics_vulkan.cpp` is a 312-line stub: instance, debug callback, Win32, Android and XCB surfaces, and a device. `create_swapchain` is empty, there is no Metal surface, and the factory never returns it. The top-level CMake forces `EKA2L1_BUILD_VULKAN_BACKEND` off on iOS. No software renderer exists: window-server composition and the guest EGL, GLES 1 (`gles1/shadergen.cpp`), GLES 2 and OpenVG libraries (about 12,900 lines in `src/emu/dispatch/src/libraries`) all draw through the graphics driver and emit GLSL. A Vulkan or software backend is a new port of the whole graphics driver, not a build flag or a build-time patch, so it is out of scope and would mean maintaining a renderer fork. The CPU side was not the blocker: the dyncom interpreter is in the tree, setting `EKA2L1_IOS_DYNARMIC` off keeps Dynarmic out of both slices (upstream defaults it on for the simulator slice), and LuaJIT is forced off on iOS (native patches only). Nothing was built or added: no submodule, no core, no install flow. The firmware and `.sis`/`.sisx` install flow was not designed, because no build can use it. `Sources/App/AppState.swift` still lists Symbian with EKA2L1 in the platform catalog; removing it is a follow-up. Revisit if upstream ships a Vulkan backend reachable from `create_graphics_driver` with a Metal surface, or a software backend. |
+| 6.7 | Symbian: EKA2L1 | not started | Blocked: 6.6 failed. |
 
 A failed spike removes the platform's row from `docs/03`.
 
@@ -215,7 +215,7 @@ A failed spike removes the platform's row from `docs/03`.
 | Dreamcast | 6.2 |
 | 3DS | 6.3 |
 | Java ME | 6.4 then 6.5 |
-| Symbian | 6.6 then 6.7 |
+| Symbian | 6.6 failed; 6.7 not started |
 
 ---
 
