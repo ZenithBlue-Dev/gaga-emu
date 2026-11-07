@@ -2,21 +2,30 @@
 # Writes build/core-set.yml, which project.yml includes, then runs xcodegen. A build links only the
 # cores in GAGA_CORE_SET; each one must already be built by scripts/build-core.sh.
 #
-#   scripts/generate-project.sh                  every core in Cores/
+#   scripts/generate-project.sh                  every core in Cores/ except the non-commercial ones
+#   GAGA_CORE_SET=sideload scripts/generate-project.sh  every core, for a free personal build only
 #   GAGA_CORE_SET="mgba" scripts/generate-project.sh    only those core IDs, space separated
 #
 # A left-out core keeps a refusing stub in the registry and is hidden from CoreCatalog, and the app's
-# no-JIT gate fails the build if its framework is embedded anyway.
+# no-JIT gate fails the build if its framework is embedded anyway. A core whose core.env sets
+# CORE_NONCOMMERCIAL=1 has a licence that forbids commercial use (docs/03 section 5): it never enters an
+# App Store or TestFlight build, which scripts/appstore_release.sh and scripts/nojit-gate.sh enforce.
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 
-known=()
+known=() commercial=()
 for env in Cores/*/core.env; do
-    known+=("$(basename "$(dirname "$env")")")
+    core=$(basename "$(dirname "$env")")
+    known+=("$core")
+    grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || commercial+=("$core")
 done
-core_set=${GAGA_CORE_SET:-${known[*]}}
+case "${GAGA_CORE_SET:-}" in
+    "") core_set=${commercial[*]} ;;
+    sideload) core_set=${known[*]} ;;
+    *) core_set=$GAGA_CORE_SET ;;
+esac
 
 dependencies='' defines=''
 for core in $core_set; do
