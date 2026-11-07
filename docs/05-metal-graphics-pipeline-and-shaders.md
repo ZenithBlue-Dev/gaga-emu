@@ -18,8 +18,8 @@ The app presents frames from the mock core through the copy path. No real core i
 | Filter picker: built-in, Community and Imported sections, upscaler and sliders saved per filter | built | `Sources/UI/Settings/FilterPickerView.swift` |
 | Community presets, converted offline from public-domain files | built: three | `Sources/Metal/CommunityShaders.metal`, section 5 |
 | Import `.metal` | built | `Sources/Metal/ImportedFilter.swift`, section 4.1 |
-| Import `.slangp` and `.slang` | planned, deferred to after milestone 5.1: no tab or button until it exists | section 4 |
-| Custom presets | planned: the per-filter sliders cover the common case | section 4 |
+| Import `.slangp` and `.slang` | built, unit-tested on macOS Metal; not run on a device | `Sources/Metal/SlangFilter.swift`, `Slang/GagaSlang.cpp`, section 4.2 |
+| Saved custom presets | built | `Sources/Metal/ShaderPresetStore.swift`, section 4.3 |
 | Game view presenting a core frame | built, on the mock core | `Sources/UI/Game/GameView.swift` |
 | Host-buffer path | planned | none |
 | Core-owned layer path | built: MoltenVK v1.4.2 as one shared framework that each layer-path core links, the libretro Vulkan context, proved by the Vulkan test core | `Cores/shared/LibretroVulkan.c`, `Cores/vktest`, section 2.3 |
@@ -132,7 +132,7 @@ Two entries carry conditions from `docs/03`. N64 passes the no-JIT gate as GagaE
 
 Seen in screenshot `0BF2D032`: a sheet with an edit button and a close button, a search field, the tabs Default, RetroArch, Import and Custom, a preview card with an image button, and a list where each row has a preview (eye) control and a separate selection control.
 
-Status in GagaEmu: the picker is an original split view, with the list on the left and a large preview and its controls on the right (`docs/06` section 3.4). There are no tabs, search field or eye icons. The list has three sections: the built-in presets, Community, and Imported with an `Import .metal File` button.
+Status in GagaEmu: the picker is an original split view, with the list on the left and a large preview and its controls on the right (`docs/06` section 3.4). There are no tabs, search field or eye icons. The list has four sections: Saved (section 4.3), the built-in presets, Community, and Imported with `Import .metal File` and `Import .slangp Preset` buttons.
 
 ### 3.1 Built-in presets
 
@@ -218,8 +218,8 @@ The rule against generating CPU code is separate from GPU shaders. No shipped co
 | Built-in presets | Bundled default metallib. There is no source fallback: the renderer fails to initialise if the library is missing. | built |
 | Community presets | Converted offline and bundled in the same metallib (section 3.5). | built |
 | Import, `.metal` | Runtime `makeLibrary(source:)` on a user-selected file (section 4.1). | built |
-| Import, `.slangp` and `.slang` | Needs a translation path from Slang to MSL, such as glslang and SPIRV-Cross. It waits for MoltenVK (milestone 5.1), and no tab or button is shown until then. | planned, deferred to after 5.1 |
-| Custom presets | User-edited parameter sets over existing presets. The per-filter sliders in section 3.2 cover the common case. | planned |
+| Import, `.slangp` and `.slang` | glslang and SPIRV-Cross translate each pass to MSL once, at import (section 4.2). A launch only compiles that MSL with `makeLibrary(source:)`. GPU code only: no CPU code is generated. | built |
+| Saved custom presets | Named sets of slider values over an existing filter (section 4.3). | built |
 
 ### 4.1 Imported `.metal` filters
 
@@ -233,6 +233,20 @@ The rule against generating CPU code is separate from GPU shaders. No shipped co
 6. Reflection shows it binds only buffer(0), at most 36 bytes, texture(0) and texture(1) as `texture2d<float>`, and sampler(0).
 
 Compilation runs off the main thread. A filter that passes runs as the last pass of the chain, after the chosen upscaler. If a command buffer that uses it ends in error, the renderer drops it, the session falls back to Original, and no crash follows. A hostile shader can still stall the GPU briefly before that happens. `Tests/Phase3Tests.swift` covers each rejection and a working filter.
+
+### 4.2 Imported `.slangp` presets
+
+The picker's `Import .slangp Preset` button takes the `.slangp` file and, when they are not in the same folder, its `.slang` files. `SlangImporter` reads the preset, pastes `#include` files (at most 8 deep), splits each `.slang` file into vertex and fragment source at `#pragma stage`, and reads `#pragma parameter`, `#pragma format` and `#pragma name`. Each file is at most 256 KB of UTF-8 text, and a preset has at most 64 files and 16 passes.
+
+`gaga_slang_translate` (`Slang/GagaSlang.cpp`, the `GagaSlang` static library) compiles both stages with glslang under Vulkan rules and writes MSL with SPIRV-Cross for iOS, MSL 2.3. The uniform block goes to buffer(0) and push constants to buffer(1); textures and samplers take indices in the order SPIR-V lists them. The result is stored as `<name>.gagaslang` (JSON) beside the imported `.metal` filters and listed in the Imported section. Licences: glslang is BSD-3-Clause with BSD-2-Clause, MIT and Apache-2.0 parts; SPIRV-Cross is Apache-2.0 (`Licences/notices.json`, component `slang-import`).
+
+`SlangChain` draws each pass as a quad with RetroArch's MVP. Supported: multipass, `scale_type` `source`, `viewport` and `absolute`, `filter_linear`, `wrap_mode`, `float_framebuffer`, `srgb_framebuffer`, `#pragma format`, `frame_count_mod`, the size semantics, `FrameCount` and parameters, which show as sliders saved per filter. Refused with a message naming the cause: lookup textures, `#reference`, feedback, history and other passes' outputs, unknown uniforms, storage buffers and images, separate samplers, and a block over 4 KB. A GPU error drops the chain and falls back to Original, as for `.metal` filters.
+
+Shortcut: the last pass always draws to the viewport and ignores its own scale. Translation has no timeout, so a very large shader blocks the import sheet until glslang finishes. `Tests/SlangImportTests.swift` covers parsing, a two-pass translation drawn to pixels, the store round trip and each refusal.
+
+### 4.3 Saved custom presets
+
+The picker's `Save Preset` button names the current filter and its slider values. `ShaderPresetStore` keeps them in `Documents/Filter Presets.json`. A Saved section applies, renames and deletes them; delete asks first. Names are trimmed, at most 40 characters and unique ignoring case. An unreadable file is moved aside, never overwritten. Saved presets are free. `Tests/ShaderPresetStoreTests.swift` covers them.
 
 ---
 

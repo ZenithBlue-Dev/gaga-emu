@@ -70,8 +70,8 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Tabs** [S]: `Default`, `RetroArch`, `Import`, `Custom`. Only Default's contents are shown. GagaEmu has no tabs; its list has sections instead (`docs/06` section 3.4).
   1. **Default**: MSL presets [G]. Status: built.
   2. **Community** (in place of the RetroArch tab): public-domain libretro Slang shaders converted ahead of time [G], with licences recorded in `docs/05` section 5. Status: built, three presets.
-  3. **Import**: runtime `.metal` source through `makeLibrary(source:)` [G]. Status: built. `.slangp` import needs a translation path and is deferred to after MoltenVK (`docs/07` 3.6). Status: planned.
-  4. **Custom**: parameter editing such as scanlines, curvature, bloom and colour temperature [G]. Status: built as sliders saved per filter; saved custom presets are planned.
+  3. **Import**: runtime `.metal` source through `makeLibrary(source:)` [G]. Status: built. `.slangp` import translates RetroArch slang presets to MSL with glslang and SPIRV-Cross at import (`docs/05` section 4.2). Status: built.
+  4. **Custom**: parameter editing such as scanlines, curvature, bloom and colour temperature [G]. Status: built as sliders saved per filter, plus named saved presets (`docs/05` section 4.3).
 - **Presets** [S]: `Original`, `Cartoon`, `CRT v1`, `CRT v2`, `Geom CRT Border`, `Geom CRT`, `Film`. The screenshot cuts off at Film, so the total is not confirmed. Effect definitions are [G]; see `docs/05`.
 - **Anime4K, xBRZ and CRT-Royale**: Anime4K is built from its MIT-licensed shaders and is premium. xBRZ and CRT-Royale are GPL and do not ship; GagaEmu's own Edge Smooth upscaler and CRT Deluxe preset replace them, and a saved `crt-royale` choice falls back to Original.
 
@@ -97,7 +97,8 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Cover Scraping** [S]: row only. GagaEmu's row is `Cover Art` in Settings > Library, off by default. The source is [G]: Libretro Thumbnails by exact title; OpenVGDB and SteamGridDB are not used. Status: built (3.8).
 - **Save states**: `Auto Save States` is a toggle, shown off [S]. Manual slots with thumbnails and a proposed 50-slot rolling auto-save are [G]. Status: the toggle is hidden until 2.6, and the free-tier cap exists in `StoreKitManager` but has no caller.
 - **iCloud Sync** [S]: shows `iCloud Not Enabled`. Sync across devices is [G]. Status: blocked on the App ID's iCloud capability, row hidden (3.11).
-- **Other enhancements** [G], status planned: rewind on qualifying cores, RetroAchievements Softcore and Hardcore (the row is [S], status blocked on an owner account and approval, row hidden), AirPlay Fullscreen (the toggle is [S], greyed off; GagaEmu's version is built but unverified on a second screen, row hidden).
+- **Rewind** [G], status built, device pending: on cores whose state is at most 2 MB and saves in at most 2 ms, a 64 MB compressed ring, a hold button and Options + L1 on a controller (`docs/06` section 3.7). Free.
+- **Other enhancements** [G], status planned: RetroAchievements Softcore and Hardcore (the row is [S], status blocked on an owner account and approval, row hidden), AirPlay Fullscreen (the toggle is [S], greyed off; GagaEmu's version is built but unverified on a second screen, row hidden).
 
 ### 2.6 Premium & StoreKit 2 (Ref: `0596EA12`)
 `docs/06` is canonical for this spec. This section is a summary.
