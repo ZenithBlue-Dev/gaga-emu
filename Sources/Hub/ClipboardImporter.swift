@@ -152,7 +152,8 @@ public struct ClipboardImporter: Sendable {
 
     /// Same size and CRC-32. False when either cannot be read.
     static func sameContents(_ a: URL, _ b: URL) -> Bool {
-        func size(_ url: URL) -> Int? { (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize }
+        // Not resourceValues: a URL caches them, so a file rewritten at the same URL would keep its old size.
+        func size(_ url: URL) -> Int? { (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int }
         guard let sizeA = size(a), sizeA == size(b), let crcA = RomPatcher.crc32(fileAt: a) else { return false }
         return crcA == RomPatcher.crc32(fileAt: b)
     }

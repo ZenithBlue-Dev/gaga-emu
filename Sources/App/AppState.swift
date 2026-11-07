@@ -1075,7 +1075,8 @@ final class AppState: ObservableObject {
         // Another size under that name (a game called firmware.bin) is placed as a game. A different file already
         // in System is never replaced. A .rom (such as an FDS folder's disksys.rom) is never a game.
         let fileName = url.lastPathComponent.lowercased()
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        // Not url.resourceValues: a URL caches them, so a file rewritten at the same URL kept its old size.
+        let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int
         if platformID == nil, inROMFolder, let size, BIOSManagerView.sizes[fileName]?.contains(size) == true {
             try? FileManager.default.createDirectory(at: systemDirectory, withIntermediateDirectories: true)
             let dest = systemDirectory.appendingPathComponent(fileName)
