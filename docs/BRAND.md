@@ -6,13 +6,7 @@ How GagaEmu names itself, speaks and looks outside the code. The visual system i
 
 The name is **GagaEmu**: one word, capital G and capital E.
 
-The repo is inconsistent today. These need an owner decision and a separate change:
-
-| Where | Current text |
-|---|---|
-| `Sources/App/Info.plist`, `CFBundleDisplayName` (the Home Screen label) | `GAGA-EMU` |
-| App Store name (`AppStore/metadata/en-US/name.txt`) | `GagaEmu - Retro Game Emulator` |
-| Settings row, WiFi upload page title, clipboard message, `README.md` heading | `Gaga-Emu` |
+Every display string uses it: the Home Screen label (`CFBundleDisplayName`), the App Store name, Settings, the WiFi upload page and messages. The bundle ID `com.zenithblue.gagaemu`, target names and the site URL `zenithblue-oss.github.io/gaga-emu-site` are identifiers and stay as they are.
 
 **Owner action:** a trademark check on "GagaEmu" has not been done. Do it before release. It should also cover the similarity to other "Gaga" marks.
 
@@ -41,9 +35,9 @@ Plain, short and calm, like a line printed on a label.
 
 ## App icon
 
-**Status: pending owner choice.** The app still ships the placeholder from `scripts/make_app_icon.py`. Sign-off is tracked in `docs/07` milestone 7.6.
+**Status: chosen by the owner, option 4, Steps** (2026-11-07). It is installed in `Sources/App/Assets.xcassets/AppIcon.appiconset/` as a 1024 PNG with dark and tinted entries.
 
-All options are in `design/icons/`, with a side-by-side view in `design/icons/options.png`. Each folder has `icon-1024.png`, `icon-1024-dark.png` and `icon-1024-tinted.png`.
+All the options remain in `design/icons/`, with a side-by-side view in `design/icons/options.png`. Each folder has `icon-1024.png`, `icon-1024-dark.png` and `icon-1024-tinted.png`.
 
 | # | Folder | Idea | Weakest point |
 |---|---|---|---|
@@ -54,7 +48,7 @@ All options are in `design/icons/`, with a side-by-side view in `design/icons/op
 | 5 | `option-5-well` | Paper cut away and turned step by step, down to vermilion | Weakest at 60pt, says nothing about games |
 | 6 | `option-6-phosphor` | One lit pixel on a curved screen, on a vermilion tile | Moves furthest from the paper look; can read as a camera |
 
-Recommendation: option 4. It is the only one that says "game" and "pixels" without borrowing a controller, and its geometry suits the print look.
+Why option 4: it is the only one that says "game" and "pixels" without borrowing a controller, and its geometry suits the print look.
 
 Rejected: a plus of two crossing planes (reads as medical, and red on white as a flag); a single vermilion dot on paper (reads as a national flag); any pad or cartridge shape.
 
@@ -72,13 +66,11 @@ Use the traditional single-size `AppIcon.appiconset`, with a 1024 PNG and dark a
 
 Icon Composer's layered `.icon` also compiled for iOS 17 in that test, with flat fallback PNGs. It would need the glyph split from the tile and a `project.yml` change, and the system's glass would replace our lighting. Consider it later if the rendered icon looks wrong on iOS 26 or newer. That has not been checked on a device.
 
-### Installing the chosen icon
+### Changing the icon
 
-1. Copy the three PNGs into `Sources/App/Assets.xcassets/AppIcon.appiconset/` and list them in `Contents.json`, using the `luminosity` appearances `dark` and `tinted`.
-2. Delete or update `scripts/make_app_icon.py`, because running it overwrites `AppIcon.png`.
-3. Update `docs/06` section 3.6 and this section.
+Copy the three PNGs into `Sources/App/Assets.xcassets/AppIcon.appiconset/` as `AppIcon.png`, `AppIcon-dark.png` and `AppIcon-tinted.png`. `Contents.json` lists them with the `luminosity` appearances `dark` and `tinted`. Update `docs/06` section 3.6 and this section.
 
-To re-render, run `design/icons/render_all.sh`. It needs Blender 5 on the path and uses a fresh factory scene.
+To re-render, run `design/icons/render_all.sh`. It needs Blender 5 on the path and uses a fresh factory scene. It writes to `design/icons/` only, so copy the result across afterwards.
 
 ## Colour and type summary
 

@@ -421,7 +421,7 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
-| About | Version, Support and FAQ, Feedback, Rate Gaga-Emu, Terms of Service, Privacy Policy. Debug builds add Run Benchmark. | built: Rate Gaga-Emu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
+| About | Version, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy. Debug builds add Run Benchmark. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
 
 All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
 
@@ -437,7 +437,7 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 | AirPlay Fullscreen | Graphics | 3.11 |
 | iCloud Sync | Storage | 3.11 |
 | About Us (licence notices) | About | 7.5 |
-| Share Gaga-Emu | About | 7.6 |
+| Share GagaEmu | About | 7.6 |
 | Reset Tips | About | When the app has dismissible tips |
 | Language | About | When a second localisation exists |
 | Online Play | Play | Not scheduled. Netplay is not promised or gated until built. |
@@ -456,7 +456,7 @@ The paywall is named Gaga Plus (`GagaPlusView`). Two columns: benefits on the le
 
 ### 3.6 App icon
 
-An ink game cover with a vermilion spine on paper, drawn by `scripts/make_app_icon.py`. Original artwork with no third-party imagery. It needs owner sign-off before submission.
+Steps, chosen by the owner: ink pixel stairs and one vermilion pixel in the air, on a paper tile. `AppIcon.appiconset` holds a single-size 1024 PNG with dark and tinted entries, rendered by `design/icons/render_all.sh`. Original artwork with no third-party imagery. Options and rules are in `docs/BRAND.md`.
 
 ### 3.7 Game view and pause menu
 

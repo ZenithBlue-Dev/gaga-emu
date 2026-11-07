@@ -1,4 +1,4 @@
-# Gaga-Emu — All-in-One Multi-Model Emulator for iOS
+# GagaEmu — All-in-One Multi-Model Emulator for iOS
 
 Multi-system emulator for iOS and iPadOS, designed for App Store distribution with no JIT in any shipped core.
 
