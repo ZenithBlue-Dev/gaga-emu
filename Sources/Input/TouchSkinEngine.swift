@@ -103,10 +103,11 @@ public final class TouchSkinEngine: ObservableObject {
                     opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil)
     }
 
-    /// Game choice, then platform choice, then standard. A choice that no longer fits the platform is skipped.
+    /// Game choice, then platform choice, then the platform's own layout. A choice that no longer fits the
+    /// platform is skipped.
     static func layoutID(game: String?, platform: String?, platformID: String) -> String {
         let choices = Layout.choices(for: platformID).map(\.id)
-        return [game, platform].compactMap { $0 }.first(where: choices.contains) ?? Layout.standard.id
+        return [game, platform].compactMap { $0 }.first(where: choices.contains) ?? Layout.defaultID(for: platformID)
     }
 
     // MARK: Hit testing
@@ -300,7 +301,7 @@ public final class TouchSkinEngine: ObservableObject {
                     button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
                     button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
                 ],
-                platforms: ["gba", "gb", "gbc", "nes"])
+                platforms: ["gba", "gb", "gbc", "nes", "pce"])
         }()
 
         /// DOSBox Pure opens its on-screen keyboard on L3. It sits in the space under L that every layout a
@@ -313,6 +314,12 @@ public final class TouchSkinEngine: ObservableObject {
         }
 
         public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton]
+
+        /// The layout a platform starts on when the player has chosen none: the one shaped like its controller.
+        /// Platforms added before milestone 8.x keep Standard.
+        static let platformDefaults: [String: String] = ["pce": "two-button"]
+
+        static func defaultID(for platformID: String) -> String { platformDefaults[platformID] ?? standard.id }
 
         public static func choices(for platformID: String) -> [Layout] {
             builtIn.filter { $0.platforms?.contains(platformID) ?? true }

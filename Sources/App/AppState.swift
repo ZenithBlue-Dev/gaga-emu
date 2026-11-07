@@ -109,6 +109,9 @@ enum CoreCatalog {
         .init(id: "psp", name: "PSP", manufacturer: "Sony", cores: [
             .init(id: "ppsspp", name: "PPSSPP", note: "IR interpreter", recommended: true)
         ]),
+        .init(id: "pce", name: "PC Engine", manufacturer: "NEC", cores: [
+            .init(id: "beetle_pce_fast", name: "Beetle PCE Fast", note: "HuCard and CD", recommended: true)
+        ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
             .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
         ]),
@@ -191,6 +194,8 @@ enum CoreCatalog {
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "smd", "sms": return "megadrive"
+        // A .ccd is a CloneCD disc, which only the PC Engine core opens. A PC Engine .cue is placed by its contents.
+        case "pce", "ccd": return "pce"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
@@ -203,7 +208,7 @@ enum CoreCatalog {
     /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
     static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u"]
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
-    static var discPlatforms: [PlatformInfo] { ["ps1", "megacd", "dos"].compactMap(platform) }
+    static var discPlatforms: [PlatformInfo] { ["ps1", "megacd", "dos", "pce"].compactMap(platform) }
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
@@ -247,7 +252,8 @@ enum CoreCatalog {
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
     /// the system ID in sector 16, or SYSTEM.CNF in the root directory. Mega-CD: "SEGADISCSYSTEM" or "SEGA"
     /// opening the first sector (Saturn's "SEGA SEGASATURN" is left out). Any other ISO 9660 disc, and any
-    /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry.
+    /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry. A .cue whose
+    /// first track is audio is a PC Engine CD: those open with a warning track, and PS1, Mega-CD and DOS discs with data.
     /// shortcut: a .chd is compressed, so it always asks; read its first hunk if players import many.
     static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
         let ext = url.pathExtension.lowercased()
@@ -255,6 +261,10 @@ enum CoreCatalog {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
             let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             let name: String?
+            if ext == "cue", let track = lines.first(where: { $0.uppercased().hasPrefix("TRACK ") }),
+               track.uppercased().hasSuffix(" AUDIO") {
+                return "pce"
+            }
             if ext == "cue" {
                 // FILE "name" BINARY, or FILE name BINARY when the name has no spaces.
                 name = lines.first { $0.uppercased().hasPrefix("FILE ") }.flatMap { line -> String? in
