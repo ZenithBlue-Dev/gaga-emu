@@ -400,7 +400,9 @@ DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",
 #endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,        "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
-DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
+#ifndef GAGA_HAS_PPSSPP
+DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            GAGA_CORE_EXCLUDED, "iso|cso|pbp|elf", 59.94, 44100)
+#endif
 
 // ============================================================================
 // REGISTRY DISPATCH TABLE

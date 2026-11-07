@@ -1,0 +1,852 @@
+PpssppCore.c
+PpssppSupport.cpp
+JitCommonNoJit.cpp
+MemoryUtil.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+LibretroVulkanContextGaga.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+LibretroGraphicsContextNoGL.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+../shared/LibretroAdapter.c
+../shared/LibretroVulkan.c
+upstream/Common/ArmCPUDetect.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Buffer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/CPUDetect.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Crypto/md5.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Crypto/sha1.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Crypto/sha256.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Color/RGBAUtil.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Convert/ColorConv.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Convert/SmallDataConvert.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Encoding/Base64.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Encoding/Compression.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Encoding/Utf8.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/DDSLoad.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/IniFile.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/JSONReader.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/JSONWriter.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/PNGLoad.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/RIFF.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/ZIMLoad.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Format/ZIMSave.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Hash/Hash.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Text/I18n.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Text/Parsers.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Data/Text/WrapText.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/ExceptionHandlerSetup.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/FakeCPUDetect.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/AndroidContentURI.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/AndroidStorage.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/DirListing.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/DiskFree.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/FileDescriptor.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/FileUtil.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/Path.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/PathBrowser.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/VFS/DirectoryReader.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/VFS/SevenZipFileReader.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/VFS/VFS.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/File/VFS/ZipFileReader.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/GPUBackendCommon.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Shader.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/ShaderTranslation.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/ShaderWriter.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanBarrier.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanContext.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanDebug.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanDescSet.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanFrameData.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanFramebuffer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanImage.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanLoader.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanMemory.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanProfiler.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanQueueRunner.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/VulkanRenderManager.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/Vulkan/thin3d_vulkan.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GPU/thin3d.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/GhidraClient.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Input/GestureDetector.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Input/InputState.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Log.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Log/ConsoleListener.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Log/LogManager.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/LogReporting.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/LoongArchCPUDetect.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Math/Statistics.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Math/curves.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Math/expression_parser.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Math/lin/matrix4x4.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Math/lin/vec3.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Math/math_util.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/MemArenaAndroid.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/MemArenaDarwin.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/MemArenaHorizon.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/MemArenaPosix.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/MemArenaWin32.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/HTTPClient.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/HTTPHeaders.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/HTTPNaettRequest.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/HTTPRequest.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/HTTPServer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/NetBuffer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/Resolve.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/Sinks.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/URL.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Net/WebsocketServer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/OSVersion.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Profiler/Profiler.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/AtlasGen.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/DrawBuffer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/ManagedTexture.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/Text/draw_text.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/Text/draw_text_android.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/Text/draw_text_qt.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/libretro/libretro-common/include -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include
+upstream/Common/Render/Text/draw_text_sdl.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/Text/draw_text_uwp.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/Text/draw_text_win.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Render/TextureAtlas.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/RiscVCPUDetect.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Serialize/Serializer.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/StringUtils.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/SysError.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/System/Display.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/System/OSD.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/System/Request.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Thread/ParallelLoop.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Thread/ThreadManager.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/Thread/ThreadUtil.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/TimeUtil.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/AsyncImageFileView.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/Context.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/IconCache.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/Notice.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/PopupScreens.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/Root.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/Screen.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/ScrollView.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/TabHolder.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/Tween.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/UI.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/UIScreen.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/View.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Common/UI/ViewGroup.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Core/Compatibility.cpp
+upstream/Core/Config.cpp
+upstream/Core/ConfigSettings.cpp
+upstream/Core/ControlMapper.cpp
+upstream/Core/Core.cpp
+upstream/Core/CoreTiming.cpp
+upstream/Core/CwCheat.cpp
+upstream/Core/Debugger/Breakpoints.cpp
+upstream/Core/Debugger/DisassemblyManager.cpp
+upstream/Core/Debugger/MemBlockInfo.cpp
+upstream/Core/Debugger/SymbolMap.cpp
+upstream/Core/Debugger/WebSocket.cpp
+upstream/Core/Debugger/WebSocket/BreakpointSubscriber.cpp
+upstream/Core/Debugger/WebSocket/CPUCoreSubscriber.cpp
+upstream/Core/Debugger/WebSocket/ClientConfigSubscriber.cpp
+upstream/Core/Debugger/WebSocket/DisasmSubscriber.cpp
+upstream/Core/Debugger/WebSocket/GPUBufferSubscriber.cpp
+upstream/Core/Debugger/WebSocket/GPURecordSubscriber.cpp
+upstream/Core/Debugger/WebSocket/GPUStatsSubscriber.cpp
+upstream/Core/Debugger/WebSocket/GameBroadcaster.cpp
+upstream/Core/Debugger/WebSocket/GameSubscriber.cpp
+upstream/Core/Debugger/WebSocket/HLESubscriber.cpp
+upstream/Core/Debugger/WebSocket/InputBroadcaster.cpp
+upstream/Core/Debugger/WebSocket/InputSubscriber.cpp
+upstream/Core/Debugger/WebSocket/LogBroadcaster.cpp
+upstream/Core/Debugger/WebSocket/MemoryInfoSubscriber.cpp
+upstream/Core/Debugger/WebSocket/MemorySubscriber.cpp
+upstream/Core/Debugger/WebSocket/ReplaySubscriber.cpp
+upstream/Core/Debugger/WebSocket/SteppingBroadcaster.cpp
+upstream/Core/Debugger/WebSocket/SteppingSubscriber.cpp
+upstream/Core/Debugger/WebSocket/WebSocketUtils.cpp
+upstream/Core/Dialog/PSPDialog.cpp
+upstream/Core/Dialog/PSPGamedataInstallDialog.cpp
+upstream/Core/Dialog/PSPMsgDialog.cpp
+upstream/Core/Dialog/PSPNetconfDialog.cpp
+upstream/Core/Dialog/PSPNpSigninDialog.cpp
+upstream/Core/Dialog/PSPOskConstants.cpp
+upstream/Core/Dialog/PSPOskDialog.cpp
+upstream/Core/Dialog/PSPPlaceholderDialog.cpp
+upstream/Core/Dialog/PSPSaveDialog.cpp
+upstream/Core/Dialog/PSPScreenshotDialog.cpp
+upstream/Core/Dialog/SavedataParam.cpp
+upstream/Core/ELF/ElfReader.cpp
+upstream/Core/ELF/PBPReader.cpp
+upstream/Core/ELF/ParamSFO.cpp
+upstream/Core/ELF/PrxDecrypter.cpp
+upstream/Core/FileLoaders/CachingFileLoader.cpp
+upstream/Core/FileLoaders/DiskCachingFileLoader.cpp
+upstream/Core/FileLoaders/HTTPFileLoader.cpp
+upstream/Core/FileLoaders/LocalFileLoader.cpp
+upstream/Core/FileLoaders/RamCachingFileLoader.cpp
+upstream/Core/FileLoaders/RetryingFileLoader.cpp
+upstream/Core/FileLoaders/ZipFileLoader.cpp
+upstream/Core/FileSystems/BlobFileSystem.cpp
+upstream/Core/FileSystems/BlockDevices.cpp
+upstream/Core/FileSystems/DirectoryFileSystem.cpp
+upstream/Core/FileSystems/FileSystem.cpp
+upstream/Core/FileSystems/ISOFileSystem.cpp
+upstream/Core/FileSystems/MetaFileSystem.cpp
+upstream/Core/FileSystems/VirtualDiscFileSystem.cpp
+upstream/Core/FileSystems/tlzrc.cpp
+upstream/Core/Font/PGF.cpp
+upstream/Core/FrameTiming.cpp
+upstream/Core/HDRemaster.cpp
+upstream/Core/HLE/AtracCtx.cpp
+upstream/Core/HLE/AtracCtx2.cpp
+upstream/Core/HLE/HLE.cpp
+upstream/Core/HLE/HLEHelperThread.cpp
+upstream/Core/HLE/HLETables.cpp
+upstream/Core/HLE/KUBridge.cpp
+upstream/Core/HLE/NetAdhocCommon.cpp
+upstream/Core/HLE/NetInetConstants.cpp
+upstream/Core/HLE/Plugins.cpp
+upstream/Core/HLE/ReplaceTables.cpp
+upstream/Core/HLE/SocketManager.cpp
+upstream/Core/HLE/__sceAudio.cpp
+upstream/Core/HLE/proAdhoc.cpp
+upstream/Core/HLE/proAdhocServer.cpp
+upstream/Core/HLE/sceAac.cpp
+upstream/Core/HLE/sceAdler.cpp
+upstream/Core/HLE/sceAtrac.cpp
+upstream/Core/HLE/sceAudio.cpp
+upstream/Core/HLE/sceAudioRouting.cpp
+upstream/Core/HLE/sceAudiocodec.cpp
+upstream/Core/HLE/sceCcc.cpp
+upstream/Core/HLE/sceChnnlsv.cpp
+upstream/Core/HLE/sceCtrl.cpp
+upstream/Core/HLE/sceDeflt.cpp
+upstream/Core/HLE/sceDisplay.cpp
+upstream/Core/HLE/sceDmac.cpp
+upstream/Core/HLE/sceFont.cpp
+upstream/Core/HLE/sceG729.cpp
+upstream/Core/HLE/sceGameUpdate.cpp
+upstream/Core/HLE/sceGe.cpp
+upstream/Core/HLE/sceHeap.cpp
+upstream/Core/HLE/sceHprm.cpp
+upstream/Core/HLE/sceHttp.cpp
+upstream/Core/HLE/sceImpose.cpp
+upstream/Core/HLE/sceIo.cpp
+upstream/Core/HLE/sceJpeg.cpp
+upstream/Core/HLE/sceKernel.cpp
+upstream/Core/HLE/sceKernelAlarm.cpp
+upstream/Core/HLE/sceKernelEventFlag.cpp
+upstream/Core/HLE/sceKernelHeap.cpp
+upstream/Core/HLE/sceKernelInterrupt.cpp
+upstream/Core/HLE/sceKernelMbx.cpp
+upstream/Core/HLE/sceKernelMemory.cpp
+upstream/Core/HLE/sceKernelModule.cpp
+upstream/Core/HLE/sceKernelMsgPipe.cpp
+upstream/Core/HLE/sceKernelMutex.cpp
+upstream/Core/HLE/sceKernelSemaphore.cpp
+upstream/Core/HLE/sceKernelThread.cpp
+upstream/Core/HLE/sceKernelTime.cpp
+upstream/Core/HLE/sceKernelVTimer.cpp
+upstream/Core/HLE/sceMd5.cpp
+upstream/Core/HLE/sceMp3.cpp
+upstream/Core/HLE/sceMp4.cpp
+upstream/Core/HLE/sceMpeg.cpp
+upstream/Core/HLE/sceMt19937.cpp
+upstream/Core/HLE/sceNet.cpp
+upstream/Core/HLE/sceNetAdhoc.cpp
+upstream/Core/HLE/sceNetAdhocMatching.cpp
+upstream/Core/HLE/sceNetApctl.cpp
+upstream/Core/HLE/sceNetInet.cpp
+upstream/Core/HLE/sceNetResolver.cpp
+upstream/Core/HLE/sceNet_lib.cpp
+upstream/Core/HLE/sceNp.cpp
+upstream/Core/HLE/sceNp2.cpp
+upstream/Core/HLE/sceOpenPSID.cpp
+upstream/Core/HLE/sceP3da.cpp
+upstream/Core/HLE/sceParseHttp.cpp
+upstream/Core/HLE/sceParseUri.cpp
+upstream/Core/HLE/scePauth.cpp
+upstream/Core/HLE/scePower.cpp
+upstream/Core/HLE/scePsmf.cpp
+upstream/Core/HLE/scePspNpDrm_user.cpp
+upstream/Core/HLE/sceReg.cpp
+upstream/Core/HLE/sceRtc.cpp
+upstream/Core/HLE/sceSas.cpp
+upstream/Core/HLE/sceSfmt19937.cpp
+upstream/Core/HLE/sceSha256.cpp
+upstream/Core/HLE/sceSircs.cpp
+upstream/Core/HLE/sceSsl.cpp
+upstream/Core/HLE/sceUmd.cpp
+upstream/Core/HLE/sceUsb.cpp
+upstream/Core/HLE/sceUsbAcc.cpp
+upstream/Core/HLE/sceUsbCam.cpp
+upstream/Core/HLE/sceUsbGps.cpp
+upstream/Core/HLE/sceUsbMic.cpp
+upstream/Core/HLE/sceUtility.cpp
+upstream/Core/HLE/sceVaudio.cpp
+upstream/Core/HW/AsyncIOManager.cpp
+upstream/Core/HW/Atrac3Standalone.cpp
+upstream/Core/HW/BufferQueue.cpp
+upstream/Core/HW/Camera.cpp
+upstream/Core/HW/Display.cpp
+upstream/Core/HW/GranularMixer.cpp
+upstream/Core/HW/MediaEngine.cpp
+upstream/Core/HW/MemoryStick.cpp
+upstream/Core/HW/MpegDemux.cpp
+upstream/Core/HW/SasAudio.cpp
+upstream/Core/HW/SasReverb.cpp
+upstream/Core/HW/SimpleAudioDec.cpp
+upstream/Core/HW/StereoResampler.cpp
+upstream/Core/Instance.cpp
+upstream/Core/KeyMap.cpp
+upstream/Core/KeyMapDefaults.cpp
+upstream/Core/Loaders.cpp
+upstream/Core/LuaContext.cpp
+upstream/Core/MIPS/IR/IRAnalysis.cpp
+upstream/Core/MIPS/IR/IRCompALU.cpp
+upstream/Core/MIPS/IR/IRCompBranch.cpp
+upstream/Core/MIPS/IR/IRCompFPU.cpp
+upstream/Core/MIPS/IR/IRCompLoadStore.cpp
+upstream/Core/MIPS/IR/IRCompVFPU.cpp
+upstream/Core/MIPS/IR/IRFrontend.cpp
+upstream/Core/MIPS/IR/IRInst.cpp
+upstream/Core/MIPS/IR/IRInterpreter.cpp
+upstream/Core/MIPS/IR/IRJit.cpp
+upstream/Core/MIPS/IR/IRNativeCommon.cpp
+upstream/Core/MIPS/IR/IRPassSimplify.cpp
+upstream/Core/MIPS/IR/IRRegCache.cpp
+upstream/Core/MIPS/JitCommon/JitBlockCache.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Core/MIPS/JitCommon/JitState.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Core/MIPS/MIPS.cpp
+upstream/Core/MIPS/MIPSAnalyst.cpp
+upstream/Core/MIPS/MIPSAsm.cpp
+upstream/Core/MIPS/MIPSCodeUtils.cpp
+upstream/Core/MIPS/MIPSDebugInterface.cpp
+upstream/Core/MIPS/MIPSDis.cpp
+upstream/Core/MIPS/MIPSDisVFPU.cpp
+upstream/Core/MIPS/MIPSInt.cpp
+upstream/Core/MIPS/MIPSIntVFPU.cpp
+upstream/Core/MIPS/MIPSStackWalk.cpp
+upstream/Core/MIPS/MIPSTables.cpp
+upstream/Core/MIPS/MIPSTracer.cpp
+upstream/Core/MIPS/MIPSVFPUFallbacks.cpp
+upstream/Core/MIPS/MIPSVFPUUtils.cpp
+upstream/Core/MIPS/fake/FakeJit.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Core/MemFault.cpp
+upstream/Core/MemMap.cpp
+upstream/Core/MemMapFunctions.cpp
+upstream/Core/PSPLoaders.cpp
+upstream/Core/Replay.cpp
+upstream/Core/Reporting.cpp
+upstream/Core/RetroAchievements.cpp
+upstream/Core/SaveState.cpp
+upstream/Core/SaveStateRewind.cpp
+upstream/Core/Screenshot.cpp
+upstream/Core/System.cpp
+upstream/Core/TiltEventProcessor.cpp
+upstream/Core/Util/AtracTrack.cpp
+upstream/Core/Util/AudioFormat.cpp
+upstream/Core/Util/BlockAllocator.cpp
+upstream/Core/Util/DisArm64.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/libretro/libretro-common/include -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -DZ7_CRC_NUM_TABLES=1
+upstream/Core/Util/GameDB.cpp
+upstream/Core/Util/GameManager.cpp
+upstream/Core/Util/MemStick.cpp
+upstream/Core/Util/PPGeDraw.cpp
+upstream/Core/Util/PathUtil.cpp
+upstream/Core/Util/PortManager.cpp
+upstream/Core/Util/RecentFiles.cpp
+upstream/Core/Util/VideoPlayer.cpp
+upstream/Core/WebServer.cpp
+upstream/GPU/Common/DepalettizeShaderCommon.cpp
+upstream/GPU/Common/DepthBufferCommon.cpp
+upstream/GPU/Common/DepthRaster.cpp
+upstream/GPU/Common/Draw2D.cpp
+upstream/GPU/Common/DrawEngineCommon.cpp
+upstream/GPU/Common/FragmentShaderGenerator.cpp
+upstream/GPU/Common/FramebufferManagerCommon.cpp
+upstream/GPU/Common/GPUDebugInterface.cpp
+upstream/GPU/Common/GPUStateUtils.cpp
+upstream/GPU/Common/GeometryShaderGenerator.cpp
+upstream/GPU/Common/IndexGenerator.cpp
+upstream/GPU/Common/PostShader.cpp
+upstream/GPU/Common/PresentationCommon.cpp
+upstream/GPU/Common/ReinterpretFramebuffer.cpp
+upstream/GPU/Common/ReplacedTexture.cpp
+upstream/GPU/Common/ShaderCommon.cpp
+upstream/GPU/Common/ShaderId.cpp
+upstream/GPU/Common/ShaderUniforms.cpp
+upstream/GPU/Common/SoftwareTransformCommon.cpp
+upstream/GPU/Common/SplineCommon.cpp
+upstream/GPU/Common/StencilCommon.cpp
+upstream/GPU/Common/TextureCacheCommon.cpp
+upstream/GPU/Common/TextureDecoder.cpp
+upstream/GPU/Common/TextureReplacer.cpp
+upstream/GPU/Common/TextureScalerCommon.cpp
+upstream/GPU/Common/TextureShaderCommon.cpp
+upstream/GPU/Common/TransformCommon.cpp
+upstream/GPU/Common/VertexDecoderCommon.cpp
+upstream/GPU/Common/VertexDecoderHandwritten.cpp
+upstream/GPU/Common/VertexShaderGenerator.cpp
+upstream/GPU/Debugger/Breakpoints.cpp
+upstream/GPU/Debugger/Debugger.cpp
+upstream/GPU/Debugger/GECommandTable.cpp
+upstream/GPU/Debugger/Playback.cpp
+upstream/GPU/Debugger/Record.cpp
+upstream/GPU/Debugger/State.cpp
+upstream/GPU/Debugger/Stepping.cpp
+upstream/GPU/GPU.cpp
+upstream/GPU/GPUCommon.cpp
+upstream/GPU/GPUCommonHW.cpp
+upstream/GPU/GPUState.cpp
+upstream/GPU/GeConstants.cpp
+upstream/GPU/GeDisasm.cpp
+upstream/GPU/Math3D.cpp
+upstream/GPU/Software/BinManager.cpp
+upstream/GPU/Software/Clipper.cpp
+upstream/GPU/Software/DrawPixel.cpp
+upstream/GPU/Software/FuncId.cpp
+upstream/GPU/Software/Lighting.cpp
+upstream/GPU/Software/Rasterizer.cpp
+upstream/GPU/Software/RasterizerRectangle.cpp
+upstream/GPU/Software/Sampler.cpp
+upstream/GPU/Software/SoftGpu.cpp
+upstream/GPU/Software/TransformUnit.cpp
+upstream/GPU/Vulkan/DebugVisVulkan.cpp
+upstream/GPU/Vulkan/DrawEngineVulkan.cpp
+upstream/GPU/Vulkan/FramebufferManagerVulkan.cpp
+upstream/GPU/Vulkan/GPU_Vulkan.cpp
+upstream/GPU/Vulkan/PipelineManagerVulkan.cpp
+upstream/GPU/Vulkan/ShaderManagerVulkan.cpp
+upstream/GPU/Vulkan/StateMappingVulkan.cpp
+upstream/GPU/Vulkan/TextureCacheVulkan.cpp
+upstream/GPU/Vulkan/VulkanUtil.cpp
+upstream/ext/SPIRV-Cross/spirv_cfg.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_cpp.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_cross.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_cross_parsed_ir.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_cross_util.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_glsl.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_hlsl.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_msl.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/SPIRV-Cross/spirv_parser.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/SPIRV-Cross -DSPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS -D__STDC_LIMIT_MACROS
+upstream/ext/aemu_postoffice/client/delay_impl_cpp.cpp
+upstream/ext/aemu_postoffice/client/log_impl_ppsspp.cpp
+upstream/ext/aemu_postoffice/client/mutex_impl_cpp.cpp
+upstream/ext/aemu_postoffice/client/postoffice.c
+upstream/ext/aemu_postoffice/client/postoffice_mem_stdc.c
+upstream/ext/aemu_postoffice/client/sock_impl_linux.c
+upstream/ext/armips/Archs/ARM/Arm.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/ArmElfRelocator.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/ArmExpressionFunctions.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/ArmOpcodes.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/ArmParser.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/CArmInstruction.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/CThumbInstruction.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/Pool.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/ARM/ThumbOpcodes.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/Architecture.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/CMipsInstruction.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/Mips.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/MipsElfFile.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/MipsElfRelocator.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/MipsExpressionFunctions.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/MipsMacros.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/MipsOpcodes.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/MipsParser.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/MIPS/PsxRelocator.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/SuperH/CShInstruction.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/SuperH/ShElfRelocator.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/SuperH/ShExpressionFunctions.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/SuperH/ShOpcodes.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/SuperH/ShParser.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Archs/SuperH/SuperH.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CAssemblerCommand.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CAssemblerLabel.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CDirectiveArea.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CDirectiveConditional.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CDirectiveData.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CDirectiveFile.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CDirectiveMessage.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Commands/CommandSequence.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/Allocations.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/Assembler.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/Common.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/ELF/ElfFile.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/ELF/ElfRelocator.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/Expression.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/ExpressionFunctionHandler.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/ExpressionFunctions.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/FileManager.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/Misc.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/SymbolData.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/SymbolTable.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Core/Types.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Parser/DirectivesParser.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Parser/ExpressionParser.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Parser/Parser.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Parser/Tokenizer.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Util/ByteArray.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Util/CRC.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Util/EncodingTable.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Util/FileClasses.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Util/FileSystem.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/armips/Util/Util.cpp -Iupstream/ext/armips -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include
+upstream/ext/at3_standalone/atrac.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/atrac3.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/atrac3plus.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/atrac3plusdec.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/atrac3plusdsp.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/compat.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/fft.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/get_bits.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/at3_standalone/mem.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/basis_universal/basisu_transcoder.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/cityhash/city.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/cityhash -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/cpu_features/src/filesystem.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal
+upstream/ext/cpu_features/src/hwcaps.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_DLFCN_H
+upstream/ext/cpu_features/src/impl_aarch64_linux_or_android.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_aarch64_macos_or_iphone.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_aarch64_windows.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_arm_linux_or_android.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_loongarch_linux.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_mips_linux_or_android.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_ppc_linux.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_riscv_linux.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_s390x_linux.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_x86_freebsd.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_x86_linux_or_android.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_x86_macos.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/impl_x86_windows.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal -DHAVE_SYSCTLBYNAME
+upstream/ext/cpu_features/src/stack_line_reader.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal
+upstream/ext/cpu_features/src/string_view.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/cpu_features/include -Iupstream/ext/cpu_features/include/internal
+upstream/ext/disarm.cpp
+upstream/ext/gason/gason.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/glslang/OGLCompilersDLL/InitializeDll.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/CInterface/spirv_c_interface.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/GlslangToSpv.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/InReadableOrder.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/Logger.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/SpvBuilder.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/SpvPostProcess.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/SpvTools.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/disassemble.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/SPIRV/doc.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/CInterface/glslang_c_interface.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/GenericCodeGen/CodeGen.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/GenericCodeGen/Link.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslAttributes.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslGrammar.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslOpMap.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslParseHelper.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslParseables.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslScanContext.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/HLSL/hlslTokenStream.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/Constant.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/InfoSink.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/Initialize.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/IntermTraverse.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/Intermediate.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/ParseContextBase.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/ParseHelper.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/PoolAlloc.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/RemoveTree.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/Scan.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/ShaderLang.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/SpirvIntrinsics.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/SymbolTable.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/Versions.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/attribute.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/glslang_tab.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/intermOut.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/iomapper.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/limits.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/linkValidate.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/parseConst.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/preprocessor/Pp.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/preprocessor/PpAtom.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/preprocessor/PpContext.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/preprocessor/PpScanner.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/preprocessor/PpTokens.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/propagateNoContraction.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/MachineIndependent/reflection.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Igenerated/include -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/OSDependent/Unix/ossource.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/ResourceLimits/ResourceLimits.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/glslang/ResourceLimits/resource_limits_c.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/glslang/hlsl/stub.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -DENABLE_HLSL -DENABLE_OPT=0 -DGLSLANG_OSINCLUDE_UNIX
+upstream/ext/jpge/jpgd.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/libretro/libretro-common/include -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include
+upstream/ext/jpge/jpge.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/libretro/libretro-common/include -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include
+upstream/ext/libchdr/deps/lzma-24.05/src/Alloc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/Bra.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/Bra86.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/BraIA64.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/CpuArch.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/Delta.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/LzFind.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/Lzma86Dec.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/LzmaDec.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/LzmaEnc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/deps/lzma-24.05/src/Sort.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/src/libchdr_bitstream.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/src/libchdr_cdrom.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/src/libchdr_chd.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/src/libchdr_flac.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libchdr/src/libchdr_huffman.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/libchdr/deps/lzma-24.05/include -Iupstream/ext/libchdr/include -Iupstream/ext/zlib -Iupstream/ext/zstd/lib -DZ7_ST -D__SWITCH__ -include chdr_lzma.h
+upstream/ext/libkirk/AES.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/libkirk -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libkirk/SHA1.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/libkirk -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libkirk/amctrl.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/libkirk -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libkirk/bn.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/libkirk -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libkirk/ec.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/libkirk -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libkirk/kirk_engine.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/libkirk -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/arm/arm_init.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/arm/filter_neon_intrinsics.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/png.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngerror.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngget.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngmem.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngpread.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngread.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngrio.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngrtran.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngrutil.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngset.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngtrans.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngwio.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngwrite.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngwtran.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libpng17/pngwutil.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/libzip/zip_add.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_add_dir.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_add_entry.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_algorithm_deflate.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_buffer.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_close.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_delete.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_dir_add.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_dirent.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_discard.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_entry.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_err_str.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_error.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_error_clear.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_error_get.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_error_get_sys_type.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_error_strerror.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_error_to_str.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_extra_field.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_extra_field_api.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fclose.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fdopen.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_add.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_error_clear.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_error_get.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_get_comment.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_get_external_attributes.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_get_offset.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_rename.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_replace.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_set_comment.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_set_encryption.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_set_external_attributes.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_set_mtime.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_file_strerror.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fopen.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fopen_encrypted.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fopen_index.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fopen_index_encrypted.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fread.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_fseek.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_ftell.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_archive_comment.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_archive_flag.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_encryption_implementation.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_file_comment.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_name.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_num_entries.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_get_num_files.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_hash.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_io_util.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_libzip_version.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_memdup.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_mkstempm.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_name_locate.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_new.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_open.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_pkware.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_progress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_random_unix.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_rename.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_replace.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_set_archive_comment.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_set_archive_flag.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_set_default_password.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_set_file_comment.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_set_file_compression.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_set_name.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_accept_empty.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_begin_write.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_begin_write_cloning.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_buffer.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_call.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_close.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_commit_write.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_compress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_crc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_error.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_file_common.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_file_stdio.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_file_stdio_named.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_free.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_function.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_get_file_attributes.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_is_deleted.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_layered.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_open.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_pkware_decode.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_pkware_encode.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_read.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_remove.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_rollback_write.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_seek.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_seek_write.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_stat.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_supports.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_tell.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_tell_write.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_window.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_write.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_zip.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_source_zip_new.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_stat.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_stat_index.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_stat_init.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_strerror.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_string.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_unchange.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_unchange_all.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_unchange_archive.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_unchange_data.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/libzip/zip_utf-8.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DHAVE_STDBOOL_H
+upstream/ext/loongarch-disasm.cpp
+upstream/ext/lua/lapi.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lauxlib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lbaselib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lcode.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lcorolib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lctype.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ldblib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ldebug.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ldo.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ldump.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lfunc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lgc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/linit.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/liolib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/llex.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lmathlib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lmem.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/loadlib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lobject.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lopcodes.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/loslib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lparser.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lstate.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lstring.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lstrlib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ltable.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ltablib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/ltm.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lundump.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lutf8lib.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lvm.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lua/lzio.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/lua -DLUA_USE_IOS
+upstream/ext/lzma-sdk/7zArcIn.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/7zBuf.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/7zCrc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/7zCrcOpt.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/7zDec.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/7zFile.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/7zStream.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/Bcj2.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/Bra.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/Bra86.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/Delta.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/Lzma2Dec.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/lzma-sdk/LzmaDec.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/minimp3/minimp3.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/pugixml/pugixml.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/rcheevos/src/rapi/rc_api_common.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rapi/rc_api_editor.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rapi/rc_api_info.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rapi/rc_api_runtime.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rapi/rc_api_user.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rc_client.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rc_compat.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rc_util.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/alloc.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/condition.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/condset.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/consoleinfo.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/format.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/lboard.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/memref.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/operand.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/rc_validate.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/richpresence.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/runtime.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/runtime_progress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/trigger.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rcheevos/value.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/rcheevos/src/rhash/md5.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi
+upstream/ext/riscv-disas.cpp
+upstream/ext/sfmt19937/SFMT.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/sfmt19937 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -DSFMT_MEXP=19937
+upstream/ext/snappy/snappy-c.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/snappy
+upstream/ext/snappy/snappy-sinksource.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/snappy
+upstream/ext/snappy/snappy-stubs-internal.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/snappy
+upstream/ext/snappy/snappy.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/snappy
+upstream/ext/udis86/decode.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/udis86/itab.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/udis86/syn-att.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/udis86/syn-intel.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/udis86/syn.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/udis86/udis86.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream
+upstream/ext/vma/vk_mem_alloc.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/xbrz/xbrz.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/xbrz -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/xxhash.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/xxhash -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include
+upstream/ext/zstd/lib/common/debug.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/entropy_common.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/error_private.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/fse_decompress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/pool.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/threading.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/xxhash.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/common/zstd_common.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/fse_compress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/hist.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/huf_compress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_compress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_compress_literals.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_compress_sequences.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_compress_superblock.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_double_fast.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_fast.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_lazy.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_ldm.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_opt.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstd_preSplit.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/compress/zstdmt_compress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/decompress/huf_decompress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/decompress/zstd_ddict.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/decompress/zstd_decompress.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/decompress/zstd_decompress_block.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/dictBuilder/cover.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/dictBuilder/divsufsort.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/dictBuilder/fastcover.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/ext/zstd/lib/dictBuilder/zdict.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -DZSTD_DISABLE_ASM
+upstream/libretro/libretro-common/compat/compat_posix_string.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/compat/compat_strl.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/compat/fopen_utf8.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/encodings/encoding_utf.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/file/file_path.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/file/file_path_io.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/streams/file_stream.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/streams/file_stream_transforms.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/string/stdstring.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/time/rtime.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro-common/vfs/vfs_implementation.c -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS
+upstream/libretro/libretro_vulkan.cpp -Iupstream/ext/glslang -Iupstream/ext/glew -Iupstream -Iupstream/ext/OpenXR-SDK/include -Iupstream/ext -Iupstream/Common -Iupstream/ext/libzip -Iupstream/ext/lzma-sdk -Iupstream/ext/libpng17 -Iupstream/ext/zstd/lib -Iupstream/ext/libchdr/include -Iupstream/libretro/libretro -Iupstream/libretro/libretro-common/include -Iupstream/ext/snappy -Iupstream/ext/cpu_features/include -Iupstream/ext/rcheevos/include -Iupstream/ext/rcheevos/src/rapi -Iupstream/ext/lua -Igenerated/include -Iupstream/ext/SPIRV-Cross -Iupstream/ext/armips -Iupstream/ext/armips/ext/tinyformat -Iupstream/ext/armips/ext/filesystem/include -Dppsspp_libretro_EXPORTS

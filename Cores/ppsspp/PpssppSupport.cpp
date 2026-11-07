@@ -1,0 +1,80 @@
+// What upstream's build generates or links that this build replaces (generate.py, flags.h). Nothing here
+// generates or runs code: every definition is a pointer accessor, a constant answer, or an empty body.
+#include <stddef.h>
+#include <string.h>
+
+#include "Common/Arm64Emitter.h"
+#include "Common/GPU/OpenGL/GLFeatures.h"
+#include "Common/VR/PPSSPPVR.h"
+#include "GPU/Common/VertexDecoderCommon.h"
+#include "GPU/Software/RasterizerRegCache.h"
+
+// git-version.cpp, which CMake writes from `git describe`.
+const char *PPSSPP_GIT_VERSION = "v1.20.4";
+
+// flags.h renames dlopen to this: no library is ever loaded by name.
+extern "C" void *gaga_ppsspp_no_dlopen(const char *path, int mode) {
+	(void)path;
+	(void)mode;
+	return NULL;
+}
+
+// The ARM64 code emitter (Common/Arm64Emitter.cpp) is not compiled. The vertex decoder and the software
+// renderer still hold an ARM64CodeBlock, and the ARM64 disassembler decodes float immediates, so these are
+// upstream's own bodies for the parts that never emit an instruction. The code space they point into is
+// never allocated: AllocateExecutableMemory returns null (MemoryUtil.cpp).
+namespace Arm64Gen {
+void ARM64XEmitter::SetCodePointer(const u8 *ptr, u8 *writePtr) {
+	m_code = ptr;
+	m_writable = writePtr;
+	m_lastCacheFlushEnd = ptr;
+}
+const u8 *ARM64XEmitter::GetCodePointer() const { return m_code; }
+u8 *ARM64XEmitter::GetWritableCodePtr() { return m_writable; }
+void ARM64CodeBlock::PoisonMemory(int offset) { (void)offset; }
+
+float FPImm8ToFloat(uint8_t bits) {
+	int sign = bits >> 7;
+	uint32_t f = 0;
+	f |= (sign << 31);
+	int bit6 = (bits >> 6) & 1;
+	uint32_t exp = ((!bit6) << 7) | (0x7C * bit6) | ((bits >> 4) & 3);
+	uint32_t mantissa = (bits & 0xF) << 19;
+	f |= exp << 23;
+	f |= mantissa;
+	float fl;
+	memcpy(&fl, &f, sizeof(float));
+	return fl;
+}
+}  // namespace Arm64Gen
+
+// The vertex decoder JIT (VertexDecoderArm64.cpp) is not compiled. DrawEngineCommon only makes a
+// VertexDecoderJitCache for the JIT CPU cores; the IR interpreter decodes vertices in C++.
+JittedVertexDecoder VertexDecoderJitCache::Compile(const VertexDecoder &dec, int32_t *jittedSize) {
+	(void)dec;
+	*jittedSize = 0;
+	return nullptr;
+}
+
+// The software renderer's code block (RasterizerRegCache.cpp) is not compiled. Upstream compiles pixel and
+// sampler functions on x86-64 only; on ARM64 its Compile calls only Clear, so no space is needed.
+namespace Rasterizer {
+CodeBlock::CodeBlock(int size) : fp(this) { (void)size; }
+std::string CodeBlock::DescribeCodePtr(const u8 *ptr) {
+	(void)ptr;
+	return std::string();
+}
+void CodeBlock::Clear() { descriptions_.clear(); }
+}  // namespace Rasterizer
+
+// OpenGL is not compiled (flags.h). The shader generators read these only for GLSL output, which Vulkan
+// never asks for.
+GLExtensions gl_extensions;
+int GLExtensions::GLSLVersion() { return 0; }
+
+// Common/VR (OpenXR) is not compiled. No headset is ever present.
+bool IsVREnabled() { return false; }
+bool IsBigScreenVRMode() { return false; }
+bool IsFlatVRGame() { return false; }
+bool IsGameVRScene() { return false; }
+bool IsImmersiveVRMode() { return false; }
