@@ -85,13 +85,8 @@ public struct ClipboardImporter: Sendable {
             try? FileManager.default.removeItem(at: temp)
             throw ImportError.unsupported
         }
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let dest = directory.appendingPathComponent(name)
-        if FileManager.default.fileExists(atPath: dest.path) {
-            try FileManager.default.removeItem(at: dest)
-        }
-        try FileManager.default.moveItem(at: temp, to: dest)
-        return dest
+        defer { try? FileManager.default.removeItem(at: temp) }
+        return try place(temp, named: name, in: directory)
     }
 
     public static func persist(_ item: Item, into directory: URL) throws -> URL {
@@ -99,21 +94,56 @@ public struct ClipboardImporter: Sendable {
         case .file(let url), .archive(let url):
             let name = WiFiTransferServer.sanitize(url.lastPathComponent)
             guard !name.isEmpty else { throw ImportError.unsupported }
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let dest = directory.appendingPathComponent(name)
-            if FileManager.default.fileExists(atPath: dest.path) { try FileManager.default.removeItem(at: dest) }
-            try FileManager.default.copyItem(at: url, to: dest)
-            return dest
+            let part = try partFile(in: directory)
+            defer { try? FileManager.default.removeItem(at: part) }
+            try FileManager.default.copyItem(at: url, to: part)
+            return try place(part, named: name, in: directory)
         case .blob(let filename, let data):
             let name = WiFiTransferServer.sanitize(filename)
             guard !name.isEmpty else { throw ImportError.unsupported }
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            let dest = directory.appendingPathComponent(name)
-            try data.write(to: dest, options: .atomic)
-            return dest
+            let part = try partFile(in: directory)
+            defer { try? FileManager.default.removeItem(at: part) }
+            try data.write(to: part, options: .atomic)
+            return try place(part, named: name, in: directory)
         case .remote:
             throw ImportError.unsupported // use download(_:into:)
         }
+    }
+
+    /// A hidden scratch name in `directory`, so the move into place stays on one volume.
+    static func partFile(in directory: URL) throws -> URL {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent(".\(UUID().uuidString).part")
+    }
+
+    /// Moves `file` into `directory` as `name`, never over a different file. Every import ends here. A file
+    /// already there with the same size and CRC-32 is reused and `file` goes; otherwise the name takes the
+    /// Files app's " 2", " 3" suffix, as in "Game 2.gba".
+    static func place(_ file: URL, named name: String, in directory: URL) throws -> URL {
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let stem = (name as NSString).deletingPathExtension, ext = (name as NSString).pathExtension
+        var number = 1
+        while true {
+            let candidate = number == 1 ? name : "\(stem) \(number)" + (ext.isEmpty ? "" : ".\(ext)")
+            let dest = directory.appendingPathComponent(candidate)
+            if !fileManager.fileExists(atPath: dest.path) {
+                try fileManager.moveItem(at: file, to: dest)
+                return dest
+            }
+            if sameContents(file, dest) {
+                try? fileManager.removeItem(at: file)
+                return dest
+            }
+            number += 1
+        }
+    }
+
+    /// Same size and CRC-32. False when either cannot be read.
+    static func sameContents(_ a: URL, _ b: URL) -> Bool {
+        func size(_ url: URL) -> Int? { (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize }
+        guard let sizeA = size(a), sizeA == size(b), let crcA = RomPatcher.crc32(fileAt: a) else { return false }
+        return crcA == RomPatcher.crc32(fileAt: b)
     }
 
     private static func remoteScheme(_ url: URL) -> Bool {
@@ -142,6 +172,19 @@ enum ClipboardImporterChecks {
         assert((try? ClipboardImporter.classify(remote)) == .remote(remote))
         let junk = URL(string: "file:///tmp/notes.txt")!
         assert((try? ClipboardImporter.classify(junk)) == nil)
+
+        // The same name never replaces a different file.
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("gaga-place-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        func put(_ text: String) -> String? {
+            guard let part = try? ClipboardImporter.partFile(in: dir), (try? Data(text.utf8).write(to: part)) != nil else { return nil }
+            return (try? ClipboardImporter.place(part, named: "Game.gba", in: dir))?.lastPathComponent
+        }
+        assert(put("one") == "Game.gba")
+        assert(put("one") == "Game.gba", "identical: reused")
+        assert(put("two") == "Game 2.gba", "different: a new name")
+        assert(put("one") == "Game.gba")
+        assert((try? Data(contentsOf: dir.appendingPathComponent("Game.gba"))) == Data("one".utf8))
     }
 }
 #endif

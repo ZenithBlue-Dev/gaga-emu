@@ -243,9 +243,10 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
             if let (name, bytes) = filePart(part) {
                 let safe = sanitize(name)
                 guard !safe.isEmpty else { throw UploadError.badName }
-                let dest = directory.appendingPathComponent(safe)
-                try bytes.write(to: dest, options: .atomic)
-                saved.append(safe)
+                let part = try ClipboardImporter.partFile(in: directory)
+                defer { try? FileManager.default.removeItem(at: part) }
+                try bytes.write(to: part, options: .atomic)
+                saved.append(try ClipboardImporter.place(part, named: safe, in: directory).lastPathComponent)
             }
             search = next.lowerBound
         }

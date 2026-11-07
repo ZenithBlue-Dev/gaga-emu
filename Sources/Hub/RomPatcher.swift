@@ -64,6 +64,19 @@ public enum RomPatcher {
         return crc ^ 0xFFFF_FFFF
     }
 
+    /// A file's CRC-32 read 1 MiB at a time, so a disc image is never loaded whole. Nil when a read fails.
+    static func crc32(fileAt url: URL) -> UInt32? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        var crc: UInt32 = 0xFFFF_FFFF
+        do {
+            while let data = try handle.read(upToCount: 1 << 20), !data.isEmpty {
+                for byte in data { crc = table[Int((crc ^ UInt32(byte)) & 0xFF)] ^ (crc >> 8) }
+            }
+        } catch { return nil }
+        return crc ^ 0xFFFF_FFFF
+    }
+
     /// Verifies and throws `badChecksum` on mismatch. Comparison is case-insensitive.
     public static func verify(_ data: Data, crc32 expectedCRC: UInt32? = nil, md5 expectedMD5: String? = nil) throws -> Checksums {
         let sums = checksums(data)
