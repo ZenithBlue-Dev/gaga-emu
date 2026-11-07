@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertGreaterThanOrEqual(count, 13, "Registry must register all 13 core interfaces")
+        XCTAssertEqual(count, 12, "Mock plus 11 core stubs")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
@@ -19,9 +19,12 @@ final class GagaEmuTests: XCTestCase {
         // Validate tier 1 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("mgba"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("gambatte"))
-        XCTAssertNotNil(GagaCoreRegistry_FindByID("snes9x"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("bsnes"))
-        XCTAssertNotNil(GagaCoreRegistry_FindByID("genesis_plus_gx"))
+        XCTAssertNotNil(GagaCoreRegistry_FindByID("jgenesis"))
+
+        // Excluded by licence (docs/03 section 6)
+        XCTAssertNil(GagaCoreRegistry_FindByID("snes9x"))
+        XCTAssertNil(GagaCoreRegistry_FindByID("genesis_plus_gx"))
 
         // Validate tier 2 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("pcsx_rearmed"))

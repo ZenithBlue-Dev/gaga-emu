@@ -280,10 +280,9 @@ DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX ReARM
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Mgba_GetInterface,          "mgba",            "mGBA",              "0.10.3", "gba|gb|gbc",          59.7275, 32768)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
-DEFINE_CORE_INTERFACE(Snes9x_GetInterface,        "snes9x",          "Snes9x",            "1.62.3", "smc|sfc|fig",         60.0988, 32040)
 DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             "115",    "smc|sfc",             60.0988, 32040)
 DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",          "0.5.0",  "gb|gbc",              59.7275, 32768)
-DEFINE_CORE_INTERFACE(GenesisPlusGx_GetInterface, "genesis_plus_gx", "Genesis Plus GX",   "1.7.4",  "md|smd|gen|bin|cue",  60.0, 44100)
+DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",          "0.0.0",  "md|smd|gen|bin|cue",  60.0, 48000)
 DEFINE_CORE_INTERFACE(MelonDS_GetInterface,       "melonds",         "melonDS DS",        "0.9.5",  "nds|dsi",             60.0, 44100)
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,        "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
@@ -299,9 +298,8 @@ static const CoreGetterFunc s_core_getters[] = {
     MockCore_GetInterface,
     Mgba_GetInterface,
     Gambatte_GetInterface,
-    Snes9x_GetInterface,
     Bsnes_GetInterface,
-    GenesisPlusGx_GetInterface,
+    Jgenesis_GetInterface,
     PcsxReArmed_GetInterface,
     BeetlePsx_GetInterface,
     Gpsp_GetInterface,
