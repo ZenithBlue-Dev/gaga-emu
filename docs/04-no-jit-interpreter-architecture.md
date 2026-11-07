@@ -167,7 +167,6 @@ These are candidates where upstream speed may be the blocker. **Each would be se
 | Beetle Saturn SH-2 | Tier 3. Two guest CPUs | Accuracy risk. Patch hot paths before any redesign |
 | Mupen64Plus-Next VR4300 and RSP | Tier 2, heavy per guest instruction | Audit the RSP path first (section 7.1) |
 | Azahar ARM11 interpreter | Tier 3 and multi-core | Large scope. Later than the others |
-| EKA2L1 interpreter | Depends on its spike | No work before the spike |
 | PPSSPP IR hot loop | Upstream is already threaded and chained | Targeted patches only |
 
 Check the licence impact of a modified core against `docs/03`. This is engineering guidance, not legal advice.
@@ -440,7 +439,6 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | 3DS | Azahar | ARM11 MPCore | Not audited | `use_cpu_jit` and `use_shader_jit` default to true and must be off and compiled out (`docs/03`). Experimental | 3 | Target (unmeasured) |
 | Arcade | MAME | Per driver (the 28 machines in `Cores/mame/drivers.flt`; the test machine gridlee is a 6809) | Audited at `5f5a0774` (0.289): none of the 28 machines has a recompiling CPU, so no DRC file is compiled at all, `drcbe_c` included. `FORBIDDEN_SOURCES` refuses `drcbex64.cpp`, `drcbearm64.cpp` and `3rdparty/asmjit`, and `osdlib_retro.cpp` (executable memory) is replaced by `Cores/mame/MameOsdLib.cpp` | No DRC, no asmjit, no work-queue threads (`mame_thread_mode` disabled), no sockets, `dlopen` or `mprotect` (`Cores/mame/core.env`) | 2 | Measured on the owner's iPhone (iPhone 17, iPhone18,3, iOS 27.2), 2026-11-07, build `9a4fa23`, one 30 s run after 5 s warm-up on the generated `gridlee.zip` set, Debug host with Release core, thermal nominal throughout: 60.00 fps, 1% low 56.9, core CPU 2.99 ms per frame mean, 3.13 p95, 3.33 p99, wall 3.02 ms mean, peak footprint 208 MB, 0 audio underruns, 22 of 2098 video frames dropped, no generated code. One run of one 6809 machine, not the three of section 7.2. Built, legal gate open. Load varies widely by driver, so one tier cannot describe every set |
 | Arcade | MAME | Per driver | Not audited | Recompiler paths off; audit per driver | 2 | Target (unmeasured). Load varies widely by driver, so one tier cannot describe every set |
-| Symbian | EKA2L1 | ARM | Spike | Interpreter unverified | 3 | Target (unmeasured). Spike first |
 
 **Research, not shipping and not promised.**
 

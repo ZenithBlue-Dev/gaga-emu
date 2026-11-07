@@ -44,7 +44,6 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | 3DS | Azahar (experimental) | Azahar | None | [GPL-3.0](https://raw.githubusercontent.com/azahar-emu/azahar/master/LICENSE.txt) | Vulkan via MoltenVK ([README](https://raw.githubusercontent.com/azahar-emu/azahar/master/README.md): Vulkan 1.1 or GLES 3.2; GLES is not accepted), or software | Unverified end to end. Interpreter present (`arm/dyncom`). [`use_cpu_jit` and `use_shader_jit`](https://raw.githubusercontent.com/azahar-emu/azahar/master/src/common/settings.h) default to true and must be off and compiled out | Active, last push 2026-11-06. [CMake](https://raw.githubusercontent.com/azahar-emu/azahar/master/CMakeLists.txt) has an iOS path | 3 |
 | Arcade | MAME (libretro fork, 28 machines) | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases): MAME in the App Store version | None | [GPL-2.0-or-later](https://www.mamedev.org/legal.html) as a whole, most files BSD-3-Clause, plus GPL-2.0+, LGPL-2.1+, CC0, MIT, zlib, IJG, BSL-1.0 and public-domain parts (section 5) | Software (libretro frame, `mame_alternate_renderer` off) | Static gate and the forbidden-source check pass on both slices: no DRC back end (not even `drcbe_c`), no asmjit, no `osdlib_retro.cpp`, no sockets, `dlopen` or `mprotect` imports. Merged from branch `core/mame` at bridge ABI 5, legal gate open | Active, last push 2026-11-07 ([libretro/mame](https://github.com/libretro/mame)). No tag for 0.289; pinned to master commit `5f5a07748ce5c239c4118463ce8e6473743d4859` | 2 |
 | DOS / Win9x | DOSBox Pure (normal core) | Not seen. Public repo: `dosbox.pure` | DOSBox Staging, DOSBox-X | [GPL-2.0-or-later](https://codeberg.org/schelling/dosbox-pure), plus LGPL-2.1-or-later, BSD-3-Clause and MIT parts (section 5) | Software only; Voodoo runs in software and no OpenGL is linked | Built with `DISABLE_DYNAREC` and without `core_dyn_x86` or `core_dynrec`: the no-JIT gate and the forbidden-source check pass on both slices, and the dSYM lists the interpreter sources only. Merged from branch `core/dosbox_pure`, legal gate open | Active. Moved by its author from GitHub to Codeberg in October 2026 (section 5). Pinned to tag 1.0-preview7, `cdaea10ce8cac231bc341ca05d4c5e4e5fe0fbd5` | 2 |
-| Symbian | EKA2L1 | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases) list JIT modes for it | None | [GPL-3.0](https://github.com/EKA2L1/EKA2L1) | **Port needed.** [iOS path links OpenGLES.framework](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/drivers/CMakeLists.txt), which is not an accepted path. A Vulkan backend file exists; completeness unverified | **Unverified: spike required.** [dyncom interpreter is in the tree](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/cpu/CMakeLists.txt); a full no-JIT run is unproven | Active, last push 2026-11-06. README calls development a part-time hobby | 3 |
 
 ### Renderer rules
 
@@ -113,7 +112,7 @@ Only sourced claims appear here. Expected performance is a target (unmeasured); 
     - The build needs Emscripten (Boehm.js and Relooper to asm.js), TypeScript 1.8 `--out`, Closure, Soot and a SpiderMonkey shell. Only `javac` 21 and `node` are on this Mac, and `javac` 21 cannot target the `-source 1.3` the Makefile uses.
     - It has no M3G (JSR 184) or Mascot Capsule, and it was built for Firefox OS apps, not games.
     - A web view would provide the browser APIs. It would not fix the source or porting problems, and it does not fit the core texture path.
-- **Symbian (EKA2L1):** the spike must prove the dyncom interpreter runs games and that a Vulkan or software renderer exists. If either fails, the row is out under the renderer rules.
+- **Symbian (EKA2L1):** out. The renderer spike failed at `62f0180e` (`docs/07` 6.6): only the OpenGL backend is built, the Vulkan backend is a stub with no swapchain or Metal surface, and no software renderer exists. The row left the master matrix and is listed under Excluded.
 
 ---
 
@@ -457,6 +456,7 @@ No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, 
 | Mesen-S, Mesen2 | [Archived](https://github.com/SourMesen/Mesen2); not active picks |
 | DuckStation | [CC-BY-NC-ND](https://raw.githubusercontent.com/stenzek/duckstation/master/README.md) |
 | GLideN64 | GLES on iOS; not an accepted renderer path |
+| EKA2L1 (Symbian) | [GPL-3.0](https://github.com/EKA2L1/EKA2L1). Renderer spike failed at `62f0180e` (`docs/07` 6.6): GLES on iOS is the only working backend, the Vulkan backend is a stub, and there is no software renderer. The dyncom interpreter was not the blocker |
 | SwanStation | Not selected. [GPL-3.0 hard fork](https://raw.githubusercontent.com/libretro/swanstation/main/README.md) of DuckStation; removed from the plan with no accepted role |
 | Yabause | Not selected. Last push 2024-03 |
 | Angrylion RDP | Not selected. CPU-side RDP; ParaLLEl-RDP is the chosen path |
