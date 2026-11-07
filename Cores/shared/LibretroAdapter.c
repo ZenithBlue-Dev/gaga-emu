@@ -1,6 +1,9 @@
 // See LibretroAdapter.h. Every retro_* call happens on the host's one serial queue, so every libretro
 // callback fires there too, inside a host call, and hands the host only pointers valid for that call.
 #include "LibretroAdapter.h"
+#ifdef GAGA_LIBRETRO_VULKAN
+#include "LibretroVulkan.h" // Vulkan hardware rendering: every call into it sits under this define.
+#endif
 
 #include <libretro.h>
 
@@ -143,15 +146,36 @@ static bool lr_environment(unsigned command, void* data) {
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_CORE_STOPPED, "The core stopped this game.");
         return true;
     default:
+#ifdef GAGA_LIBRETRO_VULKAN
+        return lr_vk_environment(command, data);
+#else
         return false; // No rumble, messages, VFS, core options UI, hardware rendering or other frontend extras.
+#endif
     }
 }
+
+#ifdef GAGA_LIBRETRO_VULKAN
+void gaga_lr_report_fatal(const char* message) {
+    LrInstance* a = lr_current();
+    if (a) lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_VIDEO, message);
+}
+#endif
 
 // MARK: - Video, audio, input
 
 static void lr_video(const void* data, unsigned width, unsigned height, size_t pitch) {
     LrInstance* a = lr_current();
-    if (!a || !data) return;
+    if (!a) return;
+#ifdef GAGA_LIBRETRO_VULKAN
+    if (lr_vk_requested()) { // The frame goes to the layer. The host hears only its size.
+        if (lr_vk_present(width, height, data != RETRO_HW_FRAME_BUFFER_VALID) && a->video_cb) {
+            GagaFrameDescriptor sized = { .width = width, .height = height, .pixel_format = GAGA_PIXEL_FORMAT_XRGB8888 };
+            a->video_cb(&sized, a->video_userdata);
+        }
+        return;
+    }
+#endif
+    if (!data) return;
     GagaFrameDescriptor frame = { .pixel_data = data, .width = width, .height = height, .pitch = pitch };
     switch (a->pixel_format) {
     case RETRO_PIXEL_FORMAT_RGB565:
@@ -353,7 +377,13 @@ void gaga_lr_destroy(GagaInstance* inst) {
     if (a->loaded) {
         lr_flush(a);
         retro_cheat_reset();
+#ifdef GAGA_LIBRETRO_VULKAN
+        lr_vk_destroy_context(); // libretro order: context_destroy, unload, then the device.
         retro_unload_game();
+        lr_vk_release();
+#else
+        retro_unload_game();
+#endif
     }
     retro_deinit();
     lr_release();
@@ -425,6 +455,9 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
     bool loaded = retro_load_game(&game);
     free(bytes); // libretro lets a core keep the pointer only through this call.
     if (!loaded) {
+#ifdef GAGA_LIBRETRO_VULKAN
+        lr_vk_release(); // Forgets a context the core asked for before it failed.
+#endif
         char message[192];
         snprintf(message, sizeof(message), "%s could not load this game.", gaga_libretro_core.name);
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_ROM, message);
@@ -436,6 +469,9 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
         !lr_open_battery(a, &a->batteries[1], RETRO_MEMORY_RTC, "rtc", rom_path) ||
         (gaga_libretro_core.save_battery && !gaga_libretro_core.save_battery())) {
         retro_unload_game();
+#ifdef GAGA_LIBRETRO_VULKAN
+        lr_vk_release();
+#endif
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_SAVE, "The save file for this game could not be opened.");
         return false;
     }
@@ -447,6 +483,17 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
     struct retro_system_av_info av = { 0 };
     retro_get_system_av_info(&av);
     a->sample_rate = (uint32_t)lround(av.timing.sample_rate);
+#ifdef GAGA_LIBRETRO_VULKAN
+    // libretro brings the context up after retro_load_game returns and before the first retro_run.
+    char vk_error[160] = "The 3D renderer could not start.";
+    if (lr_vk_requested() && !lr_vk_create_context(vk_error, sizeof(vk_error))) {
+        lr_vk_destroy_context();
+        retro_unload_game();
+        lr_vk_release();
+        lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_VIDEO, vk_error);
+        return false;
+    }
+#endif
     a->loaded = true;
     return true;
 }
@@ -470,12 +517,6 @@ void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint
     }
 }
 
-bool gaga_lr_attach_metal_layer(GagaInstance* inst, void* layer) {
-    (void)inst;
-    (void)layer;
-    return false;
-}
-
 void gaga_lr_set_video_callback(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor*, void*), void* userdata) {
     LrInstance* a = (LrInstance*)inst;
     if (!a) return;
@@ -497,8 +538,14 @@ void gaga_lr_set_event_callback(GagaInstance* inst, void (*cb)(GagaEventSeverity
     a->event_userdata = userdata;
 }
 
-// Nothing runs between step_frame calls, so there is nothing to stop or restart.
-void gaga_lr_pause(GagaInstance* inst) { (void)inst; }
+// Nothing runs between step_frame calls, so there is nothing to stop or restart. A Vulkan core's last
+// frame may still be on the GPU, which must be idle before the app leaves the foreground.
+void gaga_lr_pause(GagaInstance* inst) {
+    (void)inst;
+#ifdef GAGA_LIBRETRO_VULKAN
+    lr_vk_wait_idle();
+#endif
+}
 void gaga_lr_resume(GagaInstance* inst) { (void)inst; }
 
 void gaga_lr_flush_battery_save(GagaInstance* inst) {
