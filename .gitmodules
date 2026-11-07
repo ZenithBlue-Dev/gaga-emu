@@ -4,3 +4,6 @@
 [submodule "Cores/gambatte/upstream"]
 	path = Cores/gambatte/upstream
 	url = https://github.com/libretro/gambatte-libretro.git
+[submodule "Cores/pcsx_rearmed/upstream"]
+	path = Cores/pcsx_rearmed/upstream
+	url = https://github.com/libretro/pcsx_rearmed.git
