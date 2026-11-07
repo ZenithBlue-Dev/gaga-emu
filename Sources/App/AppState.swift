@@ -969,6 +969,8 @@ final class AppState: ObservableObject {
     @Published var autoFullScreen: Bool { didSet { save() } }
     @Published var respectSilentMode: Bool { didSet { save() } }
     @Published var rumble: Bool { didSet { save() } }
+    /// 0 to 1. Scales a game's rumble on controllers and the device.
+    @Published var rumbleStrength: Double { didSet { save() } }
     @Published var skinSoundEffects: Bool { didSet { save() } }
     @Published var language: String { didSet { save() } }
     @Published var shaderID: String { didSet { save() } }
@@ -1007,6 +1009,7 @@ final class AppState: ObservableObject {
         var autoFullScreen: Bool
         var respectSilentMode: Bool
         var rumble: Bool
+        var rumbleStrength: Double?
         var skinSoundEffects: Bool
         var language: String
         var shaderID: String
@@ -1045,6 +1048,7 @@ final class AppState: ObservableObject {
         autoFullScreen = snapshot?.autoFullScreen ?? true
         respectSilentMode = snapshot?.respectSilentMode ?? false
         rumble = snapshot?.rumble ?? false
+        rumbleStrength = snapshot?.rumbleStrength ?? 1
         skinSoundEffects = snapshot?.skinSoundEffects ?? true
         language = snapshot?.language ?? "English"
         shaderID = snapshot?.shaderID ?? "original"
@@ -1348,6 +1352,7 @@ final class AppState: ObservableObject {
         let session = try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,
                                       skins: skins, bindings: triggerPro.bindings, shaderID: shader,
                                       respectSilentMode: respectSilentMode,
+                                      rumble: RumbleManager(scale: Float(rumbleStrength), targets: HapticRumbleTargets(controllers: controllers, device: rumble).targets),
                                       entitlements: { [store] in store.entitlements })
         session.autoSaveEnabled = { [weak self] in self?.autoSaveEnabled ?? false }
         session.renderer.apply(shaderParameters[shader] ?? ShaderParameterValues())
@@ -1583,7 +1588,7 @@ final class AppState: ObservableObject {
                                 shaderParameters: shaderParameters, platformSkins: platformSkins,
                                 airPlayFullscreen: airPlayFullscreen, iCloudSync: iCloudSync,
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
-                                rumble: rumble, skinSoundEffects: skinSoundEffects, language: language,
+                                rumble: rumble, rumbleStrength: rumbleStrength, skinSoundEffects: skinSoundEffects, language: language,
                                 shaderID: shaderID, defaultCores: defaultCores)
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? data.write(to: storeURL, options: .atomic)

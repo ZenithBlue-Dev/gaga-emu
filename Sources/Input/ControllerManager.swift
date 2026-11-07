@@ -133,6 +133,11 @@ public final class ControllerManager: ObservableObject {
         devices.first { $0.slot == slot }
     }
 
+    /// The physical controller in `slot`, for its haptics.
+    func controller(inSlot slot: Int) -> GCController? {
+        device(inSlot: slot).flatMap { controllers[$0.id] }
+    }
+
     /// Binds `deviceID` to `slot`, evicting whoever held it. Pass nil to unbind.
     public func assign(_ deviceID: String, to slot: Int?) {
         guard let index = devices.firstIndex(where: { $0.id == deviceID }) else { return }
