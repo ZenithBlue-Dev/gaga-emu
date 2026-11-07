@@ -142,3 +142,6 @@
 [submodule "Cores/azahar/deps/robin-map"]
 	path = Cores/azahar/deps/robin-map
 	url = https://github.com/Tessil/robin-map.git
+[submodule "Cores/beetle_psx/upstream"]
+	path = Cores/beetle_psx/upstream
+	url = https://github.com/libretro/beetle-psx-libretro.git
