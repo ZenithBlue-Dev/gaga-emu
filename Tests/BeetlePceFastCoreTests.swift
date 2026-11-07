@@ -32,7 +32,10 @@ final class BeetlePceFastCoreTests: XCTestCase {
         XCTAssertTrue(found.self_test(&error, error.count))
         XCTAssertEqual(CoreCatalog.defaultCore(for: "pce"), "beetle_pce_fast")
         XCTAssertEqual(CoreCatalog.platformName("pce"), "PC Engine")
-        for ext in ["pce", "ccd"] { XCTAssertEqual(CoreCatalog.platformID(forExtension: ext), "pce") }
+        XCTAssertEqual(CoreCatalog.platformID(forExtension: "pce"), "pce")
+        XCTAssertNil(CoreCatalog.platformID(forExtension: "ccd"), "a shared disc extension, placed by content")
+        let ccd = try probe.write(Data("[CloneCD]\n".utf8), name: "lone.ccd")
+        XCTAssertEqual(CoreCatalog.platformID(forFile: URL(fileURLWithPath: ccd)), "pce", "a .ccd with no .img to read")
     }
 
     func testAPCEngineCDIsPlacedByItsAudioFirstTrack() throws {

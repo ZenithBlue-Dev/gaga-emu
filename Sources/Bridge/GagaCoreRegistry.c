@@ -487,23 +487,26 @@ DEFINE_CORE_INTERFACE(Prboom_GetInterface,        "prboom",          "PrBoom",  
 
 typedef const GagaCoreInterface* (*CoreGetterFunc)(void);
 
+// FindByExtension returns the first core here that claims the extension, so order is policy: each extension goes to
+// the default core of the platform CoreCatalog.platformID(forExtension:) names, or for a shared disc or archive
+// extension, of the first platform CoreCatalog.unplacedPlatforms(forExtension:) offers whose default core claims it.
+// Import decides the real platform by content. CoreRoutingTests checks every claimed extension against this rule.
 static const CoreGetterFunc s_core_getters[] = {
-    MockCore_GetInterface,
     Mgba_GetInterface,
     Gambatte_GetInterface,
     Nestopia_GetInterface,
     Bsnes_GetInterface,
+    PcsxReArmed_GetInterface, // First disc core: PS1 leads the disc platforms, so .cue, .bin, .chd, .iso, .m3u and .toc.
     Jgenesis_GetInterface,
-    PcsxReArmed_GetInterface,
+    BeetleSaturn_GetInterface, // Before Beetle PSX and PCE Fast: .ccd, which PCSX-ReARMed does not claim, goes to Saturn.
     BeetlePsx_GetInterface,
-    BeetleSaturn_GetInterface,
     Gpsp_GetInterface,
     MelonDS_GetInterface,
-    Mame_GetInterface,
+    Mame_GetInterface, // Before DOSBox Pure and FBNeo: .zip and .7z offer Arcade first.
     Mupen64PlusNext_GetInterface,
+    Ppsspp_GetInterface, // Before Azahar: an .elf is a PSP program unless its header says ARM.
     Azahar_GetInterface,
     Flycast_GetInterface,
-    Ppsspp_GetInterface,
     VkTest_GetInterface,
     BeetlePceFast_GetInterface, // After PCSX-ReARMed: FindByExtension gives .cue, .chd and .m3u to the PS1 core.
     BeetleSupergrafx_GetInterface, // After PCE Fast, which keeps .pce; this one is first for .sgx.
@@ -526,7 +529,8 @@ static const CoreGetterFunc s_core_getters[] = {
     Picodrive_GetInterface,
     Fbneo_GetInterface,
     SwanStation_GetInterface,
-    DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
+    DosboxPure_GetInterface, // After PCSX-ReARMed: FindByExtension gives .exe, .iso and .cue to the PS1 core.
+    MockCore_GetInterface, // Last: its "bin" must not shadow the PS1 core.
 };
 
 static const size_t s_core_count = sizeof(s_core_getters) / sizeof(s_core_getters[0]);
@@ -565,7 +569,8 @@ const GagaCoreInterface* GagaCoreRegistry_FindByExtension(const char* extension)
 
     for (size_t i = 0; i < s_core_count; ++i) {
         const GagaCoreInterface* core = s_core_getters[i]();
-        if (!core || !core->supported_extensions) continue;
+        // A core this build left out is never the answer, so the next claimant (the platform's default) is.
+        if (!core || !core->supported_extensions || strcmp(core->core_version, GAGA_CORE_EXCLUDED) == 0) continue;
 
         // Supported extensions is pipe-delimited list e.g. "gba|bin|zip"
         const char* ext_list = core->supported_extensions;

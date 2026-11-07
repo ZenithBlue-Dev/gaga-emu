@@ -275,8 +275,8 @@ enum CoreCatalog {
         case "sms": return "mastersystem"
         case "gg": return "gamegear"
         case "sg", "mv": return "sg1000"
-        // A .ccd is a CloneCD disc, which only the PC Engine core opens. A PC Engine .cue is placed by its contents.
-        case "pce", "ccd": return "pce"
+        // A CloneCD .ccd serves PS1, Saturn and PC Engine, so it is a disc placed by content, like a .cue.
+        case "pce": return "pce"
         case "sgx": return "sgx"
         case "vb", "vboy": return "vb"
         case "ngp", "ngc", "ngpc", "npc": return "ngp"
