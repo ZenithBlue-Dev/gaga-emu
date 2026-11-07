@@ -39,6 +39,16 @@
                 <string>C617.1</string>
             </array>
         </dict>
+        <!-- 35F9.1: MoltenVK, linked into each layer-path core (Mupen64PlusNextCore, VkTestCore), imports
+             mach_absolute_time to time GPU work and frames inside the app. Nothing leaves the device. -->
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>35F9.1</string>
+            </array>
+        </dict>
     </array>
 </dict>
 </plist>

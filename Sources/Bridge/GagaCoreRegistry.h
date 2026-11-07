@@ -23,6 +23,7 @@ const GagaCoreInterface* Flycast_GetInterface(void);
 const GagaCoreInterface* Ppsspp_GetInterface(void);
 const GagaCoreInterface* VkTest_GetInterface(void); // Layer-path test core, Debug builds only.
 const GagaCoreInterface* DosboxPure_GetInterface(void);
+const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);
