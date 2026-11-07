@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertEqual(count, 12, "Mock plus 11 core stubs")
+        XCTAssertEqual(count, 12, "Mock, the real cores and the stubs")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
@@ -248,7 +248,7 @@ final class GagaEmuTests: XCTestCase {
         // Every registry stub resolves to a catalog row, so a saved ID always names a real core.
         for index in 0..<GagaCoreRegistry_GetCount() {
             let id = String(cString: GagaCoreRegistry_GetAtIndex(index)!.pointee.core_id)
-            if id != "mock" { XCTAssertTrue(ids.contains(id), "\(id) missing from CoreCatalog") }
+            if id != "mock" { XCTAssertEqual(ids.contains(id), !GagaCoreRegistry_IsExcluded(id), "\(id) in CoreCatalog") }
         }
     }
 
@@ -320,7 +320,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testEveryLegacyCoreIDMapsIntoTheCatalog() {
         let ids = Set(CoreCatalog.platforms.flatMap(\.cores).map(\.id))
-        for (legacy, current) in StateMigration.legacyCoreIDs {
+        for (legacy, current) in StateMigration.legacyCoreIDs where !GagaCoreRegistry_IsExcluded(current) {
             XCTAssertTrue(ids.contains(current), "\(legacy) maps to unknown \(current)")
         }
     }

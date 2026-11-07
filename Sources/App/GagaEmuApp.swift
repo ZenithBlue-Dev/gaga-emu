@@ -30,7 +30,7 @@ struct GagaEmuApp: App {
 enum AppStateChecks {
     @MainActor static func run() {
         CodeGenCheck.captureBaseline()
-        assert(CoreCatalog.defaultCore(for: "gba") == "mgba")
+        assert(CoreCatalog.defaultCore(for: "gba") == "mgba" || GagaCoreRegistry_IsExcluded("mgba"))
         assert(CoreCatalog.coreName("bsnes") == "bsnes")
         assert(CoreCatalog.platformID(forExtension: "gdi") == "dreamcast")
         let game = GameItem(id: UUID(), title: "Demo", platformID: "ps1", romPath: "/tmp/a.chd",

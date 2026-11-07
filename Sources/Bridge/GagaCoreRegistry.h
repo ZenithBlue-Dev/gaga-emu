@@ -29,6 +29,8 @@ size_t GagaCoreRegistry_GetCount(void);
 const GagaCoreInterface* GagaCoreRegistry_GetAtIndex(size_t index);
 const GagaCoreInterface* GagaCoreRegistry_FindByID(const char* core_id);
 const GagaCoreInterface* GagaCoreRegistry_FindByExtension(const char* extension);
+// True for a core with a framework in Cores/ that GAGA_CORE_SET left out of this build.
+bool GagaCoreRegistry_IsExcluded(const char* core_id);
 
 #ifdef __cplusplus
 }

@@ -8,7 +8,7 @@ Manic EMU is a feature reference only, tracked in `docs/02`. Nothing in this doc
 
 ## Status
 
-The app runs a full game session on mGBA, the first real core, and on the mock core. The 10 other non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build.
+The app runs a full game session on mGBA, on Gambatte (the first core through the shared libretro adapter, merged from the `core/gambatte` branch, with its GPL gate still open) and on the mock core. The 9 other non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build.
 
 Status terms used in this document:
 
@@ -35,7 +35,8 @@ Status comes from reading the code and running the iOS Simulator, not from a dev
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │
  ┌───────────────────────────────┴─────────────────────────────────────┐
- │ Mock core, MgbaCore.xcframework (built). 10 weak stubs (stub).      │
+ │ Mock core, MgbaCore and GambatteCore xcframeworks (built).          │
+ │ 9 weak stubs (stub).                                                │
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ video and audio callbacks
  ┌───────────────────────────────┴─────────────────────────────────────┐
@@ -212,11 +213,13 @@ size_t GagaCoreRegistry_GetCount(void);
 const GagaCoreInterface* GagaCoreRegistry_GetAtIndex(size_t index);
 const GagaCoreInterface* GagaCoreRegistry_FindByID(const char* core_id);
 const GagaCoreInterface* GagaCoreRegistry_FindByExtension(const char* extension);
+// True for a core with a framework in Cores/ that GAGA_CORE_SET left out of this build.
+bool GagaCoreRegistry_IsExcluded(const char* core_id);
 ```
 
 The table is compile-time; `docs/03` section 8 shows it and lists where the code disagrees with the catalog. The short lowercase `core_id` is the planned single ID scheme.
 
-Each remaining stub is a weak definition in the app binary. A core's stub must be deleted when its framework is linked, or the app's own definition will win over the framework's symbol. The mGBA stub is deleted.
+Each remaining stub is a weak definition in the app binary. A linked framework's symbol must not meet its stub, or the app's own definition wins. So a core with a framework keeps its stub inside `#ifndef GAGA_HAS_<ID>`, with core version `"excluded"`: a build whose core set leaves the core out gets the stub, and `CoreCatalog.platforms` hides that core, and any platform left with no core. mGBA and Gambatte stubs are guarded this way.
 
 ### 2.3 Swift layer (built)
 
@@ -282,7 +285,29 @@ Per `docs/03` section 5: each core is a dynamic, embedded xcframework that expor
 
 Frameworks are signed and shipped inside the app bundle. Code is never loaded from user paths or downloaded. Dynamic linking does not change the GPL analysis in `docs/03` section 5.
 
-Status: built for mGBA. `scripts/build-core.sh` writes `build/cores/MgbaCore.xcframework`, arm64 only, for simulator and device. The app's `project.yml` embeds it. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `xcodegen generate` and a build (README).
+Status: built for mGBA and Gambatte. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
+
+**Core set.** `GAGA_CORE_SET` picks which cores a build links, for example an MPL-only TestFlight build with no GPL code. `GAGA_CORE_SET="mgba" scripts/generate-project.sh` links only mGBA. Unset, it links every `Cores/*/core.env`. The script refuses an unknown ID or a missing xcframework. It writes `build/core-set.yml`, which embeds each framework, sets the `GAGA_CORE_SET` build setting and defines `GAGA_HAS_<ID>=1`. The post-build no-JIT gate fails if a framework in the set is missing from the app, or a framework outside it is embedded, which happens when a build folder from a wider set is reused. `scripts/appstore_release.sh` defaults to `GAGA_CORE_SET=mgba` until the GPL gate in `docs/07` milestone 4.0 closes. A core left out keeps its guarded stub (section 2.2) and is hidden from the catalog, and its tests skip.
+
+**Libretro cores.** `Cores/shared/LibretroAdapter.c` hosts one statically linked libretro core behind `GagaCoreInterface`. Each libretro core's framework compiles the adapter with its own copy of the core, so `retro_*` symbols never meet. Its bridge file is a table and a getter; `Cores/gambatte/GambatteCore.c` is the pattern. What the adapter does:
+
+- **Environment.** It answers the system and save directories (the `system_dir` and `save_dir` given to `create`), the pixel format (XRGB8888 or RGB565 only), `GET_VARIABLE` from the core's table, `INPUT_BITMASKS`, `CAN_DUPE`, `LOG` (dropped), `SET_SYSTEM_AV_INFO` and `SHUTDOWN` (a FATAL event). Every other call, including hardware rendering, frontend extras, cores that load content themselves and options UI, returns false. A core that needs a hardware context does not fit this adapter.
+- **Instance.** libretro is a set of globals with no userdata, so a framework has one live instance. `create` returns NULL while another is alive. Callbacks with no live instance do nothing. Every call runs on the host's serial queue, and the frame and audio pointers handed on are valid only during the callback.
+- **Video and audio.** Frames are copied; XRGB8888 alpha is forced opaque. A NULL frame (a duplicate) is skipped. Audio arrives through the batch callback.
+- **Input.** Host bits map to the RetroPad, with bitmask queries and analog sticks.
+- **Battery.** `RETRO_MEMORY_SAVE_RAM` goes to `<rom stem>.sav` and `RETRO_MEMORY_RTC` to `<rom stem>.rtc` in `save_dir`, by temp file, `fsync` and `rename`. The adapter writes only changed bytes, every 300 frames, on `flush_battery_save` and on `destroy`. A crash loses at most about 5 seconds of saves. A write failure raises one FATAL; later flushes still retry. An existing file of the wrong size refuses the load, so it is never overwritten.
+- **States.** The adapter puts a 16-byte header in front of the core's bytes: `GLR1`, payload size and a hash of the ROM. `load_state` refuses a wrong size or another ROM, then takes its own snapshot and restores it if `retro_unserialize` fails, so the game keeps running.
+- **Cheats.** Optional. The adapter keeps the list by host ID and, on every change, resets and re-applies it, one code per index. The core's `is_cheat` refuses codes it cannot parse.
+
+For a libretro core, steps 3 to 7 below become:
+
+- `core.env` also adds `-I../shared` to both flag sets, and `sources.txt` lists `../shared/LibretroAdapter.c`.
+- The bridge file defines `const GagaLibretroCore gaga_libretro_core` (name, game kind, the variable table with this app's defaults, and optional `is_rom` and `is_cheat`), then the getter: `GAGA_LIBRETRO_ENTRY_POINTS` (which also sets `abi_version`) plus `GAGA_LIBRETRO_CHEATS` if cheats work, then ID, name, version, extensions, `target_fps`, `audio_sample_rate` and `state_version`.
+- Put in the variable table every core option whose upstream default is wrong for this app, such as a boot ROM option. The adapter answers false for a key not in the table, which the core reads as its own default.
+- Leave out any upstream file whose licence is not the core's licence, and stub what it provided. Gambatte's `cc_resampler.c` is GPLv3 and is replaced by two empty functions (`docs/03` section 5).
+- Read the core's `retro_get_memory_*` and options before writing tests: battery saves need `RETRO_MEMORY_SAVE_RAM`, and a boot ROM option must stay off unless the core has its own free boot ROM.
+
+**Adding the next core.** Follow these in order. `<id>` is the `core_id` in `CoreCatalog`, `<Name>` is the prefix of its stub in `GagaCoreRegistry.c`.
 
 **Adding the next core.** Follow these in order. `<id>` is the `core_id` in `CoreCatalog`, `<Name>` is the prefix of its stub in `GagaCoreRegistry.c`.
 
@@ -315,17 +340,13 @@ Status: built for mGBA. `scripts/build-core.sh` writes `build/cores/MgbaCore.xcf
    - `state_size` returns the exact byte count `save_state` writes now. The host asks before each save, so it may change between saves.
    - `step_frame` must be safe to call several times in one timer tick, because fast-forward does. The host drops the audio and shows the last frame, so a core does not need a fast-forward mode.
    - Cheats are optional: a NULL `cheat_add` hides the menu row. If you implement it, also implement `cheat_remove` and `cheat_set_enabled`. `id` is the host's and stays stable across sessions. A code the core cannot parse returns false with an error and adds nothing. The host re-adds stored cheats after `load_rom` on every launch.
-8. **Delete the core's `DEFINE_CORE_INTERFACE(<Name>_GetInterface, ...)` line** in `Sources/Bridge/GagaCoreRegistry.c`. Keep its entry in `s_core_getters`. Check that `CoreCatalog` has the `core_id` and the file extensions the core really accepts.
-9. **Add to `project.yml`,** under the `GagaEmu` target's `dependencies`, then run `xcodegen generate`:
-   ```yaml
-      - framework: build/cores/<Framework>.xcframework
-        embed: true
-   ```
+8. **Guard the core's stub** in `Sources/Bridge/GagaCoreRegistry.c`: wrap its `DEFINE_CORE_INTERFACE(<Name>_GetInterface, ...)` line in `#ifndef GAGA_HAS_<ID>` and set its version to `GAGA_CORE_EXCLUDED`, as mGBA's is. `<ID>` is the core ID in capitals. Keep its entry in `s_core_getters`. Check that `CoreCatalog` has the `core_id` and the file extensions the core really accepts.
+9. **Run `scripts/generate-project.sh`.** It finds the new `core.env` and embeds the framework. `project.yml` does not change.
 10. **Build.** `scripts/build-core.sh <id>` must print `exports (iphonesimulator): _<Name>_GetInterface`, the same for `iphoneos`, and `no-JIT gate: pass <Framework>` twice. The app's post-build gate must print `pass` for the framework. It fails the build if the framework is not embedded.
 11. **Check the privacy manifest.** Run `nm -u` on the framework. Any required-reason API, such as `fstat`, needs an entry in `Sources/App/PrivacyInfo.xcprivacy`.
-12. **Test.** Add `Tests/<Name>CoreTests.swift`, reaching the core through `GagaCoreRegistry_FindByID("<id>")`, because the test bundle cannot link the framework's symbol. Use a homebrew or generated ROM, never a commercial one, and no vendor BIOS. Assert that it loads, frames match, input changes the frame, audio is non-silent, a FATAL message arrives, `CodeGenCheck.violations()` is empty after a run, a state round trip restores the game, a refused state leaves the game running, and any cheat format has an effect. `Tests/MgbaCoreTests.swift` and `Sources/Debug/GBATestROM.swift` are the pattern. Update any test that uses this core's ID as its example of a stub.
+12. **Test.** Add `Tests/<Name>CoreTests.swift`, reaching the core through `GagaCoreRegistry_FindByID("<id>")`, because the test bundle cannot link the framework's symbol. Use a homebrew or generated ROM, never a commercial one, and no vendor BIOS. Assert that it loads, frames match, input changes the frame, audio is non-silent, a FATAL message arrives, `CodeGenCheck.violations()` is empty after a run, a state round trip restores the game, a refused state leaves the game running, and any cheat format has an effect. `Tests/MgbaCoreTests.swift` and `Sources/Debug/GBATestROM.swift` are the pattern; `Tests/GambatteCoreTests.swift` and `Sources/Debug/GBTestROM.swift` for a libretro core. Skip the tests when `GagaCoreRegistry_IsExcluded("<id>")`. Update any test that uses this core's ID as its example of a stub.
 13. **Verify in the app on the Simulator.** Import through a real importer, launch from the Library, press a touch control, pause, resume, quit, relaunch ten times, and check the `.sav`. Run the tests with `-enableThreadSanitizer YES`. Build `generic/platform=iOS` with `CODE_SIGNING_ALLOWED=NO`, both Debug and Release.
-14. **Record.** Update the core's rows in `docs/03` (pin, licence, no-JIT) and `docs/04` section 7.1, and its milestone in `docs/07`. Its status stays "built, device benchmark pending" until a device run per `docs/04` section 7.2 exists.
+14. **Record.** Update the core's rows in `docs/03` (pin, licence, no-JIT) and `docs/04` section 7.1, and its milestone in `docs/07`. Its status stays "built, device benchmark pending" until a device run per `docs/04` section 7.2 exists. A GPL core whose gate is still open is "built, legal gate open, device benchmark pending", and stays out of `scripts/appstore_release.sh`'s core set.
 
 ---
 
@@ -559,6 +580,10 @@ The paywall stays off in submitted builds until a real core runs end to end. Whi
 
 ```yaml
 name: GagaEmu
+# The core frameworks and GAGA_HAS_<ID> defines. Run scripts/generate-project.sh, not xcodegen directly.
+include:
+  - path: build/core-set.yml
+    relativePaths: false
 options:
   bundleIdPrefix: com.zenithblue
   deploymentTarget:
@@ -613,10 +638,6 @@ targets:
       GCC_C_LANGUAGE_STANDARD: c99
       # The no-JIT gate reads the built app, outside what a sandboxed script may read.
       ENABLE_USER_SCRIPT_SANDBOXING: NO
-    dependencies:
-      # Built by scripts/build-core.sh, which must run first. See README.
-      - framework: build/cores/MgbaCore.xcframework
-        embed: true
     frameworks:
       - Metal
       - MetalKit
@@ -650,6 +671,6 @@ targets:
         - $(SRCROOT)/Sources/Bridge
 ```
 
-Each integrated core adds one embedded dependency to the app target, per section 2.5 above.
+`project.yml` names no core. `scripts/generate-project.sh` writes `build/core-set.yml` with one embedded dependency per core in the core set, the `GAGA_CORE_SET` build setting and a `GAGA_HAS_<ID>=1` define for each, then runs `xcodegen generate`. Plain `xcodegen generate` fails, because the include file is missing. Section 2.5 has the core set.
 
 `GagaEmu.xcodeproj/` is generated and ignored by git, as in S3 and S4 (`S3/ios/.gitignore:2`, `S4/ios/BachataS4/project.yml:4-5`). After a fresh clone, run the build command in the README; `scripts/appstore_release.sh` runs the same steps first.

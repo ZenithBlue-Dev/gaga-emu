@@ -9,9 +9,14 @@ TEAM=9227VF8RW4
 ARCHIVE=build/GagaEmu.xcarchive
 EXPORT=build/export
 
+# GPL cores do not ship while the legal gate is open (docs/07 milestone 4.0). This is the MPL-only set.
+GAGA_CORE_SET=${GAGA_CORE_SET:-mgba}
+export GAGA_CORE_SET
+
 git submodule update --init
-scripts/build-core.sh
-xcodegen generate
+# shellcheck disable=SC2086 # a word list.
+scripts/build-core.sh $GAGA_CORE_SET
+scripts/generate-project.sh
 xcodebuild -project GagaEmu.xcodeproj -scheme GagaEmu \
   -destination 'generic/platform=iOS' \
   -configuration Release \

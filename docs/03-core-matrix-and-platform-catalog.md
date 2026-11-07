@@ -30,7 +30,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 
 | Platform | GagaEmu default | Manic default (screenshot) | Alternates | Licence | Renderer path | No-JIT status | Upstream state | Load tier |
 |---|---|---|---|---|---|---|---|---|
-| Game Boy / GBC | Gambatte | Gambatte | SameBoy, Gearboy | [GPL-2.0](https://github.com/libretro/gambatte-libretro) (source header says version 2) | Software | Unverified | Active, last push 2026-10-30 | 1 |
+| Game Boy / GBC | Gambatte | Gambatte | SameBoy, Gearboy | [GPL-2.0](https://github.com/libretro/gambatte-libretro) (source headers say version 2, with no "or later"), plus MIT parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending. Built on branch `core/gambatte`, legal gate open | Active, last push 2026-10-30. No release tags; pinned to master commit `77f2567d718b8973d02caa2daa8dce4953faf811` | 1 |
 | GBA | mGBA | mGBA | VBA-M, gpSP (interpreter) | [MPL-2.0](https://github.com/mgba-emu/mgba), plus a BSD-3-Clause part (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending | Active, last push 2026-11-06. Pinned to tag 0.10.5, `26b7884bc25a5933960f3cdcd98bac1ae14d42e2` | 1 |
 | NES | Nestopia | Not seen | FCEUMM, QuickNES | [GPL-2.0](https://raw.githubusercontent.com/libretro/nestopia/master/COPYING) | Software | Unverified | Active, last push 2026-09-13 ([0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)) | 1 |
 | SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt) | Software | Unverified | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro)) | 2 |
@@ -110,7 +110,8 @@ GPL cores in an App Store binary carry legal risk. The FSF had [GNU Go removed](
 
 - Legal review is a required gate before the first GPL core ships.
 - The likely posture is publishing the app source under a compatible licence. [Manic](https://github.com/Manic-EMU/ManicEMU) and [Delta](https://github.com/rileytestut/Delta) publish app source under AGPL-3.0.
-- The mix of GPL-2.0 (Gambatte's header says version 2), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix.
+- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core.
+- Until this gate closes, release builds use `GAGA_CORE_SET=mgba` (`docs/06` section 2.5), so no GPL code ships.
 - This is an open owner decision. Counsel is needed.
 
 ### Linking
@@ -139,6 +140,20 @@ The build compiles two licences, and each needs a place in the 7.5 notices:
 `src/third-party/blip_buf` (LGPL-2.1) is no longer compiled. `Cores/mgba/blip.c`, GagaEmu's own 116-line band-limited resampler, implements the same functions, written from the contracts in the header and not from the library's source. The header, `include/mgba/core/blip_buf.h`, is still read at compile time, because mGBA's own files include it. It contributes declarations only, and `Cores/mgba/sources.txt` compiles no file from `third-party/blip_buf`. This engineering step removes the relinking question, but it is not legal advice: counsel should confirm the header's status when they look at the gate above.
 
 The app has no licence screen yet. In-app notices are tracked at milestone 7.5, which must close before any App Store release containing this core. No Nintendo BIOS or game is bundled.
+
+### Gambatte licence obligations
+
+Source: [github.com/libretro/gambatte-libretro](https://github.com/libretro/gambatte-libretro), the repository libretro-super builds from, at master commit `77f2567d718b8973d02caa2daa8dce4953faf811` (it has no release tags), as the unmodified submodule `Cores/gambatte/upstream`. `Cores/gambatte/GambatteCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files, linked with Gambatte into `GambatteCore.framework`. This is on branch `core/gambatte` only and must not ship until the legal gate above closes.
+
+| Part | Licence | What it asks of a binary release |
+|---|---|---|
+| `libgambatte/src` (26 compiled files have a GPL header) | GPL-2.0, no "or later" | The complete corresponding source of the whole work, under GPL-2.0, with the written offer or the source alongside. This is the gate above. |
+| `libgambatte/libretro-common` (14 files), `libgambatte/libretro/blipper.c` | MIT | Reproduce each copyright notice and the permission notice. |
+| `libretro.cpp`, `gambatte_log.c`, `bootloader.cpp`, `cartridge_libretro.cpp`, `next_m0_time.cpp` | No header; the repository's `COPYING` is GPL-2.0 | Treat as GPL-2.0. |
+
+`libgambatte/libretro/cc_resampler.c` says GPLv3 and is not compiled: `GambatteCore.c` defines `CC_init` and `CC_renderaudio` as empty functions. Upstream calls them only when `gambatte_audio_resampler` is `cc`, which GagaEmu never sets, or when allocating its default resampler fails, and then the game runs silent. Its header `cc_resampler.h` is still read at compile time, as `libretro.cpp` includes it. It contributes declarations only. Counsel should confirm this, as with mGBA's `blip_buf.h`.
+
+`HAVE_NETWORK` is off, so the link-cable socket code is not compiled. The core's own Game Boy and Game Boy Color boot ROMs are not bundled: the `gambatte_gb_bootloader` option is off, so the core starts the game with its built-in post-boot register state and never reads a Nintendo file. The test ROM carries no Nintendo logo bytes; the core does not check them.
 
 ### No-JIT gate
 
@@ -259,7 +274,7 @@ static const CoreGetterFunc s_core_getters[] = {
 };
 ```
 
-Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework`, and its stub is deleted. Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba` and does not run `.gb` or `.gbc`. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework` and Gambatte from `GambatteCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, and Gambatte takes `.gb` and `.gbc`. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
 
 ### Storage (current code)
 

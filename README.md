@@ -40,17 +40,17 @@ Needs Xcode and [XcodeGen](https://github.com/yonaskolb/XcodeGen). From a clean 
 
 ```bash
 git submodule update --init
-scripts/build-core.sh          # writes build/cores/MgbaCore.xcframework, runs the no-JIT gate
-xcodegen generate
+scripts/build-core.sh          # writes build/cores/<Framework>.xcframework per core, runs the no-JIT gate
+scripts/generate-project.sh    # runs xcodegen with the core set; GAGA_CORE_SET="mgba" links only mGBA
 xcodebuild build -project GagaEmu.xcodeproj -scheme GagaEmu \
   -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
 ```
 
 Run `xcodebuild test` with the same arguments for the tests. For a device build without signing, use `-destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO`. A build fails if a core fails the no-JIT gate (`docs/04` section 8). Build outputs and the generated project are not committed. `docs/06` section 2.5 has the recipe for adding a core.
 
-**Source for bundled code.** mGBA is MPL-2.0: [github.com/mgba-emu/mgba](https://github.com/mgba-emu/mgba), tag 0.10.5, commit `26b7884bc25a5933960f3cdcd98bac1ae14d42e2`, unmodified, at `Cores/mgba/upstream`. `docs/03` section 5 lists the licences it brings.
+**Source for bundled code.** mGBA is MPL-2.0: [github.com/mgba-emu/mgba](https://github.com/mgba-emu/mgba), tag 0.10.5, commit `26b7884bc25a5933960f3cdcd98bac1ae14d42e2`, unmodified, at `Cores/mgba/upstream`. `docs/03` section 5 lists the licences it brings. Gambatte is GPL-2.0: [github.com/libretro/gambatte-libretro](https://github.com/libretro/gambatte-libretro), commit `77f2567d718b8973d02caa2daa8dce4953faf811`, unmodified, at `Cores/gambatte/upstream`. It is not in release builds until the legal gate in `docs/07` milestone 4.0 closes.
 
-**Test ROM.** No commercial game or Nintendo material is involved. `scripts/make-test-rom.sh <out.gba>` writes a small homebrew ROM from `Sources/Debug/GBATestROM.swift`; the tests generate their own.
+**Test ROM.** No commercial game or Nintendo material is involved. `scripts/make-test-rom.sh <out.gba|out.gb|out.gbc>` writes a small homebrew ROM from `Sources/Debug/GBATestROM.swift` or `Sources/Debug/GBTestROM.swift`; the tests generate their own.
 
 **Benchmark.** In a Debug build, use Settings > About > Run Benchmark, or launch with `-GagaBenchmark`. The record lands in Documents/Benchmarks, which the Files app shows. `docs/04` section 7.2 has the procedure.
 

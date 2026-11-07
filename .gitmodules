@@ -1,3 +1,6 @@
 [submodule "Cores/mgba/upstream"]
 	path = Cores/mgba/upstream
 	url = https://github.com/mgba-emu/mgba.git
+[submodule "Cores/gambatte/upstream"]
+	path = Cores/gambatte/upstream
+	url = https://github.com/libretro/gambatte-libretro.git

@@ -53,7 +53,14 @@ struct CoreInfo: Identifiable, Equatable {
 /// Static registry. Defaults match docs/03 section 2; alternates are a subset of section 3.
 /// IDs are the C registry's short lowercase `core_id`, the only ID scheme. No dlopen.
 enum CoreCatalog {
-    static let platforms: [PlatformInfo] = [
+    /// Without the cores this build left out (`GAGA_CORE_SET`), or any platform with none left.
+    static let platforms: [PlatformInfo] = allPlatforms.compactMap { platform in
+        let cores = platform.cores.filter { !GagaCoreRegistry_IsExcluded($0.id) }
+        return cores.isEmpty ? nil : PlatformInfo(id: platform.id, name: platform.name,
+                                                  manufacturer: platform.manufacturer, cores: cores)
+    }
+
+    private static let allPlatforms: [PlatformInfo] = [
         .init(id: "ps1", name: "PlayStation", manufacturer: "Sony", cores: [
             .init(id: "beetle_psx", name: "Beetle PSX HW", note: "PGXP, Vulkan", recommended: false),
             .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true)

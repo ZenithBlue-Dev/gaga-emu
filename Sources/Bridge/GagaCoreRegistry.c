@@ -369,11 +369,20 @@ __attribute__((weak)) const GagaCoreInterface* getter(void) { \
     return &s_interface; \
 }
 
+// A real core's framework supplies its getter. GAGA_CORE_SET (scripts/generate-project.sh) can leave one out
+// of a build, and then this refusing row stands in and CoreCatalog hides the core.
+#define GAGA_CORE_EXCLUDED "excluded"
+#ifndef GAGA_HAS_MGBA
+DEFINE_CORE_INTERFACE(Mgba_GetInterface,          "mgba",            "mGBA",              GAGA_CORE_EXCLUDED, "gba",      59.7275, 32768)
+#endif
+#ifndef GAGA_HAS_GAMBATTE
+DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",          GAGA_CORE_EXCLUDED, "gb|gbc",   59.7275, 32768)
+#endif
+
 DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX ReARMed",      "r23",    "cue|bin|chd|pbp|iso", 60.0, 44100)
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
 DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             "115",    "smc|sfc",             60.0988, 32040)
-DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",          "0.5.0",  "gb|gbc",              59.7275, 32768)
 DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",          "0.0.0",  "md|smd|gen|bin|cue",  60.0, 48000)
 DEFINE_CORE_INTERFACE(MelonDS_GetInterface,       "melonds",         "melonDS DS",        "0.9.5",  "nds|dsi",             60.0, 44100)
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,        "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
@@ -421,6 +430,11 @@ const GagaCoreInterface* GagaCoreRegistry_FindByID(const char* core_id) {
         }
     }
     return NULL;
+}
+
+bool GagaCoreRegistry_IsExcluded(const char* core_id) {
+    const GagaCoreInterface* core = GagaCoreRegistry_FindByID(core_id);
+    return core && strcmp(core->core_version, GAGA_CORE_EXCLUDED) == 0;
 }
 
 const GagaCoreInterface* GagaCoreRegistry_FindByExtension(const char* extension) {
