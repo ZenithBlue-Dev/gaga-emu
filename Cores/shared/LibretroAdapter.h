@@ -25,10 +25,17 @@ typedef struct {
     const char* name;                       // In messages for the player, such as "Gambatte".
     const char* game_kind;                  // Ends "This file is not ...", such as "a Game Boy game".
     const GagaLibretroVariable* variables;  // Ends with a NULL key.
-    // Optional. Checks a file's bytes before the core sees them. Not called for need_fullpath cores.
+    // Optional. Checks a file's bytes before the core sees them. A need_fullpath core that sets it gets the
+    // file read once for the check, and still loads it by path.
     bool (*is_rom)(const uint8_t* data, size_t size);
     // Needed with GAGA_LIBRETRO_CHEATS. libretro's cheat call cannot refuse a code, so this checks one line.
     bool (*is_cheat)(const char* line);
+    // Optional, for a core that writes its own battery files and returns no RETRO_MEMORY_SAVE_RAM: writes
+    // them now, and returns false if one could not be written. Called after load and at every flush.
+    bool (*save_battery)(void);
+    // Optional, for a core that cannot add a code to ones it already applied: takes every applied code
+    // back out, keeping the core's list. Called before each retro_cheat_set.
+    void (*unapply_cheats)(void);
 } GagaLibretroCore;
 
 extern const GagaLibretroCore gaga_libretro_core;
