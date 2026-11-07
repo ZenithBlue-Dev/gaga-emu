@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 import Compression
+import UniformTypeIdentifiers
 
 /// One imported game. `coreOverride` wins over the platform default.
 struct GameItem: Identifiable, Codable, Equatable {
@@ -875,6 +876,11 @@ enum StateMigration {
 /// The app's one web host, the same one the App Store metadata uses.
 enum SiteLinks {
     private static let host = "https://zenithblue-oss.github.io/gaga-emu-site"
+    static let site = "\(host)/"
+    /// What Share GagaEmu sends.
+    /// shortcut: the app has no App Store ID until its first submission, so this is the site; replace with
+    /// https://apps.apple.com/app/id<ID> once App Store Connect assigns one.
+    static let appStore = site
     /// The site's page is "Support & FAQ", and it is also the feedback route.
     static let support = "\(host)/support.html"
     static let privacy = "\(host)/privacy.html"
@@ -928,10 +934,14 @@ final class AppState: ObservableObject {
     @Published var launchFailure: LaunchFailure?
     /// A game waiting on the player's answer: resume its auto save, or start from the battery save.
     @Published var resumeOffer: GameItem?
+    /// Disc images and archives whose contents did not name a platform, asked one at a time (`unplacedQuestion`).
+    @Published var unplaced: [GameItem] = []
     /// Waits for the game view to finish dismissing, because an alert cannot present during that.
     private var pendingFailure: LaunchFailure?
 
     struct LaunchFailure: Identifiable, Equatable {
+        /// The title of a failure that came from an import, not a game.
+        static let importTitle = "Import"
         let id = UUID()
         let title: String
         let message: String
@@ -941,6 +951,7 @@ final class AppState: ObservableObject {
             // A finished benchmark ends its session the same way a failure does.
             if message.hasPrefix("Benchmark saved") { return "Benchmark finished" }
             #endif
+            if title == Self.importTitle { return "Could not import" }
             return "Could not play \(title)"
         }
     }
@@ -988,6 +999,8 @@ final class AppState: ObservableObject {
     private var coverTask: Task<Void, Never>?
 
     var romDirectory: URL
+    /// Custom touch layouts from the skin editor, one flex skin per platform ID.
+    let skinDirectory: URL
     private let storeURL: URL
 
     struct Snapshot: Codable {
@@ -1027,6 +1040,7 @@ final class AppState: ObservableObject {
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         romDirectory = root.appendingPathComponent("ROMs", isDirectory: true)
         storeURL = root.appendingPathComponent("state.json")
+        skinDirectory = root.appendingPathComponent("Skins", isDirectory: true)
         wifi = WiFiTransferServer(romDirectory: romDirectory)
         filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
         let stored = (try? Data(contentsOf: storeURL)).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) }
@@ -1065,6 +1079,84 @@ final class AppState: ObservableObject {
     /// A name is a path under the ROM folder, as "Game/Game.cue" for a disc set.
     func addUploads(_ names: [String]) async {
         for name in names { await importArrived(romDirectory.appendingPathComponent(name)) }
+    }
+
+    /// `importArrived` for a file the player chose or dropped: queues the platform question when a disc image
+    /// or archive did not say. Returns the note, when there is one.
+    @discardableResult
+    func importChosen(_ dest: URL) async -> String? {
+        let (game, note) = await importArrived(dest)
+        if let game, game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath)) != nil {
+            unplaced.append(game)
+        }
+        return note
+    }
+
+    /// Drop import, for every screen that takes drops: copies each dropped file into the ROM folder off the
+    /// main thread, then `importChosen`. `done` gets each file's notice, and true when it is a problem (a note
+    /// or an error) rather than "Imported". False when nothing is a file.
+    func importDropped(_ providers: [NSItemProvider], done: @escaping @MainActor (String, Bool) -> Void) -> Bool {
+        var accepted = false
+        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            accepted = true
+            // @Sendable: the provider calls back on its own queue, never the main actor.
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { @Sendable item, _ in
+                guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+                Task { @MainActor in
+                    do {
+                        let romDirectory = self.romDirectory
+                        let dest = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
+                        let note = await self.importChosen(dest)
+                        done(note ?? "Imported \(dest.lastPathComponent)", note != nil)
+                    } catch {
+                        done(error.localizedDescription, true)
+                    }
+                }
+            }
+        }
+        return accepted
+    }
+
+    // MARK: Touch skins
+
+    func customSkinURL(_ platformID: String) -> URL {
+        skinDirectory.appendingPathComponent("\(platformID).json")
+    }
+
+    func hasCustomSkin(_ platformID: String) -> Bool {
+        FileManager.default.fileExists(atPath: customSkinURL(platformID).path)
+    }
+
+    /// The game's choice, then the platform's. Custom loads the saved layout; a missing or unreadable one falls
+    /// back to the platform's own built-in layout.
+    func applySkin(for game: GameItem) {
+        let platform = platformSkins[game.platformID]
+        if (game.skinID ?? platform) == TouchSkinEngine.customID {
+            do { return try skins.loadFlex(from: customSkinURL(game.platformID)) } catch {}
+        }
+        skins.loadBuiltIn(TouchSkinEngine.layoutID(game: game.skinID, platform: platform, platformID: game.platformID),
+                          platformID: game.platformID)
+    }
+
+    /// Saves the skin editor's layout as the platform's custom skin and chooses it. Throws, saving nothing,
+    /// when the layout fails `TouchSkinEngine.problems`.
+    func saveCustomSkin(_ buttons: [TouchSkinEngine.Button], opacity: Double, platformID: String) throws {
+        if let problem = TouchSkinEngine.problems(in: buttons).first { throw CustomSkinError(message: problem) }
+        let data = try TouchSkinEngine.encodeFlex(name: "Custom", buttons: buttons, opacity: opacity)
+        try FileManager.default.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
+        try data.write(to: customSkinURL(platformID), options: .atomic)
+        platformSkins[platformID] = TouchSkinEngine.customID
+    }
+
+    /// Deletes the platform's custom skin and returns it to its default layout.
+    func resetCustomSkin(_ platformID: String) {
+        try? FileManager.default.removeItem(at: customSkinURL(platformID))
+        if platformSkins[platformID] == TouchSkinEngine.customID { platformSkins[platformID] = nil }
+    }
+
+    struct CustomSkinError: LocalizedError {
+        let message: String
+        var errorDescription: String? { message }
     }
 
     /// Every import ends here: Files, drop, clipboard, download, WiFi Transfer and the Debug launch arguments.
@@ -1344,9 +1436,7 @@ final class AppState: ObservableObject {
         guard let romPath = game.resolvedROMPath(romDirectory: romDirectory) else {
             throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
         }
-        skins.loadBuiltIn(TouchSkinEngine.layoutID(game: game.skinID, platform: platformSkins[game.platformID],
-                                                   platformID: game.platformID),
-                          platformID: game.platformID)
+        applySkin(for: game)
         skins.hapticsEnabled = rumble
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"

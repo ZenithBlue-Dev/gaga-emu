@@ -369,6 +369,8 @@ private struct AboutPane: View {
     @Environment(\.requestReview) private var requestReview
     #endif
     @State private var showLicences = false
+    @State private var showAboutUs = false
+    @State private var tipsReset = false
     #if DEBUG
     @EnvironmentObject private var state: AppState
     #endif
@@ -378,9 +380,38 @@ private struct AboutPane: View {
         return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
     }
 
+    /// The Language row appears only once a second localisation ships; today the app is English only.
+    private var hasLanguages: Bool { Bundle.main.localizations.filter { $0 != "Base" }.count > 1 }
+
     var body: some View {
         ValueRow(title: "Version", value: version)
         Rule()
+        ActionRow(title: "About Us") { showAboutUs = true }
+            .sheet(isPresented: $showAboutUs) { AboutUsView() }
+        Rule()
+        if let link = URL(string: SiteLinks.appStore) {
+            ShareLink(item: link, message: Text("GagaEmu plays your own game files on iPhone and iPad.")) {
+                HStack {
+                    Text("Share GagaEmu")
+                    Spacer(minLength: 12)
+                    Image(systemName: "square.and.arrow.up").font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                }
+                .padding(.vertical, 6)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Rule()
+        }
+        ActionRow(title: "Reset Tips", value: tipsReset ? "Tips will show again" : nil, symbol: "arrow.counterclockwise") {
+            Tip.reset()
+            tipsReset = true
+        }
+        Rule()
+        if hasLanguages {
+            LinkRow(title: "Language", url: UIApplication.openSettingsURLString)
+            Rule()
+        }
         LinkRow(title: "Support and FAQ", url: SiteLinks.support)
         Rule()
         LinkRow(title: "Feedback", url: SiteLinks.support)
@@ -400,6 +431,37 @@ private struct AboutPane: View {
         ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer") { state.runBenchmark() }
         Rule()
         #endif
+    }
+}
+
+/// Settings > About > About Us: what GagaEmu is, its version and build, and where to read more.
+struct AboutUsView: View {
+    @State private var showLicences = false
+
+    private func info(_ key: String) -> String { Bundle.main.infoDictionary?[key] as? String ?? "?" }
+
+    var body: some View {
+        PaperSheet(title: "About Us") {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("GagaEmu").font(.gameTitle).accessibilityAddTraits(.isHeader)
+                Text("A multi-system emulator for iPhone and iPad, with no JIT in any core. It plays homebrew and backups you legally own, and includes no games, ROMs or BIOS.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
+                Rule()
+                ValueRow(title: "Version", value: info("CFBundleShortVersionString"))
+                Rule()
+                ValueRow(title: "Build", value: info("CFBundleVersion"))
+                Rule()
+                LinkRow(title: "Website", url: SiteLinks.site)
+                Rule()
+                LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
+                Rule()
+                ActionRow(title: "Licences") { showLicences = true }
+                    .fullScreenCover(isPresented: $showLicences) { LicencesView() }
+                Rule()
+                Text("GagaEmu is an independent project. It is not affiliated with, endorsed by or sponsored by any console maker. All trademarks belong to their owners.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 8)
+            }
+        }
     }
 }
 

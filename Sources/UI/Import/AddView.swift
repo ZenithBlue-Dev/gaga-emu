@@ -10,16 +10,6 @@ struct AddView: View {
     @State private var showPatcher = false
     @State private var notice: String?
     @State private var isTargeted = false
-    /// Disc images whose contents did not name a platform, asked one at a time.
-    @State private var unplaced: [GameItem] = []
-
-    private let romTypes: [UTType] = {
-        var types: [UTType] = [.zip, .data, .item]
-        for ext in ["gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "nds", "3ds", "iso", "chd", "cue", "ccd", "toc", "bin", "pbp", "cso", "gdi", "cdi", "7z", "rar", "m3u", "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf", "pce", "sgx", "vb", "vboy", "ngp", "ngc", "ngpc", "npc", "ws", "wsc", "pc2", "min", "sms", "gg", "sg", "mv", "a26", "a78", "lnx", "a52", "xex", "atr", "xfd", "dcm", "atx", "j64", "jag", "d64", "t64", "prg", "crt", "tap", "adf", "hdf", "wad", "3dsx", "cci", "cxi"] {
-            if let type = UTType(filenameExtension: ext) { types.append(type) }
-        }
-        return types
-    }()
 
     var body: some View {
         HStack(spacing: 0) {
@@ -31,6 +21,7 @@ struct AddView: View {
                     }
                     .buttonStyle(PrimaryButtonStyle())
                     dropTarget
+                    TipLine(tip: .dropFiles)
                     ImportProgressRows()
                     if let notice { Text(notice).font(.footnote).foregroundStyle(AppTheme.muted) }
                 }
@@ -55,37 +46,12 @@ struct AddView: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .fileImporter(isPresented: $showFiles, allowedContentTypes: romTypes, allowsMultipleSelection: true) { result in
+        .fileImporter(isPresented: $showFiles, allowedContentTypes: GameFileTypes.all, allowsMultipleSelection: true) { result in
             importFiles(result)
         }
         .sheet(isPresented: $showMultiDisc) { MultiDiscSheet() }
         .sheet(isPresented: $showPatcher) { RomPatcherSheet() }
-        .onDrop(of: romTypes, isTargeted: $isTargeted) { providers in
-            consume(providers)
-        }
-        .confirmationDialog("Which system is \(unplaced.first?.title ?? "this disc") for?",
-                            isPresented: Binding(get: { !unplaced.isEmpty }, set: { if !$0, !unplaced.isEmpty { unplaced.removeFirst() } }),
-                            titleVisibility: .visible) {
-            ForEach(unplaced.first.flatMap { CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: $0.romPath)) } ?? []) { platform in
-                Button(platform.name) {
-                    if let game = unplaced.first { state.update(game.id) { $0.platformID = platform.id } }
-                }
-            }
-            Button("Not Now", role: .cancel) {}
-        } message: {
-            Text("GagaEmu could not tell from the file.")
-        }
-    }
-
-    /// Imports a copied file, and queues the platform question when a disc image or .zip did not say.
-    /// Returns why import stored no game or kept an older file, for the notice.
-    @discardableResult
-    private func add(_ dest: URL) async -> String? {
-        let (game, note) = await state.importArrived(dest)
-        if let game, game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath)) != nil {
-            unplaced.append(game)
-        }
-        return note
+        .gameFileDrop(isTargeted: $isTargeted) { line, _ in notice = line }
     }
 
     private var dropTarget: some View {
@@ -158,14 +124,14 @@ struct AddView: View {
                 Task {
                     do {
                         let dest = try await ClipboardImporter.download(url, into: state.romDirectory)
-                        notice = await add(dest) ?? "Imported \(dest.lastPathComponent)"
+                        notice = await state.importChosen(dest) ?? "Imported \(dest.lastPathComponent)"
                     } catch {
                         notice = error.localizedDescription
                     }
                 }
             default:
                 let dest = try ClipboardImporter.persist(item, into: state.romDirectory)
-                Task { notice = await add(dest) ?? "Imported \(dest.lastPathComponent)" }
+                Task { notice = await state.importChosen(dest) ?? "Imported \(dest.lastPathComponent)" }
             }
         } catch {
             notice = error.localizedDescription
@@ -188,30 +154,10 @@ struct AddView: View {
                     }
                 }.value
                 var notes: [String] = []
-                for dest in copied { if let note = await add(dest) { notes.append(note) } }
+                for dest in copied { if let note = await state.importChosen(dest) { notes.append(note) } }
                 notice = (["Imported \(copied.count) file\(copied.count == 1 ? "" : "s")"] + notes).joined(separator: "\n")
             }
         }
-    }
-
-    private func consume(_ providers: [NSItemProvider]) -> Bool {
-        var accepted = false
-        for provider in providers where provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            accepted = true
-            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
-                guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-                Task { @MainActor in
-                    do {
-                        let romDirectory = state.romDirectory
-                        let dest = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
-                        notice = await add(dest) ?? "Imported \(dest.lastPathComponent)"
-                    } catch {
-                        notice = error.localizedDescription
-                    }
-                }
-            }
-        }
-        return accepted
     }
 }
 

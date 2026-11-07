@@ -48,6 +48,7 @@ struct RootView: View {
                     .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
             }
         }
+        .unplacedQuestion()
         .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) { GameView(session: $0) }
         .alert(state.launchFailure?.heading ?? "Could not play this game",
                isPresented: Binding(get: { state.launchFailure != nil }, set: { if !$0 { state.launchFailure = nil } }),
