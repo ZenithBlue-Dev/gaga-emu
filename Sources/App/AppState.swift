@@ -1226,7 +1226,8 @@ final class AppState: ObservableObject {
         // A BIOS file the BIOS Files screen names, at a size its core reads, moves to the cores' system folder.
         // Another size under that name (a game called firmware.bin) is placed as a game. A different file already
         // in System is never replaced. A .rom (such as an FDS folder's disksys.rom) is never a game.
-        let fileName = url.lastPathComponent.lowercased()
+        // Matched in any letter case, placed under the exact name the core opens (bios_CD_U.bin, kick34005.A500).
+        let fileName = BIOSManagerView.canonicalName(url.lastPathComponent) ?? url.lastPathComponent.lowercased()
         // Not url.resourceValues: a URL caches them, so a file rewritten at the same URL kept its old size.
         let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int
         if platformID == nil, inROMFolder, let size, BIOSManagerView.sizes[fileName]?.contains(size) == true {

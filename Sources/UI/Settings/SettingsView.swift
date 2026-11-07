@@ -503,6 +503,11 @@ struct BIOSManagerView: View {
         "kick34005.A500": [256 << 10], "kick40068.A1200": [512 << 10]
     ].merging(snesFirmware.map { ($0.0, Set([$0.2])) }) { listed, _ in listed }
 
+    /// The exact name a core reads for a file name in any letter case, or nil when no BIOS has that name.
+    static func canonicalName(_ file: String) -> String? {
+        sizes.keys.first { $0.caseInsensitiveCompare(file) == .orderedSame }
+    }
+
     /// bsnes's coprocessor firmware: file name, chip and part, bytes. bsnes opens <chip>.program.rom and
     /// <chip>.data.rom in the system folder for a game with that chip; Snes9x emulates the chips without them.
     static let snesFirmware: [(String, String, Int)] = [

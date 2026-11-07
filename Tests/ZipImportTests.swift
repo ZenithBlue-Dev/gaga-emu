@@ -244,6 +244,29 @@ final class ZipImportTests: XCTestCase {
     }
 
     @MainActor
+    func testMixedCaseBIOSNamesRouteToSystemUnderTheCoreName() throws {
+        let state = AppState()
+        let saved = state.games
+        let system = FileManager.default.temporaryDirectory.appendingPathComponent("system-\(UUID().uuidString)")
+        state.systemDirectory = system
+        defer { state.games = saved; state.save(); try? FileManager.default.removeItem(at: system) }
+        let cases: [(String, String, Int)] = [
+            ("BIOS_CD_U.BIN", "bios_CD_U.bin", 128 << 10), ("bios_cd_e.bin", "bios_CD_E.bin", 128 << 10),
+            ("Bios_Cd_J.bin", "bios_CD_J.bin", 128 << 10), ("KICK34005.a500", "kick34005.A500", 256 << 10),
+            ("kick40068.a1200", "kick40068.A1200", 512 << 10), ("SCPH5501.BIN", "scph5501.bin", 512 << 10)
+        ]
+        for (arrived, exact, size) in cases {
+            let file = state.romDirectory.appendingPathComponent(arrived)
+            try Data(count: size).write(to: file)
+            XCTAssertNil(state.importROM(at: file), arrived)
+            let names = try FileManager.default.contentsOfDirectory(atPath: system.path)
+            XCTAssertTrue(names.contains(exact), "\(arrived) is placed as \(exact), got \(names)")
+            XCTAssertFalse(FileManager.default.fileExists(atPath: file.path), "\(arrived) left ROMs")
+        }
+        XCTAssertEqual(state.games.count, saved.count)
+    }
+
+    @MainActor
     func testAROMFileIsNeverAGame() throws {
         let state = AppState()
         let saved = state.games
