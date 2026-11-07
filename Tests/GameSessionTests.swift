@@ -258,7 +258,7 @@ final class GameSessionTests: XCTestCase {
     }
 
     func testStubCoresFailInsteadOfShowingBlack() throws {
-        let stub = try XCTUnwrap(GagaCoreRegistry_FindByID("gambatte")).pointee
+        let stub = try XCTUnwrap(GagaCoreRegistry_FindByID("bsnes")).pointee
         XCTAssertEqual(stub.abi_version, GAGA_BRIDGE_ABI_VERSION)
         XCTAssertThrowsError(try GagaCoreWrapper(interface: stub)) {
             XCTAssertEqual($0.localizedDescription, "This core is not part of this build yet.")

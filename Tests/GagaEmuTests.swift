@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertEqual(count, 12, "Mock plus 11 core stubs")
+        XCTAssertEqual(count, 12, "Mock, the real cores and the stubs")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
@@ -248,7 +248,7 @@ final class GagaEmuTests: XCTestCase {
         // Every registry stub resolves to a catalog row, so a saved ID always names a real core.
         for index in 0..<GagaCoreRegistry_GetCount() {
             let id = String(cString: GagaCoreRegistry_GetAtIndex(index)!.pointee.core_id)
-            if id != "mock" { XCTAssertTrue(ids.contains(id), "\(id) missing from CoreCatalog") }
+            if id != "mock" { XCTAssertEqual(ids.contains(id), !GagaCoreRegistry_IsExcluded(id), "\(id) in CoreCatalog") }
         }
     }
 
