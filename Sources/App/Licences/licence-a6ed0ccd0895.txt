@@ -1,0 +1,1 @@
+rflac (libretro-common/formats/flac), RetroArch's fork of dr_flac by David Reid, is in the public domain, or MIT No Attribution where that is not recognised.

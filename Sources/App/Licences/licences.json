@@ -738,6 +738,218 @@
    ]
   },
   {
+   "id": "beetle_pce_fast",
+   "title": "Beetle PCE Fast",
+   "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later, BSD-3-Clause, MIT, zlib and public-domain parts",
+   "source": "https://github.com/libretro/beetle-pce-fast-libretro, commit 2de1ce1",
+   "cores": [
+    "beetle_pce_fast"
+   ],
+   "framework": "BeetlePceFastCore",
+   "texts": [
+    {
+     "title": "Mednafen (GPL-2.0-or-later)",
+     "file": "licence-84d7d6cf28ad.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "Tremor",
+     "file": "licence-d2ab57583364.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-c25c10fbc0c4.txt"
+    },
+    {
+     "title": "LZMA SDK and dr_flac",
+     "file": "licence-f7a8fa8c86f1.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    },
+    {
+     "title": "Blip_Buffer (LGPL-2.1-or-later)",
+     "file": "licence-e5d47aaac156.txt"
+    }
+   ]
+  },
+  {
+   "id": "beetle_supergrafx",
+   "title": "Beetle SuperGrafx",
+   "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later, BSD-3-Clause, MIT and public-domain parts",
+   "source": "https://github.com/libretro/beetle-supergrafx-libretro, commit 9c11dcd",
+   "cores": [
+    "beetle_supergrafx"
+   ],
+   "framework": "BeetleSupergrafxCore",
+   "texts": [
+    {
+     "title": "Mednafen (GPL-2.0-or-later)",
+     "file": "licence-84d7d6cf28ad.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "Tremor",
+     "file": "licence-d2ab57583364.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-c08f98790812.txt"
+    },
+    {
+     "title": "rflac",
+     "file": "licence-a6ed0ccd0895.txt"
+    },
+    {
+     "title": "Blip_Buffer (LGPL-2.1-or-later)",
+     "file": "licence-e5d47aaac156.txt"
+    }
+   ]
+  },
+  {
+   "id": "beetle_vb",
+   "title": "Beetle VB",
+   "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later, SoftFloat and MIT parts",
+   "source": "https://github.com/libretro/beetle-vb-libretro, commit d5ae54c",
+   "cores": [
+    "beetle_vb"
+   ],
+   "framework": "BeetleVbCore",
+   "texts": [
+    {
+     "title": "Mednafen (GPL-2.0-or-later)",
+     "file": "licence-e64b3ad42d0f.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "V810 emulator",
+     "file": "licence-e9791e9e26d4.txt"
+    },
+    {
+     "title": "SoftFloat",
+     "file": "licence-8271be9c6997.txt"
+    },
+    {
+     "title": "Blip_Buffer (LGPL-2.1-or-later)",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-e4d9b2668f79.txt"
+    }
+   ]
+  },
+  {
+   "id": "beetle_ngp",
+   "title": "Beetle NeoPop",
+   "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later and MIT parts",
+   "source": "https://github.com/libretro/beetle-ngp-libretro, commit a50d5ac",
+   "cores": [
+    "beetle_ngp"
+   ],
+   "framework": "BeetleNgpCore",
+   "texts": [
+    {
+     "title": "NeoPop (GPL-2.0-or-later)",
+     "file": "licence-31fa38349a8e.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "Fuse Z80 core (GPL-2.0-or-later)",
+     "file": "licence-6d7dc4659721.txt"
+    },
+    {
+     "title": "Blip_Buffer and T6W28 (LGPL-2.1-or-later)",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "beetle_wswan",
+   "title": "Beetle Cygne",
+   "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later and MIT parts",
+   "source": "https://github.com/libretro/beetle-wswan-libretro, commit 4b01295",
+   "cores": [
+    "beetle_wswan"
+   ],
+   "framework": "BeetleWswanCore",
+   "texts": [
+    {
+     "title": "Cygne (GPL-2.0-or-later)",
+     "file": "licence-1af9e8b9cc12.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "Mednafen WonderSwan RTC (GPL-2.0-or-later)",
+     "file": "licence-b22929bbfc6e.txt"
+    },
+    {
+     "title": "Blip_Buffer (LGPL-2.1-or-later)",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-e4d9b2668f79.txt"
+    }
+   ]
+  },
+  {
+   "id": "pokemini",
+   "title": "PokeMini",
+   "licence": "GPL-3.0-or-later, with MIT parts",
+   "source": "https://github.com/libretro/PokeMini, commit 132111b",
+   "cores": [
+    "pokemini"
+   ],
+   "framework": "PokeMiniCore",
+   "texts": [
+    {
+     "title": "PokeMini (GPL-3.0-or-later)",
+     "file": "licence-c2fbb9b6ff7c.txt"
+    },
+    {
+     "title": "PokeMini emulator core",
+     "file": "licence-a9fa0c5306f0.txt"
+    },
+    {
+     "title": "FreeBIOS",
+     "file": "licence-1bc833f16245.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-e4d9b2668f79.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
