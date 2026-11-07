@@ -738,6 +738,114 @@
    ]
   },
   {
+   "id": "flycast",
+   "title": "Flycast",
+   "licence": "GPL-2.0-or-later, with GPL-3.0 (xBRZ), BSD, MIT, zlib, BSL-1.0, Apache-2.0 and public domain parts",
+   "source": "https://github.com/flyinghead/flycast, tag v2.7, commit 5aa091f, with the dependencies that tag pins: glslang 15.3.0 (fc9889c), VulkanMemoryAllocator (1d8f600), Vulkan-Headers v1.4.341 (b5c8f99), libchdr (5f82799, with zlib 1.3.1, zstd 1.5.6 and LZMA SDK 24.05) and asio (d340200). It links MoltenVK, listed separately.",
+   "cores": [
+    "flycast"
+   ],
+   "framework": "FlycastCore",
+   "texts": [
+    {
+     "title": "Flycast (GPL-2.0-or-later)",
+     "file": "licence-dbe696cde3b4.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-8177f9751321.txt"
+    },
+    {
+     "title": "xBRZ (GPL-3.0)",
+     "file": "licence-aa162f30dc90.txt"
+    },
+    {
+     "title": "GNU General Public License 3",
+     "file": "licence-c61f12da7cda.txt"
+    },
+    {
+     "title": "picoTCP (GPL-2.0 or GPL-3.0)",
+     "file": "licence-af5a2bc623f9.txt"
+    },
+    {
+     "title": "Dreamcast BIOS font",
+     "file": "licence-60dbe93dbfb7.txt"
+    },
+    {
+     "title": "CDI image parser and MD5",
+     "file": "licence-e7c6d64e7221.txt"
+    },
+    {
+     "title": "glslang",
+     "file": "licence-adb783e734e9.txt"
+    },
+    {
+     "title": "Vulkan Memory Allocator",
+     "file": "licence-8d70e4cf2a99.txt"
+    },
+    {
+     "title": "Vulkan-Headers",
+     "file": "licence-ac24e5ea920e.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-845efc77857d.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "asio",
+     "file": "licence-5cc69ca9afd3.txt"
+    },
+    {
+     "title": "Boost Software License 1.0",
+     "file": "licence-c9bff7573892.txt"
+    },
+    {
+     "title": "libelf (University of New South Wales)",
+     "file": "licence-914f8a751f33.txt"
+    },
+    {
+     "title": "BSD-2-Clause",
+     "file": "licence-f6036f79d054.txt"
+    },
+    {
+     "title": "OpenBSD ELF header",
+     "file": "licence-22c885c39560.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    },
+    {
+     "title": "xxHash",
+     "file": "licence-6ffedbc0f787.txt"
+    },
+    {
+     "title": "stb_image (MIT)",
+     "file": "licence-7169810d8b6c.txt"
+    },
+    {
+     "title": "GLM",
+     "file": "licence-62d2d642c7d0.txt"
+    },
+    {
+     "title": "Boost.Nowide",
+     "file": "licence-c9bff7573892.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
@@ -760,7 +868,8 @@
    "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
    "cores": [
     "vktest",
-    "mupen64plus_next"
+    "mupen64plus_next",
+    "flycast"
    ],
    "texts": [
     {

@@ -169,12 +169,42 @@
       ]
     },
     {
+      "id": "flycast", "title": "Flycast", "cores": ["flycast"], "framework": "FlycastCore", "licence": "GPL-2.0-or-later, with GPL-3.0 (xBRZ), BSD, MIT, zlib, BSL-1.0, Apache-2.0 and public domain parts",
+      "source": "https://github.com/flyinghead/flycast, tag v2.7, commit 5aa091f, with the dependencies that tag pins: glslang 15.3.0 (fc9889c), VulkanMemoryAllocator (1d8f600), Vulkan-Headers v1.4.341 (b5c8f99), libchdr (5f82799, with zlib 1.3.1, zstd 1.5.6 and LZMA SDK 24.05) and asio (d340200). It links MoltenVK, listed separately.",
+      "texts": [
+        { "title": "Flycast (GPL-2.0-or-later)", "from": "Cores/flycast/upstream/core/emulator.cpp", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/flycast/upstream/LICENSE" },
+        { "title": "xBRZ (GPL-3.0)", "from": "Cores/flycast/upstream/core/deps/xbrz/xbrz.cpp", "comment": true },
+        { "title": "GNU General Public License 3", "from": "Cores/flycast/upstream/core/deps/xbrz/License.txt" },
+        { "title": "picoTCP (GPL-2.0 or GPL-3.0)", "from": "Cores/flycast/upstream/core/deps/picotcp/COPYING" },
+        { "title": "Dreamcast BIOS font", "from": "Cores/flycast/upstream/fonts/biosfont.cpp", "comment": true },
+        { "title": "CDI image parser and MD5", "text": "core/deps/chdpsr (the DiscJuggler image parser) carries no notice of its own and is distributed with Flycast under Flycast's licence. core/deps/md5 is from https://github.com/ulwanski/md5, a copy of Alexander Peslyak's public domain MD5.\n" },
+        { "title": "glslang", "from": "Cores/flycast/deps/glslang/LICENSE.txt" },
+        { "title": "Vulkan Memory Allocator", "from": "Cores/flycast/deps/VulkanMemoryAllocator/LICENSE.txt" },
+        { "title": "Vulkan-Headers", "from": "Cores/flycast/deps/Vulkan-Headers/LICENSE.md" },
+        { "title": "libchdr", "from": "Cores/flycast/deps/libchdr/LICENSE.txt" },
+        { "title": "zlib", "from": "Cores/flycast/deps/libchdr/deps/zlib-1.3.1/LICENSE" },
+        { "title": "Zstandard", "from": "Cores/flycast/deps/libchdr/deps/zstd-1.5.6/LICENSE" },
+        { "title": "LZMA SDK", "from": "Cores/flycast/deps/libchdr/deps/lzma-24.05/LICENSE" },
+        { "title": "asio", "from": "Cores/flycast/deps/asio/asio/COPYING" },
+        { "title": "Boost Software License 1.0", "from": "Cores/flycast/deps/asio/asio/LICENSE_1_0.txt" },
+        { "title": "libelf (University of New South Wales)", "from": "Cores/flycast/upstream/core/deps/libelf/src/elf.c", "comment": true },
+        { "title": "BSD-2-Clause", "text": "Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:\n\n1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.\n\n2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n" },
+        { "title": "OpenBSD ELF header", "from": "Cores/flycast/upstream/core/deps/libelf/include/elf/exec_elf.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/flycast/upstream/core/deps/libretro-common/file/file_path.c", "comment": true },
+        { "title": "xxHash", "from": "Cores/flycast/upstream/core/deps/xxHash/LICENSE" },
+        { "title": "stb_image (MIT)", "from": "Cores/flycast/upstream/core/deps/stb/stb_image.h", "lines": [7620, 7636] },
+        { "title": "GLM", "from": "Cores/flycast/upstream/core/deps/glm/copying.txt" },
+        { "title": "Boost.Nowide", "from": "Cores/flycast/upstream/core/deps/nowide/LICENSE" }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
     },
     {
-      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next"], "licence": "Apache-2.0",
+      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next", "flycast"], "licence": "Apache-2.0",
       "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
       "texts": [
         { "title": "MoltenVK", "from": "build/moltenvk/LICENSE" },
