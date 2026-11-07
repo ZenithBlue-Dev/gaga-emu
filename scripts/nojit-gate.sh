@@ -54,13 +54,20 @@ strings_for_framework() {
 }
 
 check_app() {
-    local app=$1 framework name binary env
+    local app=$1 framework name binary env core
     check_entitlements "$2"
     for env in "$root"/Cores/*/core.env; do
         # shellcheck source=/dev/null
         name=$(source "$env" && echo "$CORE_FRAMEWORK")
-        if [ ! -f "$app/Frameworks/$name.framework/$name" ]; then
-            echo "no-JIT gate: $name is not embedded in $app" >&2
+        core=$(basename "$(dirname "$env")")
+        # GAGA_CORE_SET is a build setting from scripts/generate-project.sh. Run by hand, every core is expected.
+        if [ -z "${GAGA_CORE_SET:-}" ] || [[ " $GAGA_CORE_SET " == *" $core "* ]]; then
+            if [ ! -f "$app/Frameworks/$name.framework/$name" ]; then
+                echo "no-JIT gate: $name is not embedded in $app" >&2
+                return 1
+            fi
+        elif [ -e "$app/Frameworks/$name.framework" ]; then
+            echo "no-JIT gate: $name is outside GAGA_CORE_SET but embedded in $app. Clean the build folder." >&2
             return 1
         fi
     done
