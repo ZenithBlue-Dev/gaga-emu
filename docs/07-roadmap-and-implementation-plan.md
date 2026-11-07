@@ -162,6 +162,16 @@ Online play is not scheduled. It is not promised or gated until built, and its S
 | 5.5 | PSP: PPSSPP | planned | `IR_INTERPRETER`, not plain `INTERPRETER`. Choose native Metal outside libretro or Vulkan on MoltenVK. |
 | 5.6 | Core-output texture path | planned | Optional. Lets layer-path cores use host shaders (`docs/05` section 2.4). |
 
+### 8.x Backlog cores
+
+Systems from `docs/03` section 6's backlog, taken up after v1 planning. Each group of cores is built on its own branch and keeps its own rows below. A row is "built, legal gate open, device pending" until a device run per `docs/04` section 7.2 exists.
+
+**group-retro** (branch `core/group-retro`): 8-bit, Atari, computer and DOOM cores. Tests are written and built but device-pending; each core's logic was checked on a macOS host harness that drives the same `GagaCoreInterface`.
+
+| ID | Platform | Core | Status | Detail |
+|---|---|---|---|---|
+| 8.x.r1 | Master System, Game Gear, SG-1000 | Gearsystem 3.9.24 (`40b8eeba`, GPL-3.0-or-later) | built, legal gate open, device pending | `Cores/gearsystem`. Extensions `.sms`, `.gg`, `.sg`, `.mv`; `.sms` moves from the Mega Drive row (JGenesis in GagaEmu takes no `.sms`) to its own platform. Touch: Two Button layout. BIOS optional and off. YM2413 FM is stubbed for licence (`docs/03` section 5), so FM music is silent. Test ROM `SMSTestROM` (Z80, cartridge RAM), tests `GearsystemCoreTests`. Cheats: Pro Action Replay and Game Genie. Host harness: picture, all six inputs, 440 Hz tone, battery boot counter, deterministic state round trip |
+
 ---
 
 ## 9. Phase 6: High-Load Cores and Spikes

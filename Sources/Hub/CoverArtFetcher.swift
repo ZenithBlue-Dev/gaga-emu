@@ -24,7 +24,10 @@ enum LibretroThumbnails {
         "megacd": "Sega - Mega-CD - Sega CD",
         "megadrive": "Sega - Mega Drive - Genesis",
         "dreamcast": "Sega - Dreamcast",
-        "dos": "DOS"
+        "dos": "DOS",
+        "mastersystem": "Sega - Master System - Mark III",
+        "gamegear": "Sega - Game Gear",
+        "sg1000": "Sega - SG-1000"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.

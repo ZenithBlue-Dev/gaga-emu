@@ -47,6 +47,12 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Java ME | J2meJS | J2meJS | None | Unknown; upstream not identified | Unverified | **Unverified: spike required.** JS runtime path unknown (section 4) | Unknown | 2 |
 | Symbian | EKA2L1 | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases) list JIT modes for it | None | [GPL-3.0](https://github.com/EKA2L1/EKA2L1) | **Port needed.** [iOS path links OpenGLES.framework](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/drivers/CMakeLists.txt), which is not an accepted path. A Vulkan backend file exists; completeness unverified | **Unverified: spike required.** [dyncom interpreter is in the tree](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/cpu/CMakeLists.txt); a full no-JIT run is unproven | Active, last push 2026-11-06. README calls development a part-time hobby | 3 |
 
+**Backlog cores, group-retro** (`docs/07` section 8.x). Rows from section 6's backlog, built on branch `core/group-retro`. Same columns; Manic's core is from its public repo.
+
+| Platform | GagaEmu default | Manic default (screenshot) | Alternates | Licence | Renderer path | No-JIT status | Upstream state | Load tier |
+|---|---|---|---|---|---|---|---|---|
+| Master System / Game Gear / SG-1000 | Gearsystem | `gearsystem` | None | [GPL-3.0-or-later](https://github.com/drhelius/Gearsystem) (file headers: "version 3 of the License, or any later version"), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Z80 interpreter, no recompiler in the tree. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([drhelius/Gearsystem](https://github.com/drhelius/Gearsystem), `platforms/libretro`). Pinned to tag 3.9.24, `40b8eebab53007c976eb29755b1ef7925140c37f` | 1 |
+
 ### Renderer rules
 
 - **App UI, frame presentation and post-processing:** native Metal.
@@ -345,6 +351,20 @@ Not compiled: `mupen64plus-rsp-paraLLEl` (`rsp_jit.cpp`, `jit_allocator`) and GN
 
 No PIF ROM, IPL3 or game is bundled. The PIF boot is upstream's HLE (`bootrom_hle.c`): it copies the cartridge's own boot block to RSP DMEM and jumps to it. The test cartridge `Sources/Debug/N64TestROM.swift` is GagaEmu's own MIPS program, booted that way.
 
+### Gearsystem licence obligations
+
+Source: [github.com/drhelius/Gearsystem](https://github.com/drhelius/Gearsystem), the author's repository and the one libretro-super builds, tag 3.9.24, commit `40b8eebab53007c976eb29755b1ef7925140c37f`, as the unmodified submodule `Cores/gearsystem/upstream`. `Cores/gearsystem/GearsystemCore.c`, `nofm.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/gearsystem/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src` (Z80, VDP, mappers, I/O, link cable, YM2413 wrapper) and `platforms/libretro` | GPL-3.0-or-later (file headers; `LICENSE` is the GPL-3.0 text) | The complete corresponding source of the whole work, with the written offer or the source alongside, and no added restrictions. This is the gate above. |
+| `src/audio/Blip_Buffer.cpp`, `Sms_Apu.cpp`, `Stereo_Buffer.cpp` (Shay Green) | LGPL-2.1-or-later | Satisfied by the GPL source release; counsel to confirm. |
+| `platforms/shared/dependencies/miniz/miniz.c` | MIT | Reproduce the notice. |
+
+Not compiled: `src/audio/emu2413/emu2413.c`, the YM2413 FM emulation. It is Jarek Burczynski's MAME `ym2413.c` by way of Genesis Plus GX and its header states no licence, so `Cores/gearsystem/nofm.c` stands in with empty functions: FM music (Japanese Master System games only) is silent, the PSG plays. Also not compiled: the disassembler and VGM recorder (`GS_DISABLE_DISASSEMBLER`, `GS_DISABLE_VGMRECORDER`, as upstream's libretro makefile sets) and every desktop, iOS and imgui frontend. No socket, `dlopen` or thread is imported; the link cable runs two instances in one process.
+
+No BIOS or game is bundled. The `gearsystem_bios_sms` and `gearsystem_bios_gg` options stay "Disabled", so no Sega boot ROM is read. The test ROM `Sources/Debug/SMSTestROM.swift` is GagaEmu's own hand-assembled Z80 program.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -411,6 +431,8 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Atari:** 2600 (`stella`), 5200 (`atari800`), 7800 (`prosystem`), Jaguar (`virtualjaguar`), Lynx (`holani`)
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
+
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem).
 
 ---
 

@@ -115,6 +115,16 @@ enum CoreCatalog {
         .init(id: "dos", name: "MS-DOS", manufacturer: "Vintage", cores: [
             .init(id: "dosbox_pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)
         ]),
+        // group-retro backlog platforms (docs/07 section 8.x).
+        .init(id: "mastersystem", name: "Master System", manufacturer: "Sega", cores: [
+            .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true)
+        ]),
+        .init(id: "gamegear", name: "Game Gear", manufacturer: "Sega", cores: [
+            .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true)
+        ]),
+        .init(id: "sg1000", name: "SG-1000", manufacturer: "Sega", cores: [
+            .init(id: "gearsystem", name: "Gearsystem", note: "Default", recommended: true)
+        ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
             .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
         ]),
@@ -153,7 +163,8 @@ enum CoreCatalog {
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
-                       "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC"]
+                       "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC",
+                       "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG"]
         return special[id] ?? id.uppercased()
     }
 
@@ -190,7 +201,10 @@ enum CoreCatalog {
         case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
-        case "md", "gen", "smd", "sms": return "megadrive"
+        case "md", "gen", "smd": return "megadrive"
+        case "sms": return "mastersystem"
+        case "gg": return "gamegear"
+        case "sg", "mv": return "sg1000"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

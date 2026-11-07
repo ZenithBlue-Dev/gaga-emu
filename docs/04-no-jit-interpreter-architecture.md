@@ -443,6 +443,12 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | Java ME | J2meJS | JVM bytecode | Spike | No-JIT and JS runtime path unverified | 2 | Target (unmeasured). Spike first |
 | Symbian | EKA2L1 | ARM | Spike | Interpreter unverified | 3 | Target (unmeasured). Spike first |
 
+**Backlog cores, group-retro** (`docs/07` section 8.x). Logic checked on a macOS host harness only; no device numbers yet.
+
+| Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
+|---|---|---|---|---|---|---|
+| Master System / Game Gear / SG-1000 | Gearsystem | Z80 | Audited at 3.9.24 (`40b8eeba`): table-driven Z80 interpreter (`src/opcodes*.cpp`); compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. Disassembler and VGM recorder off; single threaded, offline, no `dlopen` or `mprotect` (`Cores/gearsystem/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+
 **Research, not shipping and not promised.**
 
 - **Dolphin (GameCube, Wii).** Gekko is based on the PowerPC 750CXe. Upstream reports about 30 fps (50% speed) for Mario Kart Wii on an iPhone 16 Pro Max without JIT, on default settings (<https://oatmealdome.me/?p=1695>). This is a data point about Dolphin, not a GagaEmu target.

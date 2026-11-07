@@ -738,6 +738,34 @@
    ]
   },
   {
+   "id": "gearsystem",
+   "title": "Gearsystem",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/drhelius/Gearsystem, tag 3.9.24, commit 40b8eeb",
+   "cores": [
+    "gearsystem"
+   ],
+   "framework": "GearsystemCore",
+   "texts": [
+    {
+     "title": "Gearsystem",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "Blip_Buffer and Sms_Apu (Shay Green)",
+     "file": "licence-e5d47aaac156.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
