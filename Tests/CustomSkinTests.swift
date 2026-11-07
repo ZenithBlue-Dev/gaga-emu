@@ -93,3 +93,14 @@ final class CustomSkinTests: GagaTestCase {
         XCTAssertEqual(state.skins.skin?.id, "two-button")
     }
 }
+
+/// First-run tips come back after Reset Tips.
+final class TipTests: XCTestCase {
+    func testResetClearsDismissedTips() {
+        UserDefaults.standard.set("holdGame,dropFiles", forKey: Tip.storageKey)
+        Tip.reset()
+        XCTAssertNil(UserDefaults.standard.string(forKey: Tip.storageKey))
+        XCTAssertGreaterThanOrEqual(Tip.allCases.count, 3)
+        XCTAssertLessThanOrEqual(Tip.allCases.count, 5)
+    }
+}

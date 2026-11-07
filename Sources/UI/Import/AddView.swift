@@ -21,6 +21,7 @@ struct AddView: View {
                     }
                     .buttonStyle(PrimaryButtonStyle())
                     dropTarget
+                    TipLine(tip: .dropFiles)
                     ImportProgressRows()
                     if let notice { Text(notice).font(.footnote).foregroundStyle(AppTheme.muted) }
                 }

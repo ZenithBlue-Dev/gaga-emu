@@ -37,6 +37,7 @@ struct LibraryView: View {
                     Rule().ignoresSafeArea(edges: .vertical)
                     VStack(spacing: 0) {
                         ImportProgressRows().padding(.horizontal, 16)
+                        TipLine(tip: .holdGame).padding(.horizontal, 16).padding(.top, 8)
                         filterRow
                         Rule()
                         shelvesList

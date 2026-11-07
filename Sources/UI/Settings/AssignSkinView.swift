@@ -47,6 +47,7 @@ struct AssignSkinView: View {
                 .padding(.bottom, 12)
                 Text("Touch and hold a game in the library to choose a skin for that game only.")
                     .font(.footnote).foregroundStyle(AppTheme.muted).padding(.bottom, 8)
+                TipLine(tip: .editSkin).padding(.bottom, 8)
                 Rule()
                 ForEach(CoreCatalog.platforms) { platform in
                     HStack {

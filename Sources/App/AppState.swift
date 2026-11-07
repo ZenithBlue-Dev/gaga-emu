@@ -876,6 +876,11 @@ enum StateMigration {
 /// The app's one web host, the same one the App Store metadata uses.
 enum SiteLinks {
     private static let host = "https://zenithblue-oss.github.io/gaga-emu-site"
+    static let site = "\(host)/"
+    /// What Share GagaEmu sends.
+    /// shortcut: the app has no App Store ID until its first submission, so this is the site; replace with
+    /// https://apps.apple.com/app/id<ID> once App Store Connect assigns one.
+    static let appStore = site
     /// The site's page is "Support & FAQ", and it is also the feedback route.
     static let support = "\(host)/support.html"
     static let privacy = "\(host)/privacy.html"
