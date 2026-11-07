@@ -1296,14 +1296,15 @@ final class AppState: ObservableObject {
 
     /// As Files import: copied in, then `importArrived`. A note is shown as an Import failure, and the game is
     /// filtered onto the screen, since the Library builds only the shelves in view and a walk looks for it there.
-    /// Logs `[gaga-import] done <name> -> <platform>` (or `-> none`) when it ends, for device runners.
+    /// Logs `[gaga-import] done <name> -> <platform>` (`-> system (BIOS)` for a BIOS file, else `-> none`) when it
+    /// ends, for device runners.
     @discardableResult
     func importDebugROM(at url: URL) async throws -> GameItem? {
         let romDirectory = romDirectory
         // Off the main thread: the copy can be gigabytes.
         let copied = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
         let (game, note) = await importArrived(copied)
-        print("[gaga-import] done \(url.lastPathComponent) -> \(game?.platformID ?? "none")")
+        print("[gaga-import] done \(url.lastPathComponent) -> \(game?.platformID ?? (biosName(url) == nil ? "none" : "system (BIOS)"))")
         if let note { launchFailure = LaunchFailure(title: "Import", message: note) }
         if let game {
             platformFilter = game.platformID
