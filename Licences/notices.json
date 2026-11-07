@@ -208,6 +208,17 @@
       ]
     },
     {
+      "id": "beetle_ngp", "title": "Beetle NeoPop", "cores": ["beetle_ngp"], "framework": "BeetleNgpCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later and MIT parts",
+      "source": "https://github.com/libretro/beetle-ngp-libretro, commit a50d5ac",
+      "texts": [
+        { "title": "NeoPop (GPL-2.0-or-later)", "from": "Cores/beetle_ngp/upstream/mednafen/ngp/gfx.c", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_ngp/upstream/COPYING" },
+        { "title": "Fuse Z80 core (GPL-2.0-or-later)", "from": "Cores/beetle_ngp/upstream/mednafen/hw_cpu/z80-fuse/z80.c", "comment": true },
+        { "title": "Blip_Buffer and T6W28 (LGPL-2.1-or-later)", "from": "Cores/beetle_ngp/upstream/mednafen/sound/Blip_Buffer.cpp", "comment": true },
+        { "title": "libretro-common", "from": "Cores/beetle_ngp/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
