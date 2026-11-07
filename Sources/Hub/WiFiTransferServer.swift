@@ -227,7 +227,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Writes every file part of a multipart body into `directory`. Returns saved names.
+    /// Writes every file part of a multipart body into `directory`. Returns saved paths under it, as "Game/Game.cue" for a disc set.
     static func writeMultipart(_ body: Data, contentType: String, into directory: URL) throws -> [String] {
         guard let boundary = boundary(from: contentType) else { throw UploadError.noBoundary }
         let delimiter = Data(("--" + boundary).utf8)
@@ -246,7 +246,8 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
                 let part = try ClipboardImporter.partFile(in: directory)
                 defer { try? FileManager.default.removeItem(at: part) }
                 try bytes.write(to: part, options: .atomic)
-                saved.append(try ClipboardImporter.place(part, named: safe, in: directory).lastPathComponent)
+                let placed = try ClipboardImporter.placeROM(part, named: safe, in: directory)
+                saved.append(ClipboardImporter.relativePath(placed, in: directory))
             }
             search = next.lowerBound
         }

@@ -86,7 +86,7 @@ public struct ClipboardImporter: Sendable {
             throw ImportError.unsupported
         }
         defer { try? FileManager.default.removeItem(at: temp) }
-        return try place(temp, named: name, in: directory)
+        return try placeROM(temp, named: name, in: directory)
     }
 
     public static func persist(_ item: Item, into directory: URL) throws -> URL {
@@ -97,14 +97,14 @@ public struct ClipboardImporter: Sendable {
             let part = try partFile(in: directory)
             defer { try? FileManager.default.removeItem(at: part) }
             try FileManager.default.copyItem(at: url, to: part)
-            return try place(part, named: name, in: directory)
+            return try placeROM(part, named: name, in: directory)
         case .blob(let filename, let data):
             let name = WiFiTransferServer.sanitize(filename)
             guard !name.isEmpty else { throw ImportError.unsupported }
             let part = try partFile(in: directory)
             defer { try? FileManager.default.removeItem(at: part) }
             try data.write(to: part, options: .atomic)
-            return try place(part, named: name, in: directory)
+            return try placeROM(part, named: name, in: directory)
         case .remote:
             throw ImportError.unsupported // use download(_:into:)
         }
@@ -116,7 +116,18 @@ public struct ClipboardImporter: Sendable {
         return directory.appendingPathComponent(".\(UUID().uuidString).part")
     }
 
-    /// Moves `file` into `directory` as `name`, never over a different file. Every import ends here. A file
+    /// Every import into the ROM folder ends here. A disc set's file goes to its set's folder under its own name
+    /// (`DiscSet.route`); anything else is placed flat.
+    static func placeROM(_ file: URL, named name: String, in directory: URL) throws -> URL {
+        try DiscSet.route(file, named: name, in: directory) ?? place(file, named: name, in: directory)
+    }
+
+    /// The path of `url` under `directory`, as "Game.gba" or "Game/Game.cue".
+    static func relativePath(_ url: URL, in directory: URL) -> String {
+        DiscSet.folder(of: url, romDirectory: directory).map { "\($0.lastPathComponent)/\(url.lastPathComponent)" } ?? url.lastPathComponent
+    }
+
+    /// Moves `file` into `directory` as `name`, never over a different file. A file
     /// already there with the same size and CRC-32 is reused and `file` goes; otherwise the name takes the
     /// Files app's " 2", " 3" suffix, as in "Game 2.gba".
     static func place(_ file: URL, named name: String, in directory: URL) throws -> URL {
