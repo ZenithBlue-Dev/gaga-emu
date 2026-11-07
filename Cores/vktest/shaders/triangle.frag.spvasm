@@ -1,0 +1,23 @@
+; The test core's fragment shader: one flat colour, so a test can read exact bytes back.
+; GLSL equivalent: layout(location = 0) out vec4 color; void main() { color = vec4(1, 0.25, 0, 1); }
+; Regenerate VkTestShaders.h with Cores/vktest/shaders/make-shaders.sh after a change.
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Fragment %main "main" %color
+               OpExecutionMode %main OriginUpperLeft
+               OpDecorate %color Location 0
+       %void = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %vec4 = OpTypeVector %float 4
+   %out_vec4 = OpTypePointer Output %vec4
+      %color = OpVariable %out_vec4 Output
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+ %float_quarter = OpConstant %float 0.25
+  %vermilion = OpConstantComposite %vec4 %float_1 %float_quarter %float_0 %float_1
+       %main = OpFunction %void None %void_fn
+      %entry = OpLabel
+               OpStore %color %vermilion
+               OpReturn
+               OpFunctionEnd

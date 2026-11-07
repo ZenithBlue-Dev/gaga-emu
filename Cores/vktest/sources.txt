@@ -1,0 +1,3 @@
+VkTestCore.c
+../shared/LibretroAdapter.c
+../shared/LibretroVulkan.c

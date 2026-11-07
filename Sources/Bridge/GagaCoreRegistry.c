@@ -381,6 +381,11 @@ DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",   
 #ifndef GAGA_HAS_MELONDS_DS
 DEFINE_CORE_INTERFACE(MelonDS_GetInterface,       "melonds_ds",      "melonDS DS",        GAGA_CORE_EXCLUDED, "nds",      59.8261, 32728)
 #endif
+// The layer-path test core (Cores/vktest). CoreCatalog lists it in Debug builds only, and
+// scripts/appstore_release.sh leaves it out of the core set.
+#ifndef GAGA_HAS_VKTEST
+DEFINE_CORE_INTERFACE(VkTest_GetInterface,        "vktest",          "Vulkan Test",       GAGA_CORE_EXCLUDED, "gagavk",   60.0,    48000)
+#endif
 
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
@@ -409,6 +414,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Azahar_GetInterface,
     Flycast_GetInterface,
     Ppsspp_GetInterface,
+    VkTest_GetInterface,
 };
 
 static const size_t s_core_count = sizeof(s_core_getters) / sizeof(s_core_getters[0]);
