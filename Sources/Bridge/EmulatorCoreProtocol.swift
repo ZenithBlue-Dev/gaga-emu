@@ -215,10 +215,13 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     }
 
     /// One folder per game, named after the ROM file rather than a Library ID, so a save survives
-    /// removing a game from the Library and adding it back.
+    /// removing a game from the Library and adding it back. A disc set in its own folder under ROMs is keyed
+    /// by folder too, as "Saves/Game 2/Game.cue", because two different sets may share a descriptor name.
     public static func saveDirectory(forROM romPath: String) -> String {
-        baseDirectory.appendingPathComponent("Saves")
-            .appendingPathComponent(URL(fileURLWithPath: romPath).lastPathComponent).path
+        let url = URL(fileURLWithPath: romPath), folder = url.deletingLastPathComponent()
+        let saves = baseDirectory.appendingPathComponent("Saves")
+        let base = folder.deletingLastPathComponent().lastPathComponent == "ROMs" ? saves.appendingPathComponent(folder.lastPathComponent) : saves
+        return base.appendingPathComponent(url.lastPathComponent).path
     }
 
     /// Refuses a core with the wrong ABI or a failing self-test before creating anything.
