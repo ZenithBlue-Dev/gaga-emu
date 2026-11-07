@@ -59,6 +59,9 @@ final class BenchmarkRun {
         let fps: Double
         let fps1PercentLow: Double
         let frameIntervalMs: Percentiles
+        /// When each frame interval over 25 ms ended, in seconds after measuring began: one entry is a single hitch
+        /// (a shader compile), entries at a steady spacing are a periodic stall.
+        let slowFramesAtSeconds: [Double]
         /// Primary metric: CPU time on the core thread per guest frame, including the host callbacks.
         let coreCPUMsPerFrame: Percentiles
         let coreWallMsPerFrame: Percentiles
@@ -181,6 +184,7 @@ final class BenchmarkRun {
         }
         try? await Task.sleep(for: .seconds(warmup))
         let measureFrom = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        let statsAtStart = session.stats // Underruns while the game starts are not the measured run's.
         var interrupted = false
         for _ in 0..<Int(seconds) {
             try? await Task.sleep(for: .seconds(1))
@@ -194,7 +198,7 @@ final class BenchmarkRun {
         guard session.phase != .stopped else { return }
         session.pause(.menu)
 
-        let record = makeRecord(thermalStart: thermalStart, measureFrom: measureFrom, interrupted: interrupted)
+        let record = makeRecord(thermalStart: thermalStart, measureFrom: measureFrom, statsAtStart: statsAtStart, interrupted: interrupted)
         do {
             let url = try write(record)
             Logger(subsystem: "com.zenithblue.gagaemu", category: "benchmark").notice("record \(url.path, privacy: .public)")
@@ -234,7 +238,8 @@ final class BenchmarkRun {
         }
     }
 
-    private func makeRecord(thermalStart: ProcessInfo.ThermalState, measureFrom: UInt64, interrupted: Bool) -> Record {
+    private func makeRecord(thermalStart: ProcessInfo.ThermalState, measureFrom: UInt64, statsAtStart: GameSession.Stats,
+                            interrupted: Bool) -> Record {
         noteThermal()
         let first = samples.starts.firstIndex { $0 >= measureFrom } ?? samples.starts.count
         let starts = samples.starts[first...]
@@ -269,12 +274,14 @@ final class BenchmarkRun {
             fps: measured > 0 ? Double(starts.count - 1) / measured : 0,
             fps1PercentLow: slowestMean > 0 ? 1000 / slowestMean : 0,
             frameIntervalMs: Percentiles(intervals),
+            slowFramesAtSeconds: zip(starts.dropFirst(), intervals).filter { $1 > 25 }
+                .map { (Double($0.0 - starts.first!) / 10_000_000).rounded() / 100 },
             coreCPUMsPerFrame: Percentiles(samples.cpus[first...].map { Double($0) / 1_000_000 }),
             coreWallMsPerFrame: Percentiles(samples.walls[first...].map { Double($0) / 1_000_000 }),
             threadCPUPercentOfOneCore: threadTotals.mapValues { ($0 / divisor * 10).rounded() / 10 },
             memory: Self.memory(),
             thermal: .init(start: Self.name(thermalStart), end: Self.name(ProcessInfo.processInfo.thermalState), highest: Self.name(thermalHigh)),
-            audio: .init(underruns: stats.audioUnderruns, framesWritten: stats.audioWritten, framesRendered: stats.audioRendered),
+            audio: .init(underruns: stats.audioUnderruns - statsAtStart.audioUnderruns, framesWritten: stats.audioWritten, framesRendered: stats.audioRendered),
             video: .init(framesWritten: stats.videoWritten, framesDropped: stats.videoDropped),
             codeGenViolations: CodeGenCheck.violations().map(\.description))
     }
