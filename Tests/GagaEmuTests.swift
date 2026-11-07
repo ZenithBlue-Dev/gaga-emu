@@ -651,6 +651,26 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(try platform("pc.bin", image(Array("CD001".utf8), at: 16 * 2352 + 17)), "dos", "ISO 9660, Mode 1")
         XCTAssertNil(try platform("blank.bin", Data(count: 1024)), "asks")
         XCTAssertNil(try platform("game.chd", Data("MComprHD".utf8)), "compressed, asks")
+        XCTAssertEqual(try platform("dc.iso", image(Array("SEGA SEGAKATANA ".utf8), at: 0)), "dreamcast", "IP.BIN")
+        XCTAssertEqual(try platform("dc.bin", image(Array("SEGA SEGAKATANA ".utf8), at: 16)), "dreamcast", "raw sector")
+        XCTAssertEqual(try platform("dc.cue", Data("FILE \"dc.bin\" BINARY\n  TRACK 01 MODE1/2352\n".utf8)), "dreamcast")
+        // A version 5 header (124 bytes) whose one metadata entry follows it.
+        func chd(tag: String) -> Data {
+            var bytes = [UInt8](repeating: 0, count: 124 + 16 + 8)
+            bytes.replaceSubrange(0..<8, with: Array("MComprHD".utf8))
+            bytes[11] = 124
+            bytes[15] = 5
+            bytes[55] = 124 // metaoffset
+            bytes.replaceSubrange(124..<128, with: Array(tag.utf8))
+            bytes[128] = 1
+            bytes[131] = 8 // flags, then a 3-byte length; the next offset stays 0
+            return Data(bytes)
+        }
+        XCTAssertEqual(try platform("gd.chd", chd(tag: "CHGD")), "dreamcast", "GD-ROM track metadata")
+        XCTAssertNil(try platform("cd.chd", chd(tag: "CHT2")), "a CD-ROM .chd asks")
+        XCTAssertEqual(CoreCatalog.platformID(forFile: dir.appendingPathComponent("game.gdi")), "dreamcast")
+        XCTAssertEqual(CoreCatalog.platformID(forFile: dir.appendingPathComponent("game.cdi")), "dreamcast")
+        XCTAssertEqual(CoreCatalog.unplacedPlatforms(forExtension: "chd")?.last?.id, "dreamcast")
         XCTAssertNil(try platform("lost.cue", Data("FILE \"gone.bin\" BINARY\n".utf8)), "asks")
         XCTAssertEqual(CoreCatalog.discPlatforms.map(\.id).first, "ps1")
     }

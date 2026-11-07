@@ -402,7 +402,9 @@ DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",
 DEFINE_CORE_INTERFACE(Mupen64PlusNext_GetInterface, "mupen64plus_next", "Mupen64Plus-Next", GAGA_CORE_EXCLUDED, "n64|v64|z64", 60.0, 44100)
 #endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
-DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
+#ifndef GAGA_HAS_FLYCAST
+DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast",           GAGA_CORE_EXCLUDED, "gdi|cdi|chd|cue", 59.9453, 44100)
+#endif
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
 
 // ============================================================================
