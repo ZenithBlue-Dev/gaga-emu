@@ -121,6 +121,9 @@ enum CoreCatalog {
         .init(id: "ngp", name: "Neo Geo Pocket", manufacturer: "SNK", cores: [
             .init(id: "beetle_ngp", name: "Beetle NeoPop", note: "Pocket and Color", recommended: true)
         ]),
+        .init(id: "ws", name: "WonderSwan", manufacturer: "Bandai", cores: [
+            .init(id: "beetle_wswan", name: "Beetle WonderSwan", note: "Mono and Color", recommended: true)
+        ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
             .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
         ]),
@@ -208,6 +211,7 @@ enum CoreCatalog {
         case "sgx": return "sgx"
         case "vb", "vboy": return "vb"
         case "ngp", "ngc", "ngpc", "npc": return "ngp"
+        case "ws", "wsc", "pc2": return "ws"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
