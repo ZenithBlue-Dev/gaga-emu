@@ -427,6 +427,33 @@ final class GagaEmuTests: XCTestCase {
     }
 
     @MainActor
+    func testPaywallGateClosedLiftsLimits() {
+        let closed = StoreKitManager.Entitlements.effective(.free, gateOpen: false)
+        XCTAssertEqual(closed.maxSaveStates, .max)
+        XCTAssertEqual(closed.maxCheats, .max)
+        XCTAssertEqual(closed.maxFastForward, 5)
+        XCTAssertTrue(closed.premiumShaders)
+        XCTAssertTrue(closed.autoSaveState)
+    }
+
+    @MainActor
+    func testPaywallGateOpenEnforcesPurchases() {
+        let free = StoreKitManager.Entitlements.effective(.free, gateOpen: true)
+        XCTAssertEqual(free, .free)
+        XCTAssertEqual(free.maxSaveStates, 3)
+        let lifetime = StoreKitManager.Entitlements(premium: true, lifetime: true)
+        XCTAssertEqual(StoreKitManager.Entitlements.effective(lifetime, gateOpen: true), lifetime)
+    }
+
+    #if !PAYWALL_ENABLED
+    @MainActor
+    func testGateClosedInThisBuild() {
+        XCTAssertFalse(PaywallGate.isOpen)
+        XCTAssertTrue(StoreKitManager().canUseShader("geom-crt"))
+    }
+    #endif
+
+    @MainActor
     func testAutoSaveStateIsPremium() {
         XCTAssertFalse(StoreKitManager.Entitlements.free.autoSaveState)
         XCTAssertTrue(StoreKitManager.Entitlements(premium: true).autoSaveState)

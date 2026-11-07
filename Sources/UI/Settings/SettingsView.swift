@@ -85,7 +85,11 @@ struct SettingsView: View {
         }
     }
 
-    private var membershipBanner: some View {
+    @ViewBuilder private var membershipBanner: some View {
+        if PaywallGate.isOpen { membershipCard }
+    }
+
+    private var membershipCard: some View {
         Button { if store.entitlements.showsSubscribePrompts { showPaywall = true } } label: {
             VStack(spacing: 8) {
                 Text(store.entitlements.premium ? "GAGA-EMU Membership Active" : "Unlock GAGA-EMU membership")

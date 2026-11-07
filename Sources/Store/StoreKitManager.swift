@@ -1,6 +1,16 @@
 import Foundation
 import StoreKit
 
+/// Paywall release gate (docs/06 section 4.5). Add the PAYWALL_ENABLED compilation condition in
+/// project.yml only when milestone 7.2 opens it. While closed: no banner, no premium labels, no limits.
+public enum PaywallGate {
+    #if PAYWALL_ENABLED
+    public static let isOpen = true
+    #else
+    public static let isOpen = false
+    #endif
+}
+
 /// StoreKit 2. Three products: monthly, annual, lifetime.
 /// Premium unlocks the items in docs/06 section 4.3.
 @MainActor
@@ -48,13 +58,18 @@ public final class StoreKitManager: ObservableObject {
         /// Lifetime owners have nothing left to buy (docs/06 section 4.4).
         public var showsSubscribePrompts: Bool { !lifetime }
         public static let free = Entitlements(premium: false)
+
+        /// What the app enforces: the purchases, or no limits at all while the gate is closed.
+        static func effective(_ purchased: Entitlements, gateOpen: Bool = PaywallGate.isOpen) -> Entitlements {
+            gateOpen ? purchased : Entitlements(premium: true)
+        }
     }
 
     /// Sell only what works: anime4k and crt-royale return with milestone 3.4.
     public static let premiumShaderIDs: Set<String> = ["geom-crt", "geom-crt-border"]
 
     @Published public private(set) var offers: [Offer] = []
-    @Published public private(set) var entitlements: Entitlements = .free
+    @Published public private(set) var entitlements: Entitlements = .effective(.free)
     @Published public private(set) var isLoading = false
     @Published public var lastError: String?
 
@@ -147,7 +162,7 @@ public final class StoreKitManager: ObservableObject {
             current.premium = true
             if transaction.productID == ProductID.lifetime.rawValue { current.lifetime = true }
         }
-        return current
+        return .effective(current)
     }
 
     /// The offer App Store Connect has configured, if this user is still eligible for it.

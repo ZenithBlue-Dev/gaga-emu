@@ -68,7 +68,7 @@ struct ShadersSettingsView: View {
         } label: {
             HStack {
                 Text(shader.name).foregroundStyle(.white).font(.system(size: 16))
-                if shader.premium {
+                if shader.premium && PaywallGate.isOpen {
                     Text("PREMIUM").font(.system(size: 9, weight: .bold)).foregroundStyle(AppTheme.warning)
                 }
                 Spacer()

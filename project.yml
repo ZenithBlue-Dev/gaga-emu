@@ -21,6 +21,8 @@ configs:
       GCC_OPTIMIZATION_LEVEL: "s"
 
 settings:
+  # Paywall release gate: stays out until milestone 7.2 opens it (docs/06 section 4.5).
+  # To open it, add here: SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYWALL_ENABLED
   SWIFT_VERSION: "5.9"
   ENABLE_BITCODE: NO
   CLANG_ENABLE_MODULES: YES
