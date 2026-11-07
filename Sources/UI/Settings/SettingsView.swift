@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 
 /// Two-pane settings. Only rows with working behaviour appear; docs/07 says what returns when.
@@ -309,6 +310,11 @@ private struct GagaPlusPane: View {
 }
 
 private struct AboutPane: View {
+    @Environment(\.requestReview) private var requestReview
+    #if DEBUG
+    @EnvironmentObject private var state: AppState
+    #endif
+
     private var version: String {
         let info = Bundle.main.infoDictionary
         return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
@@ -325,6 +331,12 @@ private struct AboutPane: View {
         Rule()
         LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
         Rule()
+        ActionRow(title: "Rate Gaga-Emu", symbol: "star") { requestReview() }
+        Rule()
+        #if DEBUG
+        ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer") { state.runBenchmark() }
+        Rule()
+        #endif
     }
 }
 
