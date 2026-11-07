@@ -512,6 +512,19 @@ N64: one interval over 25 ms, ending at 9.36 s (`slowFramesAtSeconds`), so one s
 
 N64: 5 intervals over 25 ms in the measured 10 s, ending at 0.9, 3.5, 3.5, 4.0 and 4.5 s (`slowFramesAtSeconds`), so a cluster in the first 5 s of measuring and none after, not a steady stall. PSP peak footprint is now 329 MB, so the 1929 MB of run 6 was the whole-ISO hash. Import: the PSP 7z named .zip and the PS1 .7z disc both imported (platforms PSP and PS1), as did every other file; GBC landed on the GB platform and FDS on the NES platform. The three `bios_CD_*.bin` files and `disksys.rom` landed in `GagaEmu/System`. Short runs, not the three of section 7.2.
 
+**Game-scene device runs, 2026-11-08, build `c8f42c3` (device run 8).** Same phone and method, one 30 s run each (5 s warm-up, 30 s measured), thermal nominal throughout, host Debug with Release core. Owner-supplied games were copied to Documents and imported with `-GagaImportROM`, one per launch; none kept in the repo, names redacted in the records. The Mega-CD and PS1 records hash only the `.cue` sheet. The three `bios_CD_*.bin` files were imported first.
+
+| Platform | Core | Game | Archive | fps | 1% low | Core CPU ms per frame (mean, p99) | Peak footprint | Audio underruns | Slow frames (s into measuring) |
+|---|---|---|---|---|---|---|---|---|---|
+| GBA | mGBA | owner-supplied GBA game | .zip | 59.7 | 56.5 | 2.95, 3.79 | 174 MB | 0 | none |
+| N64 | Mupen64Plus-Next | owner-supplied N64 game | .zip | 59.6 | 31.9 | 5.37, 10.99 | 557 MB | 5 | 0.9, 3.41, 3.46, 3.98, 4.47, 10.4 |
+| PSP | PPSSPP | owner-supplied PSP game | .zip (a 7z) | 59.9 | 56.7 | 1.27, 1.77 | 327 MB | 0 | none |
+| PS1 | PCSX-ReARMed | owner-supplied PS1 disc | .7z | 60.0 | 57.3 | 6.07, 7.32 | 178 MB | 0 | none |
+| PS1 (same disc) | Beetle PSX HW | owner-supplied PS1 disc | .7z | 59.6 | 34.9 | 5.30, 7.84 | 513 MB | 4 | 14.08, 16.31, 22.46, 29.57 |
+| Mega-CD | JGenesis | owner-supplied Mega-CD game | .zip | 59.9 | 56.7 | 7.41, 8.44 | 178 MB | 0 | none |
+
+N64 against run 7 (10 s run, 1% low 19.9, 4 underruns, slow frames at 0.9, 3.5, 3.5, 4.0 and 4.5 s): the same five early hitches come again at 0.9, 3.41, 3.46, 3.98 and 4.47 s, so they are a repeatable start-up cluster, not noise. The 1% low is higher (31.9) because the 30 s run averages the slowest 1% of 1804 intervals, which dilutes five hitches, and the asynchronous queue submit may have shortened them; this run cannot tell the two apart. One new slow frame came at 10.4 s, after the cluster, and underruns are 5. The run's console printed one `[gaga-vk]` line: `vkCreateComputePipelines returned VkResult 1000297000` (the value of `VK_PIPELINE_COMPILE_REQUIRED`). It is not tied to a time here, so a pipeline compile cannot be named as the cause of any hitch. Beetle PSX HW ran with the OpenBIOS; it measured 59.6 fps with a 1% low of 34.9 and four slow frames from 14 s on. Its record counts no presented frames (layer-path cores write none to the video writer), so the picture itself was not seen on the device in this run; the unit test that draws the BIOS screen passed. 3DS was not run: the smallest owner archive (1.3 GB) holds a `.3ds` whose NCSD magic is present, but the zip is cut off (no central directory, 7-Zip: "Unexpected end of archive", 1.39 GB on disk against 1.66 GB packed for its one entry), so it cannot be unpacked. Short runs, not the three of section 7.2.
+
 **Backlog cores, group-retro** (`docs/07` section 8.x). Logic checked on a macOS host harness only; no device numbers yet.
 
 | Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
