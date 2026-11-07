@@ -163,7 +163,7 @@ Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and lay
 | Others | `Terms of Service`, `Privacy Policy` | | built as links |
 | Others | `Featured Items` | Purpose not shown | removed |
 | More from Manic | BitBop promo, `Try Now` | Manic's own product | **Not applicable.** Not planned. |
-| None | `Rate Us` card | `Your 5-star rating means the world to us! :)` | hidden |
+| None | `Rate Us` card | `Your 5-star rating means the world to us! :)` | built as a Settings > About row, `Rate Gaga-Emu`, using the system review prompt, without the 5-star copy |
 
 Rows marked hidden are not shown; each returns in the milestone and settings category listed in `docs/06` section 3.3. Saved values stay in `state.json`.
 

@@ -8,7 +8,7 @@ Manic EMU is a feature reference only, tracked in `docs/02`. Nothing in this doc
 
 ## Status
 
-The app runs a full game session on the mock core. The 11 non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build. No real core is integrated.
+The app runs a full game session on mGBA, the first real core, and on the mock core. The 10 other non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build.
 
 Status terms used in this document:
 
@@ -35,7 +35,7 @@ Status comes from reading the code and running the iOS Simulator, not from a dev
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │
  ┌───────────────────────────────┴─────────────────────────────────────┐
- │ Mock core (built). 11 weak stubs (stub). Real cores (planned, docs/03)│
+ │ Mock core, MgbaCore.xcframework (built). 10 weak stubs (stub).      │
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ video and audio callbacks
  ┌───────────────────────────────┴─────────────────────────────────────┐
@@ -205,11 +205,11 @@ const GagaCoreInterface* GagaCoreRegistry_FindByExtension(const char* extension)
 
 The table is compile-time; `docs/03` section 8 shows it and lists where the code disagrees with the catalog. The short lowercase `core_id` is the planned single ID scheme.
 
-Each stub is a weak definition in the app binary. A core's stub must be deleted when its framework is linked, or the app's own definition will win over the framework's symbol.
+Each remaining stub is a weak definition in the app binary. A core's stub must be deleted when its framework is linked, or the app's own definition will win over the framework's symbol. The mGBA stub is deleted.
 
 ### 2.3 Swift layer (built)
 
-`Sources/Bridge/EmulatorCoreProtocol.swift` defines `EmulatorCoreError`, `VideoFrame`, `AudioPacket`, `EmulatorCoreProtocol` and `GagaCoreWrapper`. The wrapper's initializer throws: it checks `abi_version`, runs `self_test` and creates the instance, so a core that fails either check never gets an instance. A `.userInteractive` serial queue owns every instance call, and a strict timer at `target_fps` drives `step_frame`. `pause` and `stop` are synchronous barriers on that queue, so no callback runs after they return. `Sources/Session/GameSession.swift` is the only caller in the app.
+`Sources/Bridge/EmulatorCoreProtocol.swift` defines `EmulatorCoreError`, `VideoFrame`, `AudioPacket`, `EmulatorCoreProtocol` and `GagaCoreWrapper`. The wrapper's initializer throws: it checks `abi_version`, runs `self_test` and creates the instance, so a core that fails either check never gets an instance. A `.userInteractive` serial queue owns every instance call, and a strict timer at `target_fps` drives `step_frame`. `pause` and `stop` are synchronous barriers on that queue, so no callback runs after they return. `Sources/Session/GameSession.swift` is the only caller in the app. `create` gets a per-game save directory, `Saves/<rom file name>/`, from `GagaCoreWrapper.saveDirectory(forROM:)`, and `load_rom` gets a path only.
 
 ### 2.4 Bridge additions
 
@@ -263,11 +263,48 @@ Which core uses which video path is in `docs/05` section 2.5.
 
 ### 2.5 Linking and embedding
 
-Target design, per `docs/03` section 5: each core is a dynamic, embedded xcframework that exports only the bridge entry point. Several libretro cores in one image would collide on `retro_*` symbols, and an export list keeps each core's internals private. S3 and S4 follow this shape (`S3/ios/SambaS3/project-core.yml:11-12`, `S4/ios/BachataS4/project-core.yml:16-17`, `S4/src/platform/ios/BachataCore.exports`).
+Per `docs/03` section 5: each core is a dynamic, embedded xcframework that exports only the bridge entry point. Several libretro cores in one image would collide on `retro_*` symbols, and an export list keeps each core's internals private. S3 and S4 follow this shape (`S3/ios/SambaS3/project-core.yml:11-12`, `S4/ios/BachataS4/project-core.yml:16-17`, `S4/src/platform/ios/BachataCore.exports`).
 
 Frameworks are signed and shipped inside the app bundle. Code is never loaded from user paths or downloaded. Dynamic linking does not change the GPL analysis in `docs/03` section 5.
 
-Status: planned. Today everything compiles into the app target, and no framework exists.
+Status: built for mGBA. `scripts/build-core.sh` writes `build/cores/MgbaCore.xcframework`, arm64 only, for simulator and device. The app's `project.yml` embeds it. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `xcodegen generate` and a build (README).
+
+**Adding the next core.** Follow these in order. `<id>` is the `core_id` in `CoreCatalog`, `<Name>` is the prefix of its stub in `GagaCoreRegistry.c`.
+
+1. **Read the gates.** For a GPL core, milestone 4.0 must be closed. Read `docs/07` section 2 and the core's row in `docs/03`. Read any upstream script before running it; `build-core.sh` runs none.
+2. **Vendor and pin.** Confirm the URL is the project's official repository, then run these. The final `git add` is what records the pin: without it, a clean checkout gets whatever the branch tip was.
+   ```bash
+   git submodule add <official-url> Cores/<id>/upstream
+   git -C Cores/<id>/upstream checkout <tag-or-commit>
+   git add .gitmodules Cores/<id>/upstream
+   ```
+3. **Write `Cores/<id>/core.env`.** Copy `Cores/mgba/core.env` and set all of these:
+   - `CORE_FRAMEWORK`, for example `GambatteCore`.
+   - `CORE_EXPORT`, exactly `_<Name>_GetInterface`.
+   - `CORE_VERSION`, `UPSTREAM_TAG`, and the full 40-character `UPSTREAM_COMMIT`. The build stops if the submodule is at any other commit.
+   - `CORE_CFLAGS` and `CORE_CXXFLAGS`. Paths are relative to `Cores/<id>/`. `Sources/Bridge` is already on the include path, and `GAGA_CORE_VERSION` is already defined.
+   - `FORBIDDEN_STRINGS`, the core's JIT runtime names from its audit. Never bare `jit` (`docs/04` section 8).
+   - `FORBIDDEN_IMPORTS`, a regex of APIs from features you disabled, such as `_socket$`.
+4. **Write `Cores/<id>/<Framework>.exports`.** One line: `_<Name>_GetInterface`.
+5. **Write `Cores/<id>/flags.h` if the core needs build defines.** Force it with `-include flags.h` in `CORE_CFLAGS`. Disable debuggers, frontends, scripting, networking, updaters and any dynarec.
+6. **Write `Cores/<id>/sources.txt`.** One path per line, relative to `Cores/<id>/`, listing the bridge and exactly the upstream files needed. `.c` uses `CORE_CFLAGS`, `.cpp` and `.cc` use `CORE_CXXFLAGS`. Upstream's own build system is not run. Check each third-party file's licence and add it to `docs/03`.
+7. **Write the bridge, `Cores/<id>/<Framework>.c`,** implementing `GagaCoreInterface` from `GagaBridge.h`:
+   - Set `abi_version` first. Implement `self_test`, which runs with no instance and before `create`, `pause`, `resume` and `set_event_callback`.
+   - Every instance call runs on one serial queue. Callbacks fire on it, inside a host call. Marshal any worker thread to `step_frame`. Descriptor and message pointers are valid only during the callback. No callback after `destroy` returns.
+   - `load_rom` gets a path only, and returns false after a FATAL event whose message the player can read. FATAL during play ends the session with its message.
+   - The host timer calls `step_frame` at `target_fps` with 4 inputs. Do not self-pace. Each audio packet carries `sample_rate`.
+   - Write battery saves into the `save_dir` you are given. `Cores/mgba/MgbaCore.c` is the pattern.
+8. **Delete the core's `DEFINE_CORE_INTERFACE(<Name>_GetInterface, ...)` line** in `Sources/Bridge/GagaCoreRegistry.c`. Keep its entry in `s_core_getters`. Check that `CoreCatalog` has the `core_id` and the file extensions the core really accepts.
+9. **Add to `project.yml`,** under the `GagaEmu` target's `dependencies`, then run `xcodegen generate`:
+   ```yaml
+      - framework: build/cores/<Framework>.xcframework
+        embed: true
+   ```
+10. **Build.** `scripts/build-core.sh <id>` must print `exports (iphonesimulator): _<Name>_GetInterface`, the same for `iphoneos`, and `no-JIT gate: pass <Framework>` twice. The app's post-build gate must print `pass` for the framework. It fails the build if the framework is not embedded.
+11. **Check the privacy manifest.** Run `nm -u` on the framework. Any required-reason API, such as `fstat`, needs an entry in `Sources/App/PrivacyInfo.xcprivacy`.
+12. **Test.** Add `Tests/<Name>CoreTests.swift`, reaching the core through `GagaCoreRegistry_FindByID("<id>")`, because the test bundle cannot link the framework's symbol. Use a homebrew or generated ROM, never a commercial one, and no vendor BIOS. Assert that it loads, frames match, input changes the frame, audio is non-silent, a FATAL message arrives, and `CodeGenCheck.violations()` is empty after a run. `Tests/MgbaCoreTests.swift` and `Sources/Debug/GBATestROM.swift` are the pattern. Update any test that uses this core's ID as its example of a stub.
+13. **Verify in the app on the Simulator.** Import through a real importer, launch from the Library, press a touch control, pause, resume, quit, relaunch ten times, and check the `.sav`. Run the tests with `-enableThreadSanitizer YES`. Build `generic/platform=iOS` with `CODE_SIGNING_ALLOWED=NO`, both Debug and Release.
+14. **Record.** Update the core's rows in `docs/03` (pin, licence, no-JIT) and `docs/04` section 7.1, and its milestone in `docs/07`. Its status stays "built, device benchmark pending" until a device run per `docs/04` section 7.2 exists.
 
 ---
 
@@ -363,7 +400,7 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Controls | Touch Control, connected controllers with their player slot, TriggerPro. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
-| About | Version, Support and FAQ, Feedback, Terms of Service, Privacy Policy | built: Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
+| About | Version, Support and FAQ, Feedback, Rate Gaga-Emu, Terms of Service, Privacy Policy. Debug builds add Run Benchmark. | built: Rate Gaga-Emu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
 
 All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
 
@@ -374,7 +411,6 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 | Row | Home when it returns | Returns with |
 |---|---|---|
 | Auto Save States | Play | 2.6, gated by `canUseAutoSaveState` |
-| Rate Us | About | 2.9 |
 | Cover Scraping | Library | 3.8 |
 | Assign Skin | Controls | 3.9 |
 | RetroAchievements | Play | 3.10 |
@@ -513,6 +549,8 @@ configs:
       GCC_OPTIMIZATION_LEVEL: "s"
 
 settings:
+  # Paywall release gate: stays out until milestone 7.2 opens it (docs/06 section 4.5).
+  # To open it, add here: SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYWALL_ENABLED
   SWIFT_VERSION: "5.9"
   ENABLE_BITCODE: NO
   CLANG_ENABLE_MODULES: YES
@@ -521,6 +559,8 @@ settings:
   DEVELOPMENT_TEAM: "9227VF8RW4"
   CODE_SIGN_STYLE: Automatic
   CODE_SIGN_IDENTITY: "Apple Development"
+  # Cores are built for arm64 only (scripts/build-core.sh).
+  "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
 
 targets:
   GagaEmu:
@@ -532,12 +572,19 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.gagaemu
       INFOPLIST_FILE: Sources/App/Info.plist
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       CODE_SIGN_ENTITLEMENTS: Sources/App/GagaEmu.entitlements
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
-      OTHER_CFLAGS:
-        - -std=c99
+      # Not OTHER_CFLAGS: C++ inherits those, and -std=c99 is an error in a C++ compile.
+      GCC_C_LANGUAGE_STANDARD: c99
+      # The no-JIT gate reads the built app, outside what a sandboxed script may read.
+      ENABLE_USER_SCRIPT_SANDBOXING: NO
+    dependencies:
+      # Built by scripts/build-core.sh, which must run first. See README.
+      - framework: build/cores/MgbaCore.xcframework
+        embed: true
     frameworks:
       - Metal
       - MetalKit
@@ -546,6 +593,14 @@ targets:
       - AVFoundation
       - StoreKit
       - AudioToolbox
+      - GameKit
+    postBuildScripts:
+      - name: No-JIT gate
+        script: '"$SRCROOT/scripts/nojit-gate.sh" --app "$TARGET_BUILD_DIR/$WRAPPER_NAME" "$SRCROOT/$CODE_SIGN_ENTITLEMENTS"'
+        basedOnDependencyAnalysis: false
+      - name: Record build commit
+        script: 'git -C "$SRCROOT" describe --always --dirty --exclude "*" > "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/build-commit.txt"'
+        basedOnDependencyAnalysis: false
 
   GagaEmuTests:
     type: bundle.unit-test
@@ -557,17 +612,12 @@ targets:
       - target: GagaEmu
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.GagaEmuTests
+      GENERATE_INFOPLIST_FILE: YES
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
 ```
 
-Future addition, not in `project.yml` today. Each integrated core adds one embedded dependency to the app target, following `docs/03` section 5 and section 2.5 above:
+Each integrated core adds one embedded dependency to the app target, per section 2.5 above.
 
-```yaml
-    dependencies:
-      - framework: Frameworks/MgbaCore.xcframework
-        embed: true
-```
-
-`GagaEmu.xcodeproj/` is generated and ignored by git, as in S3 and S4 (`S3/ios/.gitignore:2`, `S4/ios/BachataS4/project.yml:4-5`). Run `xcodegen generate` after a fresh clone; `scripts/appstore_release.sh` runs it first.
+`GagaEmu.xcodeproj/` is generated and ignored by git, as in S3 and S4 (`S3/ios/.gitignore:2`, `S4/ios/BachataS4/project.yml:4-5`). After a fresh clone, run the build command in the README; `scripts/appstore_release.sh` runs the same steps first.

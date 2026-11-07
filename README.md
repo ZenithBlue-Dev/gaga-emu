@@ -2,7 +2,7 @@
 
 Multi-system emulator for iOS and iPadOS, designed for App Store distribution with no JIT in any shipped core.
 
-**Status: early shell with a mock core; no real emulation core runs yet** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md)). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
+**Status: early. mGBA is the first real core. It runs a homebrew test ROM on the iOS Simulator, and has not run on a device or been benchmarked yet** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md)). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
 
 ---
 
@@ -29,8 +29,30 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
 
 5. **Manic EMU as a Feature Reference** (no parity claim and no copied UI; `docs/02` tags each item by source and status):
    - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, Multi-Disc M3U helper, and an in-memory ROM patcher (IPS, including RLE records, plus BPS and UPS).
-   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built, and proved in a game session on the mock core only.
+   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built. Touch has been proved with mGBA on the Simulator; controllers and TriggerPro in a session on the mock core only.
    - Scope is an explicit platform list in `docs/03`. PS3 (`samba-s3`) and PS4 (`bachata-s4`) are external sister projects, never catalog rows or frame producers. PS2 (`balero-s2`) and GameCube/Wii are non-shipping research and are not promised.
+
+---
+
+## Building
+
+Needs Xcode and [XcodeGen](https://github.com/yonaskolb/XcodeGen). From a clean checkout:
+
+```bash
+git submodule update --init
+scripts/build-core.sh          # writes build/cores/MgbaCore.xcframework, runs the no-JIT gate
+xcodegen generate
+xcodebuild build -project GagaEmu.xcodeproj -scheme GagaEmu \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
+```
+
+Run `xcodebuild test` with the same arguments for the tests. For a device build without signing, use `-destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO`. A build fails if a core fails the no-JIT gate (`docs/04` section 8). Build outputs and the generated project are not committed. `docs/06` section 2.5 has the recipe for adding a core.
+
+**Source for bundled code.** mGBA is MPL-2.0: [github.com/mgba-emu/mgba](https://github.com/mgba-emu/mgba), tag 0.10.5, commit `26b7884bc25a5933960f3cdcd98bac1ae14d42e2`, unmodified, at `Cores/mgba/upstream`. `docs/03` section 5 lists the licences it brings.
+
+**Test ROM.** No commercial game or Nintendo material is involved. `scripts/make-test-rom.sh <out.gba>` writes a small homebrew ROM from `Sources/Debug/GBATestROM.swift`; the tests generate their own.
+
+**Benchmark.** In a Debug build, use Settings > About > Run Benchmark, or launch with `-GagaBenchmark`. The record lands in Documents/Benchmarks, which the Files app shows. `docs/04` section 7.2 has the procedure.
 
 ---
 

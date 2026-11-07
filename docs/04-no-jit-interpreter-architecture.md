@@ -426,7 +426,7 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
 |---|---|---|---|---|---|---|
 | Game Boy / GBC | Gambatte | SM83 | Not audited | No dynarec expected | 1 | Target (unmeasured) |
-| GBA | mGBA | ARM7TDMI | Not audited | No dynarec expected | 1 | Target (unmeasured) |
+| GBA | mGBA | ARM7TDMI | Audited at 0.10.5: compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. `Cores/mgba/flags.h` | 1 | Target (unmeasured). Device benchmark pending |
 | NES | Nestopia | 6502 family | Not audited | No dynarec expected | 1 | Target (unmeasured) |
 | SNES | bsnes | 65C816, SPC700 | Not audited | No dynarec expected | 2 | Target (unmeasured). Accuracy-first core |
 | Genesis / Mega-CD | JGenesis | M68000, Z80 | Not audited. Self-maintained iOS port | No dynarec expected | 2 | Target (unmeasured) |
@@ -481,30 +481,33 @@ Adapted from `S3/docs/ios/benchmarks/` and `S4/docs/plans/ios-nojit/benchmark.md
 | `reported` | A third-party or developer statement, with its source |
 | `estimate` | Engineering guess. Mark it as S3 marks `[est]` |
 
+**Running it (built, milestone 2.8a).** `BenchmarkRun` in `Sources/Debug/BenchmarkHarness.swift` is in debug builds only.
+
+1. Install a Debug build on the iPhone from Xcode: `scripts/build-core.sh`, `xcodegen generate`, open `GagaEmu.xcodeproj`, choose the phone, Run. Turn off Low Power Mode and let the phone cool.
+2. Start a run with Settings > About > Run Benchmark, which plays the generated test ROM for 60 s. Or set launch arguments in the Xcode scheme: `-GagaBenchmark`, optionally `-GagaBenchmarkSeconds 60` and `-GagaBenchmarkROM <file name in the ROMs folder>`. The first 5 s are warm-up and are not measured.
+3. Wait for "Benchmark finished". Do not touch the screen. A run that backgrounds or pauses is marked `interrupted`.
+4. Fetch the record from the Files app, On My iPhone > GagaEmu > Benchmarks, or from Finder's Files tab for the phone. It is named `<core>-<device>-<UTC time>.json`.
+5. Repeat for three runs, discarding the first after an install (procedure above). Keep the JSON, and cite it where the core's result is recorded.
+
+The record holds device, OS, build and core commit, core settings, ROM file and SHA-256, input script, frames, fps and 1% low, frame interval, core CPU and wall ms per frame with percentiles, CPU per thread, memory, thermal state at start, end and highest, audio underruns, video drops and any `CodeGenCheck` violations. A Simulator record is labelled "simulator, not a performance measure"; a device record is labelled `measured`. The host app is always a Debug build, as recorded in `hostConfiguration`, while the core keeps its own optimised flags. So core ms per frame carries over to Release, and host thread percentages do not. The generated test ROM is trivial and sets a floor, not a game's load, so `-GagaBenchmarkROM` with a game the owner has the right to use gives the meaningful figure.
+
 ---
 
 ## 8. Per-core no-JIT gate
 
-**Status: planned.** Every core build runs this gate before it enters the app, and again on the final binary. Passing a final-binary check once is not enough, because a later core can add a path. Adapted from `S3/scripts/ios/build-core.sh:45-54`. S4 uses a similar symbol check (`S4/scripts/ios/build-core.sh:55`).
+**Status: built (milestone 2.7).** Every core build runs this gate before it enters the app, and again on the final binary. Passing a final-binary check once is not enough, because a later core can add a path. Adapted from `S3/scripts/ios/build-core.sh:45-54`. S4 uses a similar symbol check (`S4/scripts/ios/build-core.sh:55`).
 
-**Static check.**
+**JIT denial is OS enforcement.** iOS applies W^X and offers no public JIT entitlement to App Store apps, so a mapping that asks for write and execute comes back without execute on a device. The gate does not enforce that and could not. It catches a core that would depend on code generation, at build time, before it fails on a phone.
+
+**Static check.** `scripts/nojit-gate.sh` has three modes:
 
 ```bash
-#!/usr/bin/env bash
-# Usage: nojit-gate.sh <core binary or static library> [forbidden-strings-regex]
-set -euo pipefail
-binary=${1:?usage: nojit-gate.sh <binary> [strings-regex]}
-strings_regex=${2:-'asmjit::JitRuntime'}
-# Same symbol list as S3/scripts/ios/build-core.sh:46.
-if nm -u "$binary" | grep -E '_pthread_jit_write_protect_np|_sys_icache_invalidate|___clear_cache|_mach_vm_protect|_vm_protect$'; then
-    echo "$binary imports a code-generation API" >&2
-    exit 1
-fi
-if strings -a "$binary" | grep -E "$strings_regex" >/dev/null; then
-    echo "$binary contains a JIT runtime string ($strings_regex)" >&2
-    exit 1
-fi
+scripts/nojit-gate.sh <binary or object> [forbidden-strings-regex]   # one core binary
+scripts/nojit-gate.sh --entitlements <plist>                         # refuses JIT entitlement keys
+scripts/nojit-gate.sh --app <App.app> <entitlements plist>           # everything in a built app
 ```
+
+`scripts/build-core.sh` runs the first on each slice, with `FORBIDDEN_STRINGS` from `Cores/<id>/core.env`. The app's post-build step runs `--app`, which fails the build if a core in `Cores/` is not embedded, the entitlements ask for `allow-jit`, `allow-unsigned-executable-memory`, `disable-executable-page-protection` or `dynamic-codesigning`, or any binary in the app fails the check. A binary it cannot read fails too. The symbol list is S3's: `_pthread_jit_write_protect_np`, `_sys_icache_invalidate`, `___clear_cache`, `_mach_vm_protect`, `_vm_protect`.
 
 Limits of the static check:
 
@@ -513,40 +516,13 @@ Limits of the static check:
 
 **Build-configuration check.** Each core's build must set its no-JIT option and fail if the option is missing. The table in section 7.1 lists what is known.
 
-**Source audit for startup code generation.** S3 found code generation even in interpreter mode: thread trampolines, SPU and PPU gateways, a 2 GiB W+X arena, RSX copy routines, and reservations with `MAP_JIT` (`S3/docs/ios/research/00-README.md`, "Hidden blocker"). It needed about 15 static replacements and an `IOS_NO_JIT` build (`S3core` commit `30e9f7c42`). Selecting "interpreter" in a core's settings does not prove that no code is generated. Audit each core for:
+**Source audit for startup code generation.** `scripts/build-core.sh` greps the core's compiled source files for the calls below and stops on a hit, which needs a read and a per-core decision. It does not read headers or embedded assemblers, so those stay a manual step. S3 found code generation even in interpreter mode: thread trampolines, SPU and PPU gateways, a 2 GiB W+X arena, RSX copy routines, and reservations with `MAP_JIT` (`S3/docs/ios/research/00-README.md`, "Hidden blocker"). It needed about 15 static replacements and an `IOS_NO_JIT` build (`S3core` commit `30e9f7c42`). Selecting "interpreter" in a core's settings does not prove that no code is generated. Audit each core for:
 
 - `PROT_EXEC`, `MAP_JIT`, `mprotect`, `vm_protect`, `mach_vm_remap`
 - `__clear_cache`, `sys_icache_invalidate`
 - Embedded assemblers: asmjit, Lightning, xbyak, vixl, and core-specific emitters
 
-**Runtime check.** Load the core, run a test ROM for several seconds, and compare executable regions before and after. The count must not grow.
-
-```c
-#include <mach/mach.h>
-
-// Counts executable regions in this process. Compare after load and after a run of frames.
-static unsigned gaga_count_exec_regions(void) {
-    unsigned count = 0;
-    vm_address_t address = 0;
-    for (;;) {
-        vm_size_t size = 0;
-        vm_region_basic_info_data_64_t info;
-        mach_msg_type_number_t n = VM_REGION_BASIC_INFO_COUNT_64;
-        mach_port_t object = MACH_PORT_NULL;
-        if (vm_region_64(mach_task_self(), &address, &size, VM_REGION_BASIC_INFO_64,
-                         (vm_region_info_t)&info, &n, &object) != KERN_SUCCESS) {
-            break;
-        }
-        if (info.protection & VM_PROT_EXECUTE) {
-            ++count;
-        }
-        address += size;
-    }
-    return count;
-}
-```
-
-S4 walks regions with `vm_region_64` on device (`S4/docs/plans/ios-nojit/ios-core.md:57`). This exact function compiled for iOS and ran on macOS only. It has not been run on a device. A core that lazily loads a framework can raise the count without generating code, so a failure needs a look at the new region.
+**Runtime check.** `CodeGenCheck` in `Sources/Debug/CodeGenCheck.swift`, debug and test builds only, walks the process's memory map with `vm_region_recurse_64` and takes a baseline at startup. Against that baseline it reports a new region that is both writable and executable, and a new executable region that no loaded image owns, as `dladdr` sees it. Asking dyld is what stops a lazily loaded framework from counting as code generation. `GameSession` reports violations when a session stops, the benchmark record lists them, and `Tests/MgbaCoreTests.swift` runs mGBA between two checks, including a positive control that maps executable memory on the Simulator. S4 walks regions with `vm_region_64` on device (`S4/docs/plans/ios-nojit/ios-core.md:57`). This check has run on the Simulator only. The positive control cannot create such a mapping on a device, because the OS refuses it, so a device run shows a clean walk and not a proved detection.
 
 Because RWX `mmap` becomes `rw-` silently, also run each core under test with crash reports collected. An `EXC_BAD_ACCESS` at a jump into a heap address is a gate failure.
 
