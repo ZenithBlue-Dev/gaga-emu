@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Settings. Order matches 44F4AEE0, C4E3779B, 8A17681E, 9EFF77AC.
+/// Settings. Order matches 44F4AEE0, C4E3779B, 8A17681E, 9EFF77AC. Rows with nothing behind them
+/// are hidden until a later phase implements them (docs/07). Their saved values stay in state.json.
 struct SettingsView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var store: StoreKitManager
@@ -22,25 +23,9 @@ struct SettingsView: View {
                 AdventurerCardView()
                 section("General") {
                     appearanceRow
-                    navRow("paintpalette.fill", .orange, "Theme", "App Icons, Theme Colors, Boxart Settings, Console Ordering") {}
-                    toggleRow("paperplane.fill", .yellow, "Quick Start", "Skip preparation page", $state.quickStart)
-                    toggleRow("arrow.down.doc.fill", .green, "Auto Save States", nil, $state.autoSaveStates)
-                    navRow("tshirt.fill", .pink, "Assign Skin", nil) {}
-                    navRow("photo.fill", .blue, "Cover Scraping", nil) {}
                 }
                 section("Advanced") {
-                    toggleRow("dot.radiowaves.left.and.right", .blue, "AirPlay Fullscreen", "Enable fullscreen mirroring", $state.airPlayFullscreen)
-                    navRow("icloud.fill", .orange, "iCloud Sync", state.iCloudSync ? "On" : "iCloud Not Enabled") { state.iCloudSync.toggle() }
-                    toggleRow("arrow.up.left.and.arrow.down.right.circle", .teal, "Auto Full Screen",
-                              "Automatically enter full screen when a controller is connected for gaming", $state.autoFullScreen)
                     navRow("cpu.fill", .red, "BIOS", "BIOS required for some platforms") { showBIOS = true }
-                    toggleRow("bell.fill", .purple, "Respect Silent Mode",
-                              "When enabled, Gaga-Emu will only play audio when not in silent mode.", $state.respectSilentMode)
-                    navRow("globe", .orange, "Online Play Settings", nil) {}
-                    toggleRow("waveform", .green, "Rumble",
-                              "The device vibrates during certain events", $state.rumble)
-                    toggleRow("tshirt.fill", .pink, "Skin Sound Effects", nil, $state.skinSoundEffects)
-                    navRow("rosette", .blue, "RetroAchievements", nil) {}
                     navRow("square.grid.2x2", .yellow, "TriggerPro", "Create and manage advanced custom buttons.") { showTriggerPro = true }
                     navRow("circle.grid.3x3.fill", AppTheme.accent, "Shaders", nil) { showShaders = true }
                     navRow("atom", .purple, "Emulator Core", nil) { showCores = true }
@@ -50,22 +35,10 @@ struct SettingsView: View {
                     linkRow("envelope.fill", .green, "Feedback", SiteLinks.support)
                 }
                 section("Others") {
-                    navRow("person.2.fill", .pink, "About Us", nil) {}
-                    navRow("square.and.arrow.up", .blue, "Share Gaga-Emu", nil) {}
                     navRow("trash.fill", .yellow, "Clear Cache", cacheNote) { showClearConfirm = true }
-                    navRow("bubble.left.fill", .green, "Reset Tips", "Show previously dismissed alerts and tips again") {}
-                    HStack {
-                        Image(systemName: "globe").foregroundStyle(.teal).frame(width: 28)
-                        Text("Language").foregroundStyle(.white)
-                        Spacer()
-                        Text(state.language).foregroundStyle(AppTheme.textSecondary)
-                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(AppTheme.textTertiary)
-                    }
-                    .padding(.vertical, 8)
                     linkRow("doc.text.fill", .red, "Terms of Service", SiteLinks.terms)
                     linkRow("lock.shield.fill", .purple, "Privacy Policy", SiteLinks.privacy)
                 }
-                rateCard
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -128,18 +101,6 @@ struct SettingsView: View {
         .padding(.vertical, 6)
     }
 
-    private var rateCard: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 4) {
-                ForEach(0..<5, id: \.self) { _ in Image(systemName: "star.fill").foregroundStyle(.yellow) }
-            }
-            Text("Rate Us").font(.system(size: 15, weight: .bold)).foregroundStyle(AppTheme.warning)
-            Text("Your 5-star rating means the world to us!")
-                .font(.system(size: 13)).foregroundStyle(AppTheme.textSecondary)
-        }
-        .frame(maxWidth: .infinity).padding(.vertical, 16).glassCard()
-    }
-
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title).font(.system(size: 14)).foregroundStyle(AppTheme.textSecondary).padding(.leading, 4)
@@ -147,14 +108,6 @@ struct SettingsView: View {
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .glassCard()
         }
-    }
-
-    private func toggleRow(_ symbol: String, _ tint: Color, _ title: String, _ subtitle: String?, _ binding: Binding<Bool>) -> some View {
-        Toggle(isOn: binding) {
-            label(symbol, tint, title, subtitle)
-        }
-        .tint(AppTheme.accent)
-        .padding(.vertical, 4)
     }
 
     private func navRow(_ symbol: String, _ tint: Color, _ title: String, _ subtitle: String?, action: @escaping () -> Void) -> some View {
