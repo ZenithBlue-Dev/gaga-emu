@@ -2073,6 +2073,23 @@
      "file": "licence-2e05252f2fa6.txt"
     }
    ]
+  },
+  {
+   "id": "slang-import",
+   "title": "glslang and SPIRV-Cross",
+   "licence": "BSD-3-Clause, BSD-2-Clause, MIT and Apache-2.0 (glslang); Apache-2.0 (SPIRV-Cross)",
+   "source": "glslang 15.3.0 (https://github.com/KhronosGroup/glslang, commit fc9889c), the copy at Cores/flycast/deps/glslang, and SPIRV-Cross sdk-1.3.239.0 (https://github.com/KhronosGroup/SPIRV-Cross, commit 4212eef), the copy at Cores/ppsspp/upstream/ext/SPIRV-Cross, both unmodified. Built into the app to translate imported .slangp filters to Metal.",
+   "cores": [],
+   "texts": [
+    {
+     "title": "glslang",
+     "file": "licence-adb783e734e9.txt"
+    },
+    {
+     "title": "SPIRV-Cross (Apache-2.0)",
+     "file": "licence-cfc7749b96f6.txt"
+    }
+   ]
   }
  ]
 }
