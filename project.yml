@@ -65,6 +65,7 @@ targets:
       - target: GagaEmu
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.GagaEmuTests
+      GENERATE_INFOPLIST_FILE: YES
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
