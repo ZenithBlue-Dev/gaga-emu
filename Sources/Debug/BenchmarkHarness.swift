@@ -152,6 +152,11 @@ final class BenchmarkRun {
         case "amiga": (data, ext) = (AmigaTestROM.adf(), "adf")
         case "doom": (data, ext) = (DoomTestWAD.wad(), "wad")
         case "n3ds": (data, ext) = (N3DSTestProgram.build(), "3dsx")
+        case "dreamcast": // The .gdi names its tracks, written beside it.
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let files = DreamcastTestDisc.files(name: name)
+            for file in files.dropLast() { try file.data.write(to: directory.appendingPathComponent(file.name)) }
+            (data, ext) = (files.last!.data, "gdi")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
