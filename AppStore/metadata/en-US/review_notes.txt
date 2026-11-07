@@ -1,12 +1,12 @@
 GagaEmu is a retro game emulator (App Review Guideline 4.7). It contains no games, ROMs or BIOS, and it does not sell, link to or help obtain any. Users run only homebrew or legally owned backups of software they dumped from cartridges, discs and consoles they own.
 
-No account, login or demo account is needed. The app collects no data and has no analytics, advertising or tracking.
+No account, login or demo account is needed. The app has no analytics, advertising or tracking. One optional setting, Cover Art in Settings > Library, is off by default; when the user turns it on, game titles are sent to thumbnails.libretro.com to look up box art.
 
 How to review without any game:
 - On first launch the library is empty, because the app ships without any software. The import button opens the iOS file picker; files can also be copied into GagaEmu with the Files app (On My iPhone).
 - Settings shows core status and a button to share a session log. All of this works without any game.
 - While a game runs, the view is full screen with on-screen touch controls. The menu pauses or stops the game.
 
-The app does not generate or execute new machine code at run time, and it never makes memory executable.
+The app does not generate or execute new CPU code at run time, and it never makes memory executable. A user may import a .metal shader file, which the system's Metal compiler turns into GPU code; this runs on the GPU only.
 
 Review contact: name, phone and e-mail are entered by the account holder in App Store Connect.

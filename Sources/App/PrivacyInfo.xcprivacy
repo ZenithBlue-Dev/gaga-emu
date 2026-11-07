@@ -2,13 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- No tracking and no data collected: the app has no analytics or crash upload. -->
+    <!-- No tracking, analytics or crash upload. One item leaves the device, and only with the Cover Art
+         toggle on (off by default): game titles, in request URLs to thumbnails.libretro.com, a third party
+         whose server logs the app cannot control. Hence declared, not linked to identity, for app function. -->
     <key>NSPrivacyTracking</key>
     <false/>
     <key>NSPrivacyTrackingDomains</key>
     <array/>
     <key>NSPrivacyCollectedDataTypes</key>
-    <array/>
+    <array>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
+    </array>
     <!-- Declare each required-reason API when code adds it. MgbaCore imports fstat, for the size of its
          own ROM and save files, and SaveStore reads save state modification dates to list them. All of
          these files are inside the app container. -->

@@ -33,7 +33,7 @@
   },
   "ITSAppUsesNonExemptEncryption": false,
   "manual": {
-    "appPrivacy": "Data Not Collected",
+    "appPrivacy": "Other Data, for App Functionality, not linked to the user, no tracking. Game titles go to thumbnails.libretro.com only with the Cover Art setting on, which is off by default. No other data leaves the device.",
     "usesNonExemptEncryption": false,
     "exportComplianceNote": "Info.plist sets ITSAppUsesNonExemptEncryption to false.",
     "pricing": "Owner's choice",
