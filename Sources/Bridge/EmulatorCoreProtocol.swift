@@ -144,6 +144,25 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     private var lastFatalMessage: String?
     private var presentVideo = true
     private var playAudio = true
+    /// Queue only. Present while rewind is on and the core has not been ruled out.
+    private var rewindTrack: RewindTrack?
+    private var rewindHeld = false // Guarded by inputLock.
+    /// Called once on the queue: nil when rewind works on this core, otherwise why it does not.
+    public var onRewindVerdict: ((String?) -> Void)?
+
+    private final class RewindTrack {
+        let policy: RewindPolicy
+        let buffer: RewindBuffer
+        var state = Data() // Save and load scratch, as large as the largest state so far.
+        var samples: [UInt64] = []
+        var decided = false
+        var frames = 0
+
+        init(policy: RewindPolicy) {
+            self.policy = policy
+            buffer = RewindBuffer(budget: policy.budgetBytes)
+        }
+    }
 
     // MARK: - Metadata Accessors
 
@@ -412,6 +431,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             stepping = false
             if let inst = instance { coreInterface.flush_battery_save?(inst) }
             destroyInstance()
+            rewindTrack = nil
+            onRewindVerdict = nil
             onVideoFrame = nil
             onAudioPacket = nil
             onEvent = nil
@@ -433,17 +454,24 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             while inArray.count < 4 {
                 inArray.append(GagaInputState())
             }
+            recordRewind(inst)
             stepFn(inst, inArray, UInt32(min(inputs.count, 4)))
         }
     }
 
     /// Fast-forward runs `speed` whole frames per tick, so the timer's cadence and pausing stay the same.
     /// Only the last one is drawn, and audio is dropped until normal speed, so neither ring can back up.
+    /// Held rewind replaces the tick with one step back.
     private func tickFrame() {
         guard stepping, lastFatalMessage == nil, let inst = instance, let stepFn = coreInterface.step_frame else { return }
         inputLock.lock()
         let steps = speed
+        let back = rewindHeld
         inputLock.unlock()
+        if back, rewindTrack?.decided == true {
+            rewindOnce(inst, stepFn)
+            return
+        }
         playAudio = steps == 1
         for step in 1...steps {
             presentVideo = step == steps
@@ -451,7 +479,10 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         }
     }
 
-    private func stepOnce(_ inst: OpaquePointer, _ stepFn: @convention(c) (OpaquePointer?, UnsafePointer<GagaInputState>?, UInt32) -> Void) {
+    private typealias StepFunction = @convention(c) (OpaquePointer?, UnsafePointer<GagaInputState>?, UInt32) -> Void
+
+    private func stepOnce(_ inst: OpaquePointer, _ stepFn: StepFunction, record: Bool = true) {
+        if record { recordRewind(inst) }
         inputLock.lock()
         var currentInputs = playerInputs
         let frame = framesStepped
@@ -490,6 +521,85 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
 
     /// Runs `work` between frames.
     func betweenFrames<T>(_ work: () -> T) -> T { executionQueue.sync(execute: work) }
+
+    // MARK: - Rewind
+
+    /// Starts taking snapshots before frames. `onRewindVerdict` reports, after the first few, whether the
+    /// core qualifies under `policy`; one that does not stops being snapshotted at once.
+    func enableRewind(policy: RewindPolicy = .standard) {
+        executionQueue.sync {
+            guard coreInterface.state_size != nil, coreInterface.save_state != nil, coreInterface.load_state != nil else {
+                onRewindVerdict?(policy.refusal(stateSize: 0, serializeNanos: 0))
+                return
+            }
+            rewindTrack = RewindTrack(policy: policy)
+        }
+    }
+
+    /// While held, each tick steps back one snapshot instead of forward, with no sound.
+    public func setRewinding(_ held: Bool) {
+        inputLock.lock()
+        rewindHeld = held
+        inputLock.unlock()
+    }
+
+    /// One step back on the queue, for tests. Not for use while the timer runs. False when nothing is left.
+    @discardableResult
+    public func stepBackward() -> Bool {
+        executionQueue.sync {
+            guard let inst = instance, let stepFn = coreInterface.step_frame else { return false }
+            return rewindOnce(inst, stepFn)
+        }
+    }
+
+    /// Snapshots held, for tests.
+    var rewindSnapshotCount: Int { executionQueue.sync { rewindTrack?.buffer.count ?? 0 } }
+
+    // Queue only. Takes the snapshot before the frame runs, so loading it and stepping redraws that frame.
+    private func recordRewind(_ inst: OpaquePointer) {
+        guard let track = rewindTrack else { return }
+        track.frames += 1
+        guard track.frames % max(track.policy.interval, 1) == 0 else { return }
+        guard let sizeFn = coreInterface.state_size, let saveFn = coreInterface.save_state else { return }
+        let size = sizeFn(inst)
+        if let reason = track.policy.refusal(stateSize: size, serializeNanos: 0) { return endRewind(reason) }
+        if track.state.count < size { track.state = Data(count: size) }
+        let start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        let saved = track.state.withUnsafeMutableBytes { saveFn(inst, $0.baseAddress, size) }
+        let elapsed = clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - start
+        guard saved else { return endRewind("This core could not save its state, so it cannot rewind.") }
+        if !track.decided {
+            track.samples.append(elapsed)
+            guard track.samples.count >= track.policy.probeCount else {
+                track.state.withUnsafeBytes { track.buffer.push(UnsafeRawBufferPointer(rebasing: $0.prefix(size))) }
+                return
+            }
+            // The median, so one cold first save does not rule a core out.
+            let median = track.samples.sorted()[track.samples.count / 2]
+            if let reason = track.policy.refusal(stateSize: size, serializeNanos: median) { return endRewind(reason) }
+            track.decided = true
+            onRewindVerdict?(nil)
+        }
+        track.state.withUnsafeBytes { track.buffer.push(UnsafeRawBufferPointer(rebasing: $0.prefix(size))) }
+    }
+
+    // Queue only.
+    private func endRewind(_ reason: String) {
+        rewindTrack = nil
+        onRewindVerdict?(reason)
+    }
+
+    // Queue only. Loads the newest snapshot and steps once from it, so the picture shows where play now is.
+    @discardableResult
+    private func rewindOnce(_ inst: OpaquePointer, _ stepFn: StepFunction) -> Bool {
+        guard let track = rewindTrack, track.decided, let loadFn = coreInterface.load_state else { return false }
+        guard let size = track.state.withUnsafeMutableBytes({ track.buffer.popLatest(into: $0) }) else { return false }
+        guard track.state.withUnsafeBytes({ loadFn(inst, $0.baseAddress, size, nil, 0) }) else { return false }
+        presentVideo = true
+        playAudio = false
+        stepOnce(inst, stepFn, record: false)
+        return true
+    }
 
     // MARK: - Save States
 

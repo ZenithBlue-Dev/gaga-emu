@@ -79,6 +79,16 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// Off unless the player chose it and may use it. The owner of the session supplies both checks.
     var autoSaveEnabled: @MainActor () -> Bool = { false }
 
+    enum RewindStatus: Equatable {
+        case off, checking, ready
+        case unavailable(String)
+    }
+    /// The Rewind setting. Read once, in `prepare`.
+    var rewindEnabled = false
+    @Published private(set) var rewindStatus: RewindStatus = .off
+    @Published private(set) var rewinding = false
+    private var rewindTouchHeld = false
+
     var onStarted: (() -> Void)?
     /// Seconds actually played since the last call. Called on pause and on stop, so a kill loses little.
     var onPlayTime: ((TimeInterval) -> Void)?
@@ -184,6 +194,13 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             return
         }
         self.core = core
+        if rewindEnabled {
+            rewindStatus = .checking
+            core.onRewindVerdict = { [weak self] reason in
+                Task { @MainActor in self?.rewindStatus = reason.map(RewindStatus.unavailable) ?? .ready }
+            }
+            core.enableRewind()
+        }
         if let target = layerTarget { attachLayer(target.layer, width: target.width, height: target.height, scale: target.scale) }
         cheats = saves.cheats()
         if core.supportsCheats {
@@ -284,6 +301,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     func pause(_ reason: PauseReason) {
         guard phase == .running || phase == .paused else { return }
         pauseReasons.insert(reason)
+        rewindTouchHeld = false // The button may vanish under the finger, and its release with it.
         if reason == .menu { clearTouches() }
         updateDisplayLink()
         guard phase == .running else { return }
@@ -425,6 +443,30 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     func toggleFastForward() { setFastForward(fastForward == 1 ? fastForwardChoice : 1) }
 
+    // MARK: - Rewind
+
+    /// The touch button. A controller holds Options and L1 instead (`ControllerManager.InputState.rewind`).
+    func setRewindHeld(_ held: Bool) {
+        rewindTouchHeld = held
+        pushInputs()
+    }
+
+    /// VoiceOver has no press and hold: its action rewinds for one second.
+    func rewindForAccessibility() {
+        setRewindHeld(true)
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            self?.setRewindHeld(false)
+        }
+    }
+
+    private func updateRewinding(controllerHeld: Bool) {
+        let held = rewindStatus == .ready && (rewindTouchHeld || controllerHeld)
+        guard held != rewinding else { return }
+        rewinding = held
+        core?.setRewinding(held)
+    }
+
     // MARK: - Cheats
 
     var supportsCheats: Bool { core?.supportsCheats ?? false }
@@ -565,6 +607,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard let core else { return }
         var states = controllers.sample()
         menuPair(held: states.contains(where: \.openMenu))
+        updateRewinding(controllerHeld: states.contains(where: \.rewind))
         if controllers.touchOwnsPlayerOne { states[0].buttons |= touchMask | accessibilityMask }
         // A DOS program reads the keys themselves, so the keyboard does not also press pad buttons there.
         let typing = Self.typingPlatforms.contains(game.platformID)

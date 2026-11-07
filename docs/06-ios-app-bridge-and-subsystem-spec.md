@@ -535,7 +535,7 @@ Cover Art replaces the old Cover Scraping row. The old `coverScraping` value, wh
 
 **Filter picker** (`FilterPickerView`): a split view with the list on the left and a large live preview on the right. Opened from a game it sets that game's filter; opened from Graphics it sets the default for new games. Premium filters show a Plus label and open Gaga Plus when locked, only while the gate is open.
 
-The list has the built-in presets, a Community section whose rows name the author and licence, and an Imported section with a delete button per filter and an `Import .metal File` button (`docs/05` section 4.1). A failed import shows the reason in plain text in a "Filter Not Imported" sheet and selects Original. Beside the preview, the controls show Upscale (Nearest, Bilinear, Bicubic, Edge Smooth) for filters that take one, a slider for each parameter the filter reads, and Reset. The values are saved per filter. `.slangp` import and custom presets have no UI until they exist.
+The list has the built-in presets, a Community section whose rows name the author and licence, and an Imported section with a delete button per filter and an `Import .metal File` button (`docs/05` section 4.1). A failed import shows the reason in plain text in a "Filter Not Imported" sheet and selects Original. Beside the preview, the controls show Upscale (Nearest, Bilinear, Bicubic, Edge Smooth) for filters that take one, a slider for each parameter the filter reads, and Reset. The values are saved per filter. An `Import .slangp Preset` button imports RetroArch slang presets (`docs/05` section 4.2); their parameters show as sliders. A Saved section lists named presets, with apply, rename and delete, and a `Save Preset` button stores the current filter and values (`docs/05` section 4.3). Neither is premium.
 
 **Core picker** (`CorePickerSheet`): a simple list sheet for one game, with an action that also makes the choice the platform default. A file of unknown type says no cores are available.
 
@@ -554,6 +554,8 @@ Steps, chosen by the owner: ink pixel stairs and one vermilion pixel in the air,
 The pause menu is a compact paper side sheet over the dimmed game: Paused, the game title, Resume, Save State, Load State, Fast Forward (Off, then each allowed speed), Cheats and Quit to Library. Save State, Load State and Cheats appear only for a core that implements them. See Gaga Plus appears only while the gate is open, and never for a lifetime owner. Opening the menu pauses the core and audio. Quit ends the session and returns to the Library, where Continue shows the game.
 
 **From a controller.** Pressing Menu and Options together, or Home where the system passes it through, opens and closes the menu. The game does not receive that Start and Select. Either button alone still reaches the game.
+
+**Rewind.** With Settings > Play > Rewind on, the session snapshots the core every 2 frames into a 64 MB LZ4-compressed ring (`Sources/Session/Rewind.swift`). The first 5 snapshots decide: a core whose state is over 2 MB, or whose save takes over 2 ms (median), gets no rewind. While it checks or once refused, the pause menu says why. A ready core shows a hold-to-rewind button beside fast-forward; from a controller, hold Options and L1, which the game then does not receive. Audio is silent while rewinding. Rewind is free.
 
 **Saves.** Save State writes a new slot and shows the time. Load State opens the Manage Saves sheet. A state that cannot load shows why, and the game keeps running. Reaching the free limit explains it and suggests deleting one. The auto save has one fixed slot and does not count against the limit.
 
@@ -591,7 +593,7 @@ Prices always come from `Product.displayPrice` and are never hard-coded.
 
 ### 4.2 What stays free
 
-Emulation stays free: every core, ROM import, saves, baseline shaders and local multi-controller play. No core or platform is ever gated.
+Emulation stays free: every core, ROM import, saves, baseline shaders, rewind, saved filter presets, `.slangp` import and local multi-controller play. No core or platform is ever gated.
 
 ### 4.3 What premium adds
 

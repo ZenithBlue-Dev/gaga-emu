@@ -90,13 +90,22 @@ public final class ShaderManager: ObservableObject {
 
     public func select(shaderID: String) {
         previewRenderer?.setImported(nil)
+        previewRenderer?.setSlang(nil)
         selectedPreset = ShaderPreset.from(id: shaderID)
     }
 
     /// Runs an imported filter in the preview. It replaces the selected preset's last pass, so Original goes first.
     public func selectImported(_ pipeline: MTLRenderPipelineState) {
         selectedPreset = .original
+        previewRenderer?.setSlang(nil)
         previewRenderer?.setImported(pipeline)
+    }
+
+    /// Runs an imported `.slangp` in the preview, in place of the whole chain.
+    func selectSlang(_ chain: SlangChain) {
+        selectedPreset = .original
+        previewRenderer?.setImported(nil)
+        previewRenderer?.setSlang(chain)
     }
 
     public func apply(_ values: ShaderParameterValues) {
@@ -105,6 +114,7 @@ public final class ShaderManager: ObservableObject {
         phosphorGlow = values.phosphorGlow
         colorTemp = values.colorTemp
         upscaler = values.resolvedUpscaler
+        previewRenderer?.slangValues = values.slang ?? [:]
     }
 
     public func resetToDefaults() {

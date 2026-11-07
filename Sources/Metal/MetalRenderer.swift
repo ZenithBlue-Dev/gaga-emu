@@ -162,6 +162,8 @@ public struct ShaderParameterValues: Codable, Equatable {
     public var phosphorGlow: Float = 0.25
     public var colorTemp: Float = 0.50
     public var upscaler: String = Upscaler.nearest.rawValue
+    /// An imported `.slangp`'s own parameters by name. Optional, so older files still decode.
+    public var slang: [String: Float]?
 
     public init() {}
 
@@ -232,6 +234,11 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
     public private(set) var importedPipeline: MTLRenderPipelineState?
     /// Called on the main thread if the GPU rejected a frame from the imported filter, after it is dropped.
     public var onImportedFailure: (() -> Void)?
+    /// An imported `.slangp` (docs/05 section 4.2). It replaces the whole chain, upscaler included.
+    private(set) var slangChain: SlangChain?
+    /// Its parameters by name, from the saved sliders. A missing one uses the preset's value.
+    var slangValues: [String: Float] = [:]
+    private var frameCount: UInt32 = 0
 
     public weak var textureRing: MetalTextureRing?
     public var customTexture: MTLTexture?
@@ -332,10 +339,15 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         uniforms.phosphorGlow = min(max(values.phosphorGlow, 0), 1)
         uniforms.colorTemp = min(max(values.colorTemp, 0), 1)
         upscaler = values.resolvedUpscaler
+        slangValues = values.slang ?? [:]
     }
 
     public func setImported(_ pipeline: MTLRenderPipelineState?) {
         importedPipeline = pipeline
+    }
+
+    func setSlang(_ chain: SlangChain?) {
+        slangChain = chain
     }
 
     private func pipeline(fragment: String, format: MTLPixelFormat) -> MTLRenderPipelineState? {
@@ -415,6 +427,11 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         values.sourceW = UInt32(source.width)
         values.sourceH = UInt32(source.height)
 
+        if let slang = slangChain {
+            watchImported(cmdBuffer)
+            encodeSlang(slang, into: cmdBuffer, target: rpd, source: source, viewport: viewport)
+            return
+        }
         let chain = Self.chain(preset: activePreset, upscaler: upscaler)
         let imported = importedPipeline
         if imported != nil { watchImported(cmdBuffer) }
@@ -456,6 +473,62 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         }
     }
 
+    /// Each pass draws a quad into its own target, sized by its scale type; the last draws into the picture.
+    /// shortcut: a scale on the last pass is ignored (it always fills the picture), add a final blit if a preset needs it.
+    private func encodeSlang(_ chain: SlangChain, into cmdBuffer: MTLCommandBuffer, target rpd: MTLRenderPassDescriptor,
+                             source: MTLTexture, viewport: MTLViewport) {
+        frameCount &+= 1
+        let view = (width: max(Int(viewport.width), 1), height: max(Int(viewport.height), 1))
+        var parameters: [String: Float] = [:]
+        for parameter in chain.filter.parameters {
+            parameters[parameter.name] = min(max(slangValues[parameter.name] ?? parameter.initial, parameter.minimum), parameter.maximum)
+        }
+        var input = source
+        for (index, pass) in chain.passes.enumerated() {
+            let output: MTLTexture?
+            let size: (width: Int, height: Int)
+            let descriptor: MTLRenderPassDescriptor
+            if index == chain.passes.count - 1 {
+                output = nil
+                size = view
+                descriptor = rpd
+            } else {
+                size = SlangChain.outputSize(pass.spec, input: (input.width, input.height), viewport: view)
+                guard let texture = intermediate(at: index, width: size.width, height: size.height, format: pass.format) else { return }
+                output = texture
+                descriptor = MTLRenderPassDescriptor()
+                descriptor.colorAttachments[0].texture = texture
+                descriptor.colorAttachments[0].loadAction = .dontCare
+                descriptor.colorAttachments[0].storeAction = .store
+            }
+            guard let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: descriptor) else { return }
+            encoder.setRenderPipelineState(pass.pipeline)
+            encoder.setViewport(output.map { MTLViewport(originX: 0, originY: 0, width: Double($0.width), height: Double($0.height), znear: 0, zfar: 1) } ?? viewport)
+            let mod = UInt32(max(pass.spec.frameCountMod, 0))
+            let frame = SlangChain.Frame(source: (input.width, input.height), original: (source.width, source.height), output: size,
+                                         viewport: view, frameCount: mod > 0 ? frameCount % mod : frameCount, parameters: parameters)
+            for (block, slot) in [(pass.spec.ubo, 0), (pass.spec.push, 1)] where block.size > 0 {
+                SlangChain.blockBytes(block, frame: frame).withUnsafeBytes {
+                    encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: slot)
+                    encoder.setFragmentBytes($0.baseAddress!, length: $0.count, index: slot)
+                }
+            }
+            SlangChain.quad.withUnsafeBytes {
+                encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: SlangChain.vertexBufferIndex)
+            }
+            for (slot, name) in pass.spec.textures.enumerated() {
+                let texture = name == "Original" ? source : input
+                encoder.setVertexTexture(texture, index: slot)
+                encoder.setFragmentTexture(texture, index: slot)
+                encoder.setVertexSamplerState(pass.sampler, index: slot)
+                encoder.setFragmentSamplerState(pass.sampler, index: slot)
+            }
+            encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+            encoder.endEncoding()
+            if let output { input = output }
+        }
+    }
+
     private static func pixelSize(_ size: ShaderPass.Size, source: MTLTexture, viewport: MTLViewport) -> (width: Int, height: Int) {
         switch size {
         case .source(let scale): return (source.width * scale, source.height * scale)
@@ -477,8 +550,9 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         cmdBuffer.addCompletedHandler { [weak self] buffer in
             guard buffer.status == .error else { return }
             DispatchQueue.main.async {
-                guard let self, self.importedPipeline != nil else { return }
+                guard let self, self.importedPipeline != nil || self.slangChain != nil else { return }
                 self.importedPipeline = nil
+                self.slangChain = nil
                 self.onImportedFailure?()
             }
         }
