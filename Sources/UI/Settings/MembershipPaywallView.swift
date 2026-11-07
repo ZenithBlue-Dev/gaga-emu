@@ -43,9 +43,9 @@ struct MembershipPaywallView: View {
                         .font(.system(size: 12)).foregroundStyle(AppTheme.textSecondary)
                         .multilineTextAlignment(.center)
                     HStack(spacing: 8) {
-                        Link("Terms of Service", destination: URL(string: "https://gagaemu.app/terms")!)
+                        Link("Terms of Service", destination: URL(string: SiteLinks.terms)!)
                         Text("|").foregroundStyle(AppTheme.textTertiary)
-                        Link("Privacy Policy", destination: URL(string: "https://gagaemu.app/privacy")!)
+                        Link("Privacy Policy", destination: URL(string: SiteLinks.privacy)!)
                     }
                     .font(.system(size: 12)).foregroundStyle(AppTheme.textSecondary)
                     if let error = store.lastError {

@@ -59,14 +59,6 @@ struct GamesLibraryView: View {
             }
             .font(.system(size: 15))
             divider
-            Link(destination: URL(string: "https://discord.com")!) {
-                Text("Join ").foregroundStyle(AppTheme.textSecondary)
-                + Text("Discord").foregroundStyle(.blue)
-                + Text(" for assistance").foregroundStyle(AppTheme.textSecondary)
-            }
-            .font(.system(size: 14, weight: .medium))
-            .padding(.horizontal, 18).padding(.vertical, 10)
-            .background(AppTheme.card, in: Capsule())
             Spacer()
             HStack(spacing: 8) {
                 Image(systemName: "info.circle.fill").foregroundStyle(AppTheme.warning)

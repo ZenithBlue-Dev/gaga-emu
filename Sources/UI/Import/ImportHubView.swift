@@ -37,15 +37,6 @@ struct ImportHubView: View {
                     Text(notice).font(.system(size: 13)).foregroundStyle(AppTheme.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                divider
-                Link(destination: URL(string: "https://discord.com")!) {
-                    Text("Join ").foregroundStyle(AppTheme.textSecondary)
-                    + Text("Discord").foregroundStyle(.blue)
-                    + Text(" for assistance").foregroundStyle(AppTheme.textSecondary)
-                }
-                .font(.system(size: 14, weight: .medium))
-                .padding(.horizontal, 18).padding(.vertical, 10)
-                .background(AppTheme.card, in: Capsule())
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -156,15 +147,6 @@ struct ImportHubView: View {
         .padding(14)
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(style: StrokeStyle(lineWidth: 1, dash: [5]))
             .foregroundStyle(isTargeted ? AppTheme.accent : AppTheme.stroke))
-    }
-
-    private var divider: some View {
-        HStack {
-            Rectangle().fill(AppTheme.stroke).frame(height: 1)
-            Image(systemName: "sparkle").foregroundStyle(AppTheme.textTertiary)
-            Rectangle().fill(AppTheme.stroke).frame(height: 1)
-        }
-        .padding(.vertical, 6)
     }
 
     private func icon(_ symbol: String, _ tint: Color) -> some View {

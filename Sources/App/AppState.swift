@@ -204,6 +204,16 @@ enum StateMigration {
     }
 }
 
+/// The app's one web host, the same one the App Store metadata uses.
+enum SiteLinks {
+    private static let host = "https://zenithblue-oss.github.io/gaga-emu-site"
+    /// The site's page is "Support & FAQ", and it is also the feedback route.
+    static let support = "\(host)/support.html"
+    static let privacy = "\(host)/privacy.html"
+    /// shortcut: the site has no terms.html (404), so this is Apple's standard EULA; replace when the site has one.
+    static let terms = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+}
+
 enum ShaderCatalog {
     struct Shader: Identifiable, Equatable {
         let id: String

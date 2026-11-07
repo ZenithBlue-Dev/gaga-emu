@@ -46,10 +46,8 @@ struct SettingsView: View {
                     navRow("atom", .purple, "Emulator Core", nil) { showCores = true }
                 }
                 section("Support") {
-                    linkRow("questionmark.circle.fill", .orange, "FAQ", "https://gagaemu.app/faq")
-                    linkRow("envelope.fill", .green, "Feedback", "mailto:support@gagaemu.app")
-                    linkRow("bubble.left.fill", .blue, "Join QQ Channel", "https://gagaemu.app/qq")
-                    linkRow("bubble.left.and.bubble.right.fill", .purple, "Join Discord", "https://discord.com")
+                    linkRow("questionmark.circle.fill", .orange, "FAQ", SiteLinks.support)
+                    linkRow("envelope.fill", .green, "Feedback", SiteLinks.support)
                 }
                 section("Others") {
                     navRow("person.2.fill", .pink, "About Us", nil) {}
@@ -64,8 +62,8 @@ struct SettingsView: View {
                         Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(AppTheme.textTertiary)
                     }
                     .padding(.vertical, 8)
-                    linkRow("doc.text.fill", .red, "Terms of Service", "https://gagaemu.app/terms")
-                    linkRow("lock.shield.fill", .purple, "Privacy Policy", "https://gagaemu.app/privacy")
+                    linkRow("doc.text.fill", .red, "Terms of Service", SiteLinks.terms)
+                    linkRow("lock.shield.fill", .purple, "Privacy Policy", SiteLinks.privacy)
                     navRow("shippingbox.fill", .orange, "Featured Items", nil) {}
                 }
                 rateCard
