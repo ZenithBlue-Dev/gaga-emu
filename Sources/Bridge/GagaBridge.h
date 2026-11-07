@@ -9,8 +9,8 @@
 extern "C" {
 #endif
 
-// Bump on any change to GagaCoreInterface. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 2u
+// Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
+#define GAGA_BRIDGE_ABI_VERSION 3u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -45,6 +45,11 @@ typedef struct {
     float    trigger_l;   // Analog trigger depth (0.0 to 1.0)
     float    trigger_r;   // Analog trigger depth (0.0 to 1.0)
     float    accel_x, accel_y, accel_z; // Motion gyro / accelerometer
+    // One finger on the game picture, in libretro's pointer scale over the whole frame the core last
+    // sent: -32767 is the left or top edge, 32767 the right or bottom edge. Player 1 only.
+    int16_t  pointer_x;
+    int16_t  pointer_y;
+    bool     pointer_down;
 } GagaInputState;
 
 // Pixel formats emitted by core

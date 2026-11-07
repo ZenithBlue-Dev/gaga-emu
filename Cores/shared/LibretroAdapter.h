@@ -29,6 +29,9 @@ typedef struct {
     bool (*is_rom)(const uint8_t* data, size_t size);
     // Needed with GAGA_LIBRETRO_CHEATS. libretro's cheat call cannot refuse a code, so this checks one line.
     bool (*is_cheat)(const char* line);
+    // True when one cheat's lines must reach retro_cheat_set as one code, joined by '+', because the
+    // core's format spans lines (Action Replay DS conditionals). False: one index per line.
+    bool cheat_lines_are_one_code;
 } GagaLibretroCore;
 
 extern const GagaLibretroCore gaga_libretro_core;
