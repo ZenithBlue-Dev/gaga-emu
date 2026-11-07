@@ -180,6 +180,39 @@ final class FbneoCoreTests: GagaTestCase {
         }
     }
 
+    // MARK: - Cheats
+
+    /// A player's cheat file for gridlee in FBNeo's ini format: CPU 0 writes to video RAM in the second band, a
+    /// yellow pair of pixels (0x55) or a black pair (0x00), while the cheat is on.
+    private static let cheatINI = """
+        cheat "Paint"
+        default 0
+        0 "Disabled"
+        1 "Yellow", 0, 0x4000, 0x55
+        2 "Black", 0, 0x4000, 0x00
+        """
+
+    func testCheatsFromThePlayersCheatFileChangeThePicture() async throws {
+        _ = try write(Data(Self.cheatINI.utf8), to: "system/fbneo/cheats/gridlee.ini")
+        let (core, capture) = try await loaded()
+        run(core, frames: 60)
+        assertPicture(capture)
+        let plain = capture.pixels
+        XCTAssertTrue(core.supportsCheats)
+        for refused in ["No Such Cheat", "Paint = Purple", "Paint = Disabled", "0, 0x4000, 0x55"] {
+            XCTAssertThrowsError(try core.addCheat(id: 9, code: refused, enabled: true), refused)
+        }
+        try core.addCheat(id: 1, code: "PAINT", enabled: true) // The first setting, typed in capitals.
+        run(core, frames: 2)
+        let yellow = capture.pixels
+        XCTAssertNotEqual(yellow, plain, "the cheat's write shows")
+        core.removeCheat(id: 1)
+        try core.addCheat(id: 2, code: "Paint = Black", enabled: true)
+        run(core, frames: 2)
+        XCTAssertNotEqual(capture.pixels, yellow, "a setting picked by name")
+        core.stop()
+    }
+
     /// Upstream writes the driver's NVRAM to saves/fbneo/<set>.fs when the game closes.
     func testNVRAMSurvivesARestart() async throws {
         for boot in 1...3 {
