@@ -9,8 +9,9 @@
     <array/>
     <key>NSPrivacyCollectedDataTypes</key>
     <array/>
-    <!-- Sources calls no required-reason API. Declare each one when a core adds it. MgbaCore imports
-         fstat, for the size of its own ROM and save files inside the app container. -->
+    <!-- Declare each required-reason API when code adds it. MgbaCore imports fstat, for the size of its
+         own ROM and save files, and SaveStore reads save state modification dates to list them. All of
+         these files are inside the app container. -->
     <key>NSPrivacyAccessedAPITypes</key>
     <array>
         <dict>
