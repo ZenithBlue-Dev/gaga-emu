@@ -202,7 +202,7 @@
         { "title": "Mednafen (GPL-2.0-or-later)", "from": "Cores/beetle_vb/upstream/mednafen/vb/vip.c", "comment": true },
         { "title": "GNU General Public License 2", "from": "Cores/beetle_vb/upstream/COPYING" },
         { "title": "V810 emulator", "from": "Cores/beetle_vb/upstream/mednafen/hw_cpu/v810/v810_cpu.cpp", "comment": true },
-        { "title": "SoftFloat", "from": "Cores/beetle_vb/upstream/mednafen/hw_cpu/v810/fpu-new/softfloat.c", "comment": true },
+        { "title": "SoftFloat", "from": "Cores/beetle_vb/upstream/mednafen/hw_cpu/v810/fpu-new/softfloat.c", "lines": [1, 31] },
         { "title": "Blip_Buffer (LGPL-2.1-or-later)", "from": "Cores/beetle_vb/upstream/mednafen/sound/Blip_Buffer.c", "comment": true },
         { "title": "libretro-common", "from": "Cores/beetle_vb/upstream/libretro-common/compat/compat_strl.c", "comment": true }
       ]
