@@ -49,6 +49,8 @@ const GagaLibretroCore gaga_libretro_core = {
     .variables = s_variables,
     // A second game in one process otherwise draws black and ignores input (device run 5).
     .after_deinit = atari800_forget_last_game,
+    // A state holds the cartridge's and disks' file names, so its size follows the game's path length.
+    .state_size_varies = true,
 };
 
 const GagaCoreInterface* Atari800_GetInterface(void) {

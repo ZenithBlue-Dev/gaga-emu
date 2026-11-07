@@ -51,7 +51,7 @@ upstream/atari800/src/sound.c
 upstream/atari800/src/pbi_proto80.c
 upstream/atari800/src/af80.c
 upstream/atari800/src/input.c
-upstream/atari800/src/statesav.c
+Atari800StateSav.c
 upstream/atari800/src/ui_basic.c
 upstream/atari800/src/ui.c
 upstream/atari800/src/artifact.c
