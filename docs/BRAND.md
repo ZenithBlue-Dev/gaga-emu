@@ -35,7 +35,7 @@ Plain, short and calm, like a line printed on a label.
 
 ## App icon
 
-**Status: chosen by the owner, option 4, Steps** (2026-11-07). It is installed in `Sources/App/Assets.xcassets/AppIcon.appiconset/` as a 1024 PNG with dark and tinted entries.
+**Status: chosen by the owner, option 4, Steps** (2026-11-07). It is installed in `Sources/App/Assets.xcassets/AppIcon.appiconset/` as a 1024 PNG with dark and tinted entries. The default (any) entry is a copy of the dark render, so the icon is dark on light-mode home screens too.
 
 All the options remain in `design/icons/`, with a side-by-side view in `design/icons/options.png`. Each folder has `icon-1024.png`, `icon-1024-dark.png` and `icon-1024-tinted.png`.
 
