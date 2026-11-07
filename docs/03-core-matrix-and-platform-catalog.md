@@ -143,7 +143,7 @@ The build compiles two licences, and each needs a place in the 7.5 notices:
 
 `src/third-party/blip_buf` (LGPL-2.1) is no longer compiled. `Cores/mgba/blip.c`, GagaEmu's own 116-line band-limited resampler, implements the same functions, written from the contracts in the header and not from the library's source. The header, `include/mgba/core/blip_buf.h`, is still read at compile time, because mGBA's own files include it. It contributes declarations only, and `Cores/mgba/sources.txt` compiles no file from `third-party/blip_buf`. This engineering step removes the relinking question, but it is not legal advice: counsel should confirm the header's status when they look at the gate above.
 
-The app has no licence screen yet. In-app notices are tracked at milestone 7.5, which must close before any App Store release containing this core. No Nintendo BIOS or game is bundled.
+Settings > About > Licences shows these notices for every linked core (milestone 7.5, `Licences/notices.json`). A new core or a changed pin needs its rows there, then `scripts/generate-licences.py`. No Nintendo BIOS or game is bundled.
 
 ### Gambatte licence obligations
 

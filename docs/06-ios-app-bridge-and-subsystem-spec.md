@@ -466,7 +466,7 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. Assign Skin opens a sheet with a drawing of each built-in layout and a layout per platform. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
-| About | Version, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy. Debug builds add Run Benchmark. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
+| About | Version, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy, Licences. Debug builds add Run Benchmark. Licences (`LicencesView`) is a two-pane paper sheet: components on the left, the chosen one's source and full licence texts on the right. It reads `licences.json`, which `scripts/generate-licences.py` writes with the texts into `Sources/App/Licences` from the committed list `Licences/notices.json`, and shows a component only when a core that brings it in is linked (`GAGA_CORE_SET`); Anime4K and the community filters are in every build. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
 
 All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
 
@@ -479,7 +479,6 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 | RetroAchievements | Play | Blocked: needs an owner account, sign-in testing and RetroAchievements client approval (`docs/07` 3.10) |
 | AirPlay Fullscreen | Graphics | Built (`ExternalDisplay.swift`) but not checked on a second screen, so the row stays hidden (`docs/07` 3.11) |
 | iCloud Sync | Storage | Blocked: needs the iCloud capability on the App ID, an owner change (`docs/07` 3.11) |
-| About Us (licence notices) | About | 7.5 |
 | Share GagaEmu | About | 7.6 |
 | Reset Tips | About | When the app has dismissible tips |
 | Language | About | When a second localisation exists |
@@ -519,7 +518,9 @@ The pause menu is a compact paper side sheet over the dimmed game: Paused, the g
 
 **Pausing.** The menu, backgrounding and audio interruptions are separate reasons, and play resumes only when all have cleared. An interruption that ends without the system's resume hint leaves the menu open, so the player chooses.
 
-**Touch layouts.** `TouchSkinEngine.Layout.builtIn` has three original layouts: Standard (pad and face buttons at mid height, Select and Start below), Low Reach (pad and buttons at the bottom edge, Select and Start above them) and Two Button (A and B alone, larger and on a slant, offered for Game Boy, GBC, GBA and NES). A game's own choice wins over its platform's, which wins over Standard (`TouchSkinEngine.layoutID`).
+**Touch layouts.** `TouchSkinEngine.Layout.builtIn` has three original layouts: Standard (pad and face buttons at mid height, Select and Start below), Low Reach (pad and buttons at the bottom edge, Select and Start above them) and Two Button (A and B alone, larger and on a slant, offered for Game Boy, GBC, GBA and NES). A game's own choice wins over its platform's, which wins over Standard (`TouchSkinEngine.layoutID`). On a platform that types (`GameSession.typingPlatforms`, DOS today) every layout adds a Keyboard key under L that presses L3, which opens DOSBox Pure's on-screen keyboard (`Layout.buttons(for:)`).
+
+**Layer path.** A core that draws its own picture (`GAGA_CORE_CAP_METAL_LAYER`) gets the same touch controls. A finger on its picture becomes the pointer the same way: the session takes the frame size from the core's size-only frames and maps the finger over the same aspect fit the Vulkan adapter blits. Both paths hand the screen BGRA8 UNORM tagged sRGB (`MetalRenderer.configureOutput`), which MoltenVK's `B8G8R8A8_UNORM` / `SRGB_NONLINEAR` swapchain matches, so neither applies gamma twice.
 
 **Second screen.** `ExternalDisplay` puts the picture in a window on a connected external screen and leaves the controls on the device, while a game runs with AirPlay Fullscreen on. Without that window iOS mirrors the device as usual. The scene is configured by `AppDelegate` for the `windowExternalDisplayNonInteractive` role. The setting defaults to off and its row is hidden until the feature is checked on a real second screen.
 
