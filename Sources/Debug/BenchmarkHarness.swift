@@ -114,7 +114,7 @@ final class BenchmarkRun {
 
     static func writeTestROM(platformID: String, to directory: URL) throws -> URL {
         let data: Data
-        var ext = platformID
+        var ext = platformID, name = "GagaBenchmark"
         switch platformID {
         case "gba": data = GBATestROM.build()
         case "gb": data = GBTestROM.build()
@@ -126,10 +126,11 @@ final class BenchmarkRun {
         case "megadrive": (data, ext) = (MDTestROM.build(), "md")
         case "vktest": (data, ext) = (VkTestROM.build(), "gagavk")
         case "dos": (data, ext) = (DOSTestCOM.build(), "com")
+        case "arcade": (data, name, ext) = (GridleeTestSet.build(), GridleeTestSet.machine, "zip") // MAME finds the machine by name.
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent("GagaBenchmark.\(ext)")
+        let url = directory.appendingPathComponent("\(name).\(ext)")
         try data.write(to: url)
         return url
     }

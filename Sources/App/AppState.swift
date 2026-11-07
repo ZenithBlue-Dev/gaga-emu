@@ -194,6 +194,8 @@ enum CoreCatalog {
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
+        // A MAME ROM set, kept zipped as MAME reads it. A .zip serves Arcade and DOS: platformID(forFile:) looks inside.
+        case "7z": return "arcade"
         default: return nil
         }
     }
@@ -203,9 +205,15 @@ enum CoreCatalog {
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
     static var discPlatforms: [PlatformInfo] { ["ps1", "megacd", "dos"].compactMap(platform) }
 
+    /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
+    static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
+        if discExtensions.contains(ext.lowercased()) { return discPlatforms }
+        return ext.lowercased() == "zip" ? ["arcade", "dos"].compactMap(platform) : nil
+    }
+
     /// The extension's platform, corrected by the file's contents where one extension serves two platforms:
-    /// an .exe that starts with "PS-X EXE" is a PlayStation program, a .zip is a DOS game only when it
-    /// holds an .exe, .com or .bat, and a disc image is placed by `discPlatformID(_:)`.
+    /// an .exe that starts with "PS-X EXE" is a PlayStation program, a .zip is placed by `zipPlatformID(_:)`,
+    /// and a disc image is placed by `discPlatformID(_:)`.
     static func platformID(forFile url: URL) -> String? {
         let ext = url.pathExtension.lowercased()
         if discExtensions.contains(ext) { return discPlatformID(url) }
@@ -216,11 +224,24 @@ enum CoreCatalog {
             let magic = (try? handle?.read(upToCount: 8)) ?? nil
             return magic == Data("PS-X EXE".utf8) ? "ps1" : "dos"
         case "zip":
-            return zipEntryNames(url).contains { ["exe", "com", "bat"].contains(($0 as NSString).pathExtension.lowercased()) }
-                ? "dos" : nil
+            return zipPlatformID(url)
         default:
             return platformID(forExtension: url.pathExtension)
         }
+    }
+
+    /// A .zip's platform from its central directory, nothing extracted. DOS: it holds an .exe, .com, .bat or
+    /// DOSBox .conf. Arcade: its name is a machine in `mameMachines`, or every entry is ROM-like (no extension,
+    /// .bin, .rom, or one with a digit, as in "pacman.6e"). Otherwise nil, and import asks.
+    static func zipPlatformID(_ url: URL) -> String? {
+        let names = zipEntryNames(url)
+        let exts = names.map { ($0 as NSString).pathExtension.lowercased() }
+        if exts.contains(where: { ["exe", "com", "bat", "conf"].contains($0) }) { return "dos" }
+        if mameMachines.contains(url.deletingPathExtension().lastPathComponent.lowercased()) { return "arcade" }
+        let romLike = Swift.zip(names, exts).allSatisfy { name, ext in
+            !name.contains("/") && (ext.isEmpty || ext == "bin" || ext == "rom" || ext.contains(where: \.isNumber))
+        }
+        return !names.isEmpty && romLike ? "arcade" : nil
     }
 
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as

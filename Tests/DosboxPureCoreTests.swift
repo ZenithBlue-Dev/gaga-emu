@@ -153,7 +153,7 @@ final class DosboxPureCoreTests: XCTestCase {
         XCTAssertEqual(found.native_sample_rate, 48000)
         XCTAssertEqual(found.target_fps, 60.0, accuracy: 0.001)
         XCTAssertNil(found.cheat_add, "DOSBox Pure has no cheats, so the menu row hides")
-        for ext in ["com", "bat", "dosz", "zip", "ima", "vhd", "jrc", "conf"] {
+        for ext in ["com", "bat", "dosz", "ima", "vhd", "jrc", "conf"] { // .zip finds MAME first. The catalog picks by the contents.
             XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension(ext)).pointee.core_id), "dosbox_pure", ext)
         }
         XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension("exe")).pointee.core_id), "pcsx_rearmed",
@@ -414,7 +414,7 @@ final class DosboxPureCoreTests: XCTestCase {
         XCTAssertEqual(try platform("prog.com", DOSTestCOM.build()), "dos")
         XCTAssertEqual(try platform("game.zip", zip(["README.TXT", "GAME/START.EXE"])), "dos")
         XCTAssertEqual(try platform("run.zip", zip(["RUN.BAT"])), "dos")
-        XCTAssertNil(try platform("arcade.zip", zip(["rom.bin", "rom2.bin"])), "no DOS program inside")
+        XCTAssertEqual(try platform("arcade.zip", zip(["rom.bin", "rom2.bin"])), "arcade", "no DOS program, ROM-like names")
         XCTAssertNil(try platform("broken.zip", Data("PK".utf8)))
         XCTAssertEqual(CoreCatalog.platformID(forFile: directory.appendingPathComponent("gone.exe")), "dos")
         for ext in ["com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf"] {

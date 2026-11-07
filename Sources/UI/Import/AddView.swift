@@ -65,21 +65,21 @@ struct AddView: View {
         .confirmationDialog("Which system is \(unplaced.first?.title ?? "this disc") for?",
                             isPresented: Binding(get: { !unplaced.isEmpty }, set: { if !$0, !unplaced.isEmpty { unplaced.removeFirst() } }),
                             titleVisibility: .visible) {
-            ForEach(CoreCatalog.discPlatforms) { platform in
+            ForEach(unplaced.first.flatMap { CoreCatalog.unplacedPlatforms(forExtension: URL(fileURLWithPath: $0.romPath).pathExtension) } ?? []) { platform in
                 Button(platform.name) {
                     if let game = unplaced.first { state.update(game.id) { $0.platformID = platform.id } }
                 }
             }
             Button("Not Now", role: .cancel) {}
         } message: {
-            Text("GagaEmu could not tell from the disc image.")
+            Text("GagaEmu could not tell from the file.")
         }
     }
 
-    /// Imports a copied file, and queues the platform question when a disc image did not say.
+    /// Imports a copied file, and queues the platform question when a disc image or .zip did not say.
     private func add(_ dest: URL) {
         guard let game = state.importROM(at: dest) else { return }
-        if game.platformID == "unknown", CoreCatalog.discExtensions.contains(dest.pathExtension.lowercased()) {
+        if game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forExtension: dest.pathExtension) != nil {
             unplaced.append(game)
         }
     }

@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertEqual(count, 15, "Mock, the real cores, the stubs and the Vulkan test core")
+        XCTAssertEqual(count, 16, "Mock, the real cores, the stubs, the Vulkan test core and MAME")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
@@ -31,6 +31,7 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertNotNil(GagaCoreRegistry_FindByID("beetle_psx"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("melonds_ds"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("flycast"))
+        XCTAssertNotNil(GagaCoreRegistry_FindByID("mame"))
 
         // Validate tier 3 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("azahar"))
@@ -244,7 +245,7 @@ final class GagaEmuTests: XCTestCase {
         }
         XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), GagaCoreRegistry_IsExcluded("bsnes") ? "" : "bsnes")
         XCTAssertEqual(CoreCatalog.defaultCore(for: "megadrive"), "jgenesis")
-        XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), "mame")
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), GagaCoreRegistry_IsExcluded("mame") ? "" : "mame")
 
         // Every registry stub resolves to a catalog row, so a saved ID always names a real core.
         for index in 0..<GagaCoreRegistry_GetCount() {
@@ -652,6 +653,27 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertNil(try platform("game.chd", Data("MComprHD".utf8)), "compressed, asks")
         XCTAssertNil(try platform("lost.cue", Data("FILE \"gone.bin\" BINARY\n".utf8)), "asks")
         XCTAssertEqual(CoreCatalog.discPlatforms.map(\.id).first, "ps1")
+    }
+
+    func testZipsArePlacedByContent() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("zips-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        func platform(_ name: String, _ data: Data) throws -> String? {
+            try data.write(to: dir.appendingPathComponent(name))
+            return CoreCatalog.platformID(forFile: dir.appendingPathComponent(name))
+        }
+        let text = Data("text".utf8)
+        XCTAssertEqual(try platform("gridlee.zip", GridleeTestSet.build()), "arcade", "a machine in the driver list")
+        XCTAssertEqual(try platform("Gridlee.zip", GridleeTestSet.zip([("readme.txt", text)])), "arcade", "by name alone")
+        XCTAssertEqual(try platform("set.zip", GridleeTestSet.zip([("pacman.6e", text), ("82s123", text)])), "arcade", "ROM-like names")
+        XCTAssertEqual(try platform("game.zip", GridleeTestSet.zip([("GAME.EXE", text), ("README.TXT", text)])), "dos")
+        XCTAssertEqual(try platform("gridlee2.zip", GridleeTestSet.zip([("gridlee.1", text), ("dosbox.conf", text)])), "dos",
+                       "a DOS file wins over ROM-like names")
+        XCTAssertNil(try platform("unclear.zip", GridleeTestSet.zip([("readme.txt", text)])), "asks")
+        XCTAssertNil(try platform("broken.zip", Data("PK".utf8)), "asks")
+        XCTAssertEqual(CoreCatalog.unplacedPlatforms(forExtension: "ZIP")?.map(\.id), ["arcade", "dos"])
+        XCTAssertEqual(CoreCatalog.platformID(forExtension: "7z"), "arcade")
     }
 
     @MainActor

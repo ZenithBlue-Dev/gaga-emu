@@ -441,6 +441,7 @@ void gaga_lr_destroy(GagaInstance* inst) {
 #endif
     }
     retro_deinit();
+    if (gaga_libretro_core.after_deinit) gaga_libretro_core.after_deinit();
     lr_release();
     for (size_t i = 0; i < 2; ++i) free(a->batteries[i].written);
     for (size_t i = 0; i < a->cheat_count; ++i) free(a->cheats[i].code);
@@ -771,6 +772,7 @@ bool gaga_lr_self_test(char* error, size_t error_capacity) {
         retro_set_environment(lr_environment);
         retro_init();
         retro_deinit();
+        if (gaga_libretro_core.after_deinit) gaga_libretro_core.after_deinit();
         lr_release();
     }
     if (!api) lr_error(error, error_capacity, "%s was built for another libretro version.", gaga_libretro_core.name);

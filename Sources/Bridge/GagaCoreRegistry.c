@@ -389,6 +389,9 @@ DEFINE_CORE_INTERFACE(VkTest_GetInterface,        "vktest",          "Vulkan Tes
 #ifndef GAGA_HAS_DOSBOX_PURE
 DEFINE_CORE_INTERFACE(DosboxPure_GetInterface,    "dosbox_pure",     "DOSBox Pure",       GAGA_CORE_EXCLUDED, "zip|dosz|exe|com|bat|iso|chd|cue|ins|img|ima|vhd|jrc|m3u|m3u8|conf", 60.0, 48000)
 #endif
+#ifndef GAGA_HAS_MAME
+DEFINE_CORE_INTERFACE(Mame_GetInterface,          "mame",            "MAME",              GAGA_CORE_EXCLUDED, "zip|7z",   60.0,    48000)
+#endif
 
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
@@ -416,6 +419,7 @@ static const CoreGetterFunc s_core_getters[] = {
     BeetlePsx_GetInterface,
     Gpsp_GetInterface,
     MelonDS_GetInterface,
+    Mame_GetInterface,
     Azahar_GetInterface,
     Flycast_GetInterface,
     Ppsspp_GetInterface,
