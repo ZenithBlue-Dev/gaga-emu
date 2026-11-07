@@ -14,7 +14,12 @@ struct GagaEmuApp: App {
                 .environmentObject(state.store)
                 .environmentObject(state.wifi)
                 .tint(AppTheme.accent)
-                .task { GameCenter.authenticate() }
+                .task {
+                    GameCenter.authenticate()
+                    #if DEBUG
+                    state.runBenchmarkIfRequested()
+                    #endif
+                }
         }
     }
 }
@@ -22,12 +27,12 @@ struct GagaEmuApp: App {
 #if DEBUG
 enum AppStateChecks {
     @MainActor static func run() {
+        CodeGenCheck.captureBaseline()
         assert(CoreCatalog.defaultCore(for: "gba") == "mgba")
         assert(CoreCatalog.coreName("bsnes") == "bsnes")
         assert(CoreCatalog.platformID(forExtension: "gdi") == "dreamcast")
         let game = GameItem(id: UUID(), title: "Demo", platformID: "ps1", romPath: "/tmp/a.chd",
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,
-        CodeGenCheck.captureBaseline()
                             isFavorite: false, shaderID: "original")
         assert(game.resolvedCoreID(defaults: [:]) == "pcsx_rearmed")
         assert(game.resolvedCoreID(defaults: ["ps1": "beetle_psx"]) == "beetle_psx")

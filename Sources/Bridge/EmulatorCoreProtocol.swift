@@ -114,6 +114,10 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public var onEvent: ((Event) -> Void)?
     /// Last chance to change player 1's input for this frame (TriggerPro). Gets the frame number.
     public var playerOneFilter: ((GagaInputState, Int) -> GagaInputState)?
+    #if DEBUG
+    /// Benchmark timing for each timed frame: start time, wall time and this thread's CPU time, in ns.
+    public var onFrameTimed: ((UInt64, UInt64, UInt64) -> Void)?
+    #endif
 
     private let inputLock = NSLock()
     private var playerInputs: [GagaInputState] = Array(repeating: GagaInputState(), count: 4)
@@ -163,10 +167,6 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
 
     // MARK: - Initialization
 
-    /// Refuses a core with the wrong ABI or a failing self-test before creating anything.
-    public init(interface: GagaCoreInterface, systemDirectory: String? = nil, saveDirectory: String? = nil) throws {
-        guard interface.abi_version == GAGA_BRIDGE_ABI_VERSION else {
-            throw EmulatorCoreError.abiMismatch(found: interface.abi_version, expected: GAGA_BRIDGE_ABI_VERSION)
     private static var baseDirectory: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
             .appendingPathComponent("GagaEmu")
@@ -179,6 +179,10 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             .appendingPathComponent(URL(fileURLWithPath: romPath).lastPathComponent).path
     }
 
+    /// Refuses a core with the wrong ABI or a failing self-test before creating anything.
+    public init(interface: GagaCoreInterface, systemDirectory: String? = nil, saveDirectory: String? = nil) throws {
+        guard interface.abi_version == GAGA_BRIDGE_ABI_VERSION else {
+            throw EmulatorCoreError.abiMismatch(found: interface.abi_version, expected: GAGA_BRIDGE_ABI_VERSION)
         }
         if let selfTest = interface.self_test {
             var error = [CChar](repeating: 0, count: 256)
@@ -360,6 +364,9 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             onAudioPacket = nil
             onEvent = nil
             playerOneFilter = nil
+            #if DEBUG
+            onFrameTimed = nil
+            #endif
         }
     }
 
@@ -383,7 +390,15 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         inputLock.unlock()
 
         if let filter = playerOneFilter { currentInputs[0] = filter(currentInputs[0], frame) }
+        #if DEBUG
+        let wallStart = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
+        let cpuStart = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
         stepFn(inst, currentInputs, 4)
+        onFrameTimed?(wallStart, clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - wallStart,
+                      clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - cpuStart)
+        #else
+        stepFn(inst, currentInputs, 4)
+        #endif
 
         inputLock.lock()
         framesStepped += 1

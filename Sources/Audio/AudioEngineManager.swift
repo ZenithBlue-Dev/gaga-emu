@@ -45,6 +45,7 @@ public final class AudioEngineManager: ObservableObject {
     private var primed = false
     private var writtenFrames = 0
     private var renderedFrames = 0
+    private var underruns = 0
     private let lock = OSAllocatedUnfairLock()
 
     // Emulation queue only, or while it is stopped.
@@ -53,11 +54,11 @@ public final class AudioEngineManager: ObservableObject {
 
     public var outputSampleRate: Double { outputFormat.sampleRate }
 
-    /// Frames accepted after resampling, frames played, and whether the engine is running.
-    public var stats: (written: Int, rendered: Int, engineRunning: Bool) {
+    /// Frames accepted after resampling, frames played, times playback ran dry, and whether the engine is running.
+    public var stats: (written: Int, rendered: Int, underruns: Int, engineRunning: Bool) {
         lock.lock()
         defer { lock.unlock() }
-        return (writtenFrames, renderedFrames, engine.isRunning)
+        return (writtenFrames, renderedFrames, underruns, engine.isRunning)
     }
 
     public init(outputSampleRate: Double = 48000.0) {
@@ -219,6 +220,7 @@ public final class AudioEngineManager: ObservableObject {
         if count < frames {
             (left + count).update(repeating: 0, count: frames - count)
             (right + count).update(repeating: 0, count: frames - count)
+            if primed { underruns += 1 }
             primed = false
         }
     }

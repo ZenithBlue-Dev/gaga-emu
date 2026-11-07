@@ -278,6 +278,14 @@ final class AppState: ObservableObject {
         let id = UUID()
         let title: String
         let message: String
+
+        var heading: String {
+            #if DEBUG
+            // A finished benchmark ends its session the same way a failure does.
+            if message.hasPrefix("Benchmark saved") { return "Benchmark finished" }
+            #endif
+            return "Could not play \(title)"
+        }
     }
 
     @Published var nickname: String { didSet { save() } }
@@ -418,6 +426,41 @@ final class AppState: ObservableObject {
             throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
         }
         skins.hapticsEnabled = rumble
+    #if DEBUG
+    /// Runs the benchmark on `rom`, or on the generated test ROM. It stays out of the Library and play history.
+    func runBenchmark(rom: URL? = nil, seconds: TimeInterval = BenchmarkRun.defaultSeconds) {
+        guard session == nil, !launching else { return }
+        launching = true
+        Task {
+            defer { launching = false }
+            do {
+                let romURL = try rom ?? BenchmarkRun.writeTestROM(to: romDirectory)
+                let game = GameItem(id: UUID(), title: "Benchmark", platformID: "gba", romPath: romURL.path,
+                                    coverPath: nil, coreOverride: "mgba", playTime: 0, lastPlayed: nil,
+                                    isFavorite: false, shaderID: "original")
+                let next = try makeSession(for: game)
+                try await next.prepare()
+                guard let interface = GagaCoreRegistry_FindByID("mgba")?.pointee else { return }
+                let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds)
+                run.attach()
+                next.onFinish = { [weak self] message in self?.endSession(game: game, message: message) }
+                session = next
+                Task { await run.drive() }
+            } catch {
+                launchFailure = LaunchFailure(title: "Benchmark", message: error.localizedDescription)
+            }
+        }
+    }
+
+    func runBenchmarkIfRequested() {
+        let defaults = UserDefaults.standard
+        guard ProcessInfo.processInfo.arguments.contains("-GagaBenchmark") else { return }
+        let seconds = defaults.double(forKey: "GagaBenchmarkSeconds")
+        runBenchmark(rom: defaults.string(forKey: "GagaBenchmarkROM").map { romDirectory.appendingPathComponent($0) },
+                     seconds: seconds > 0 ? seconds : BenchmarkRun.defaultSeconds)
+    }
+    #endif
+
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
         return try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,

@@ -52,6 +52,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         var videoDropped: Int
         var audioWritten: Int
         var audioRendered: Int
+        var audioUnderruns: Int
         var audioEngineRunning: Bool
     }
 
@@ -125,7 +126,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         return Stats(frames: coreStats.frames, buttons: coreStats.buttons,
                      videoWritten: ringStats.written, videoDropped: ringStats.dropped,
                      audioWritten: audioStats.written, audioRendered: audioStats.rendered,
-                     audioEngineRunning: audioStats.engineRunning)
+                     audioUnderruns: audioStats.underruns, audioEngineRunning: audioStats.engineRunning)
     }
 
     // MARK: - Lifecycle
@@ -134,8 +135,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     func prepare() async throws {
         guard phase == .idle else { return }
         let interface = self.interface
-        let core = try await Task.detached(priority: .userInitiated) {
         let saveDirectory = GagaCoreWrapper.saveDirectory(forROM: romPath)
+        let core = try await Task.detached(priority: .userInitiated) {
             try GagaCoreWrapper(interface: interface, saveDirectory: saveDirectory)
         }.value
 
@@ -177,7 +178,21 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
                 renderer.setTexture(texture)
             }
         }
+        #if DEBUG
+        var audioPackets = 0
+        var audioPeak: Int16 = 0
+        core.onAudioPacket = { [audio, log] packet in
+            audioPeak = max(audioPeak, packet.samples.max() ?? 0)
+            audioPackets += 1
+            if audioPackets % 240 == 0 {
+                log.notice("audio peak=\(audioPeak, privacy: .public) packets=\(audioPackets, privacy: .public)")
+                audioPeak = 0
+            }
+            audio.writeAudioPacket(packet)
+        }
+        #else
         core.onAudioPacket = { [audio] packet in audio.writeAudioPacket(packet) }
+        #endif
         core.onEvent = { [weak self] event in
             guard event.severity == GAGA_EVENT_FATAL else { return }
             // A fatal during load surfaces through the error prepare() throws, so fatal() ignores it here.
@@ -246,6 +261,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     func stop(message: String? = nil) {
         guard phase != .stopped else { return }
         phase = .stopped
+        #if DEBUG
+        CodeGenCheck.report("session stop, \(game.title)")
+        #endif
         pauseReasons = []
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
@@ -261,9 +279,6 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         onStarted = nil
         onPlayTime = nil
         onFinish = nil
-        #if DEBUG
-        CodeGenCheck.report("session stop, \(game.title)")
-        #endif
         finish?(message)
     }
 
@@ -304,6 +319,18 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             break
         }
     }
+
+    #if DEBUG
+    /// Benchmark hooks. Call between `prepare` and `run`. Both closures run on the core's queue.
+    func attachBenchmark(script: @escaping (Int) -> UInt32, timing: @escaping (UInt64, UInt64, UInt64) -> Void) {
+        core?.playerOneFilter = { state, frame in
+            var scripted = state
+            scripted.buttons = script(frame)
+            return scripted
+        }
+        core?.onFrameTimed = timing
+    }
+    #endif
 
     // MARK: - Input
 

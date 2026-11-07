@@ -49,7 +49,7 @@ struct RootView: View {
             }
         }
         .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) { GameView(session: $0) }
-        .alert("Could not play \(state.launchFailure?.title ?? "this game")",
+        .alert(state.launchFailure?.heading ?? "Could not play this game",
                isPresented: Binding(get: { state.launchFailure != nil }, set: { if !$0 { state.launchFailure = nil } }),
                presenting: state.launchFailure) { _ in
             Button("OK", role: .cancel) {}
