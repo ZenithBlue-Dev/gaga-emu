@@ -504,14 +504,23 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         }
     }
 
+    /// Platforms whose core takes the hardware keyboard key by key (GagaInputState.keys).
+    static let typingPlatforms: Set<String> = ["dos"]
+
     private func pushInputs() {
         guard let core else { return }
         var states = controllers.sample()
         menuPair(held: states.contains(where: \.openMenu))
         if controllers.touchOwnsPlayerOne { states[0].buttons |= touchMask | accessibilityMask }
-        states[0].buttons |= controllers.keyboardButtons()
+        // A DOS program reads the keys themselves, so the keyboard does not also press pad buttons there.
+        let typing = Self.typingPlatforms.contains(game.platformID)
+        if !typing { states[0].buttons |= controllers.keyboardButtons() }
         for (slot, state) in states.enumerated() {
             var input = GagaInputState(state)
+            if slot == 0, typing {
+                let keys = controllers.keyboardKeys()
+                withUnsafeMutableBytes(of: &input.keys) { $0.copyBytes(from: keys) }
+            }
             if slot == 0, let pointer {
                 input.pointer_x = pointer.x
                 input.pointer_y = pointer.y

@@ -186,6 +186,17 @@ public final class ControllerManager: ObservableObject {
         return keyMap.bindings.reduce(0) { keyboard.button(forKeyCode: $1.key)?.isPressed == true ? $0 | $1.value : $0 }
     }
 
+    /// Every key held on the connected keyboard, for a core that types: bit (u & 7) of byte u >> 3 for HID
+    /// usage u, which is GCKeyCode's raw value. Letters through right GUI (0x04 to 0xE7).
+    public func keyboardKeys() -> [UInt8] {
+        var keys = [UInt8](repeating: 0, count: 32)
+        guard let keyboard = GCKeyboard.coalesced?.keyboardInput, keyboard.isAnyKeyPressed else { return keys }
+        for usage in 0x04...0xE7 where keyboard.button(forKeyCode: GCKeyCode(rawValue: usage))?.isPressed == true {
+            keys[usage >> 3] |= 1 << (usage & 7)
+        }
+        return keys
+    }
+
     // MARK: Discovery
 
     func attach(_ controller: GCController) {

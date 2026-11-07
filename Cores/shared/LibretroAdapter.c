@@ -58,6 +58,8 @@ typedef struct {
     uint32_t sample_rate;
     uint64_t rom_id;
     GagaInputState inputs[LR_MAX_PLAYERS];
+    retro_keyboard_event_t keyboard_cb;
+    uint8_t keys_sent[32]; // Player 1's keys as keyboard_cb last heard them.
     uint32_t* opaque;
     size_t opaque_pixels;
     uint32_t frames_since_flush;
@@ -142,6 +144,9 @@ static bool lr_environment(unsigned command, void* data) {
     case RETRO_ENVIRONMENT_SHUTDOWN:
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_CORE_STOPPED, "The core stopped this game.");
         return true;
+    case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK:
+        a->keyboard_cb = ((const struct retro_keyboard_callback*)data)->callback;
+        return true;
     default:
         return false; // No rumble, messages, VFS, core options UI, hardware rendering or other frontend extras.
     }
@@ -216,10 +221,60 @@ static const uint32_t s_retropad[16] = {
     [RETRO_DEVICE_ID_JOYPAD_L3] = GAGA_BTN_L3, [RETRO_DEVICE_ID_JOYPAD_R3] = GAGA_BTN_R3,
 };
 
+// USB HID keyboard usage (GagaInputState.keys) to libretro's key code. 0 for a key libretro has no name for.
+static unsigned lr_retrok(unsigned usage) {
+    if (usage >= 0x04 && usage <= 0x1D) return RETROK_a + (usage - 0x04);
+    if (usage >= 0x1E && usage <= 0x26) return RETROK_1 + (usage - 0x1E);
+    if (usage >= 0x3A && usage <= 0x45) return RETROK_F1 + (usage - 0x3A);
+    if (usage >= 0x59 && usage <= 0x61) return RETROK_KP1 + (usage - 0x59);
+    static const uint16_t named[256] = {
+        [0x27] = RETROK_0, [0x28] = RETROK_RETURN, [0x29] = RETROK_ESCAPE, [0x2A] = RETROK_BACKSPACE,
+        [0x2B] = RETROK_TAB, [0x2C] = RETROK_SPACE, [0x2D] = RETROK_MINUS, [0x2E] = RETROK_EQUALS,
+        [0x2F] = RETROK_LEFTBRACKET, [0x30] = RETROK_RIGHTBRACKET, [0x31] = RETROK_BACKSLASH,
+        [0x32] = RETROK_BACKSLASH, [0x33] = RETROK_SEMICOLON, [0x34] = RETROK_QUOTE, [0x35] = RETROK_BACKQUOTE,
+        [0x36] = RETROK_COMMA, [0x37] = RETROK_PERIOD, [0x38] = RETROK_SLASH, [0x39] = RETROK_CAPSLOCK,
+        [0x46] = RETROK_PRINT, [0x47] = RETROK_SCROLLOCK, [0x48] = RETROK_PAUSE, [0x49] = RETROK_INSERT,
+        [0x4A] = RETROK_HOME, [0x4B] = RETROK_PAGEUP, [0x4C] = RETROK_DELETE, [0x4D] = RETROK_END,
+        [0x4E] = RETROK_PAGEDOWN, [0x4F] = RETROK_RIGHT, [0x50] = RETROK_LEFT, [0x51] = RETROK_DOWN,
+        [0x52] = RETROK_UP, [0x53] = RETROK_NUMLOCK, [0x54] = RETROK_KP_DIVIDE, [0x55] = RETROK_KP_MULTIPLY,
+        [0x56] = RETROK_KP_MINUS, [0x57] = RETROK_KP_PLUS, [0x58] = RETROK_KP_ENTER, [0x62] = RETROK_KP0,
+        [0x63] = RETROK_KP_PERIOD, [0x64] = RETROK_LESS, [0x65] = RETROK_MENU,
+        [0xE0] = RETROK_LCTRL, [0xE1] = RETROK_LSHIFT, [0xE2] = RETROK_LALT, [0xE3] = RETROK_LSUPER,
+        [0xE4] = RETROK_RCTRL, [0xE5] = RETROK_RSHIFT, [0xE6] = RETROK_RALT, [0xE7] = RETROK_RSUPER,
+    };
+    return usage < 256 ? named[usage] : 0;
+}
+
+static bool lr_key_held(const uint8_t keys[32], unsigned usage) { return keys[usage >> 3] & (1u << (usage & 7)); }
+
+// Tells a core that registered a keyboard callback which keys changed since the last frame.
+static void lr_send_keys(LrInstance* a) {
+    const uint8_t* keys = a->inputs[0].keys;
+    if (!a->keyboard_cb || memcmp(keys, a->keys_sent, sizeof(a->keys_sent)) == 0) return;
+    uint16_t modifiers = 0;
+    if (lr_key_held(keys, 0xE1) || lr_key_held(keys, 0xE5)) modifiers |= RETROKMOD_SHIFT;
+    if (lr_key_held(keys, 0xE0) || lr_key_held(keys, 0xE4)) modifiers |= RETROKMOD_CTRL;
+    if (lr_key_held(keys, 0xE2) || lr_key_held(keys, 0xE6)) modifiers |= RETROKMOD_ALT;
+    if (lr_key_held(keys, 0xE3) || lr_key_held(keys, 0xE7)) modifiers |= RETROKMOD_META;
+    for (unsigned usage = 0; usage < 256; ++usage) {
+        bool down = lr_key_held(keys, usage);
+        if (down == lr_key_held(a->keys_sent, usage)) continue;
+        unsigned code = lr_retrok(usage);
+        if (code) a->keyboard_cb(down, code, 0, modifiers);
+    }
+    memcpy(a->keys_sent, keys, sizeof(a->keys_sent));
+}
+
 static int16_t lr_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
     LrInstance* a = lr_current();
     if (!a || port >= LR_MAX_PLAYERS) return 0;
     const GagaInputState* input = &a->inputs[port];
+    if (device == RETRO_DEVICE_KEYBOARD) {
+        for (unsigned usage = 0; port == 0 && id && usage < 256; ++usage) {
+            if (lr_retrok(usage) == id && lr_key_held(input->keys, usage)) return 1;
+        }
+        return 0;
+    }
     if (device == RETRO_DEVICE_JOYPAD) {
         if (id == RETRO_DEVICE_ID_JOYPAD_MASK) {
             int16_t mask = 0;
@@ -463,6 +518,7 @@ void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint
     if (!a || !a->loaded) return;
     memset(a->inputs, 0, sizeof(a->inputs));
     if (inputs) memcpy(a->inputs, inputs, sizeof(GagaInputState) * (player_count < LR_MAX_PLAYERS ? player_count : LR_MAX_PLAYERS));
+    lr_send_keys(a);
     retro_run();
     if (++a->frames_since_flush >= LR_FLUSH_INTERVAL_FRAMES) {
         a->frames_since_flush = 0;
