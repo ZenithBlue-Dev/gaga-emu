@@ -33,7 +33,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Game Boy / GBC | Gambatte | Gambatte | SameBoy, Gearboy | [GPL-2.0](https://github.com/libretro/gambatte-libretro) (source headers say version 2, with no "or later"), plus MIT parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending. Built on branch `core/gambatte`, legal gate open | Active, last push 2026-10-30. No release tags; pinned to master commit `77f2567d718b8973d02caa2daa8dce4953faf811` | 1 |
 | GBA | mGBA | mGBA | VBA-M, gpSP (interpreter) | [MPL-2.0](https://github.com/mgba-emu/mgba), plus a BSD-3-Clause part (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending | Active, last push 2026-11-06. Pinned to tag 0.10.5, `26b7884bc25a5933960f3cdcd98bac1ae14d42e2` | 1 |
 | NES | Nestopia | Not seen | FCEUMM, QuickNES | [GPL-2.0](https://raw.githubusercontent.com/libretro/nestopia/master/COPYING) | Software | Unverified | Active, last push 2026-09-13 ([0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)) | 1 |
-| SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt) | Software | Unverified | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro)) | 2 |
+| SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt), plus ISC, Expat, MIT and public-domain parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending. Upstream libco's `mprotect` path is replaced (section 5). Built on branch `core/bsnes`, legal gate open | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro), a GitHub fork of bsnes-emu/bsnes and the repository libretro-super builds). No release tag at that point; pinned to master commit `b51612a74c4ff4b91aa55eb094940d9d848e0e96` | 2 |
 | Genesis / Mega-CD | JGenesis (self-maintained iOS port) | JGenesis (Mega-CD row) | ClownMDEmu | [GPL-3.0](https://raw.githubusercontent.com/jsgroth/jgenesis/master/README.md) | Software frames expected; port needed, since upstream's frontend uses wgpu | Unverified. [`Cargo.lock`](https://raw.githubusercontent.com/jsgroth/jgenesis/master/Cargo.lock) lists no cranelift, dynasm or wasmtime crate | Active, last push 2026-11-06. Linux, Windows and web are official; iOS is not | 2 |
 | PS1 | PCSX-ReARMed (`DYNAREC=0`) | Beetle PSX HW | Beetle PSX HW (software, or Vulkan via MoltenVK) | [GPL-2.0](https://github.com/libretro/pcsx_rearmed) | Software (`BUILTIN_GPU = neon`) | Confirmed for the build config: [`ios-arm64` sets `DYNAREC = 0`](https://raw.githubusercontent.com/libretro/pcsx_rearmed/master/Makefile.libretro) | Active, last push 2026-10-29 | 1 |
 | DS | melonDS DS | melonDS DS | DeSmuME | [GPL-3.0](https://github.com/JesseTG/melonds-ds) | Software (its OpenGL modes are not an accepted path) | Confirmed for the build config: ["JIT is disabled by default in iOS builds"](https://raw.githubusercontent.com/JesseTG/melonds-ds/main/CMakeLists.txt) | Active, last push 2026-10-28. README lists iOS arm64 | 2 |
@@ -86,7 +86,7 @@ Only sourced claims appear here. Expected performance is a target (unmeasured); 
 
 - **GBA (mGBA):** [README](https://raw.githubusercontent.com/mgba-emu/mgba/master/README.md) lists motion sensor and rumble cartridges, Boktai solar sensor, and Game Boy Camera and Printer.
 - **GB (SameBoy):** ships open-source DMG and CGB boot ROMs, not official ones. [Printer emulation](https://sameboy.github.io/features/) is listed on its site.
-- **SNES (bsnes):** [coprocessor firmware files are optional](https://docs.libretro.com/library/bsnes/). How each chip behaves without firmware is unverified.
+- **SNES (bsnes):** [coprocessor firmware files are optional](https://docs.libretro.com/library/bsnes/). How each chip behaves without firmware is unverified. GagaEmu sets `bsnes_coprocessor_prefer_hle` and never asks for firmware, so Super Game Boy and BS-X games do not load. Only a homebrew LoROM test ROM has run.
 - **N64:** ParaLLEl-RDP is [Vulkan compute](https://raw.githubusercontent.com/Themaister/parallel-rdp/master/README.md), not software rasterisation. GLideN64 is GLES on iOS and is not accepted. `HAVE_PARALLEL_RSP` must be off or its JIT removed. Whether an interpreter RSP can drive ParaLLEl-RDP at usable speed on iOS is an open spike, and the tier 2 rating depends on it.
 - **DS (melonDS DS):** DSi camera support is ["planned, but has not yet been integrated"](https://raw.githubusercontent.com/JesseTG/melonds-ds/main/README.md). Do not promise it. Delta's author [reported melonDS at 100% speed on most newer devices](https://rileytestut.com/blog/2021/04/21/delta-1-3-ds-for-everyone) in 2021.
 - **3DS (Azahar):** the PICA200 shader path differs by stage.
@@ -110,7 +110,7 @@ GPL cores in an App Store binary carry legal risk. The FSF had [GNU Go removed](
 
 - Legal review is a required gate before the first GPL core ships.
 - The likely posture is publishing the app source under a compatible licence. [Manic](https://github.com/Manic-EMU/ManicEMU) and [Delta](https://github.com/rileytestut/Delta) publish app source under AGPL-3.0.
-- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core.
+- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core. bsnes (GPL-3.0-or-later) is such a core: `core/bsnes` builds it into the same app as Gambatte.
 - Until this gate closes, release builds use `GAGA_CORE_SET=mgba` (`docs/06` section 2.5), so no GPL code ships.
 - This is an open owner decision. Counsel is needed.
 
@@ -154,6 +154,25 @@ Source: [github.com/libretro/gambatte-libretro](https://github.com/libretro/gamb
 `libgambatte/libretro/cc_resampler.c` says GPLv3 and is not compiled: `GambatteCore.c` defines `CC_init` and `CC_renderaudio` as empty functions. Upstream calls them only when `gambatte_audio_resampler` is `cc`, which GagaEmu never sets, or when allocating its default resampler fails, and then the game runs silent. Its header `cc_resampler.h` is still read at compile time, as `libretro.cpp` includes it. It contributes declarations only. Counsel should confirm this, as with mGBA's `blip_buf.h`.
 
 `HAVE_NETWORK` is off, so the link-cable socket code is not compiled. The core's own Game Boy and Game Boy Color boot ROMs are not bundled: the `gambatte_gb_bootloader` option is off, so the core starts the game with its built-in post-boot register state and never reads a Nintendo file. The test ROM carries no Nintendo logo bytes; the core does not check them.
+
+### bsnes licence obligations
+
+Source: [github.com/libretro/bsnes-libretro](https://github.com/libretro/bsnes-libretro), the libretro fork that libretro-super builds (`recipes/apple/cores-ios-arm64-generic`, `target=libretro`), at master commit `b51612a74c4ff4b91aa55eb094940d9d848e0e96`, as the unmodified submodule `Cores/bsnes/upstream`. Only the libretro target is compiled: no GUI, Qt, hiro or ruby. `Cores/bsnes/BsnesCore.c`, `BsnesSupport.cpp`, `libco.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files, linked with bsnes into `BsnesCore.framework`. This is on branch `core/bsnes` only and must not ship until the legal gate above closes.
+
+| Part | Licence | What it asks of a binary release |
+|---|---|---|
+| `bsnes/sfc`, `bsnes/processor`, `bsnes/emulator`, `bsnes/target-libretro/libretro.cpp` and `program.cpp`, and `bsnes/filter/none.cpp` (through `BsnesSupport.cpp`) | GPL-3.0-or-later (`LICENSE.txt`) | The complete corresponding source of the whole work, under GPL-3.0, with the written offer or the source alongside, and the installation information GPL-3.0 section 6 asks for. This is the gate above. |
+| `nall` (headers, compiled into every unit) | ISC (`LICENSE.txt`, second part) | Reproduce the copyright notice and permission notice. |
+| `bsnes/gb/Core` (15 files: SameBoy, needed because the Super Game Boy code references it) | Expat (`bsnes/gb/LICENSE`) | Reproduce the copyright notice and permission notice. |
+| `bsnes/lzma` (Igor Pavlov's LZMA SDK files, included by `lzma.cpp`) | Public domain, as each file header says | Nothing. |
+| `bsnes/target-libretro/libretro.h` | MIT | Reproduce the notice. |
+
+Not compiled:
+
+- `bsnes/filter/filter.cpp` bundles third-party scalers, among them blargg's `snes_ntsc` (LGPL-2.1). `BsnesSupport.cpp` draws the four NTSC options unfiltered, and `bsnes_video_filter` stays at None.
+- Upstream `libco`: its `libco.c` forces the `mprotect` path under clang, which makes a data array executable. `Cores/bsnes/libco.c` is GagaEmu's own arm64 context switch with the same API, and the gate refuses `_mprotect`.
+
+**The SPC700 IPL boot ROM is compiled in.** `bsnes/target-libretro/resources.hpp` holds the 64-byte IPL ROM of the console's sound chip, and the libretro target serves it as `ipl.rom`. bsnes has no HLE for it and no free replacement was found. It is Nintendo code inside a GPL file. This is an owner and counsel question before any release: it is the one piece of console firmware in the build. No coprocessor firmware, BIOS or game is bundled.
 
 ### No-JIT gate
 
@@ -274,7 +293,7 @@ static const CoreGetterFunc s_core_getters[] = {
 };
 ```
 
-Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework` and Gambatte from `GambatteCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, and Gambatte takes `.gb` and `.gbc`. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework`, Gambatte from `GambatteCore.xcframework` and bsnes from `BsnesCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, and Gambatte takes `.gb` and `.gbc`. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
 
 ### Storage (current code)
 
