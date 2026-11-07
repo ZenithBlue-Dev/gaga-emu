@@ -32,7 +32,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 |---|---|---|---|---|---|---|---|---|
 | Game Boy / GBC | Gambatte | Gambatte | SameBoy, Gearboy | [GPL-2.0](https://github.com/libretro/gambatte-libretro) (source headers say version 2, with no "or later"), plus MIT parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending. Built on branch `core/gambatte`, legal gate open | Active, last push 2026-10-30. No release tags; pinned to master commit `77f2567d718b8973d02caa2daa8dce4953faf811` | 1 |
 | GBA | mGBA | mGBA | VBA-M, gpSP (interpreter) | [MPL-2.0](https://github.com/mgba-emu/mgba), plus a BSD-3-Clause part (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending | Active, last push 2026-11-06. Pinned to tag 0.10.5, `26b7884bc25a5933960f3cdcd98bac1ae14d42e2` | 1 |
-| NES | Nestopia | Not seen | FCEUMM, QuickNES | [GPL-2.0](https://raw.githubusercontent.com/libretro/nestopia/master/COPYING) | Software | Unverified | Active, last push 2026-09-13 ([0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)) | 1 |
+| NES | Nestopia UE | Not seen | FCEUMM, QuickNES | [GPL-2.0-or-later](https://github.com/libretro/nestopia) (source headers say "version 2 of the License, or (at your option) any later version"), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending. Built on branch `core/nestopia`, legal gate open | Active, last push 2026-10-31 ([libretro/nestopia](https://github.com/libretro/nestopia), the libretro port of [0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)). No release tags; pinned to master commit `f1e02d12664834536edbf7352995a3d0cd1caef4` | 1 |
 | SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt) | Software | Unverified | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro)) | 2 |
 | Genesis / Mega-CD | JGenesis (self-maintained iOS port) | JGenesis (Mega-CD row) | ClownMDEmu | [GPL-3.0](https://raw.githubusercontent.com/jsgroth/jgenesis/master/README.md) | Software frames expected; port needed, since upstream's frontend uses wgpu | Unverified. [`Cargo.lock`](https://raw.githubusercontent.com/jsgroth/jgenesis/master/Cargo.lock) lists no cranelift, dynasm or wasmtime crate | Active, last push 2026-11-06. Linux, Windows and web are official; iOS is not | 2 |
 | PS1 | PCSX-ReARMed (`DYNAREC=0`) | Beetle PSX HW | Beetle PSX HW (software, or Vulkan via MoltenVK) | [GPL-2.0](https://github.com/libretro/pcsx_rearmed) | Software (`BUILTIN_GPU = neon`) | Confirmed for the build config: [`ios-arm64` sets `DYNAREC = 0`](https://raw.githubusercontent.com/libretro/pcsx_rearmed/master/Makefile.libretro) | Active, last push 2026-10-29 | 1 |
@@ -110,7 +110,7 @@ GPL cores in an App Store binary carry legal risk. The FSF had [GNU Go removed](
 
 - Legal review is a required gate before the first GPL core ships.
 - The likely posture is publishing the app source under a compatible licence. [Manic](https://github.com/Manic-EMU/ManicEMU) and [Delta](https://github.com/rileytestut/Delta) publish app source under AGPL-3.0.
-- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core.
+- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core. Nestopia is GPL-2.0-or-later, so it does not add to that conflict.
 - Until this gate closes, release builds use `GAGA_CORE_SET=mgba` (`docs/06` section 2.5), so no GPL code ships.
 - This is an open owner decision. Counsel is needed.
 
@@ -154,6 +154,19 @@ Source: [github.com/libretro/gambatte-libretro](https://github.com/libretro/gamb
 `libgambatte/libretro/cc_resampler.c` says GPLv3 and is not compiled: `GambatteCore.c` defines `CC_init` and `CC_renderaudio` as empty functions. Upstream calls them only when `gambatte_audio_resampler` is `cc`, which GagaEmu never sets, or when allocating its default resampler fails, and then the game runs silent. Its header `cc_resampler.h` is still read at compile time, as `libretro.cpp` includes it. It contributes declarations only. Counsel should confirm this, as with mGBA's `blip_buf.h`.
 
 `HAVE_NETWORK` is off, so the link-cable socket code is not compiled. The core's own Game Boy and Game Boy Color boot ROMs are not bundled: the `gambatte_gb_bootloader` option is off, so the core starts the game with its built-in post-boot register state and never reads a Nintendo file. The test ROM carries no Nintendo logo bytes; the core does not check them.
+
+### Nestopia licence obligations
+
+Source: [github.com/libretro/nestopia](https://github.com/libretro/nestopia), the repository libretro-super builds from, at master commit `f1e02d12664834536edbf7352995a3d0cd1caef4` (it has no release tags), as the unmodified submodule `Cores/nestopia/upstream`. `Cores/nestopia/NestopiaCore.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files, linked with Nestopia into `NestopiaCore.framework`. This is on branch `core/nestopia` only and must not ship until the legal gate above closes.
+
+| Part | Licence | What it asks of a binary release |
+|---|---|---|
+| `source/core` (292 compiled files, each with a GPL header) | GPL-2.0-or-later | The complete corresponding source of the whole work, under GPL-2.0 or later, with the written offer or the source alongside. This is the gate above. |
+| `source/nes_ntsc` (headers and `nes_ntsc.inl`, included by `NstVideoFilterNtsc*.cpp`) | LGPL-2.1-or-later | Reproduce the notice and give the source. Compatible with the GPL whole. The NTSC filter is compiled but off (`nestopia_blargg_ntsc_filter` is `disabled`). |
+| `libretro/libretro-common` (11 compiled files) | MIT | Reproduce each copyright notice and the permission notice. |
+| `libretro/libretro.cpp` and the headers it includes, `nesfont.h`, `nstdatabase.hpp` (the cartridge database, compiled in) and `palettes.hpp` | No header; the repository's `COPYING` is GPL-2.0 | Treat as GPL-2.0. |
+
+No file outside these groups is compiled, and the build fetches nothing. `NST_NO_ZLIB` is upstream's own define: states are never compressed and no zlib is linked. The FDS disk BIOS (`disksys.rom`) is not bundled and `.fds` is not offered, so only cartridges run. `NstHomebrew.cpp` imports `exit` for an exit port that only the `Api::Homebrew` interface turns on, which `libretro.cpp` never calls. The test ROM is GagaEmu's own generated program (`Sources/Debug/NESTestROM.swift`).
 
 ### No-JIT gate
 
@@ -262,6 +275,7 @@ static const CoreGetterFunc s_core_getters[] = {
     MockCore_GetInterface,
     Mgba_GetInterface,
     Gambatte_GetInterface,
+    Nestopia_GetInterface,
     Bsnes_GetInterface,
     Jgenesis_GetInterface,
     PcsxReArmed_GetInterface,
@@ -274,7 +288,7 @@ static const CoreGetterFunc s_core_getters[] = {
 };
 ```
 
-Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework` and Gambatte from `GambatteCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, and Gambatte takes `.gb` and `.gbc`. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework`, Gambatte from `GambatteCore.xcframework` and Nestopia from `NestopiaCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, Gambatte takes `.gb` and `.gbc`, and Nestopia takes `.nes` (iNES and NES 2.0) only. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
 
 ### Storage (current code)
 

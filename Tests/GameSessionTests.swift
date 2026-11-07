@@ -220,9 +220,9 @@ final class GameSessionTests: XCTestCase {
         XCTAssertThrowsError(try state.makeSession(for: item)) {
             XCTAssertTrue($0.localizedDescription.contains("gone.mock"))
         }
-        item.coreOverride = "nestopia"
+        item.coreOverride = "fceumm"
         XCTAssertThrowsError(try state.makeSession(for: item)) {
-            XCTAssertEqual($0.localizedDescription, "Nestopia UE is not part of this build yet.")
+            XCTAssertEqual($0.localizedDescription, "FCEUmm is not part of this build yet.")
         }
         item.coreOverride = nil
         XCTAssertThrowsError(try state.makeSession(for: item)) {

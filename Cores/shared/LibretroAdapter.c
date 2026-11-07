@@ -426,6 +426,10 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
         return false;
     }
 
+    // Nestopia fixes its state size on the first call, and its state is longer in the first frames after
+    // power on. Asking before any frame runs gives every session of a game the same size.
+    (void)retro_serialize_size();
+
     struct retro_system_av_info av = { 0 };
     retro_get_system_av_info(&av);
     a->sample_rate = (uint32_t)lround(av.timing.sample_rate);
