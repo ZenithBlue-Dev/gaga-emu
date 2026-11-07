@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Draw the placeholder app icon: a white "G" on the brand gradient. Original artwork, no third-party imagery.
+"""Draw the placeholder app icon: four white dots in a diamond on the brand gradient.
+Original artwork, no third-party imagery.
 
 Writes a 1024x1024 RGB PNG with no alpha, the single size the asset catalog needs.
 
     scripts/make_placeholder_icon.py
 """
 
-import math
 import struct
 import zlib
 from pathlib import Path
@@ -14,24 +14,17 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parents[1] / "Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 SIZE = 1024
 TOP, BOTTOM = (255, 77, 107), (140, 92, 255)  # AppTheme.brandGradient
-CX, CY, OUTER, INNER, BAR = 512, 512, 330, 205, 62
+CENTER, SPREAD, RADIUS = 512, 205, 118
+DOTS = ((CENTER, CENTER - SPREAD), (CENTER + SPREAD, CENTER), (CENTER, CENTER + SPREAD), (CENTER - SPREAD, CENTER))
 
 
-def in_g(x, y):
-    dx, dy = x - CX, CY - y
-    radius = math.hypot(dx, dy)
-    if radius > OUTER:
-        return False
-    if dx >= 10 and abs(dy) <= BAR:  # crossbar
-        return True
-    if radius < INNER:
-        return False
-    return not (dy > BAR and 0 < math.degrees(math.atan2(dy, dx)) < 52)  # mouth
+def in_mark(x, y):
+    return any((x - dx) ** 2 + (y - dy) ** 2 <= RADIUS ** 2 for dx, dy in DOTS)
 
 
 def coverage(x, y):
-    corners = (in_g(x + 0.25, y + 0.25), in_g(x + 0.75, y + 0.25), in_g(x + 0.25, y + 0.75), in_g(x + 0.75, y + 0.75))
-    return sum(corners) / 4
+    corners = ((x + 0.25, y + 0.25), (x + 0.75, y + 0.25), (x + 0.25, y + 0.75), (x + 0.75, y + 0.75))
+    return sum(in_mark(*corner) for corner in corners) / 4
 
 
 def main():

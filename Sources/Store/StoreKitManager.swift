@@ -191,7 +191,7 @@ public final class StoreKitManager: ObservableObject {
     }
 
     /// Offer badges appear only when the product has that offer (docs/06 section 4.4).
-    static func badge(for id: ProductID, intro: IntroOffer?) -> String? {
+    nonisolated static func badge(for id: ProductID, intro: IntroOffer?) -> String? {
         if id == .lifetime { return "Best Value" }
         switch intro {
         case .freeTrial: return "Free Trial"
@@ -201,7 +201,7 @@ public final class StoreKitManager: ObservableObject {
     }
 
     /// Text under the offers. It must match what the selected product actually offers.
-    static func disclosure(for id: ProductID, intro: IntroOffer?) -> String? {
+    nonisolated static func disclosure(for id: ProductID, intro: IntroOffer?) -> String? {
         guard id.isSubscription else { return nil }
         return intro == .freeTrial ? "No charges during trial period. Cancel anytime" : "Cancel anytime"
     }
