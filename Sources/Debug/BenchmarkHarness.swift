@@ -132,6 +132,7 @@ final class BenchmarkRun {
         case "sgx": data = PCETestROM.build(superGrafx: true)
         case "vb": data = VBTestROM.build()
         case "ngp": (data, ext) = (NGPTestROM.build(), "ngc")
+        case "ws": (data, ext) = (WSTestROM.build(), "wsc")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
