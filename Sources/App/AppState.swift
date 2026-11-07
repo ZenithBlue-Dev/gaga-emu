@@ -112,6 +112,9 @@ enum CoreCatalog {
         .init(id: "pce", name: "PC Engine", manufacturer: "NEC", cores: [
             .init(id: "beetle_pce_fast", name: "Beetle PCE Fast", note: "HuCard and CD", recommended: true)
         ]),
+        .init(id: "sgx", name: "SuperGrafx", manufacturer: "NEC", cores: [
+            .init(id: "beetle_supergrafx", name: "Beetle SuperGrafx", note: "Dual VDC", recommended: true)
+        ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
             .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
         ]),
@@ -196,6 +199,7 @@ enum CoreCatalog {
         case "md", "gen", "smd", "sms": return "megadrive"
         // A .ccd is a CloneCD disc, which only the PC Engine core opens. A PC Engine .cue is placed by its contents.
         case "pce", "ccd": return "pce"
+        case "sgx": return "sgx"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

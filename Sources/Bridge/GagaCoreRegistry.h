@@ -26,6 +26,7 @@ const GagaCoreInterface* VkTest_GetInterface(void); // Layer-path test core, Deb
 const GagaCoreInterface* DosboxPure_GetInterface(void);
 const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
 const GagaCoreInterface* BeetlePceFast_GetInterface(void);
+const GagaCoreInterface* BeetleSupergrafx_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

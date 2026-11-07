@@ -404,6 +404,9 @@ DEFINE_CORE_INTERFACE(Mupen64PlusNext_GetInterface, "mupen64plus_next", "Mupen64
 #ifndef GAGA_HAS_BEETLE_PCE_FAST
 DEFINE_CORE_INTERFACE(BeetlePceFast_GetInterface, "beetle_pce_fast", "Beetle PCE Fast",  GAGA_CORE_EXCLUDED, "pce|cue|ccd|chd|toc|m3u", 59.82, 44100)
 #endif
+#ifndef GAGA_HAS_BEETLE_SUPERGRAFX
+DEFINE_CORE_INTERFACE(BeetleSupergrafx_GetInterface, "beetle_supergrafx", "Beetle SuperGrafx", GAGA_CORE_EXCLUDED, "pce|sgx|cue|ccd|chd|toc|m3u", 59.82, 44100)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
@@ -432,6 +435,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Ppsspp_GetInterface,
     VkTest_GetInterface,
     BeetlePceFast_GetInterface, // After PCSX-ReARMed: FindByExtension gives .cue, .chd and .m3u to the PS1 core.
+    BeetleSupergrafx_GetInterface, // After PCE Fast, which keeps .pce; this one is first for .sgx.
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 
