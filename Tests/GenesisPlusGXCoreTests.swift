@@ -143,12 +143,13 @@ final class GenesisPlusGXCoreTests: XCTestCase {
     }
 
     /// Genesis Plus GX takes any file as a cartridge, so only a missing file and a disc with no BIOS are refused.
+    /// It loads by path and has no is_rom, so the adapter never opens the file and upstream's refusal is the message.
     func testBadFilesGiveAMessageForThePlayer() async throws {
         let bin = directory.appendingPathComponent("disc.bin")
         try Data(repeating: 0, count: 2352 * 300).write(to: bin)
         let cue = directory.appendingPathComponent("disc.cue")
         try Data("FILE \"disc.bin\" BINARY\n  TRACK 01 MODE1/2352\n    INDEX 01 00:00:00\n".utf8).write(to: cue)
-        for (path, message) in [(directory.appendingPathComponent("gone.md").path, "The game file could not be opened."),
+        for (path, message) in [(directory.appendingPathComponent("gone.md").path, "Genesis Plus GX could not load this game."),
                                 (cue.path, "Genesis Plus GX could not load this game.")] {
             let (core, _) = try makeCore()
             do {
