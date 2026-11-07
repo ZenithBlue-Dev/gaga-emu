@@ -32,6 +32,10 @@ static const GagaLibretroVariable s_variables[] = {
     { "beetle_psx_hw_track_textures", "disabled" },     // No texture dumps or HD packs beside the game.
     { "beetle_psx_hw_dump_textures", "disabled" },
     { "beetle_psx_hw_replace_textures", "disabled" },
+    // The Vulkan renderer's own fallback for these is 0 (rhi_lib_vulkan.c), not upstream's 239 and 287, so
+    // unset it scans out one line: device run 7's 2800x8 frame of border and field, no cube.
+    { "beetle_psx_hw_last_scanline", "239" },
+    { "beetle_psx_hw_last_scanline_pal", "287" },
     { NULL, NULL },
 };
 
