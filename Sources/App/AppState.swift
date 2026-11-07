@@ -183,12 +183,13 @@ enum CoreCatalog {
         case "n64", "z64", "v64": return "n64"
         case "nds": return "nds"
         case "3ds", "cia": return "n3ds"
-        // Disc images serve PS1, Mega-CD and DOS alike: platformID(forFile:) looks inside, and asks when unsure.
+        // Disc images serve PS1, PSP, Mega-CD and DOS alike: platformID(forFile:) looks inside, and asks when unsure.
+        // An EBOOT.PBP holds a PSP program or a PS1 disc: platformID(forFile:) looks inside.
         case "pbp": return "ps1"
         // A PS-EXE also ends in .exe. platformID(forFile:) tells the two apart by the file's first bytes.
         // The rest are the DOSBox Pure extensions no other core takes.
         case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
-        case "cso": return "psp"
+        case "cso", "elf": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "smd", "sms": return "megadrive"
         #if DEBUG
@@ -212,8 +213,8 @@ enum CoreCatalog {
     }
 
     /// The extension's platform, corrected by the file's contents where one extension serves two platforms:
-    /// an .exe that starts with "PS-X EXE" is a PlayStation program, a .zip is placed by `zipPlatformID(_:)`,
-    /// and a disc image is placed by `discPlatformID(_:)`.
+    /// an .exe that starts with "PS-X EXE" is a PlayStation program, a .pbp is placed by `pbpPlatformID(_:)`,
+    /// a .zip is placed by `zipPlatformID(_:)`, and a disc image is placed by `discPlatformID(_:)`.
     static func platformID(forFile url: URL) -> String? {
         let ext = url.pathExtension.lowercased()
         if discExtensions.contains(ext) { return discPlatformID(url) }
@@ -225,9 +226,24 @@ enum CoreCatalog {
             return magic == Data("PS-X EXE".utf8) ? "ps1" : "dos"
         case "zip":
             return zipPlatformID(url)
+        case "pbp":
+            return pbpPlatformID(url)
         default:
             return platformID(forExtension: url.pathExtension)
         }
+    }
+
+    /// A .pbp's platform: "psp" unless its DATA.PSAR is a PS1 disc (PSISOIMG or PSTITLEIMG) or it is not a PBP
+    /// at all, which stays "ps1" as before. The
+    /// header is "\0PBP", a version, then eight offsets, of which the eighth is DATA.PSAR's.
+    static func pbpPlatformID(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return "ps1" }
+        defer { try? handle.close() }
+        let header = [UInt8]((try? handle.read(upToCount: 40)) ?? Data())
+        guard header.count == 40, header[0..<4].elementsEqual([0, 0x50, 0x42, 0x50]) else { return "ps1" }
+        let psar = UInt64(header[36]) | UInt64(header[37]) << 8 | UInt64(header[38]) << 16 | UInt64(header[39]) << 24
+        guard (try? handle.seek(toOffset: psar)) != nil, let magic = try? handle.read(upToCount: 10) else { return "psp" }
+        return magic.starts(with: Data("PSISOIMG".utf8)) || magic.starts(with: Data("PSTITLEIMG".utf8)) ? "ps1" : "psp"
     }
 
     /// A .zip's platform from its central directory, nothing extracted. DOS: it holds an .exe, .com, .bat or
@@ -245,7 +261,7 @@ enum CoreCatalog {
     }
 
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
-    /// the system ID in sector 16, or SYSTEM.CNF in the root directory. Mega-CD: "SEGADISCSYSTEM" or "SEGA"
+    /// the system ID in sector 16, or SYSTEM.CNF in the root directory. PSP: "PSP GAME" as that system ID. Mega-CD: "SEGADISCSYSTEM" or "SEGA"
     /// opening the first sector (Saturn's "SEGA SEGASATURN" is left out). Any other ISO 9660 disc, and any
     /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry.
     /// shortcut: a .chd is compressed, so it always asks; read its first hunk if players import many.
@@ -280,6 +296,7 @@ enum CoreCatalog {
         }
         // Sector 16 starts at 32768 in a 2048-byte image, and its data at 16 * 2352 + 16 (Mode 1) or + 24 (Mode 2) in a raw one.
         let pvdStarts = [32768, 16 * 2352 + 16, 16 * 2352 + 24]
+        if has("PSP GAME", in: 32776..<32808) { return "psp" }
         if pvdStarts.contains(where: { has("PLAYSTATION", in: ($0 + 8)..<($0 + 40)) }) || has("SYSTEM.CNF;1", in: 0..<bytes.count) {
             return "ps1"
         }
