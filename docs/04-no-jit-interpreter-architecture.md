@@ -442,6 +442,12 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | Arcade | MAME | Per driver | Not audited | Recompiler paths off; audit per driver | 2 | Target (unmeasured). Load varies widely by driver, so one tier cannot describe every set |
 | Java ME | J2meJS | JVM bytecode | Spike | No-JIT and JS runtime path unverified | 2 | Target (unmeasured). Spike first |
 | Symbian | EKA2L1 | ARM | Spike | Interpreter unverified | 3 | Target (unmeasured). Spike first |
+| PC Engine / CD | Beetle PCE Fast | HuC6280 | Audited at `2de1ce1c`: a `switch` interpreter; compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. Single threaded, offline: `FORBIDDEN_IMPORTS` refuses sockets, `dlopen`, `pthread_create` and `mprotect` (`Cores/beetle_pce_fast/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+| SuperGrafx | Beetle SuperGrafx | HuC6280 | Audited at `9c11dcd2`, as PC Engine | As PC Engine (`Cores/beetle_supergrafx/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+| Virtual Boy | Beetle VB | NEC V810 | Audited at `d5ae54c8`: an opcode-dispatch interpreter (`v810_cpu.cpp`, `v810_oploop.inc`); no code-generation calls | As PC Engine (`Cores/beetle_vb/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+| Neo Geo Pocket / Color | Beetle NeoPop | TLCS-900/H, Z80 | Audited at `a50d5ac2`: table-driven interpreters; no code-generation calls | As PC Engine (`Cores/beetle_ngp/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+| WonderSwan / Color | Beetle Cygne | NEC V30MZ | Audited at `4b012958`: a `switch` interpreter (`v30mz.c`); no code-generation calls | As PC Engine (`Cores/beetle_wswan/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+| Pokémon Mini | PokeMini | Epson S1C88 | Audited at `132111b7`: a `switch` interpreter (`MinxCPU_XX.c` and its prefix tables); no code-generation calls | As PC Engine (`Cores/pokemini/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
 
 **Research, not shipping and not promised.**
 
