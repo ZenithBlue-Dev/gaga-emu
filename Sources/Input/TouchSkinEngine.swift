@@ -1,4 +1,5 @@
 import Foundation
+import AudioToolbox
 #if canImport(UIKit)
 import UIKit
 import CoreHaptics
@@ -16,7 +17,8 @@ public final class TouchSkinEngine: ObservableObject {
         public var mask: UInt32
         public var asset: String?  // PNG name inside the skin, or nil for a drawn shape
         public var shape: Shape
-        public enum Shape: String, Codable, Sendable { case rect, circle, dpup, dpdown, dpleft, dpright }
+        /// `hidden` is a hit area with nothing drawn, such as a D-pad diagonal.
+        public enum Shape: String, Codable, Sendable { case rect, circle, dpup, dpdown, dpleft, dpright, hidden }
     }
 
     public struct Skin: Identifiable, Equatable {
@@ -37,7 +39,7 @@ public final class TouchSkinEngine: ObservableObject {
     @Published public var hapticsEnabled = true
     @Published public var soundEnabled = true
 
-    public private(set) var pressed: Set<String> = []
+    @Published public private(set) var pressed: Set<String> = []
 
     #if canImport(CoreHaptics)
     private var engine: CHHapticEngine?
@@ -102,7 +104,20 @@ public final class TouchSkinEngine: ObservableObject {
     public func touchDown(at point: CGPoint) -> UInt32 {
         guard let hit = button(at: point), !pressed.contains(hit.id) else { return currentMask() }
         pressed.insert(hit.id)
-        if hapticsEnabled { tap() }
+        feedback()
+        return currentMask()
+    }
+
+    /// Replaces the held set with whatever these normalized points are on, so a finger can slide
+    /// between buttons and two fingers on one button release correctly. Returns the mask now held.
+    @discardableResult
+    public func setTouches(_ points: [CGPoint]) -> UInt32 {
+        guard let skin else { return 0 }
+        let held = Set(skin.buttons.filter { button in
+            points.contains { scaled(button.frame).contains($0) }
+        }.map(\.id))
+        if !held.subtracting(pressed).isEmpty { feedback() }
+        if held != pressed { pressed = held }
         return currentMask()
     }
 
@@ -139,6 +154,12 @@ public final class TouchSkinEngine: ObservableObject {
         return grown
     }
 
+    private func feedback() {
+        if hapticsEnabled { tap() }
+        // Keyboard click. System sounds obey the silent switch.
+        if soundEnabled { AudioServicesPlaySystemSound(1104) }
+    }
+
     private func tap() {
         #if canImport(CoreHaptics)
         guard let engine else { return }
@@ -171,16 +192,58 @@ public final class TouchSkinEngine: ObservableObject {
         }
     }
 
-    static let defaultLayout: [Button] = [
-        .init(id: "up", frame: .init(x: 0.06, y: 0.55, width: 0.09, height: 0.12), mask: ControllerManager.Button.up, asset: nil, shape: .dpup),
-        .init(id: "down", frame: .init(x: 0.06, y: 0.79, width: 0.09, height: 0.12), mask: ControllerManager.Button.down, asset: nil, shape: .dpdown),
-        .init(id: "left", frame: .init(x: 0.00, y: 0.67, width: 0.09, height: 0.12), mask: ControllerManager.Button.left, asset: nil, shape: .dpleft),
-        .init(id: "right", frame: .init(x: 0.12, y: 0.67, width: 0.09, height: 0.12), mask: ControllerManager.Button.right, asset: nil, shape: .dpright),
-        .init(id: "a", frame: .init(x: 0.86, y: 0.66, width: 0.10, height: 0.14), mask: ControllerManager.Button.south, asset: nil, shape: .circle),
-        .init(id: "b", frame: .init(x: 0.74, y: 0.74, width: 0.10, height: 0.14), mask: ControllerManager.Button.east, asset: nil, shape: .circle),
-        .init(id: "start", frame: .init(x: 0.55, y: 0.82, width: 0.08, height: 0.07), mask: ControllerManager.Button.start, asset: nil, shape: .rect),
-        .init(id: "select", frame: .init(x: 0.45, y: 0.82, width: 0.08, height: 0.07), mask: ControllerManager.Button.select, asset: nil, shape: .rect)
-    ]
+    /// Fraction of the canvas width each side keeps for controls. The picture sits between the bands.
+    public static let controlBand: CGFloat = 0.2
+
+    /// Spoken name for VoiceOver, and the visible text for buttons that carry one.
+    static func label(for id: String) -> (spoken: String, glyph: String?) {
+        switch id {
+        case "up": return ("D-pad up", nil)
+        case "down": return ("D-pad down", nil)
+        case "left": return ("D-pad left", nil)
+        case "right": return ("D-pad right", nil)
+        case "north": return ("X button", "X")
+        case "south": return ("B button", "B")
+        case "east": return ("A button", "A")
+        case "west": return ("Y button", "Y")
+        case "l": return ("L button", "L")
+        case "r": return ("R button", "R")
+        case "start": return ("Start", "Start")
+        case "select": return ("Select", "Select")
+        default: return (id, id.uppercased())
+        }
+    }
+
+    /// Every button stays inside the left and right `controlBand`. Sizes hold 44pt on the smallest
+    /// landscape phone. Face labels follow the header's Nintendo names for each position.
+    /// shortcut: one layout for every platform, per-platform layouts come with Assign Skin (3.9).
+    static let defaultLayout: [Button] = {
+        let b = ControllerManager.Button.self
+        func button(_ id: String, _ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat,
+                    _ mask: UInt32, _ shape: Button.Shape) -> Button {
+            Button(id: id, frame: CGRect(x: x, y: y, width: width, height: height), mask: mask, asset: nil, shape: shape)
+        }
+        let w: CGFloat = 0.065, h: CGFloat = 0.13
+        let padX: CGFloat = 0.0025, faceX: CGFloat = 0.8025, topY: CGFloat = 0.405
+        return [
+            button("up", padX + w, topY, w, h, b.up, .dpup),
+            button("down", padX + w, topY + 2 * h, w, h, b.down, .dpdown),
+            button("left", padX, topY + h, w, h, b.left, .dpleft),
+            button("right", padX + 2 * w, topY + h, w, h, b.right, .dpright),
+            button("upleft", padX, topY, w, h, b.up | b.left, .hidden),
+            button("upright", padX + 2 * w, topY, w, h, b.up | b.right, .hidden),
+            button("downleft", padX, topY + 2 * h, w, h, b.down | b.left, .hidden),
+            button("downright", padX + 2 * w, topY + 2 * h, w, h, b.down | b.right, .hidden),
+            button("north", faceX + w, topY, w, h, b.north, .circle),
+            button("south", faceX + w, topY + 2 * h, w, h, b.south, .circle),
+            button("west", faceX, topY + h, w, h, b.west, .circle),
+            button("east", faceX + 2 * w, topY + h, w, h, b.east, .circle),
+            button("l", 0.07, 0.02, 0.125, h, b.l1, .rect),
+            button("r", 0.805, 0.02, 0.125, h, b.r1, .rect),
+            button("select", 0.03, 0.85, 0.14, 0.12, b.select, .rect),
+            button("start", 0.83, 0.85, 0.14, 0.12, b.start, .rect)
+        ]
+    }()
 }
 
 private struct DeltaInfo: Decodable {
