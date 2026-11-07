@@ -57,8 +57,10 @@ public struct MultiDiscHelper: Sendable {
 
     /// Scans a directory (non-recursive) and returns groups of two or more discs.
     public static func scan(_ directory: URL) -> [Group] {
-        let urls = (try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        // A disc set in its own folder counts by its descriptor.
+        let urls = ((try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? [])
+            + DiscSet.folders(in: directory).compactMap(DiscSet.primary(in:))
         var buckets: [String: [(disc: Int, url: URL, platform: Platform?)]] = [:]
         // A cue sheet is the disc. Its track file beside it, under the same name, is not a disc of its own.
         let sheets = Set(urls.filter { ["cue", "ccd", "toc"].contains($0.pathExtension.lowercased()) }.map { $0.deletingPathExtension().lastPathComponent })
@@ -78,10 +80,11 @@ public struct MultiDiscHelper: Sendable {
         .sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
     }
 
-    /// Writes `Title.m3u` beside the discs. Paths are basenames so the playlist stays portable.
+    /// Writes `Title.m3u` beside the discs. Paths are relative ("Disc.cue", or "Disc/Disc.cue" for a set folder)
+    /// so the playlist stays portable.
     @discardableResult
     public static func writePlaylist(for group: Group, into directory: URL) throws -> URL {
-        let lines = group.discs.map { $0.lastPathComponent }
+        let lines = group.discs.map { ClipboardImporter.relativePath($0, in: directory) }
         let text = lines.joined(separator: "\n") + "\n"
         let name = WiFiTransferServer.sanitize(group.playlistName)
         guard name.hasSuffix(".m3u") else { throw CocoaError(.fileWriteInvalidFileName) }
