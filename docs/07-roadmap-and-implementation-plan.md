@@ -248,3 +248,9 @@ Systems from the `docs/03` section 6 Backlog, added on branch `core/group-mednaf
 - **Backlog:** the systems left in `docs/03` section 6 are "seen in Manic listing, not planned for v1".
 - **Excluded:** the cores in `docs/03` section 6 are not scheduled.
 - **Hidden rows with no phase (1.14):** Reset Tips returns once the app has dismissible tips, and Language once a second localisation exists.
+
+---
+
+## 14. Incidents
+
+- **JGenesis shipped the 32X boot ROMs (found 2026-11-07, fixed the same day).** Upstream's `backend/s32x-core/src/bootrom.rs` embeds `sh2_master_boot_rom.bin` (2048 bytes, SHA-1 `1e5b0b24`) and `sh2_slave_boot_rom.bin` (1024 bytes, SHA-1 `4103668c`) with `include_bytes!`. `genesis-core` depends on `s32x-core`, so every `JgenesisCore.framework` built since 4.4 held both whole ROMs, although GagaEmu never offered 32X. No build was released. Fix: the shim still never creates 32X hardware, and `CORE_BLANK_FILES` in `Cores/jgenesis/core.env` makes `scripts/build-core.sh` compile those files and `m68k_vectors.bin` as zeros from a staged copy; the submodule is unmodified (`docs/03` section 5). A scan of every file `build-core.sh` wrote for jgenesis found no 64-byte prefix of either ROM. Guard: `scripts/bootrom-gate.py` runs on every core binary `build-core.sh` builds. It fails on any ROM in `scripts/bootrom-hashes.txt` (hashes only, no ROM bytes), and on the first 64 bytes of any `*.bin` or `*.rom` a core's sources pull in with `include_bytes!` or `incbin`. Older derived-data folders under `build/` still hold the ROMs; never ship from them.
