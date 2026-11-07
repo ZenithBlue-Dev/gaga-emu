@@ -3,7 +3,7 @@ import SwiftUI
 /// Player slot assignment. Touch Control occupies Player 1 until a pad is bound there.
 struct ControllersModalView: View {
     @EnvironmentObject private var controllers: ControllerManager
-    let onClose: () -> Void
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -39,7 +39,7 @@ struct ControllersModalView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { onClose() } label: {
+                    Button { dismiss() } label: {
                         Image(systemName: "xmark").font(.system(size: 14, weight: .bold))
                             .frame(width: 34, height: 34).background(AppTheme.cardRaised, in: Circle())
                     }
