@@ -1,5 +1,6 @@
 import Foundation
 import GameController
+import os
 
 /// Tracks MFi, DualShock 4, DualSense, Xbox, Joy-Con (paired or split), and keyboards.
 /// Assigns each physical controller to one of four player slots. Player 1 falls
@@ -33,6 +34,9 @@ public final class ControllerManager: ObservableObject {
         public let kind: Kind
         public let vendor: String
         public var slot: Int? // 0...3, nil = unassigned
+        /// The Simulator reports a "Gamepad" that nobody is holding, and a pad can connect in a bag.
+        /// A device takes over from touch only once it has sent something.
+        public var hasSentInput = false
         public var isTouch: Bool { kind == .touch }
     }
 
@@ -45,7 +49,16 @@ public final class ControllerManager: ObservableObject {
         public var rightY: Int16 = 0
         public var triggerL: Float = 0
         public var triggerR: Float = 0
+        /// Menu and Options together, or Home where the system passes it on. Never reaches a core.
+        public var openMenu = false
         public static let zero = InputState()
+
+        /// Past stick and trigger drift, which a pad nobody is holding can report.
+        var isDeliberate: Bool {
+            let half: Int32 = 16384
+            return buttons != 0 || openMenu || triggerL > 0.5 || triggerR > 0.5
+                || [leftX, leftY, rightX, rightY].contains { abs(Int32($0)) > half }
+        }
     }
 
     public enum Button {
@@ -87,8 +100,11 @@ public final class ControllerManager: ObservableObject {
     private var controllers: [String: GCController] = [:]
     private var observers: [NSObjectProtocol] = []
     public var onChange: (() -> Void)?
+    private let defaults: UserDefaults
+    private static let unassignedKey = "GagaUnassignedControllers"
 
-    public init() {
+    public init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         let center = NotificationCenter.default
         observers = [
             center.addObserver(forName: .GCControllerDidConnect, object: nil, queue: .main) { [weak self] note in
@@ -108,9 +124,9 @@ public final class ControllerManager: ObservableObject {
 
     // MARK: Slots
 
-    /// Player 1 uses touch whenever nothing physical is bound to slot 0.
+    /// Player 1 uses touch until a physical device bound to slot 0 has sent input.
     public var touchOwnsPlayerOne: Bool {
-        !devices.contains { $0.slot == 0 && !$0.isTouch }
+        !devices.contains { $0.slot == 0 && !$0.isTouch && $0.hasSentInput }
     }
 
     public func device(inSlot slot: Int) -> Device? {
@@ -128,6 +144,10 @@ public final class ControllerManager: ObservableObject {
         } else {
             devices[index].slot = nil
         }
+        // The system re-announces controllers each launch, so an Unassign has to outlive this object.
+        var unassigned = Set(defaults.stringArray(forKey: Self.unassignedKey) ?? [])
+        if slot == nil { unassigned.insert(devices[index].name) } else { unassigned.remove(devices[index].name) }
+        defaults.set(unassigned.sorted(), forKey: Self.unassignedKey)
         onChange?()
     }
 
@@ -142,9 +162,11 @@ public final class ControllerManager: ObservableObject {
     /// Current state for players 1-4. Empty slots read as zero.
     public func sample() -> [InputState] {
         var states = Array(repeating: InputState.zero, count: Self.slotCount)
-        for device in devices {
-            guard let slot = device.slot, let controller = controllers[device.id] else { continue }
-            states[slot] = read(controller)
+        for index in devices.indices {
+            guard let controller = controllers[devices[index].id] else { continue }
+            let state = read(controller)
+            if !devices[index].hasSentInput, state.isDeliberate { devices[index].hasSentInput = true }
+            if let slot = devices[index].slot { states[slot] = state }
         }
         return states
     }
@@ -158,16 +180,26 @@ public final class ControllerManager: ObservableObject {
         return state
     }
 
+    /// Buttons from the connected keyboard, through `keyMap`.
+    public func keyboardButtons() -> UInt32 {
+        guard let keyboard = GCKeyboard.coalesced?.keyboardInput, keyboard.isAnyKeyPressed else { return 0 }
+        return keyMap.bindings.reduce(0) { keyboard.button(forKeyCode: $1.key)?.isPressed == true ? $0 | $1.value : $0 }
+    }
+
     // MARK: Discovery
 
-    private func attach(_ controller: GCController) {
+    func attach(_ controller: GCController) {
         let id = stableID(controller)
         guard controllers[id] == nil else { return }
         controllers[id] = controller
         let kind = Self.classify(controller)
-        let slot = firstFreeSlot()
-        let device = Device(id: id, name: controller.vendorName ?? kind.label, kind: kind,
-                            vendor: controller.vendorName ?? "", slot: slot)
+        let name = controller.vendorName ?? kind.label
+        let slot = defaults.stringArray(forKey: Self.unassignedKey)?.contains(name) == true ? nil : firstFreeSlot()
+        #if DEBUG
+        Logger(subsystem: "com.zenithblue.gagaemu", category: "controllers").notice(
+            "attach name=\(name, privacy: .public) category=\(controller.productCategory, privacy: .public) extended=\(controller.extendedGamepad != nil, privacy: .public) snapshot=\(controller.isSnapshot, privacy: .public) attached=\(controller.isAttachedToDevice, privacy: .public) slot=\(String(describing: slot), privacy: .public)")
+        #endif
+        let device = Device(id: id, name: name, kind: kind, vendor: controller.vendorName ?? "", slot: slot)
         devices.append(device)
         controller.playerIndex = slot.flatMap { GCControllerPlayerIndex(rawValue: $0) } ?? .indexUnset
         onChange?()
@@ -223,6 +255,10 @@ public final class ControllerManager: ObservableObject {
         set(Button.select, pad.buttonOptions?.isPressed ?? false)
         set(Button.l3, pad.leftThumbstickButton?.isPressed ?? false)
         set(Button.r3, pad.rightThumbstickButton?.isPressed ?? false)
+        // Menu and Options are Start and Select, and a game needs both, so only the pair means the app.
+        let pair = pad.buttonMenu.isPressed && pad.buttonOptions?.isPressed == true
+        state.openMenu = pair || pad.buttonHome?.isPressed == true
+        if pair { state.buttons &= ~(Button.start | Button.select) }
         state.leftX = axis(pad.leftThumbstick.xAxis.value)
         state.leftY = axis(pad.leftThumbstick.yAxis.value)
         state.rightX = axis(pad.rightThumbstick.xAxis.value)
