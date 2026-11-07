@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define LR_VK_FRAMES 2     // Frames in flight: the sync index is 0 or 1.
@@ -90,6 +91,14 @@ static void lr_vk_log(const char* format, ...) {
     vfprintf(stdout, format, args);
     va_end(args);
     fflush(stdout);
+}
+
+// MoltenVK reads its MVK_CONFIG_* settings once, at its first call, so they go in as the core loads. A setting
+// already in the environment wins. With asynchronous submits vkQueueSubmit returns once queued and MoltenVK
+// encodes the Metal command buffers on its own thread, so a core that submits from its emulation thread
+// (paraLLEl-RDP several times a frame) stops waiting for the encode (docs/05 section 2.3).
+__attribute__((constructor)) static void lr_vk_configure_moltenvk(void) {
+    setenv("MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS", "0", 0);
 }
 
 // MARK: - Checked creation
