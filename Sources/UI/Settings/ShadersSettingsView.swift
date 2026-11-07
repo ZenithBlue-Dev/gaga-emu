@@ -84,8 +84,7 @@ struct ShadersSettingsView: View {
     }
 }
 
-/// Stand-in 16-bit scene. The filter is a SwiftUI approximation of the named shader
-/// so the picker previews without a Metal pipeline. The real MSL pass replaces it.
+/// Live preview: the selected MSL preset runs on a procedural texture through `MetalRenderer`.
 struct ShaderPreviewCanvas: View {
     let shaderID: String
     @StateObject private var shaderManager = ShaderManager.shared

@@ -88,7 +88,7 @@ typedef struct GagaCoreInterface {
     // Execution slice (supports up to 4 local controller inputs)
     void (*step_frame)(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
 
-    // Hardware Metal Attachment (for 3D cores: Beetle PSX HW, PPSSPP, Azahar, Balero-S2)
+    // Layer attachment for 3D cores (Beetle PSX HW, PPSSPP, Azahar). No core implements it yet.
     bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer);
 
     // Audio & Video callbacks
