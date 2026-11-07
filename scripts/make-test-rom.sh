@@ -4,10 +4,10 @@
 # (NDSTestROM), .md (MDTestROM, with battery SRAM), .exe (PS1TestEXE), .cue (PS1TestEXE.disc, which also writes the
 # .bin beside it), .gagavk (VkTestROM, for the layer-path test core), .com (DOSTestCOM), .z64 (N64TestROM, with
 # battery SRAM), or .zip (GridleeTestSet, a MAME ROM set: MAME runs it only from a file named gridlee.zip).
-# Backlog cores (group-retro): .sms (SMSTestROM, with cartridge RAM), .a26 (Atari2600TestROM).
-# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26>
+# Backlog cores (group-retro): .sms (SMSTestROM, with cartridge RAM), .a26 (Atari2600TestROM), .a78 (Atari7800TestROM).
+# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26|output.a78>
 set -euo pipefail
-output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26>}
+output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26|output.a78>}
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -33,6 +33,7 @@ case "zip": try GridleeTestSet.build().write(to: url)
 case "z64": try N64TestROM.build().write(to: url)
 case "sms": try SMSTestROM.build().write(to: url)
 case "a26": try Atari2600TestROM.build().write(to: url)
+case "a78": try Atari7800TestROM.build().write(to: url)
 default: try GBATestROM.build().write(to: url)
 }
 SWIFT
@@ -41,6 +42,7 @@ xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAs
     "$root/Sources/Debug/NDSTestROM.swift" "$root/Sources/Debug/MDTestROM.swift" "$root/Sources/Debug/PS1TestEXE.swift" \
     "$root/Sources/Debug/VkTestROM.swift" "$root/Sources/Debug/DOSTestCOM.swift" "$root/Sources/Debug/GridleeTestSet.swift" \
     "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/SMSTestROM.swift" "$root/Sources/Debug/Atari2600TestROM.swift" \
+    "$root/Sources/Debug/Atari7800TestROM.swift" \
     "$root/Sources/Hub/RomPatcher.swift" -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

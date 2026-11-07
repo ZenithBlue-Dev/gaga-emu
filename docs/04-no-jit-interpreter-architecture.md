@@ -449,6 +449,7 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 |---|---|---|---|---|---|---|
 | Master System / Game Gear / SG-1000 | Gearsystem | Z80 | Audited at 3.9.24 (`40b8eeba`): table-driven Z80 interpreter (`src/opcodes*.cpp`); compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. Disassembler and VGM recorder off; single threaded, offline, no `dlopen` or `mprotect` (`Cores/gearsystem/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
 | Atari 2600 | Stella | 6507 (plus ARM for DPC+, CDF and ELF carts) | Audited at 7.0c (`c4016ea4`): `M6502.cxx` is a switch interpreter; Thumbulator and CortexM0 interpret ARM code, and nothing writes host code; compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. No HTTP for PlusROM; no sockets, `dlopen` or `mprotect` (`Cores/stella/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
+| Atari 7800 | ProSystem | 6502 (Sally) | Audited at `8a880142`: `Sally.c` is a switch interpreter and nothing writes host code; compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. No sockets, threads, `dlopen` or `mprotect` (`Cores/prosystem/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
 
 **Research, not shipping and not promised.**
 

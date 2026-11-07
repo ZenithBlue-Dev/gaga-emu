@@ -128,6 +128,9 @@ enum CoreCatalog {
         .init(id: "atari2600", name: "Atari 2600", manufacturer: "Atari", cores: [
             .init(id: "stella", name: "Stella", note: "Default", recommended: true)
         ]),
+        .init(id: "atari7800", name: "Atari 7800", manufacturer: "Atari", cores: [
+            .init(id: "prosystem", name: "ProSystem", note: "Default", recommended: true)
+        ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
             .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
         ]),
@@ -167,7 +170,8 @@ enum CoreCatalog {
     static func platformCode(_ id: String) -> String {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
                        "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC",
-                       "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG", "atari2600": "2600"]
+                       "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG", "atari2600": "2600",
+                       "atari7800": "7800"]
         return special[id] ?? id.uppercased()
     }
 
@@ -210,6 +214,7 @@ enum CoreCatalog {
         case "sg", "mv": return "sg1000"
         // A 2600 image is often a .bin: platformID(forFile:) tells it from a Mega Drive ROM or a disc by content.
         case "a26": return "atari2600"
+        case "a78": return "atari7800"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

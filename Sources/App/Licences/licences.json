@@ -798,6 +798,34 @@
    ]
   },
   {
+   "id": "prosystem",
+   "title": "ProSystem",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/prosystem-libretro, commit 8a88014",
+   "cores": [
+    "prosystem"
+   ],
+   "framework": "ProSystemCore",
+   "texts": [
+    {
+     "title": "ProSystem",
+     "file": "licence-63755afa640d.txt"
+    },
+    {
+     "title": "ProSystem copyright",
+     "file": "licence-3ca8587f45fd.txt"
+    },
+    {
+     "title": "BupBoop coretone (zlib)",
+     "file": "licence-a27b13569722.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

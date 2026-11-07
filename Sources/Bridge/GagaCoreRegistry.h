@@ -28,6 +28,7 @@ const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
 // group-retro backlog cores (docs/07 section 8.x).
 const GagaCoreInterface* Gearsystem_GetInterface(void);
 const GagaCoreInterface* Stella_GetInterface(void);
+const GagaCoreInterface* ProSystem_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

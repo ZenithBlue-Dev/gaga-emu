@@ -58,3 +58,6 @@
 [submodule "Cores/stella/upstream"]
 	path = Cores/stella/upstream
 	url = https://github.com/stella-emu/stella
+[submodule "Cores/prosystem/upstream"]
+	path = Cores/prosystem/upstream
+	url = https://github.com/libretro/prosystem-libretro

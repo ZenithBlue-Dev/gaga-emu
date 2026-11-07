@@ -190,6 +190,16 @@
       ]
     },
     {
+      "id": "prosystem", "title": "ProSystem", "cores": ["prosystem"], "framework": "ProSystemCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/prosystem-libretro, commit 8a88014",
+      "texts": [
+        { "title": "ProSystem", "from": "Cores/prosystem/upstream/License.txt" },
+        { "title": "ProSystem copyright", "from": "Cores/prosystem/upstream/core/ProSystem.c", "comment": true },
+        { "title": "BupBoop coretone (zlib)", "from": "Cores/prosystem/upstream/bupboop/License.txt" },
+        { "title": "libretro-common", "from": "Cores/prosystem/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
