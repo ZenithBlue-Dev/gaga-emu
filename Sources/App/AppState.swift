@@ -1367,10 +1367,14 @@ final class AppState: ObservableObject {
     /// A filter that no longer builds is not a failed launch: Original runs, and the player is told.
     private func applyImportedFilter(to session: GameSession) async {
         let id = session.game.shaderID
-        guard ImportedFilter.isImported(id) else { return }
+        guard ImportedFilter.isImported(id) || ImportedFilter.isSlang(id) else { return }
         let renderer = session.renderer
         do {
-            renderer.setImported(try await filters.pipeline(for: id, device: renderer.device))
+            if ImportedFilter.isSlang(id) {
+                renderer.setSlang(try await filters.slangChain(for: id, device: renderer.device))
+            } else {
+                renderer.setImported(try await filters.pipeline(for: id, device: renderer.device))
+            }
             renderer.onImportedFailure = { [weak session] in
                 session?.notice = "The imported filter failed on the GPU. Original is on."
             }

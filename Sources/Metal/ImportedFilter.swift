@@ -38,6 +38,12 @@ enum ImportedFilter {
 
     static func isImported(_ shaderID: String) -> Bool { shaderID.hasPrefix(idPrefix) }
 
+    /// An imported `.slangp`, kept translated as `<name>.gagaslang` (`SlangFilter`).
+    static let slangPrefix = "slang:"
+    static let slangExtension = "gagaslang"
+
+    static func isSlang(_ shaderID: String) -> Bool { shaderID.hasPrefix(slangPrefix) }
+
     /// The checks that need no GPU. Returns the source to compile.
     static func validate(_ data: Data) throws -> String {
         guard !data.isEmpty else { throw FilterImportError.empty }
@@ -109,7 +115,8 @@ enum ImportedFilter {
     }
 }
 
-/// Imported files, kept as copies in Application Support, so they survive the original moving.
+/// Imported files, kept as copies in Application Support, so they survive the original moving. A `.slangp`
+/// is kept as its translation, so a launch never runs the translator again.
 final class ImportedFilterStore {
     struct Entry: Identifiable, Equatable {
         let id: String
@@ -125,10 +132,11 @@ final class ImportedFilterStore {
 
     var entries: [Entry] {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        return files.filter { $0.pathExtension == "metal" }
+        return files.filter { $0.pathExtension == "metal" || $0.pathExtension == ImportedFilter.slangExtension }
             .map { url in
                 let name = url.deletingPathExtension().lastPathComponent
-                return Entry(id: ImportedFilter.idPrefix + name, name: name, url: url)
+                let prefix = url.pathExtension == "metal" ? ImportedFilter.idPrefix : ImportedFilter.slangPrefix
+                return Entry(id: prefix + name, name: name, url: url)
             }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
@@ -151,6 +159,58 @@ final class ImportedFilterStore {
         let destination = directory.appendingPathComponent(name).appendingPathExtension("metal")
         try data.write(to: destination, options: .atomic)
         return Entry(id: ImportedFilter.idPrefix + name, name: name, url: destination)
+    }
+
+    /// Translates the one `.slangp` among `files` and keeps the result. Its `.slang` and include files are read
+    /// from its own folder where the system allows it, and otherwise from the other `files`, matched by name.
+    func addSlang(files: [URL], device: MTLDevice) async throws -> Entry {
+        let presets = files.filter { $0.pathExtension.lowercased() == "slangp" }
+        guard presets.count == 1, let preset = presets.first else { throw SlangImportError.notPreset }
+        let scoped = files.map { $0.startAccessingSecurityScopedResource() }
+        defer { for (file, started) in zip(files, scoped) where started { file.stopAccessingSecurityScopedResource() } }
+        let name = preset.deletingPathExtension().lastPathComponent
+        let folder = preset.deletingLastPathComponent()
+        let text = try Self.readText(preset, label: preset.lastPathComponent)
+        let filter = try await Task.detached(priority: .userInitiated) {
+            try SlangImporter.translate(preset: text, name: name, load: { try Self.slangFile($0, folder: folder, companions: files) },
+                                        device: device)
+        }.value
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appendingPathComponent(name).appendingPathExtension(ImportedFilter.slangExtension)
+        try JSONEncoder().encode(filter).write(to: destination, options: .atomic)
+        return Entry(id: ImportedFilter.slangPrefix + name, name: name, url: destination)
+    }
+
+    static func slangFile(_ path: String, folder: URL, companions: [URL]) throws -> String {
+        guard !path.isEmpty, !path.hasPrefix("/") else { throw SlangImportError.missingFile(path) }
+        let direct = folder.appendingPathComponent(path).standardizedFileURL
+        if FileManager.default.isReadableFile(atPath: direct.path) { return try readText(direct, label: path) }
+        let name = (path as NSString).lastPathComponent.lowercased()
+        let matches = companions.filter { $0.lastPathComponent.lowercased() == name }
+        guard matches.count == 1 else { throw SlangImportError.missingFile(path) }
+        return try readText(matches[0], label: path)
+    }
+
+    /// Size first, so a huge file is refused without being read in.
+    private static func readText(_ url: URL, label: String) throws -> String {
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        guard size <= SlangImporter.maxFileBytes else { throw SlangImportError.tooLarge(label) }
+        guard let data = try? Data(contentsOf: url) else { throw SlangImportError.missingFile(label) }
+        guard data.count <= SlangImporter.maxFileBytes else { throw SlangImportError.tooLarge(label) }
+        guard !data.contains(0), let text = String(data: data, encoding: .utf8) else { throw SlangImportError.notText(label) }
+        return text
+    }
+
+    func slangFilter(for shaderID: String) -> SlangFilter? {
+        guard let entry = entries.first(where: { $0.id == shaderID }), ImportedFilter.isSlang(entry.id),
+              let data = try? Data(contentsOf: entry.url) else { return nil }
+        return try? JSONDecoder().decode(SlangFilter.self, from: data)
+    }
+
+    /// The chain for a saved `.slangp`. Throws if its file went missing or Metal no longer accepts it.
+    func slangChain(for shaderID: String, device: MTLDevice) async throws -> SlangChain {
+        guard let filter = slangFilter(for: shaderID) else { throw SlangImportError.missingFile(shaderID) }
+        return try await Task.detached(priority: .userInitiated) { try SlangChain(filter: filter, device: device) }.value
     }
 
     func delete(_ entry: Entry) {
