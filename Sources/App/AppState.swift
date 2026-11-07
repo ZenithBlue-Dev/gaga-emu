@@ -201,7 +201,7 @@ enum CoreCatalog {
     }
 
     /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
-    static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u"]
+    static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u", "ccd", "toc"]
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
     static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos"].compactMap(platform) }
 
@@ -247,10 +247,25 @@ enum CoreCatalog {
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
     /// the system ID in sector 16, or SYSTEM.CNF in the root directory. Saturn: "SEGA SEGASATURN" opening the
     /// first sector. Mega-CD: "SEGADISCSYSTEM" or any other "SEGA" opening it. Any other ISO 9660 disc, and any
-    /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry.
+    /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry, a .toc
+    /// through its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it.
     /// shortcut: a .chd is compressed, so it always asks; read its first hunk if players import many.
     static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
         let ext = url.pathExtension.lowercased()
+        if ext == "ccd" {
+            // The .img holds raw sectors, which the ISO 9660 rule would call DOS; DOSBox Pure cannot open a .ccd.
+            let id = depth < 2 ? discPlatformID(url.deletingPathExtension().appendingPathExtension("img"), depth: 1) : nil
+            return id == "dos" ? nil : id
+        }
+        if ext == "toc" {
+            guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+            // FILE "name" 0 or DATAFILE "name", in cdrdao's format.
+            let line = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+                .first { $0.uppercased().hasPrefix("FILE ") || $0.uppercased().hasPrefix("DATAFILE ") }
+            guard let name = line?.split(separator: "\"").dropFirst().first.map(String.init) else { return nil }
+            let id = discPlatformID(url.deletingLastPathComponent().appendingPathComponent(name), depth: 1)
+            return id == "dos" ? nil : id
+        }
         if ext == "cue" || ext == "m3u" {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
             let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }

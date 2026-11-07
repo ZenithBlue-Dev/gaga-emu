@@ -31,7 +31,7 @@ public struct MultiDiscHelper: Sendable {
             switch self {
             case .ps1: return ["bin", "cue", "chd", "pbp", "iso", "img"]
             case .megaCD: return ["bin", "cue", "chd", "iso"]
-            case .saturn: return ["bin", "cue", "chd", "iso", "mds"]
+            case .saturn: return ["bin", "cue", "chd", "iso", "ccd", "toc"]
             case .dreamcast: return ["gdi", "cdi", "chd", "cue"]
             }
         }
@@ -61,7 +61,7 @@ public struct MultiDiscHelper: Sendable {
             at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
         var buckets: [String: [(disc: Int, url: URL, platform: Platform?)]] = [:]
         // A cue sheet is the disc. Its track file beside it, under the same name, is not a disc of its own.
-        let sheets = Set(urls.filter { $0.pathExtension.lowercased() == "cue" }.map { $0.deletingPathExtension().lastPathComponent })
+        let sheets = Set(urls.filter { ["cue", "ccd", "toc"].contains($0.pathExtension.lowercased()) }.map { $0.deletingPathExtension().lastPathComponent })
         for url in urls {
             if ["bin", "img"].contains(url.pathExtension.lowercased()), sheets.contains(url.deletingPathExtension().lastPathComponent) { continue }
             guard let parsed = parse(url) else { continue }
