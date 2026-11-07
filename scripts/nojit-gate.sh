@@ -4,7 +4,8 @@
 #
 #   nojit-gate.sh <binary or object> [forbidden-strings-regex]   one core binary
 #   nojit-gate.sh --entitlements <plist>                         refuses JIT entitlement keys
-#   nojit-gate.sh --app <App.app> <entitlements plist>           Xcode build step: everything in a built app
+#   nojit-gate.sh --app <App.app> <entitlements plist>           Xcode build step: everything in a built app,
+#                                                                plus the boot ROM gate on each embedded framework
 #   nojit-gate.sh --release-set "<core ids>"                     refuses a release set with a non-commercial core
 #   nojit-gate.sh --release-app <App.app>                        refuses an app that embeds a non-commercial core
 #   nojit-gate.sh --sideload-app <App.app>                       refuses a sideload app that links StoreKit
@@ -156,6 +157,8 @@ check_app() {
         name=$(basename "$framework" .framework)
         case "$name" in XC* | Testing) continue ;; esac
         check_binary "$framework/$name" "$(strings_for_framework "$name")"
+        # A stale core framework in DerivedData skips build-core.sh's own boot ROM check (docs/07, JGenesis 32X).
+        python3 -I "$root/scripts/bootrom-gate.py" "$framework/$name"
         # Read whole, not piped into grep -q: with pipefail an early grep exit fails the pipe and hides a hit.
         links=$(otool -L "$framework/$name") contents=$(strings -a "$framework/$name")
         if grep -q '@rpath/MoltenVK.framework/MoltenVK ' <<<"$links"; then mvk_users=$((mvk_users + 1)); fi
