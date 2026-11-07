@@ -453,7 +453,9 @@ struct BIOSManagerView: View {
         ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
         ("firmware.bin", "DS firmware"),
-        ("lynxboot.img", "Lynx boot ROM (optional: Handy emulates it)")
+        ("lynxboot.img", "Lynx boot ROM (optional: Handy emulates it)"),
+        ("5200.rom", "Atari 5200 BIOS (optional: AltirraOS built in)"),
+        ("atarixl.rom", "Atari XL/XE OS (optional: AltirraOS built in)")
     ]
 
     var body: some View {

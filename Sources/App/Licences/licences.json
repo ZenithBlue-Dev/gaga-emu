@@ -854,6 +854,42 @@
    ]
   },
   {
+   "id": "atari800",
+   "title": "Atari800",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/libretro-atari800, commit 4e7fbc7",
+   "cores": [
+    "atari800"
+   ],
+   "framework": "Atari800Core",
+   "texts": [
+    {
+     "title": "Atari800",
+     "file": "licence-e6d6a009505e.txt"
+    },
+    {
+     "title": "Atari800 copyright",
+     "file": "licence-38a51bae0224.txt"
+    },
+    {
+     "title": "AltirraOS (XL/XE, 400/800, BASIC)",
+     "file": "licence-7af87f481330.txt"
+    },
+    {
+     "title": "AltirraOS 5200",
+     "file": "licence-68c8764b8431.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-d0f474ed713f.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

@@ -55,6 +55,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Atari 2600 | Stella | `stella` | stella2014 (not built) | [GPL-2.0-or-later](https://github.com/stella-emu/stella) (`Copyright.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 6502 interpreter; the ARM interpreter for DPC+, CDF and ELF carts (Thumbulator, CortexM0) does not recompile. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Active, last push 2026-11-06 ([stella-emu/stella](https://github.com/stella-emu/stella), `src/os/libretro`). Pinned to release tag 7.0c, `c4016ea4891cb0f90979cb35182214af4c1cb4e7`. Chosen over [stella2014-libretro](https://github.com/libretro/stella2014-libretro), a 2014 snapshot (Stella 3.9.3) that libretro only keeps building: both are GPL-2, this one is maintained | 1 |
 | Atari 7800 | ProSystem | `prosystem` | None | [GPL-2.0-or-later](https://github.com/libretro/prosystem-libretro) (`License.txt`), plus zlib and MIT parts (section 5) | Software | 6502 (Sally) interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/prosystem-libretro](https://github.com/libretro/prosystem-libretro)), last push 2026-08-22, no tags. Pinned to `8a88014287c7a01cd568067e5a557d0a2b2a051f` | 1 |
 | Atari Lynx | Handy | `handy` | holani (not built) | [Zlib](https://github.com/libretro/libretro-handy) (`lynx/license.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 65C02 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-handy](https://github.com/libretro/libretro-handy)), last push 2026-04-20, no tags. Pinned to `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1`. Chosen over [holani-retro](https://github.com/LLeny/holani-retro): GPL-3.0 and Rust, which `scripts/build-core.sh` does not build | 1 |
+| Atari 5200, Atari 8-bit | Atari800 | `atari800` | None | [GPL-2.0-or-later](https://github.com/libretro/libretro-atari800) (`atari800/COPYING`), plus all-permissive, Zlib and MIT parts (section 5) | Software | 6502 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-atari800](https://github.com/libretro/libretro-atari800)), last push 2026-09-01, no tags. Pinned to `4e7fbc73765c1a9670c7506616046ad1d4ccda51` | 1 |
 
 ### Renderer rules
 
@@ -410,6 +411,21 @@ Source: [github.com/libretro/libretro-handy](https://github.com/libretro/libretr
 
 No boot ROM or game is bundled. `lynxboot.img` is the player's: upstream opens it from the system folder and otherwise emulates the boot ROM's loader (HLE), which still needs the cart's own signed loader. The BIOS Files screen lists it as optional. The test program `Sources/Debug/LynxTestROM.swift` is GagaEmu's own hand-assembled 65C02 in the BS93 homebrew format; it uses no Atari key.
 
+### Atari800 licence obligations
+
+Source: [github.com/libretro/libretro-atari800](https://github.com/libretro/libretro-atari800), libretro's port of Atari800, commit `4e7fbc73765c1a9670c7506616046ad1d4ccda51` (upstream has no tags), as the unmodified submodule `Cores/atari800/upstream`. `Cores/atari800/Atari800Core.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/atari800/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `atari800/src` (6502, ANTIC, GTIA, POKEY, PIA, SIO, cartridges, disks, tape), `libretro/` | GPL-2.0-or-later (`atari800/COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `atari800/src/roms/altirra*.c` (AltirraOS XL/XE, 400/800 and 5200 kernels, Altirra BASIC, 5200 charset) | All-permissive (FSF), Avery Lee | Keep the copyright notice and the permission notice. |
+| `deps/zlib` | Zlib | Keep the notice. |
+| `libretro/libretro-common` (compat, file, streams, string, time, vfs) | MIT | Reproduce the notice. |
+
+`FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`; the R: device stays off. The P: printer device is turned off by the bridge, so no print file is written, and `atari800_cfg` stays disabled, so no `atari800.cfg` is written. `stat`, `opendir` and `readdir` are imported (the system-folder ROM scan); `stat` is covered by the app's File Timestamp reason C617.1.
+
+No Atari ROM or game is bundled; the AltirraOS replacements are free software. Atari's own `5200.rom`, XL/XE OS (`atarixl.rom`), 400/800 OS and BASIC are the player's: upstream scans the system folder for them by checksum, under any name, and uses AltirraOS otherwise. The BIOS Files screen lists `5200.rom` and `atarixl.rom` as optional. The test programs `Sources/Debug/Atari800TestROM.swift` are GagaEmu's own hand-assembled 6502.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -477,7 +493,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800).
 
 ---
 

@@ -64,3 +64,6 @@
 [submodule "Cores/handy/upstream"]
 	path = Cores/handy/upstream
 	url = https://github.com/libretro/libretro-handy
+[submodule "Cores/atari800/upstream"]
+	path = Cores/atari800/upstream
+	url = https://github.com/libretro/libretro-atari800

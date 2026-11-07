@@ -210,6 +210,18 @@
       ]
     },
     {
+      "id": "atari800", "title": "Atari800", "cores": ["atari800"], "framework": "Atari800Core", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/libretro-atari800, commit 4e7fbc7",
+      "texts": [
+        { "title": "Atari800", "from": "Cores/atari800/upstream/atari800/COPYING" },
+        { "title": "Atari800 copyright", "from": "Cores/atari800/upstream/atari800/src/atari.c", "comment": true },
+        { "title": "AltirraOS (XL/XE, 400/800, BASIC)", "from": "Cores/atari800/upstream/atari800/src/roms/altirraos_xl.c", "comment": true },
+        { "title": "AltirraOS 5200", "from": "Cores/atari800/upstream/atari800/src/roms/altirra_5200_os.c", "comment": true },
+        { "title": "zlib", "from": "Cores/atari800/upstream/deps/zlib/zlib.h", "comment": true },
+        { "title": "libretro-common", "from": "Cores/atari800/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]

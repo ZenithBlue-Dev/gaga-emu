@@ -134,6 +134,12 @@ enum CoreCatalog {
         .init(id: "lynx", name: "Atari Lynx", manufacturer: "Atari", cores: [
             .init(id: "handy", name: "Handy", note: "Default", recommended: true)
         ]),
+        .init(id: "atari5200", name: "Atari 5200", manufacturer: "Atari", cores: [
+            .init(id: "atari800", name: "Atari800", note: "Default", recommended: true)
+        ]),
+        .init(id: "atari8bit", name: "Atari 8-bit", manufacturer: "Atari", cores: [
+            .init(id: "atari800", name: "Atari800", note: "800XL", recommended: true)
+        ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
             .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
         ]),
@@ -174,7 +180,7 @@ enum CoreCatalog {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
                        "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC",
                        "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG", "atari2600": "2600",
-                       "atari7800": "7800"]
+                       "atari7800": "7800", "atari5200": "5200", "atari8bit": "A8"]
         return special[id] ?? id.uppercased()
     }
 
@@ -219,6 +225,8 @@ enum CoreCatalog {
         case "a26": return "atari2600"
         case "a78": return "atari7800"
         case "lnx": return "lynx"
+        case "a52": return "atari5200"
+        case "xex", "atr", "xfd", "dcm", "atx": return "atari8bit"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
