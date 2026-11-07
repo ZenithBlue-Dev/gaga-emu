@@ -73,6 +73,10 @@ typedef struct {
 
 static LrVulkan s_vk;
 static pthread_mutex_t s_queue_lock = PTHREAD_MUTEX_INITIALIZER;
+// Guards has_image, image and the waits. PPSSPP calls set_image from its render thread (its vkQueuePresentKHR
+// hook), racing the present on the host's queue: a frame copied half way through read width 0, the cause of
+// "no frame presented" in its tests (device runs 5 to 8).
+static pthread_mutex_t s_image_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // GagaEmu's ink letterbox (Palette.ink in AppTheme.swift), as the copy path's renderer clears to.
 static const VkClearColorValue s_letterbox = { .float32 = { 0x1C / 255.0f, 0x1A / 255.0f, 0x17 / 255.0f, 1.0f } };
@@ -104,9 +108,10 @@ __attribute__((constructor)) static void lr_vk_configure_moltenvk(void) {
 // MARK: - Checked creation
 
 // A pipeline, render pass or shader the driver refuses draws nothing, and cores rarely say so. The core's
-// lookups come through these, so each refusal is logged with its VkResult.
+// lookups come through these, so each refusal is logged with its VkResult. VK_PIPELINE_COMPILE_REQUIRED is not
+// one: it is the expected answer to FAIL_ON_PIPELINE_COMPILE_REQUIRED (paraLLEl-RDP's cache probe, device run 8).
 static void lr_vk_check(const char* call, VkResult result) {
-    if (result != VK_SUCCESS) lr_vk_log("[gaga-vk] %s returned VkResult %d\n", call, (int)result);
+    if (result != VK_SUCCESS && result != VK_PIPELINE_COMPILE_REQUIRED) lr_vk_log("[gaga-vk] %s returned VkResult %d\n", call, (int)result);
 }
 
 static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_graphics_pipelines(VkDevice device, VkPipelineCache cache, uint32_t count,
@@ -139,7 +144,30 @@ static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_shader_module(VkDevice device
     return result;
 }
 
+// MoltenVK lists pipelineCreationCacheControl, but FAIL_ON_PIPELINE_COMPILE_REQUIRED only skips the SPIR-V to MSL
+// step: a new set of specialization constants is still a Metal compile on the caller's thread. paraLLEl-RDP probes
+// each new combiner state that way on the emulation thread, 26 to 65 ms a time (device run 8's N64 hitches). Without
+// the feature its Granite hands every such compile to its pipeline worker thread and draws with the generic shader
+// meanwhile, as it does on drivers where it turns the feature off itself.
+static void lr_vk_hide_cache_control(VkPhysicalDeviceFeatures2* features) {
+    for (VkBaseOutStructure* next = (VkBaseOutStructure*)features->pNext; next; next = next->pNext) {
+        if (next->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_CREATION_CACHE_CONTROL_FEATURES) {
+            ((VkPhysicalDevicePipelineCreationCacheControlFeatures*)next)->pipelineCreationCacheControl = VK_FALSE;
+        } else if (next->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES) {
+            ((VkPhysicalDeviceVulkan13Features*)next)->pipelineCreationCacheControl = VK_FALSE;
+        }
+    }
+}
+
+static VKAPI_ATTR void VKAPI_CALL lr_vk_get_features2(VkPhysicalDevice gpu, VkPhysicalDeviceFeatures2* features) {
+    vkGetPhysicalDeviceFeatures2(gpu, features);
+    lr_vk_hide_cache_control(features);
+}
+
 static PFN_vkVoidFunction lr_vk_checked(const char* name) {
+    if (strcmp(name, "vkGetPhysicalDeviceFeatures2") == 0 || strcmp(name, "vkGetPhysicalDeviceFeatures2KHR") == 0) {
+        return (PFN_vkVoidFunction)lr_vk_get_features2;
+    }
     if (strcmp(name, "vkCreateGraphicsPipelines") == 0) return (PFN_vkVoidFunction)lr_vk_create_graphics_pipelines;
     if (strcmp(name, "vkCreateComputePipelines") == 0) return (PFN_vkVoidFunction)lr_vk_create_compute_pipelines;
     if (strcmp(name, "vkCreateRenderPass") == 0) return (PFN_vkVoidFunction)lr_vk_create_render_pass;
@@ -163,6 +191,7 @@ static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL lr_vk_instance_proc(VkInstance i
 static void lr_vk_set_image(void* handle, const struct retro_vulkan_image* image, uint32_t count,
                             const VkSemaphore* semaphores, uint32_t src_queue_family) {
     (void)handle;
+    pthread_mutex_lock(&s_image_lock);
     s_vk.has_image = image != NULL;
     if (image) {
         s_vk.image = (LrVkImage){ .image = image->create_info.image, .layout = image->image_layout,
@@ -171,6 +200,7 @@ static void lr_vk_set_image(void* handle, const struct retro_vulkan_image* image
     }
     s_vk.wait_count = 0;
     for (uint32_t i = 0; i < count && i < LR_VK_MAX_WAITS; ++i) s_vk.waits[s_vk.wait_count++] = semaphores[i];
+    pthread_mutex_unlock(&s_image_lock);
 }
 
 static uint32_t lr_vk_get_sync_index(void* handle) { (void)handle; return s_vk.index; }
@@ -395,7 +425,9 @@ void lr_vk_destroy_context(void) {
     lr_vk_wait_idle();
     s_vk.context_live = false;
     s_vk.presented = false; // The core frees its images now.
+    pthread_mutex_lock(&s_image_lock);
     s_vk.has_image = false;
+    pthread_mutex_unlock(&s_image_lock);
     if (s_vk.hw.context_destroy) s_vk.hw.context_destroy();
 }
 
@@ -558,7 +590,15 @@ static void lr_vk_record_copy(VkCommandBuffer cmd, const LrVkImage* src, VkImage
 // semaphores and sync index keep moving while the view is away.
 bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     if (!s_vk.device) return false;
+    // This frame's image and waits, taken at once: set_image may come from the core's own thread.
+    pthread_mutex_lock(&s_image_lock);
+    LrVkImage image = s_vk.image;
     bool show = !dupe && s_vk.has_image && width > 0 && height > 0;
+    VkSemaphore image_waits[LR_VK_MAX_WAITS];
+    uint32_t image_wait_count = s_vk.wait_count;
+    memcpy(image_waits, s_vk.waits, sizeof(image_waits));
+    s_vk.wait_count = 0;
+    pthread_mutex_unlock(&s_image_lock);
     // A dupe waits on no semaphore (libretro), and one with nothing to run or signal is a no-op.
     if (!show && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
     uint32_t slot = s_vk.index;
@@ -578,9 +618,9 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     VkCommandBufferBeginInfo begin = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT };
     vkBeginCommandBuffer(cmd, &begin);
     if (show) {
-        s_vk.image.width = width;
-        s_vk.image.height = height;
-        if (target != UINT32_MAX) lr_vk_record_copy(cmd, &s_vk.image, s_vk.images[target], s_vk.extent, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        image.width = width;
+        image.height = height;
+        if (target != UINT32_MAX) lr_vk_record_copy(cmd, &image, s_vk.images[target], s_vk.extent, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
     vkEndCommandBuffer(cmd);
 
@@ -588,7 +628,7 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     VkPipelineStageFlags stages[LR_VK_MAX_WAITS + 1];
     uint32_t wait_count = 0;
     if (show && s_vk.core_cmd_count == 0) { // With set_command_buffers, libretro skips the semaphores.
-        for (uint32_t i = 0; i < s_vk.wait_count; ++i) waits[wait_count++] = s_vk.waits[i];
+        for (uint32_t i = 0; i < image_wait_count; ++i) waits[wait_count++] = image_waits[i];
     }
     if (target != UINT32_MAX) waits[wait_count++] = s_vk.acquired[slot];
     for (uint32_t i = 0; i < wait_count; ++i) stages[i] = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -615,7 +655,6 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     }
     lr_vk_unlock();
 
-    s_vk.wait_count = 0;
     s_vk.core_cmd_count = 0;
     s_vk.signal = VK_NULL_HANDLE;
     s_vk.index = (slot + 1) % LR_VK_FRAMES;
@@ -629,7 +668,7 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
         return false;
     }
     if (show) {
-        s_vk.last = s_vk.image;
+        s_vk.last = image;
         s_vk.presented = true;
     }
     return show;
