@@ -57,6 +57,7 @@ typedef struct {
     bool loaded;
     bool save_write_failed;
     bool bad_video_reported;
+    bool abandoned; // The core's load never finished. Destroy leaks the instance.
     enum retro_pixel_format pixel_format;
     uint32_t sample_rate;
     uint64_t rom_id;
@@ -429,6 +430,9 @@ void gaga_lr_destroy(GagaInstance* inst) {
     a->video_cb = NULL;
     a->audio_cb = NULL;
     a->event_cb = NULL;
+    // shortcut: the instance and the claim on the core's globals are never released, so this process cannot start
+    // another game on this core. Fine while a stuck load ends in a relaunch; free it if the core can report done.
+    if (a->abandoned) return;
     if (a->loaded) {
         lr_flush(a);
         retro_cheat_reset();
@@ -524,7 +528,12 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_ROM, message);
         return false;
     }
-    if (gaga_libretro_core.finish_load) gaga_libretro_core.finish_load();
+    const char* stuck = gaga_libretro_core.finish_load ? gaga_libretro_core.finish_load() : NULL;
+    if (stuck) {
+        a->abandoned = true; // No unload: the core is still running its load. gaga_lr_destroy leaks the instance.
+        lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_ROM, stuck);
+        return false;
+    }
 
     // Refuse to run rather than let a player lose progress to a save that never reaches disk.
     if (!lr_open_battery(a, &a->batteries[0], RETRO_MEMORY_SAVE_RAM, "sav", rom_path) ||

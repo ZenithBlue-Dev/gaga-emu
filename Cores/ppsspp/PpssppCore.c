@@ -15,7 +15,7 @@ static const GagaLibretroVariable s_variables[] = {
     { NULL, NULL },
 };
 
-void gaga_ppsspp_finish_load(void); // PpssppSupport.cpp
+const char* gaga_ppsspp_finish_load(void); // PpssppSupport.cpp
 
 const GagaLibretroCore gaga_libretro_core = {
     .name = "PPSSPP",

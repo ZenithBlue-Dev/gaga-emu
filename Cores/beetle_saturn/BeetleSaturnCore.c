@@ -75,9 +75,10 @@ static bool saturn_save_battery(void) {
 // upstream's failed-write flag is a static that outlives a game: the last session's unload into a folder that
 // could not be written left it set, and this game's first flush then refused to load. Flushing here takes that
 // stale report and starts this game's own cartridge write, whose outcome save_battery reports.
-static void saturn_finish_load(void) {
+static const char* saturn_finish_load(void) {
     (void)SS_FlushCartNV();
     save_writer_drain();
+    return NULL;
 }
 
 static bool saturn_is_hex(const char* text, size_t count) {

@@ -74,8 +74,15 @@ void CodeBlock::Clear() { descriptions_.clear(); }
 // retro_load_game starts PPSSPP's ExecLoader thread and returns. Unloading before it finishes shuts the kernel
 // down under it (a null idle thread in __KernelStartIdleThreads), and frames run before it finishes show
 // nothing. The first retro_run joins the finished thread and brings the GPU up on the context.
-extern "C" void gaga_ppsspp_finish_load(void) {
-	while (PollBootState() == BootState::Booting) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+// A loader that is still running after 30 s is stuck. PSP_Shutdown under it crashes and nothing here can stop
+// it, so the message makes the adapter fail the load and leak the instance instead of unloading it.
+extern "C" const char *gaga_ppsspp_finish_load(void) {
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+	while (PollBootState() == BootState::Booting) {
+		if (std::chrono::steady_clock::now() >= deadline) return "The game took too long to start.";
+		std::this_thread::sleep_for(std::chrono::milliseconds(2));
+	}
+	return nullptr;
 }
 
 // OpenGL is not compiled (flags.h). The shader generators read these only for GLSL output, which Vulkan
