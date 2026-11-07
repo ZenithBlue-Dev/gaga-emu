@@ -1,108 +1,119 @@
 import SwiftUI
+import UIKit
 
-/// Dark OLED palette from the Manic reference screenshots.
-enum AppTheme {
-    static let background = Color(red: 0x0B / 255, green: 0x0C / 255, blue: 0x10 / 255)
-    static let card = Color(red: 0x1C / 255, green: 0x1C / 255, blue: 0x1E / 255)
-    static let cardRaised = Color(red: 0x2C / 255, green: 0x2C / 255, blue: 0x2E / 255)
-    static let stroke = Color.white.opacity(0.06)
-    static let textPrimary = Color.white
-    static let textSecondary = Color(white: 0.62)
-    static let textTertiary = Color(white: 0.42)
-    static let accent = Color(red: 1, green: 0.30, blue: 0.42)
-    static let accentBlue = Color(red: 0.45, green: 0.36, blue: 1)
-    static let accentGreen = Color(red: 0.20, green: 0.78, blue: 0.45)
-    static let warning = Color(red: 1, green: 0.72, blue: 0.20)
-    static let radius: CGFloat = 22
-
-    static let brandGradient = LinearGradient(
-        colors: [Color(red: 1, green: 0.30, blue: 0.42), Color(red: 0.55, green: 0.36, blue: 1)],
-        startPoint: .leading, endPoint: .trailing)
-
-    static let membershipGradient = LinearGradient(
-        colors: [Color(red: 1, green: 0.45, blue: 0.55), Color(red: 0.72, green: 0.42, blue: 0.95)],
-        startPoint: .leading, endPoint: .trailing)
+/// "Paper and ink" colours as (light, dark) hex pairs, spec in docs/06 section 3.
+enum Palette {
+    static let paper = (light: 0xF4EFE6, dark: 0x16140F)
+    static let surface = (light: 0xFBF8F2, dark: 0x211E18)
+    static let ink = (light: 0x1C1A17, dark: 0xEDE6D8)
+    static let muted = (light: 0x6B655B, dark: 0xA79F90)
+    static let rule = (light: 0xD9D1C2, dark: 0x3A352C)
+    /// Vermilion darkened on paper and lightened on dark, so accent text and glyphs reach AA.
+    static let accent = (light: 0xBF3D18, dark: 0xF0683F)
+    /// True vermilion, used only as a fill under `onAccent`.
+    static let accentFill = 0xE4572E
+    static let onAccent = 0x1C1A17
 }
 
-struct GlassCard: ViewModifier {
-    var radius: CGFloat = AppTheme.radius
-    func body(content: Content) -> some View {
-        content
-            .background(AppTheme.card, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(AppTheme.stroke, lineWidth: 1))
+private extension Color {
+    init(_ pair: (light: Int, dark: Int)) {
+        self.init(UIColor { UIColor(hex: $0.userInterfaceStyle == .dark ? pair.dark : pair.light) })
+    }
+
+    init(hex: Int) { self.init(UIColor(hex: hex)) }
+}
+
+private extension UIColor {
+    convenience init(hex: Int) {
+        self.init(red: CGFloat(hex >> 16 & 0xFF) / 255, green: CGFloat(hex >> 8 & 0xFF) / 255,
+                  blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
     }
 }
 
-extension View {
-    func glassCard(radius: CGFloat = AppTheme.radius) -> some View { modifier(GlassCard(radius: radius)) }
+extension Font {
+    static let screenTitle = Font.system(.title2, design: .serif).weight(.semibold)
+    static let gameTitle = Font.system(.title3, design: .serif).weight(.semibold)
+    /// Platform code, play time, file size.
+    static let meta = Font.system(.caption, design: .monospaced)
 }
 
-/// Floating bottom bar: rocket, folder, gear. The active tab is a gradient pill.
-struct GlassTabBar: View {
-    @Binding var selection: AppTab
+/// Hairline in place of shadows and cards. Follows the stack's axis.
+struct Rule: View {
+    var body: some View { Divider().overlay(AppTheme.rule) }
+}
+
+struct PrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.headline)
+            .foregroundStyle(isEnabled ? AppTheme.onAccent : AppTheme.muted)
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .background(isEnabled ? AppTheme.accentFill : AppTheme.rule,
+                        in: RoundedRectangle(cornerRadius: AppTheme.corner))
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+/// Text button in the accent colour, with a full-size target.
+struct QuietButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(AppTheme.accent)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+/// Header plus content for every sheet. `scrolls: false` is for content that scrolls itself.
+struct PaperSheet<Content: View>: View {
+    let title: String
+    var subtitle: String?
+    var scrolls = true
+    @ViewBuilder var content: Content
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(AppTab.allCases) { tab in
-                Button { selection = tab } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: tab.symbol)
-                            .font(.system(size: 18, weight: .semibold))
-                        if selection == tab {
-                            Text(tab.title).font(.system(size: 16, weight: .semibold))
-                        }
-                    }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: selection == tab ? .infinity : 64)
-                    .frame(height: 52)
-                    .background {
-                        if selection == tab {
-                            Capsule().fill(AppTheme.brandGradient)
-                        }
-                    }
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(title).font(.screenTitle).accessibilityAddTraits(.isHeader)
+                if let subtitle { Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted) }
+                Spacer(minLength: 0)
+                Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+            }
+            .padding(.horizontal, 20)
+            Rule()
+            if scrolls {
+                ScrollView {
+                    content.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(tab.title)
+            } else {
+                content
             }
         }
-        .padding(6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(Capsule().stroke(AppTheme.stroke, lineWidth: 1))
-        .padding(.horizontal, 28)
+        .foregroundStyle(AppTheme.ink)
+        .background(AppTheme.paper.ignoresSafeArea())
+        .presentationCornerRadius(AppTheme.corner)
     }
 }
 
-enum AppTab: String, CaseIterable, Identifiable {
-    case games, importHub, settings
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .games: return "Games"
-        case .importHub: return "Import"
-        case .settings: return "Settings"
-        }
-    }
-    var symbol: String {
-        switch self {
-        case .games: return "paperplane.fill"
-        case .importHub: return "square.and.arrow.down"
-        case .settings: return "gearshape.fill"
-        }
-    }
-}
+enum AppTheme {
+    static let paper = Color(Palette.paper)
+    static let surface = Color(Palette.surface)
+    static let ink = Color(Palette.ink)
+    static let muted = Color(Palette.muted)
+    static let rule = Color(Palette.rule)
+    static let accent = Color(Palette.accent)
+    static let accentFill = Color(hex: Palette.accentFill)
+    static let onAccent = Color(hex: Palette.onAccent)
+    static let corner: CGFloat = 6
 
-struct RoundIconButton: View {
-    let systemName: String
-    var action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
-                .background(.ultraThinMaterial, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(systemName)
+    /// Left spine on covers. One muted hue per catalog platform; the code text is the non-colour cue.
+    static func spine(_ platformID: String) -> Color {
+        guard let index = CoreCatalog.platforms.firstIndex(where: { $0.id == platformID }) else { return muted }
+        return Color(hue: Double(index) / Double(CoreCatalog.platforms.count), saturation: 0.6, brightness: 0.7)
     }
 }
