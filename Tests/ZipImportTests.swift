@@ -146,19 +146,18 @@ final class ZipImportTests: XCTestCase {
         func le(_ value: Int, _ bytes: Int) -> Data { Data((0..<bytes).map { UInt8(truncatingIfNeeded: value >> ($0 * 8)) }) }
         let packed = try (data as NSData).compressed(using: .zlib) as Data, file = Data(name.utf8)
         let crc = Int(RomPatcher.crc32(data)), ones = 0xFFFF_FFFF
-        var out = le(0x0403_4B50, 4) + le(45, 2) + le(0, 2) + le(8, 2) + le(0, 4) + le(crc, 4)
-        out += le(packed.count, 4) + le(data.count, 4) + le(file.count, 2) + le(0, 2) + file + packed
-        let extra = le(1, 2) + le(24, 2) + le(data.count, 8) + le(packed.count, 8) + le(0, 8)
-        let directory = le(0x0201_4B50, 4) + le(45, 2) + le(45, 2) + le(0, 2) + le(8, 2) + le(0, 4) + le(crc, 4)
-            + le(ones, 4) + le(ones, 4) + le(file.count, 2) + le(extra.count, 2) + le(0, 2) + le(0, 2) + le(0, 2)
-            + le(0, 4) + le(ones, 4) + file + extra
+        func fields(_ list: [(Int, Int)]) -> Data { list.reduce(into: Data()) { $0 += le($1.0, $1.1) } }
+        var out = fields([(0x0403_4B50, 4), (45, 2), (0, 2), (8, 2), (0, 4), (crc, 4), (packed.count, 4), (data.count, 4),
+                          (file.count, 2), (0, 2)]) + file + packed
+        let extra = fields([(1, 2), (24, 2), (data.count, 8), (packed.count, 8), (0, 8)])
+        let directory = fields([(0x0201_4B50, 4), (45, 2), (45, 2), (0, 2), (8, 2), (0, 4), (crc, 4), (ones, 4), (ones, 4),
+                                (file.count, 2), (extra.count, 2), (0, 2), (0, 2), (0, 2), (0, 4), (ones, 4)]) + file + extra
         let start = out.count
         out += directory
         let record = out.count
-        out += le(0x0606_4B50, 4) + le(44, 8) + le(45, 2) + le(45, 2) + le(0, 4) + le(0, 4) + le(1, 8) + le(1, 8)
-            + le(directory.count, 8) + le(start, 8)
-        out += le(0x0706_4B50, 4) + le(0, 4) + le(record, 8) + le(1, 4)
-        out += le(0x0605_4B50, 4) + le(0xFFFF, 2) + le(0xFFFF, 2) + le(0xFFFF, 2) + le(0xFFFF, 2) + le(ones, 4) + le(ones, 4) + le(0, 2)
+        out += fields([(0x0606_4B50, 4), (44, 8), (45, 2), (45, 2), (0, 4), (0, 4), (1, 8), (1, 8), (directory.count, 8), (start, 8)])
+        out += fields([(0x0706_4B50, 4), (0, 4), (record, 8), (1, 4)])
+        out += fields([(0x0605_4B50, 4), (0xFFFF, 2), (0xFFFF, 2), (0xFFFF, 2), (0xFFFF, 2), (ones, 4), (ones, 4), (0, 2)])
         return out
     }
 
