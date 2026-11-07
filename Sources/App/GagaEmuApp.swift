@@ -14,6 +14,7 @@ struct GagaEmuApp: App {
                 .environmentObject(state.store)
                 .preferredColorScheme(state.appearance.colorScheme)
                 .tint(AppTheme.accent)
+                .task { GameCenter.authenticate() }
         }
     }
 }

@@ -57,6 +57,7 @@ targets:
       - AVFoundation
       - StoreKit
       - AudioToolbox
+      - GameKit
 
   GagaEmuTests:
     type: bundle.unit-test
