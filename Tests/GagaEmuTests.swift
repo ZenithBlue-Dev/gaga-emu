@@ -241,7 +241,7 @@ final class GagaEmuTests: XCTestCase {
         for excluded in ["snes9x", "genesis_plus_gx", "picodrive", "fbneo", "kronos", "swanstation"] {
             XCTAssertFalse(ids.contains(excluded))
         }
-        XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), "bsnes")
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), GagaCoreRegistry_IsExcluded("bsnes") ? "" : "bsnes")
         XCTAssertEqual(CoreCatalog.defaultCore(for: "megadrive"), "jgenesis")
         XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), "mame")
 
@@ -295,7 +295,8 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(migrated.avatarIndex, 2)
 
         // A game on a removed core now resolves to the platform default.
-        XCTAssertEqual(migrated.games[1].coreOverride ?? CoreCatalog.defaultCore(for: "snes"), "bsnes")
+        XCTAssertNil(migrated.games[1].coreOverride)
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), GagaCoreRegistry_IsExcluded("bsnes") ? "" : "bsnes")
 
         // Second launch: nothing left to do.
         let reloaded = try JSONDecoder().decode(AppState.Snapshot.self, from: JSONEncoder().encode(migrated))

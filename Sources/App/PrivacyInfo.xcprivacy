@@ -25,7 +25,8 @@
         </dict>
     </array>
     <!-- Declare each required-reason API when code adds it. MgbaCore imports fstat, for the size of its
-         own ROM and save files, GambatteCore imports stat, in libretro-common's file helpers, and SaveStore reads save state modification dates to list them. All of
+         own ROM and save files, GambatteCore imports stat, in libretro-common's file helpers, BsnesCore imports
+         stat and fstat, in nall's file helpers, and SaveStore reads save state modification dates to list them. All of
          these files are inside the app container. -->
     <key>NSPrivacyAccessedAPITypes</key>
     <array>
