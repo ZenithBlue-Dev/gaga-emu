@@ -69,6 +69,19 @@ final class BeetlePsxCoreTests: XCTestCase {
         for _ in 0..<frames { core.step(inputs: [input]) }
     }
 
+    /// Keeps a BGRA8 frame in the result bundle as a PNG.
+    private func attach(_ pixels: Data, width: Int, height: Int, named name: String) {
+        let info = CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue
+        guard let provider = CGDataProvider(data: pixels as CFData),
+              let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: info), provider: provider,
+                                  decode: nil, shouldInterpolate: false, intent: .defaultIntent) else { return }
+        let attachment = XCTAttachment(image: UIImage(cgImage: image))
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func picture(_ core: GagaCoreWrapper, line: UInt = #line) throws -> [UInt8] {
         let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented", line: line)
         return [UInt8](frame.pixels)
@@ -92,15 +105,23 @@ final class BeetlePsxCoreTests: XCTestCase {
     }
 
     /// OpenBIOS's screen, drawn by the Vulkan renderer: frames reach the layer, the picture is not one flat
-    /// colour, and the BIOS plays sound.
+    /// colour, and the BIOS plays sound. Its tiny shell spins a flat-shaded cube on a blue (0x004058) field: the
+    /// software renderer on a Mac shows the cube's three faces from frame 60 on (black border, field and faces, 5
+    /// colours at frame 180), so more frames do not help a picture with fewer. The picture is attached either way.
     func testOpenBIOSBootsOnTheVulkanLayerWithNoBIOSFile() async throws {
         let (core, capture) = try await loaded()
         run(core, frames: 180)
         XCTAssertNil(capture.fatal)
         XCTAssertGreaterThan(capture.frames, 0)
-        let pixels = try picture(core)
-        let colours = Set(stride(from: 0, to: pixels.count - 3, by: 4).map { Int(pixels[$0]) << 16 | Int(pixels[$0 + 1]) << 8 | Int(pixels[$0 + 2]) })
-        XCTAssertGreaterThan(colours.count, 2, "not one flat colour")
+        let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented")
+        let pixels = [UInt8](frame.pixels)
+        var counts: [Int: Int] = [:]
+        for index in stride(from: 0, to: pixels.count - 3, by: 4) {
+            counts[Int(pixels[index]) << 16 | Int(pixels[index + 1]) << 8 | Int(pixels[index + 2]), default: 0] += 1
+        }
+        let listed = counts.sorted { $0.value > $1.value }.prefix(8).map { String(format: "BGR %06x x%d", $0.key, $0.value) }
+        attach(frame.pixels, width: frame.width, height: frame.height, named: "OpenBIOS frame 180")
+        XCTAssertGreaterThan(counts.count, 2, "not one flat colour: \(frame.width)x\(frame.height) \(listed)")
         XCTAssertEqual(capture.sampleRate, 44100)
         XCTAssertGreaterThan(Int(capture.left.max() ?? 0) - Int(capture.left.min() ?? 0), 5000, "not silent")
         core.stop()
