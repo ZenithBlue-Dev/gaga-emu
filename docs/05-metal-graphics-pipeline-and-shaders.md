@@ -122,7 +122,7 @@ This path is an optional improvement. v1 ships without it, and section 2.5 is th
 | Core-owned layer | Skipped until the output-texture path exists for that core | N64 with ParaLLEl-RDP, PS1 with Beetle PSX HW in Vulkan mode, PSP, Dreamcast, 3DS |
 | Undetermined | Decided by the spike | Java ME (J2meJS) and Symbian (EKA2L1). Symbian's iOS path links OpenGLES.framework today, so it is out under rule 4 unless a Vulkan or software renderer is proven. |
 
-Two entries carry conditions from `docs/03`. N64 fails the no-JIT gate as configured upstream until an interpreter RSP is proven usable, and ParaLLEl-RDP's Vulkan requirements on MoltenVK are unverified. The Dreamcast fork's renderer is unverified. Azahar can also fall back to its software renderer, which would move it to the copy path. `docs/07` tracks these spikes.
+Two entries carry conditions from `docs/03`. N64 passes the no-JIT gate as GagaEmu builds it (cxd4 interpreter RSP), and MoltenVK reports ParaLLEl-RDP's required 8-bit and 16-bit storage and int8/int16 features; both still wait on the device run in `docs/07` 5.2. The Dreamcast fork's renderer is unverified. Azahar can also fall back to its software renderer, which would move it to the copy path. `docs/07` tracks these spikes.
 
 ---
 
