@@ -8,7 +8,7 @@ Manic EMU is a feature reference only, tracked in `docs/02`. Nothing in this doc
 
 ## Status
 
-The app today is a shell plus a mock core. The 12 non-mock registry cores are stubs: `load_rom` returns true and `step_frame` does nothing (`Sources/Bridge/GagaCoreRegistry.c:241-247,279-290`). No game session exists, because `AppState.launch` only records state and `GagaCoreWrapper` is instantiated only in tests.
+The app runs a full game session on the mock core. The 11 non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build. No real core is integrated.
 
 Status terms used in this document:
 
@@ -16,7 +16,7 @@ Status terms used in this document:
 - **stub:** the row, toggle or symbol exists, but nothing acts on it. A stub toggle persists its value and no code reads it.
 - **planned:** no code exists.
 
-Status comes from reading the code, not from a device test.
+Status comes from reading the code and running the iOS Simulator, not from a device test.
 
 ---
 
@@ -25,10 +25,10 @@ Status comes from reading the code, not from a device test.
 ```
  ┌─────────────────────────────────────────────────────────────────────┐
  │ SwiftUI app (built)                                                 │
- │ Library, Add, Settings, ControllerManager, StoreKitManager          │
+ │ Library, Add, Settings, GameView, GameSession, ControllerManager    │
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ EmulatorCoreProtocol, GagaCoreWrapper
-                                 │ (built, used only by tests)
+                                 │ (built)
  ┌───────────────────────────────┴─────────────────────────────────────┐
  │ C bridge: GagaBridge.h, GagaCoreRegistry (built)                    │
  │ GagaCoreInterface: one function-pointer table per core              │
@@ -39,7 +39,7 @@ Status comes from reading the code, not from a device test.
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ video and audio callbacks
  ┌───────────────────────────────┴─────────────────────────────────────┐
- │ Video: Metal paths in docs/05. Audio: AudioEngineManager (unused).  │
+ │ Video: Metal paths in docs/05. Audio: AudioEngineManager.           │
  │ Haptics: CoreHaptics in TouchSkinEngine.                            │
  └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -63,6 +63,9 @@ There are no free `gaga_core_*` functions. Each core exposes a `GagaCoreInterfac
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Bump on any change to GagaCoreInterface. The host refuses a core built for another version.
+#define GAGA_BRIDGE_ABI_VERSION 1u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -123,8 +126,21 @@ typedef struct {
     uint8_t        channels;    // 1 = mono, 2 = stereo
 } GagaAudioDescriptor;
 
+typedef enum {
+    GAGA_EVENT_INFO    = 0,
+    GAGA_EVENT_WARNING = 1,
+    GAGA_EVENT_FATAL   = 2, // The host ends the session and shows the message.
+} GagaEventSeverity;
+
+// Threading contract. The host makes every instance call on one serial queue, never concurrently.
+// Video, audio and event callbacks must fire on that queue, inside a host call to the core. A core
+// with worker threads marshals to step_frame. Descriptor pointers and event messages are valid only
+// during the callback. No callback may fire after destroy returns.
+
 // Core Lifecycle Interface
 typedef struct GagaCoreInterface {
+    // Stays the first member, so the host can read it before trusting the rest of the table.
+    uint32_t    abi_version;          // GAGA_BRIDGE_ABI_VERSION
     const char* core_id;
     const char* core_name;
     const char* core_version;
@@ -143,7 +159,7 @@ typedef struct GagaCoreInterface {
     // Execution slice (supports up to 4 local controller inputs)
     void (*step_frame)(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
 
-    // Hardware Metal Attachment (for 3D cores: Beetle PSX HW, PPSSPP, Azahar, Balero-S2)
+    // Layer attachment for 3D cores (Beetle PSX HW, PPSSPP, Azahar). No core implements it yet.
     bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer);
 
     // Audio & Video callbacks
@@ -156,6 +172,17 @@ typedef struct GagaCoreInterface {
 
     // Cheats
     void (*apply_cheat)(GagaInstance* inst, uint32_t index, bool enabled, const char* code);
+
+    // Runs with no instance or game. Returns false and fills error on failure.
+    bool (*self_test)(char* error, size_t error_capacity);
+
+    // The host pauses before the app leaves the foreground. No step_frame runs between the two.
+    void (*pause)(GagaInstance* inst);
+    void (*resume)(GagaInstance* inst);
+
+    // Errors and events. A FATAL event during load_rom supplies the message the player sees.
+    void (*set_event_callback)(GagaInstance* inst,
+        void (*cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata), void* userdata);
 } GagaCoreInterface;
 
 #ifdef __cplusplus
@@ -164,8 +191,6 @@ typedef struct GagaCoreInterface {
 
 #endif // GAGA_BRIDGE_H
 ```
-
-The Balero-S2 mention in the `attach_metal_layer` comment is stale, because S2 is not part of the binary. `docs/07` tracks the cleanup.
 
 ### 2.2 Registry (built)
 
@@ -182,17 +207,17 @@ The table is compile-time; `docs/03` section 8 shows it and lists where the code
 
 Each stub is a weak definition in the app binary. A core's stub must be deleted when its framework is linked, or the app's own definition will win over the framework's symbol.
 
-### 2.3 Swift layer (built, test use only)
+### 2.3 Swift layer (built)
 
-`Sources/Bridge/EmulatorCoreProtocol.swift` defines `EmulatorCoreError`, `VideoFrame`, `AudioPacket`, `EmulatorCoreProtocol` and `GagaCoreWrapper`. The wrapper runs on a `.userInteractive` execution queue.
+`Sources/Bridge/EmulatorCoreProtocol.swift` defines `EmulatorCoreError`, `VideoFrame`, `AudioPacket`, `EmulatorCoreProtocol` and `GagaCoreWrapper`. The wrapper's initializer throws: it checks `abi_version`, runs `self_test` and creates the instance, so a core that fails either check never gets an instance. A `.userInteractive` serial queue owns every instance call, and a strict timer at `target_fps` drives `step_frame`. `pause` and `stop` are synchronous barriers on that queue, so no callback runs after they return. `Sources/Session/GameSession.swift` is the only caller in the app.
 
-### 2.4 Planned additions
+### 2.4 Bridge additions
 
-Nothing in this section is in the header yet. The bridge has no stable ABI today, so these can change the existing table directly. All are `Status: planned`.
+**Built** (2.5, listed in section 2.1): `GAGA_BRIDGE_ABI_VERSION` with `abi_version`, `self_test`, `pause`, `resume`, `set_event_callback` and `GagaEventSeverity`. A fatal event during `load_rom` supplies the message the player sees. A fatal event while playing ends the session and shows its message on the Library.
+
+**Planned.** These arrive with the frame paths that need them. Each changes `GagaCoreInterface`, so each bumps the ABI version.
 
 ```c
-#define GAGA_BRIDGE_ABI_VERSION 1u
-
 typedef enum {
     GAGA_CORE_CAP_HOST_BUFFER    = 1u << 0, // accepts set_host_framebuffer
     GAGA_CORE_CAP_METAL_LAYER    = 1u << 1, // presents to an attached layer; host shaders skipped
@@ -207,19 +232,8 @@ typedef struct {
     GagaPixelFormat format;
 } GagaHostFramebuffer;
 
-typedef enum {
-    GAGA_EVENT_INFO    = 0,
-    GAGA_EVENT_WARNING = 1,
-    GAGA_EVENT_FATAL   = 2,
-} GagaEventSeverity;
-
-// Added to GagaCoreInterface. abi_version becomes the first member, so the host
-// can read it before trusting the rest of the table, and refuses a mismatch.
-uint32_t abi_version;
+// Added to GagaCoreInterface.
 uint32_t capabilities; // GagaCoreCapability bits
-
-// Runs with no game loaded. Returns false and fills error on failure.
-bool (*self_test)(char* error, size_t error_capacity);
 
 // Replaces the current attach_metal_layer. Called again when the drawable size changes.
 bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer,
@@ -233,14 +247,6 @@ bool (*set_host_framebuffer)(GagaInstance* inst, const GagaHostFramebuffer* buff
 // until the next step_frame. It must come from the host's MTLDevice.
 void (*set_output_texture_callback)(GagaInstance* inst,
     void (*cb)(void* mtl_texture, uint32_t width, uint32_t height, void* userdata), void* userdata);
-
-// Lifecycle. The host pauses before the app leaves the foreground.
-void (*pause)(GagaInstance* inst);
-void (*resume)(GagaInstance* inst);
-
-// Errors and events. Today load_rom and state calls return only a bool.
-void (*set_event_callback)(GagaInstance* inst,
-    void (*cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata), void* userdata);
 ```
 
 Precedent in the sister projects:
@@ -312,15 +318,15 @@ A left rail about 72pt wide holds Library, Add and Settings as icon plus small l
 
 **Empty state:** one typographic line, "The shelf is empty.", and an Add Games button.
 
-Tapping a cover plays, as does the Play button. Status: stub, because `AppState.launch` only records state until Phase 2.
+Tapping a cover plays, as does the Play button. The game view opens only once the core has loaded the game (section 3.7).
 
 **Long-press menu.** This is the single definition of the menu; other docs point here.
 
 | Action | Behaviour | Status |
 |---|---|---|
-| Play | Starts a game session | stub: records state only (`AppState.launch`) |
+| Play | Starts a game session | built: only the mock core can run a game until 2.9 |
 | Change Core | Opens the core picker, with an option to set the platform default (`docs/03` section 8) | built |
-| Choose Filter | Opens the filter picker for this game | built: stored on the game; no session reads it yet |
+| Choose Filter | Opens the filter picker for this game | built: the game session applies it |
 | Manage Saves | Save state slots with thumbnails | planned: the sheet states that no saves exist yet. 2.6 fills it. |
 | Edit Details | Title and favorite, plus platform, core, file size and play time as read-only metadata | built; cover art planned |
 | Delete | Asks for confirmation, then removes the game and its play history from the library. The file stays in the ROM folder. | built |
@@ -351,10 +357,10 @@ Two panes: categories on the left, the selected category on the right. Only rows
 
 | Category | Rows | Status |
 |---|---|---|
-| Play | Total play time and session count, read-only | built |
+| Play | Total play time and session count, read-only. Quick Start opens the most recent game when the app starts, because GagaEmu has no preparation page to skip. Auto Full Screen removes the touch bands when a controller owns Player 1. Respect Silent Mode makes game audio obey the silent switch. | built |
 | Library | Game count, BIOS Files, default core per platform | built |
 | Graphics | Default Filter, which opens the filter picker | built |
-| Controls | Touch Control, connected controllers with their player slot, TriggerPro | built: no session to feed |
+| Controls | Touch Control, connected controllers with their player slot, TriggerPro. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
 | About | Version, Support and FAQ, Feedback, Terms of Service, Privacy Policy | built: Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
@@ -367,9 +373,6 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 
 | Row | Home when it returns | Returns with |
 |---|---|---|
-| Quick Start, Auto Full Screen | Play | 2.1 |
-| Respect Silent Mode | Play | 2.3 |
-| Rumble, Skin Sound Effects | Controls | 2.4 |
 | Auto Save States | Play | 2.6, gated by `canUseAutoSaveState` |
 | Rate Us | About | 2.9 |
 | Cover Scraping | Library | 3.8 |
@@ -398,6 +401,18 @@ The paywall is named Gaga Plus (`GagaPlusView`). Two columns: benefits on the le
 ### 3.6 App icon
 
 An ink game cover with a vermilion spine on paper, drawn by `scripts/make_app_icon.py`. Original artwork with no third-party imagery. It needs owner sign-off before submission.
+
+### 3.7 Game view and pause menu
+
+`GameView` covers the whole screen, with the status bar and home indicator hidden. The picture is aspect fit on the ink letterbox, which stays dark in both appearances. Touch controls sit in a band on each side of the picture, inside the safe area, with hit areas of at least 44pt. The left band holds L, the D-pad and Select. The right band holds R, the face buttons and Start. A pause button sits top left. When a controller owns Player 1, the controls hide; with Auto Full Screen on, the bands go too and the picture takes the width. Every control has a VoiceOver label, and activating one presses that button briefly.
+
+The pause menu is a compact paper side sheet over the dimmed game: Paused, the game title, Resume and Quit to Library. Later entries, such as save states, appear only when they work. Opening it pauses the core and audio. Quit ends the session and returns to the Library, where Continue shows the game.
+
+**Pausing.** The menu, backgrounding and audio interruptions are separate reasons, and play resumes only when all have cleared. An interruption that ends without the system's resume hint leaves the menu open, so the player chooses.
+
+**Failures.** A load runs before the game view opens. If it fails, the Library shows an alert with the core's own message and no game view opens. A fatal core event while playing closes the game view and shows the same alert.
+
+`shortcut:` the pause button is the only way to open the menu, so a player with a controller still reaches for the screen. A controller combination is the upgrade.
 
 ---
 
@@ -462,10 +477,10 @@ The paywall stays off in submitted builds until a real core runs end to end. Whi
 | Subsystem | Current state | Status |
 |---|---|---|
 | Persistence | JSON at `Application Support/GagaEmu/state.json`; no SQLite or Core Data (`AppState.swift:221-248`, `docs/03` section 8) | built |
-| Audio | `AudioEngineManager`: `AVAudioEngine` ring buffer, default 44.1 kHz. No resampler, and no caller in `Sources`. | built, unused |
-| Controllers | `ControllerManager`: MFi, DualShock 4, DualSense, Xbox, Joy-Con and keyboards | built, no session to feed |
-| Touch skins | `TouchSkinEngine`: `.deltaskin` and flex skins, CoreHaptics | built, no session to feed |
-| TriggerPro | `TriggerProManager`: turbo, hold and combo | built, no session to feed |
+| Audio | `AudioEngineManager`: `AVAudioEngine` source node pulling from a ring buffer, with `LinearResampler` converting core audio to 48 kHz. | built |
+| Controllers | `ControllerManager`: MFi, DualShock 4, DualSense, Xbox, Joy-Con and keyboards | built. Keyboard mapping exists, but the session does not read it yet. |
+| Touch skins | `TouchSkinEngine`: `.deltaskin` and flex skins, CoreHaptics. One default layout for all platforms; 3.9 adds skin assignment. | built |
+| TriggerPro | `TriggerProManager`: turbo, hold and combo, on player 1 | built |
 | Game Center | Entitlement present, GameKit linked. `GameCenter.authenticate` signs in the local player in the background, with no failure UI. No leaderboards or achievements. | built |
 
 ---

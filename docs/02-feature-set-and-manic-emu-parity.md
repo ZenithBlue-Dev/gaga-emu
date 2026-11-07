@@ -49,7 +49,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 ### 2.1 Adventurer Card & Community Links (Ref: `F7ADD189`, `8A17681E`)
 - **Card** [S]: heading `Adventurer Card`, with `Nickname: Adventurer`, `Play Time: Start your adventure now`, `Joined: 6 Nov 2026` and a mascot image. Status: removed by the redesign; saved fields stay in `state.json`.
 - **Banner** [S]: `Unlock MANIC EMU membership`, `You are the protagonist of this story`, `50% Off`. Status: not built. GagaEmu has a Gaga Plus settings category instead.
-- **Play time** [G]: tracked per game and totalled in Settings > Play. Status: built, with no session to feed it.
+- **Play time** [G]: tracked per game and totalled in Settings > Play. Status: built.
 - **Community links** [S]: `FAQ`, `Feedback`, `Join QQ Channel`, `Join Discord`. Status: `FAQ` and `Feedback` built as links; `Join QQ Channel` and `Join Discord` removed, since GagaEmu has neither (`docs/06` section 3.3).
 - **Clear Cache** [S]: label only. What it clears (temp ROMs, covers, shader caches) is [G].
 
@@ -57,10 +57,10 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Controllers panel** [S]: a side panel that slides in with the main screen visible at its edge, opened from the top-left button on Games. It has a `Touch Control` row with a `Player 1` picker, plus `?` and `...` buttons. Status: slot assignment built, in Settings > Controls.
 - **Player slots**: only `Player 1` is seen [S]. Players 1 to 4 and touch fallback are [G]. Status: built in `Sources/Input/ControllerManager.swift`.
 - **Hardware controllers** [G]: `GameController.framework` for DualShock 4, DualSense, Xbox, Joy-Con and MFi pads. Brands are not shown in any screenshot.
-- **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure, EKA2L1 and J2meJS. Status: built in `Sources/Input/ControllerManager.swift`, with no session to feed.
-- **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: row hidden until 2.4.
-- **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G].
-- **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode.
+- **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure, EKA2L1 and J2meJS. Status: mapping built in `Sources/Input/ControllerManager.swift`; the game session does not read it yet.
+- **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: the row is built as a haptic on each touch press. Core vibration events need a bridge addition and are not planned yet.
+- **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G]. Status: built, a system click on each touch press.
+- **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode. Status: built, not yet tested on a device.
 - **TriggerPro** [S]: subtitle `Create and manage advanced custom buttons.` Nothing more is shown. Turbo at 5 to 30 Hz, hold latch and combos of up to four steps are [G]. Status: built in `Sources/Input/TriggerProManager.swift`.
 - **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. The `Assign Skin` row is hidden until 3.9. A skin customizer is planned.
 
@@ -137,18 +137,18 @@ Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and lay
 | :--- | :--- | :--- | :--- |
 | General | `Appearance` | Shown `Dark Mode`; three unlabelled icons | not planned: the app follows the system appearance |
 | General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | not planned: the palette is fixed |
-| General | `Quick Start` | `Skip preparation page`; shown off | hidden |
+| General | `Quick Start` | `Skip preparation page`; shown off | built: GagaEmu has no preparation page, so it opens the most recent game when the app starts |
 | General | `Auto Save States` | Shown off | hidden |
 | General | `Assign Skin` | | hidden |
 | General | `Cover Scraping` | | hidden |
 | Advanced | `AirPlay Fullscreen` | `Enable fullscreen mirroring`; greyed off | hidden |
 | Advanced | `iCloud Sync` | `iCloud Not Enabled` | hidden |
-| Advanced | `Auto Full Screen` | Enters full screen when a controller connects; shown on | hidden |
+| Advanced | `Auto Full Screen` | Enters full screen when a controller connects; shown on | built |
 | Advanced | `BIOS` | `BIOS required for some platforms` | built |
-| Advanced | `Respect Silent Mode` | Shown off | hidden |
+| Advanced | `Respect Silent Mode` | Shown off | built |
 | Advanced | `Online Play Settings` | | hidden |
-| Advanced | `Rumble` | Shown off | hidden |
-| Advanced | `Skin Sound Effects` | Shown on | hidden |
+| Advanced | `Rumble` | Shown off | built: haptic on touch presses only |
+| Advanced | `Skin Sound Effects` | Shown on | built |
 | Advanced | `RetroAchievements` | | hidden |
 | Advanced | `TriggerPro` | `Create and manage advanced custom buttons.` | built |
 | Advanced | `JIT` | Between TriggerPro and Shaders | **Deliberately dropped.** No JIT in any shipped core. |

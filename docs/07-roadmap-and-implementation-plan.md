@@ -2,7 +2,7 @@
 
 This document is canonical for phases and status. `docs/03` is canonical for the core list, licences and renderers, `docs/04` for interpreter design and load tiers, `docs/05` for graphics, and `docs/06` for the bridge API and premium spec. Other docs do not fork this plan.
 
-**Where the project stands:** Phase 1 is closed: the code matches the docs, and the UI redesign (1.19 to 1.21) resolved 1.13. The app is still a shell plus a mock core. The 11 non-mock registry cores are stubs, and no game session exists. Status below comes from reading the code and from unit tests and screens on the iOS Simulator on 2026-11-07, not from a device test.
+**Where the project stands:** Phase 1 is closed: the code matches the docs, and the UI redesign (1.19 to 1.21) resolved 1.13. Milestones 2.1 to 2.5 are built: a full game session runs, on the mock core only. The 11 non-mock registry cores are stubs that refuse to start, so no real game runs yet. Status below comes from reading the code and from unit tests and screens on the iOS Simulator on 2026-11-07, not from a device test.
 
 **Status terms:**
 
@@ -22,7 +22,7 @@ This document is canonical for phases and status. `docs/03` is canonical for the
 |---|---|---|---|
 | 0 | Shell, bridge skeleton and import tools | built | Done |
 | 1 | Bring the code in line with the docs, and redesign the UI | built | Every milestone in section 4 closed |
-| 2 | First game session with one real core | planned | mGBA runs a game end to end on a device, and the paywall release gate can open |
+| 2 | First game session with one real core | 2.1 to 2.5 built, on the mock core; the rest planned | mGBA runs a game end to end on a device, and the paywall release gate can open |
 | 3 | Shader chain and library features | planned, with parts built in Phase 0 | Listed features work in a game session |
 | 4 | Software-rendered cores | planned | Each core meets section 2. Starts behind the legal gate. |
 | 5 | Vulkan on MoltenVK | planned | Layer path works, and each core meets section 2 |
@@ -55,8 +55,8 @@ A core milestone closes only when all of these hold:
 | 0.3 | Bridge, registry, mock core | built | Mock core produces a pattern and a 440 Hz sine. The 12 other cores are stubs. |
 | 0.4 | ROM import | built | Files, WiFi, Read Clipboard, MultiDisc Helper, RomPatcher and drag and drop. No real core has loaded an imported ROM yet; 2.9 proves that path. |
 | 0.5 | Metal ring, renderer, seven presets, preview | built | No core frame reaches it (`docs/05`). |
-| 0.6 | Controllers, touch skins, TriggerPro logic | built | No session to feed |
-| 0.7 | Audio engine class | built | Unused, no resampler. See 2.3. |
+| 0.6 | Controllers, touch skins, TriggerPro logic | built | Feed the game session since 2.4 |
+| 0.7 | Audio engine class | built | Rewritten and wired by 2.3 |
 | 0.8 | StoreKit manager and paywall | built | See 1.5 and 1.6. |
 
 ROM import sits here because cores depend on it and it already exists. The previous plan delivered it after the cores that need it.
@@ -84,14 +84,14 @@ Manic EMU is a feature reference only (owner decision, 2026-11-07). GagaEmu does
 | 1.11 | Stop tracking the generated project | built | `GagaEmu.xcodeproj/` is ignored and untracked. `scripts/appstore_release.sh` runs `xcodegen generate` first; run it yourself after a fresh clone. |
 | 1.12 | Ring corrections | built | Row pitch comes from `minimumLinearTextureAlignment(for:)`. `attachCompletion` pairs each acquire with one completion signal (`docs/05` section 2.1). |
 | 1.13 | Screen corrections | resolved by 1.19 to 1.21 | Side panels are not built. Controllers live in Settings > Controls, and play history is the Continue panel plus the Recent filter. Featured Items is removed under 1.14, and no JIT row exists. |
-| 1.14 | Empty rows | built | Each stub row and the empty Featured Items row are hidden or removed; saved values stay in `state.json`. Theme was dropped by 1.19, because the palette is fixed. Hidden: Quick Start, Auto Save States, Assign Skin, Cover Scraping, AirPlay Fullscreen, iCloud Sync, Auto Full Screen, Respect Silent Mode, Online Play Settings, Rumble, Skin Sound Effects, RetroAchievements, About Us, Share Gaga-Emu, Reset Tips, Language, Rate Us. `docs/06` section 3.3 lists the settings category and milestone that restores each. |
+| 1.14 | Empty rows | built | Each stub row and the empty Featured Items row are hidden or removed; saved values stay in `state.json`. Theme was dropped by 1.19, because the palette is fixed. Still hidden: Auto Save States, Assign Skin, Cover Scraping, AirPlay Fullscreen, iCloud Sync, Online Play Settings, RetroAchievements, About Us, Share Gaga-Emu, Reset Tips, Language, Rate Us. `docs/06` section 3.3 lists the settings category and milestone that restores each. Quick Start, Auto Full Screen, Respect Silent Mode, Rumble and Skin Sound Effects came back with 2.1 to 2.4. |
 | 1.15 | WiFi transfer hardening | built | `PINAttemptLimiter`: every 5th wrong PIN locks the server for a minute, and the 15th stops it until the user restarts it with a new PIN. The PIN is header only, and comparison stays timing-safe. Plain HTTP remains; the Add screen and upload page say so, and that it is off by default. |
 | 1.16 | GPU check | built | A14 required for layer-path 3D cores; 2D cores have no such floor. `GPUFloor.supportsLayerPathCores` wraps `device.supportsFamily(.apple7)`, and `GPUFloor.layerPathMessage` is the text. Nothing is refused today, because no code uses a Metal 3 API. 5.1 is the first caller. |
 | 1.17 | IPS RLE support | built | `RomPatcher.applyIPS` already decoded RLE; only a stale comment and the docs said otherwise. Hand-built test vectors now cover it. |
 | 1.18 | Stale comments | built | Comments corrected in `MetalTextureRing.swift`, `GagaBridge.h` and the shader picker, now `FilterPickerView.swift`. |
 | 1.19 | Design system | built | "Paper and ink" tokens and shared styles in `AppTheme.swift` (`docs/06` section 3). The app follows the system appearance, so the Appearance row is gone. A unit test checks AA contrast for every text colour. New icon from `scripts/make_app_icon.py`, awaiting owner sign-off. |
 | 1.20 | Landscape only | built | Landscape left and right on iPhone and iPad, with `UIRequiresFullScreen`. Device rotation and the portrait refusal were checked on the Simulator (iOS 27.0), not on a device. App Store validation was not run. The key is deprecated, so 7.6 rechecks it. `NSLocalNetworkUsageDescription` now names WiFi transfer only. |
-| 1.21 | Screens redesign | built | Left rail, Library with Continue panel and shelves, Add, two-pane Settings, split filter picker, core picker sheet, and the Gaga Plus paywall (`docs/06` section 3). Paywall logic, import, security and migration behaviour are unchanged. Play buttons still only record state. Checked with screenshots on the Simulator, in light and dark, with empty and seeded libraries, on iPhone 18 Pro Max, iPhone 17e and iPad Pro 11-inch. |
+| 1.21 | Screens redesign | built | Left rail, Library with Continue panel and shelves, Add, two-pane Settings, split filter picker, core picker sheet, and the Gaga Plus paywall (`docs/06` section 3). Paywall logic, import, security and migration behaviour are unchanged. Checked with screenshots on the Simulator, in light and dark, with empty and seeded libraries, on iPhone 18 Pro Max, iPhone 17e and iPad Pro 11-inch. |
 
 ---
 
@@ -99,11 +99,11 @@ Manic EMU is a feature reference only (owner decision, 2026-11-07). GagaEmu does
 
 | ID | Milestone | Status | Detail |
 |---|---|---|---|
-| 2.1 | Game view and session controller | planned | `launch` creates the core, loads the ROM, runs `step_frame` and tears down. Prove it with the mock core first. Restores the Quick Start and Auto Full Screen rows (1.14). |
-| 2.2 | Video | planned | Video callback to ring to renderer, the copy path in `docs/05` section 2.1. |
-| 2.3 | Audio | planned | Wire `AudioEngineManager` to the audio callback and add the missing resampler. Core rates differ from the output rate. Restores the Respect Silent Mode row (1.14). |
-| 2.4 | Input | planned | Controllers, touch skins and TriggerPro feed `GagaInputState`. Restores the Rumble and Skin Sound Effects rows (1.14). |
-| 2.5 | Bridge additions | planned | ABI version, self-test, pause and resume, event callback (`docs/06` section 2.4). |
+| 2.1 | Game view and session controller | built, on the mock core | `GameSession` creates the core and loads the ROM off the main thread, steps it on the core's queue at `target_fps`, pauses for the menu, backgrounding and audio interruptions, and tears down. `GameView` and the pause menu are in `docs/06` section 3.7. A failed load shows the real message on the Library. `GameItem.resolvedROMPath` finds a game by file name in the ROM folder when the container path has moved. Play time and last played are saved on pause and stop. Restored Quick Start and Auto Full Screen (`docs/06` section 3.3). |
+| 2.2 | Video | built, on the mock core | Video callback to ring to renderer, the copy path in `docs/05` section 2.1, with aspect fit, the ink letterbox, the game's shader, and pixel format or size changes between frames. The 16-bit path is expanded on the Simulator, so `.b5g6r5Unorm` has not run on a device. |
+| 2.3 | Audio | built, on the mock core | `AudioEngineManager` rewritten around a source node, with `LinearResampler` converting to 48 kHz. No rate control yet, so clock drift would show as a rare dropped or re-primed moment. Restored Respect Silent Mode: on uses `.ambient`, off uses `.playback`. The switch itself has not been tested on a device. |
+| 2.4 | Input | built, on the mock core | Controllers, touch and TriggerPro feed `GagaInputState`, sampled once per display frame. TriggerPro applies to player 1 only. One default touch layout for all platforms until 3.9. Keyboard mapping is not read by the session yet. Restored Rumble, which means a haptic on each touch press because the bridge has no rumble event, and Skin Sound Effects. |
+| 2.5 | Bridge additions | built | `abi_version`, `self_test`, `pause`, `resume` and `set_event_callback` (`docs/06` sections 2.1 and 2.4). A core with the wrong ABI, or a failing self-test, is refused with a clear error. Capabilities, layer size and detach, host framebuffer and output texture stay planned for the paths that need them. |
 | 2.6 | Saves | planned | Battery saves, save states, Manage Saves, Export Save. Enforce `canAddSaveState`. Restores the Auto Save States row, gated by `canUseAutoSaveState`. A saved value of on from the old free toggle must not bypass the gate (1.14, 1.5). |
 | 2.7 | Per-core no-JIT gate | planned | A build script in this repo, modelled on `S3/scripts/ios/build-core.sh:45-54`, with a per-core string list. Add a runtime check for code generation at startup, which a symbol scan can miss (`S3/docs/ios/research/00-README.md`). |
 | 2.8 | Core packaging | planned | Dynamic embedded xcframework exporting only the bridge (`docs/06` section 2.5). |

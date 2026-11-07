@@ -29,7 +29,7 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
 
 5. **Manic EMU as a Feature Reference** (no parity claim and no copied UI; `docs/02` tags each item by source and status):
    - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, Multi-Disc M3U helper, and an in-memory ROM patcher (IPS, including RLE records, plus BPS and UPS).
-   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built, but there is no game session to feed yet.
+   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built, and proved in a game session on the mock core only.
    - Scope is an explicit platform list in `docs/03`. PS3 (`samba-s3`) and PS4 (`bachata-s4`) are external sister projects, never catalog rows or frame producers. PS2 (`balero-s2`) and GameCube/Wii are non-shipping research and are not promised.
 
 ---

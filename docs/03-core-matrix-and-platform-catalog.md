@@ -244,7 +244,7 @@ static const CoreGetterFunc s_core_getters[] = {
 };
 ```
 
-Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. Everything except the mock core is a stub. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. Everything except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
 
 ### Storage (current code)
 

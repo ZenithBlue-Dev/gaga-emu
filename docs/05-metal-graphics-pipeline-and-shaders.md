@@ -8,16 +8,16 @@ No performance number in this document is a measurement. The 60 frames per secon
 
 ## Status
 
-The app today is a shell plus a mock core. No core frame reaches the screen, because no game view exists and `AppState.launch` only records state.
+The app presents frames from the mock core through the copy path. No real core is integrated.
 
 | Item | Status | Where |
 |---|---|---|
-| Texture ring: three shared `MTLBuffer` slots, memcpy through `writeFrame` | built, no callers in `Sources` | `Sources/Metal/MetalTextureRing.swift` |
-| Single-pass renderer and seven MSL presets | built, used only by the preview | `Sources/Metal/MetalRenderer.swift`, `Shaders.metal` |
+| Texture ring: three shared `MTLBuffer` slots, memcpy through `writeFrame` | built | `Sources/Metal/MetalTextureRing.swift` |
+| Single-pass renderer and seven MSL presets | built, used by the game view and the preview | `Sources/Metal/MetalRenderer.swift`, `Shaders.metal` |
 | Shader preview canvas with a procedural texture | built | `Sources/Metal/ShaderManager.swift` |
 | Filter picker, built-in presets | built | `Sources/UI/Settings/FilterPickerView.swift` |
 | RetroArch, import and custom sources | planned: no UI until they exist | section 4 |
-| Game view presenting a core frame | planned | none |
+| Game view presenting a core frame | built, on the mock core | `Sources/UI/Game/GameView.swift` |
 | Host-buffer path | planned | none |
 | Core-owned layer path | stub: `attach_metal_layer` is in the bridge, no core implements it, MoltenVK is not linked | `Sources/Bridge/GagaBridge.h:92` |
 | Core-output texture path | planned | none |
@@ -75,7 +75,11 @@ let bytesPerRow = ((width * bytesPerPixel + alignment - 1) / alignment) * alignm
 | `GAGA_PIXEL_FORMAT_XRGB8888` | `.bgra8Unorm` | The X byte is undefined, so presets must not depend on sampled alpha. |
 | `GAGA_PIXEL_FORMAT_RGBA8888` | `.rgba8Unorm` | |
 
-An inflight semaphore bounds the ring at three slots, and `acquireWritableBuffer` blocks the emulation thread when all three are in flight. Each acquire pairs with exactly one completion signal: `MetalRenderer.draw` calls `attachCompletion` on every draw with a texture, and it attaches nothing unless an acquire is waiting. The simulator cannot use buffer-backed linear textures, so the ring falls back to `texture.replace` there.
+An inflight semaphore bounds the ring at three slots. `acquireWritableBuffer` does not block: when all three are in flight it returns nil and the frame is dropped and counted. Blocking would deadlock, because a pause or teardown waits for the frame in flight on the main thread, which is the thread whose draws release slots. Each acquire pairs with exactly one completion signal: `MetalRenderer.draw` calls `attachCompletion` on every draw with a texture, and it attaches nothing unless an acquire is waiting.
+
+The ring changes size and format whenever a frame's descriptor does. The renderer sets an aspect-fit viewport and clears to the ink letterbox colour, in both appearances. `shortcut:` it assumes square pixels, so a core with a non-square display aspect looks stretched until the bridge reports the aspect.
+
+The simulator cannot use buffer-backed linear textures, so the ring falls back to `texture.replace` there. Its GPU also has no 16-bit formats, so RGB565 frames are expanded to BGRA there. The real `.b5g6r5Unorm` path runs only on a device.
 
 ### 2.2 Host-buffer path (planned)
 
