@@ -26,7 +26,7 @@ upstream/libretro-common/string/rstrtod.c
 upstream/libretro-common/string/stdstring.c
 upstream/libretro-common/time/rtime.c
 upstream/libretro-common/vfs/vfs_implementation.c
-upstream/libretro.cpp
+GagaSupergrafx.cpp
 upstream/mednafen/cdrom/audioreader.cpp
 upstream/mednafen/cdrom/CDAccess_CCD.cpp
 upstream/mednafen/cdrom/CDAccess_CHD.cpp

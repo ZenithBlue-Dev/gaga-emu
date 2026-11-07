@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+const char* gaga_sgx_finish_load(void); // GagaSupergrafx.cpp
+
 // Option values are upstream's spelling. A key not listed reads as unset, which upstream treats as its default.
 static const GagaLibretroVariable s_variables[] = {
     { "sgx_cdbios", "System Card 3" }, // syscard3.pce, the one Settings > BIOS Files lists.
@@ -41,6 +43,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .game_kind = "a SuperGrafx game",
     .variables = s_variables,
     .is_cheat = sgx_is_cheat,
+    .finish_load = gaga_sgx_finish_load,
 };
 
 const GagaCoreInterface* BeetleSupergrafx_GetInterface(void) {
