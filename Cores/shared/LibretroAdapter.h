@@ -43,6 +43,9 @@ typedef struct {
     // True when one cheat's lines must reach retro_cheat_set as one code, joined by '+', because the
     // core's format spans lines (Action Replay DS conditionals). False: one index per line.
     bool cheat_lines_are_one_code;
+    // True for a core whose state size changes from save to save (RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE,
+    // Azahar's compressed states): load_state takes the size from the state's header, not from the running game.
+    bool state_size_varies;
     // Optional. A message for the player when this game cannot start, such as a BIOS the player has not added,
     // or NULL. Called with the system folder before the core sees the game.
     const char* (*refuse_load)(const char* system_dir, const char* rom_path);
