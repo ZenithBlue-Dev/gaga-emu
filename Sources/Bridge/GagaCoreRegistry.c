@@ -413,6 +413,9 @@ DEFINE_CORE_INTERFACE(Snes9x_GetInterface,        "snes9x",          "Snes9x",  
 #ifndef GAGA_HAS_GENESIS_PLUS_GX
 DEFINE_CORE_INTERFACE(GenesisPlusGX_GetInterface, "genesis_plus_gx", "Genesis Plus GX",   GAGA_CORE_EXCLUDED, "md|gen|smd|sms|gg|sg|bin|cue|chd|iso|m3u", 59.9227, 44100)
 #endif
+#ifndef GAGA_HAS_PICODRIVE
+DEFINE_CORE_INTERFACE(Picodrive_GetInterface,     "picodrive",       "PicoDrive",         GAGA_CORE_EXCLUDED, "32x|md|gen|smd|sms|gg|sg|bin|cue|chd|iso|m3u", 60.0, 44100)
+#endif
 
 // ============================================================================
 // REGISTRY DISPATCH TABLE
@@ -439,6 +442,7 @@ static const CoreGetterFunc s_core_getters[] = {
     VkTest_GetInterface,
     Snes9x_GetInterface, // After the default core of each platform, so FindByExtension keeps the default.
     GenesisPlusGX_GetInterface,
+    Picodrive_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

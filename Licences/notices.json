@@ -203,6 +203,24 @@
         { "title": "Genesis Plus GX, Nuked OPN2, Tremor, minimp3, libchdr, zlib, Zstandard and LZMA", "from": "Cores/genesis_plus_gx/upstream/LICENSE.txt" },
         { "title": "libretro-common", "from": "Cores/genesis_plus_gx/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
       ]
+    },
+    {
+      "id": "picodrive", "title": "PicoDrive", "cores": ["picodrive"], "framework": "PicodriveCore",
+      "licence": "PicoDrive licence (non-commercial), with FAME, CZ80 and MAME non-commercial parts, and BSD, zlib, MIT-0 and public-domain parts",
+      "source": "https://github.com/libretro/picodrive, commit 1890c29, built unmodified. Sideload builds only: its licence and those of FAME and CZ80 forbid commercial use.",
+      "texts": [
+        { "title": "PicoDrive", "from": "Cores/picodrive/upstream/COPYING" },
+        { "title": "FAME Motorola 68000 Emulation Library by Oscar Orallo (oscar@m68k.com)", "from": "Cores/picodrive/upstream/cpu/fame/fame.html" },
+        { "title": "CZ80", "from": "Cores/picodrive/upstream/cpu/cz80/readme.txt" },
+        { "title": "MAME SH-2 core", "from": "Cores/picodrive/upstream/cpu/sh2/mame/sh2.c", "comment": true },
+        { "title": "Tremor", "from": "Cores/picodrive/upstream/platform/common/tremor/COPYING" },
+        { "title": "libchdr", "from": "Cores/picodrive/upstream/pico/cd/libchdr/LICENSE.txt" },
+        { "title": "LZMA SDK", "from": "Cores/picodrive/upstream/pico/cd/libchdr/deps/lzma-24.05/LICENSE" },
+        { "title": "Zstandard", "from": "Cores/picodrive/upstream/pico/cd/libchdr/deps/zstd-1.5.6/LICENSE" },
+        { "title": "zlib", "from": "Cores/picodrive/upstream/zlib/README" },
+        { "title": "dr_libs", "from": "Cores/picodrive/upstream/platform/common/dr_libs/LICENSE" },
+        { "title": "libretro-common", "from": "Cores/picodrive/upstream/platform/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
     }
   ]
 }

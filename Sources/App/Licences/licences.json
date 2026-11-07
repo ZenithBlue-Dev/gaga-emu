@@ -836,6 +836,62 @@
      "file": "licence-fad6ee1dcbed.txt"
     }
    ]
+  },
+  {
+   "id": "picodrive",
+   "title": "PicoDrive",
+   "licence": "PicoDrive licence (non-commercial), with FAME, CZ80 and MAME non-commercial parts, and BSD, zlib, MIT-0 and public-domain parts",
+   "source": "https://github.com/libretro/picodrive, commit 1890c29, built unmodified. Sideload builds only: its licence and those of FAME and CZ80 forbid commercial use.",
+   "cores": [
+    "picodrive"
+   ],
+   "framework": "PicodriveCore",
+   "texts": [
+    {
+     "title": "PicoDrive",
+     "file": "licence-a36c54a11967.txt"
+    },
+    {
+     "title": "FAME Motorola 68000 Emulation Library by Oscar Orallo (oscar@m68k.com)",
+     "file": "licence-1107d2721c70.txt"
+    },
+    {
+     "title": "CZ80",
+     "file": "licence-d4401ac4bfa1.txt"
+    },
+    {
+     "title": "MAME SH-2 core",
+     "file": "licence-e1649583e9c2.txt"
+    },
+    {
+     "title": "Tremor",
+     "file": "licence-d2ab57583364.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-365db9b693fd.txt"
+    },
+    {
+     "title": "dr_libs",
+     "file": "licence-dd1c647e6f76.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
   }
  ]
 }

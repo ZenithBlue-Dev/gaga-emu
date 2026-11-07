@@ -23,6 +23,7 @@ enum LibretroThumbnails {
         "saturn": "Sega - Saturn",
         "megacd": "Sega - Mega-CD - Sega CD",
         "megadrive": "Sega - Mega Drive - Genesis",
+        "sega32x": "Sega - 32X",
         "dreamcast": "Sega - Dreamcast",
         "dos": "DOS"
     ]

@@ -70,12 +70,18 @@ enum CoreCatalog {
         ]),
         .init(id: "megacd", name: "Mega-CD", manufacturer: "Sega", cores: [
             .init(id: "jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true),
-            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false)
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
         ]),
-        // Genesis Plus GX also runs the .sms and .gg files this platform takes; JGenesis runs Mega Drive only.
+        // Genesis Plus GX and PicoDrive also run the .sms and .gg files this platform takes; JGenesis runs Mega Drive only.
         .init(id: "megadrive", name: "Mega Drive", manufacturer: "Sega", cores: [
             .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true),
-            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false)
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
+        ]),
+        // Sideload builds only, so App Store builds have no 32X platform (docs/03 section 5).
+        .init(id: "sega32x", name: "32X", manufacturer: "Sega", cores: [
+            .init(id: "picodrive", name: "PicoDrive", note: "Default", recommended: true)
         ]),
         .init(id: "dreamcast", name: "Dreamcast", manufacturer: "Sega", cores: [
             .init(id: "flycast", name: "Flycast", note: "JITLess", recommended: true)
@@ -157,7 +163,7 @@ enum CoreCatalog {
 
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
-        let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
+        let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "sega32x": "32X", "dreamcast": "DC", "n3ds": "3DS",
                        "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC"]
         return special[id] ?? id.uppercased()
     }
@@ -196,6 +202,7 @@ enum CoreCatalog {
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "smd", "sms", "gg": return "megadrive"
+        case "32x": return "sega32x"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

@@ -1,0 +1,108 @@
+   sh2.c
+   Portable Hitachi SH-2 (SH7600 family) emulator
+
+   Copyright Juergen Buchmueller <pullmoll@t-online.de>,
+   all rights reserved.
+
+   - This source code is released as freeware for non-commercial purposes.
+   - You are free to use and redistribute this code in modified or
+     unmodified form, provided you list me in the credits.
+   - If you modify this source code, you must add a notice to each modified
+     source file that it has been changed.  If you're a nice person, you
+     will clearly mark each change too.  :)
+   - If you wish to use this for commercial purposes, please contact me at
+     pullmoll@t-online.de
+   - The author of this copywritten work reserves the right to change the
+     terms of its usage and license at any time, including retroactively
+   - This entire notice must remain in the source code.
+
+  This work is based on <tiraniddo@hotmail.com> C/C++ implementation of
+  the SH-2 CPU core and was adapted to the MAME CPU core requirements.
+  Thanks also go to Chuck Mason <chukjr@sundail.net> and Olivier Galibert
+  <galibert@pobox.com> for letting me peek into their SEMU code :-)
+
+
+
+
+    Changes
+    20130129 Angelo Salese
+    - added illegal opcode exception handling, side effect of some Saturn games
+      on loading like Feda or Falcom Classics Vol. 1
+      (i.e. Master CPU Incautiously transfers memory from CD to work RAM H, and
+            wipes out Slave CPU program code too while at it).
+
+    20051129 Mariusz Wojcieszek
+    - introduced memory_decrypted_read_word() for opcode fetching
+
+    20050813 Mariusz Wojcieszek
+    - fixed 64 bit / 32 bit division in division unit
+
+    20031015 O. Galibert
+    - dma fixes, thanks to sthief
+
+    20031013 O. Galibert, A. Giles
+    - timer fixes
+    - multi-cpu simplifications
+
+    20030915 O. Galibert
+    - fix DMA1 irq vector
+    - ignore writes to DRCRx
+    - fix cpu number issues
+    - fix slave/master recognition
+    - fix wrong-cpu-in-context problem with the timers
+
+    20021020 O. Galibert
+    - DMA implementation, lightly tested
+    - delay slot in debugger fixed
+    - add divide box mirrors
+    - Nicola-ify the indentation
+    - Uncrapify sh2_internal_*
+    - Put back nmi support that had been lost somehow
+
+    20020914 R. Belmont
+    - Initial SH2 internal timers implementation, based on code by O. Galibert.
+      Makes music work in galspanic4/s/s2, panic street, cyvern, other SKNS games.
+    - Fix to external division, thanks to "spice" on the E2J board.
+      Corrects behavior of s1945ii turret boss.
+
+    20020302 Olivier Galibert (galibert@mame.net)
+    - Fixed interrupt in delay slot
+    - Fixed rotcr
+    - Fixed div1
+    - Fixed mulu
+    - Fixed negc
+
+    20020301 R. Belmont
+    - Fixed external division
+
+    20020225 Olivier Galibert (galibert@mame.net)
+    - Fixed interrupt handling
+
+    20010207 Sylvain Glaize (mokona@puupuu.org)
+
+    - Bug fix in INLINE void MOVBM(UINT32 m, UINT32 n) (see comment)
+    - Support of full 32 bit addressing (RB, RW, RL and WB, WW, WL functions)
+        reason : when the two high bits of the address are set, access is
+        done directly in the cache data array. The SUPER KANEKO NOVA SYSTEM
+        sets the stack pointer here, using these addresses as usual RAM access.
+
+        No real cache support has been added.
+    - Read/Write memory format correction (_bew to _bedw) (see also SH2
+        definition in cpuintrf.c and DasmSH2(..) in sh2dasm.c )
+
+    20010623 James Forshaw (TyRaNiD@totalise.net)
+
+    - Modified operation of sh2_exception. Done cause mame irq system is stupid, and
+      doesnt really seem designed for any more than 8 interrupt lines.
+
+    20010701 James Forshaw (TyRaNiD@totalise.net)
+
+    - Fixed DIV1 operation. Q bit now correctly generated
+
+    20020218 Added save states (mokona@puupuu.org)
+
+
+
+#include "debugger.h"
+#include "sh2.h"
+#include "sh2comn.h"
