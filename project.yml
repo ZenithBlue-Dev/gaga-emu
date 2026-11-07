@@ -73,6 +73,10 @@ targets:
       - name: Record build commit
         script: 'git -C "$SRCROOT" describe --always --dirty --exclude "*" > "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/build-commit.txt"'
         basedOnDependencyAnalysis: false
+    scheme:
+      testTargets:
+        - GagaEmuTests
+        - GagaEmuUITests
 
   GagaEmuTests:
     type: bundle.unit-test
@@ -88,3 +92,18 @@ targets:
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
+
+  # Device walks (UITests/GagaEmuWalkTests.swift). A separate bundle, never inside the app, and it needs a
+  # Debug app for -GagaImportTestROM.
+  GagaEmuUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: UITests
+    dependencies:
+      - target: GagaEmu
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.GagaEmuUITests
+      GENERATE_INFOPLIST_FILE: YES
+      TEST_TARGET_NAME: GagaEmu

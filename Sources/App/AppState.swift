@@ -725,6 +725,25 @@ final class AppState: ObservableObject {
         let dest = try ClipboardImporter.persist(.file(url), into: romDirectory)
         addUploads([dest.lastPathComponent])
     }
+
+    /// `-GagaImportTestROM <core-id>`: adds that core's generated test ROM (the benchmark's) to the Library,
+    /// set to play on that core, so a device walk (UITests) has a game with a touch layout and no file to copy.
+    func importTestROMIfRequested() {
+        guard let coreID = UserDefaults.standard.string(forKey: "GagaImportTestROM") else { return }
+        do {
+            guard let platformID = CoreCatalog.platforms.first(where: { $0.cores.contains { $0.id == coreID } })?.id else {
+                throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
+            }
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("GagaTestROM", isDirectory: true)
+            let name = try BenchmarkRun.writeTestROM(platformID: platformID, to: folder).lastPathComponent
+            try importDebugROM(at: folder.appendingPathComponent(name))
+            if let game = games.first(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }) {
+                update(game.id) { $0.coreOverride = coreID }
+            }
+        } catch {
+            launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
+        }
+    }
     #endif
 
     func makeSession(for game: GameItem) throws -> GameSession {

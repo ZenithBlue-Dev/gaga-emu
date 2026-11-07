@@ -20,6 +20,7 @@ struct GagaEmuApp: App {
                     state.refreshCovers()
                     #if DEBUG
                     state.importROMIfRequested()
+                    state.importTestROMIfRequested()
                     state.runBenchmarkIfRequested()
                     #endif
                 }
