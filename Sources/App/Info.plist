@@ -37,19 +37,18 @@
     </array>
     <key>UISupportedInterfaceOrientations</key>
     <array>
-        <string>UIInterfaceOrientationPortrait</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UISupportedInterfaceOrientations~ipad</key>
     <array>
-        <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationPortraitUpsideDown</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+    <key>UIRequiresFullScreen</key>
+    <true/>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>Gaga-Emu uses the local network for WiFi ROM transfers and multiplayer netplay.</string>
+    <string>GagaEmu uses the local network only for WiFi transfer, to receive game files from a browser on the same network.</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_http._tcp</string>
