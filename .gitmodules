@@ -58,3 +58,21 @@
 [submodule "Cores/ppsspp/upstream"]
 	path = Cores/ppsspp/upstream
 	url = https://github.com/hrydgard/ppsspp.git
+[submodule "Cores/flycast/upstream"]
+	path = Cores/flycast/upstream
+	url = https://github.com/flyinghead/flycast.git
+[submodule "Cores/flycast/deps/glslang"]
+	path = Cores/flycast/deps/glslang
+	url = https://github.com/KhronosGroup/glslang.git
+[submodule "Cores/flycast/deps/VulkanMemoryAllocator"]
+	path = Cores/flycast/deps/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "Cores/flycast/deps/Vulkan-Headers"]
+	path = Cores/flycast/deps/Vulkan-Headers
+	url = https://github.com/KhronosGroup/Vulkan-Headers.git
+[submodule "Cores/flycast/deps/libchdr"]
+	path = Cores/flycast/deps/libchdr
+	url = https://github.com/flyinghead/libchdr.git
+[submodule "Cores/flycast/deps/asio"]
+	path = Cores/flycast/deps/asio
+	url = https://github.com/flyinghead/asio.git

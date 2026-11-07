@@ -1,0 +1,1 @@
+core/deps/chdpsr (the DiscJuggler image parser) carries no notice of its own and is distributed with Flycast under Flycast's licence. core/deps/md5 is from https://github.com/ulwanski/md5, a copy of Alexander Peslyak's public domain MD5.

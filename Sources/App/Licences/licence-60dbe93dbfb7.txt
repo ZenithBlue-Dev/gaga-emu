@@ -1,0 +1,12 @@
+ Build the dreamcast BIOS font table using the specified fonts with the help of FreeType2.
+ Fonts should be listed in increasing priority order since glyphs are replaced by later fonts if found.
+
+ TODO: extended half-width katakana chars (rows 5 and 6) aren't found
+
+ biosfont 12x24rk.pcf jiskan24.pcf neep-iso8859-1-12x24.pcf
+
+ 12x24rk.pcf: Copyright 1989 by Sony Corp.
+				Attrib license
+ jiskan24.pcf: Licensed under Public Domain
+ neep-iso8859-1-12x24.pcf: Copyright Jim Knoble <jmknoble@pobox.com>
+							 GPL v2+

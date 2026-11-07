@@ -204,7 +204,7 @@ enum CoreCatalog {
     /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
     static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u", "ccd", "toc"]
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
-    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos"].compactMap(platform) }
+    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos", "dreamcast"].compactMap(platform) }
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
@@ -262,13 +262,14 @@ enum CoreCatalog {
 
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
     /// the system ID in sector 16, or SYSTEM.CNF in the root directory. PSP: "PSP GAME" as that system ID.
-    /// Saturn: "SEGA SEGASATURN" opening the first sector. Mega-CD: "SEGADISCSYSTEM" or any other "SEGA"
-    /// opening it. Any other ISO 9660 disc, and any .iso or .img, is DOS. A .cue is read through its first
-    /// FILE, an .m3u through its first entry, a .toc through its first FILE or DATAFILE, and a CloneCD .ccd
-    /// through the .img beside it.
-    /// shortcut: a .chd is compressed, so it always asks; read its first hunk if players import many.
+    /// Saturn: "SEGA SEGASATURN" opening the first sector. Dreamcast: "SEGA SEGAKATANA" opening it (IP.BIN).
+    /// Mega-CD: "SEGADISCSYSTEM" or any other "SEGA" opening it. Any other ISO 9660 disc, and any .iso or
+    /// .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry, a .toc through
+    /// its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it. A .chd is placed by
+    /// `chdPlatformID(_:)`.
     static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
         let ext = url.pathExtension.lowercased()
+        if ext == "chd" { return chdPlatformID(url) }
         if ext == "ccd" {
             // The .img holds raw sectors, which the ISO 9660 rule would call DOS; DOSBox Pure cannot open a .ccd.
             let id = depth < 2 ? discPlatformID(url.deletingPathExtension().appendingPathExtension("img"), depth: 1) : nil
@@ -300,7 +301,7 @@ enum CoreCatalog {
             guard let name else { return nil }
             return discPlatformID(url.deletingLastPathComponent().appendingPathComponent(name), depth: 1)
         }
-        guard ext != "chd", let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }
         let bytes = [UInt8]((try? handle.read(upToCount: 0x10000)) ?? Data())
         func has(_ text: String, in range: Range<Int>) -> Bool {
@@ -317,11 +318,39 @@ enum CoreCatalog {
             return "ps1"
         }
         // A raw image's first sector has 16 bytes of sync and header before the data.
+        if [0, 16].contains(where: { has("SEGA SEGAKATANA", in: $0..<($0 + 15)) }) { return "dreamcast" }
         for start in [0, 16] where has("SEGA", in: start..<(start + 4)) {
             return has("SEGA SEGASATURN", in: start..<(start + 15)) ? "saturn" : "megacd"
         }
         if ext == "iso" || ext == "img" || pvdStarts.contains(where: { has("CD001", in: ($0 + 1)..<($0 + 6)) }) {
             return "dos"
+        }
+        return nil
+    }
+
+    /// A .chd's platform from its metadata, which is stored uncompressed: Dreamcast when a track is a GD-ROM
+    /// track ("CHGD", or "CHGT" from older chdman). Otherwise nil, and import asks.
+    /// shortcut: a CD-ROM .chd's sectors are compressed, so a PS1, Mega-CD or Dreamcast CD-R .chd still asks.
+    static func chdPlatformID(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        func read(_ offset: UInt64, _ count: Int) -> [UInt8] {
+            guard (try? handle.seek(toOffset: offset)) != nil else { return [] }
+            return [UInt8]((try? handle.read(upToCount: count)) ?? Data())
+        }
+        func be(_ bytes: [UInt8], _ at: Int, _ count: Int) -> UInt64 {
+            bytes[at..<(at + count)].reduce(0) { $0 << 8 | UInt64($1) }
+        }
+        let header = read(0, 124)
+        guard header.count >= 56, header.starts(with: Array("MComprHD".utf8)) else { return nil }
+        // The first metadata entry's offset: header version 5 keeps it at byte 48, versions 3 and 4 at 36.
+        var next = be(header, 12, 4) >= 5 ? be(header, 48, 8) : be(header, 36, 8)
+        // Each entry: a 4-byte tag, flags and a 3-byte length, then the next entry's offset. A bound stops a loop.
+        for _ in 0..<256 where next != 0 {
+            let entry = read(next, 16)
+            guard entry.count == 16 else { return nil }
+            if ["CHGD", "CHGT"].contains(String(decoding: entry[0..<4], as: UTF8.self)) { return "dreamcast" }
+            next = be(entry, 8, 8)
         }
         return nil
     }
