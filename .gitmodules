@@ -4,3 +4,6 @@
 [submodule "Cores/gambatte/upstream"]
 	path = Cores/gambatte/upstream
 	url = https://github.com/libretro/gambatte-libretro.git
+[submodule "Cores/bsnes/upstream"]
+	path = Cores/bsnes/upstream
+	url = https://github.com/libretro/bsnes-libretro.git
