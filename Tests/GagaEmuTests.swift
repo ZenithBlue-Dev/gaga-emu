@@ -226,6 +226,15 @@ final class GagaEmuTests: XCTestCase {
         }
     }
 
+    func testResolvedCoreIDHonoursDefaults() {
+        var game = GameItem(id: UUID(), title: "Demo", platformID: "ps1", romPath: "/a.chd", coverPath: nil,
+                            coreOverride: nil, playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
+        XCTAssertEqual(game.resolvedCoreID(defaults: [:]), "pcsx_rearmed")
+        XCTAssertEqual(game.resolvedCoreID(defaults: ["ps1": "beetle_psx"]), "beetle_psx")
+        game.coreOverride = "pcsx_rearmed"
+        XCTAssertEqual(game.resolvedCoreID(defaults: ["ps1": "beetle_psx"]), "pcsx_rearmed")
+    }
+
     // MARK: - state.json Migration Tests
 
     /// A file as written by a build before milestone 1.3.

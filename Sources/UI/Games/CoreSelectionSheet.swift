@@ -8,7 +8,8 @@ struct CoreSelectionSheet: View {
 
     private var platform: PlatformInfo? { CoreCatalog.platform(game.platformID) }
     private var selected: String {
-        game.coreOverride ?? state.defaultCores[game.platformID] ?? CoreCatalog.defaultCore(for: game.platformID)
+        // `game` is a copy taken when the sheet opened; read the live override.
+        (state.games.first { $0.id == game.id } ?? game).resolvedCoreID(defaults: state.defaultCores)
     }
 
     var body: some View {

@@ -14,8 +14,9 @@ struct GameItem: Identifiable, Codable, Equatable {
     var isFavorite: Bool
     var shaderID: String
 
-    var resolvedCoreID: String {
-        coreOverride ?? CoreCatalog.defaultCore(for: platformID)
+    /// Resolution order: game override, platform default, catalog recommendation.
+    func resolvedCoreID(defaults: [String: String]) -> String {
+        coreOverride ?? defaults[platformID] ?? CoreCatalog.defaultCore(for: platformID)
     }
 }
 
@@ -354,8 +355,7 @@ final class AppState: ObservableObject {
     }
 
     func coreName(for game: GameItem) -> String {
-        let id = game.coreOverride ?? defaultCores[game.platformID] ?? CoreCatalog.defaultCore(for: game.platformID)
-        return CoreCatalog.coreName(id)
+        CoreCatalog.coreName(game.resolvedCoreID(defaults: defaultCores))
     }
 
     func setCore(_ coreID: String, for gameID: UUID, global: Bool) {
@@ -367,7 +367,7 @@ final class AppState: ObservableObject {
 
     func launch(_ game: GameItem) {
         activeGameID = game.id
-        loadedCoreID = game.coreOverride ?? defaultCores[game.platformID] ?? CoreCatalog.defaultCore(for: game.platformID)
+        loadedCoreID = game.resolvedCoreID(defaults: defaultCores)
         if let index = games.firstIndex(where: { $0.id == game.id }) {
             games[index].lastPlayed = Date()
         }
