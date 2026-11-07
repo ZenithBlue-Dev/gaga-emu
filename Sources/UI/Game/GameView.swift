@@ -34,6 +34,7 @@ struct GameView: View {
                 HStack(spacing: 0) {
                     pauseButton
                     Spacer(minLength: 0)
+                    if session.rewindStatus == .ready { rewindButton }
                     fastForwardButton
                 }
             }
@@ -69,6 +70,30 @@ struct GameView: View {
         }
         .opacity(0.8)
         .accessibilityLabel("Pause game")
+    }
+
+    /// Rewinds while a finger stays on it. Filled while it runs, with the word, so colour is not the only cue.
+    private var rewindButton: some View {
+        let on = session.rewinding
+        return Group {
+            if on {
+                Text("Back").font(.meta.weight(.bold)).foregroundStyle(AppTheme.onAccent)
+            } else {
+                Image(systemName: "backward.fill").foregroundStyle(AppTheme.onLetterbox)
+            }
+        }
+        .frame(width: 44, height: 44)
+        .background(on ? AppTheme.accentFill : Color.clear, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+        .contentShape(Rectangle())
+        .opacity(on ? 1 : 0.8)
+        .gesture(DragGesture(minimumDistance: 0)
+            .onChanged { _ in if !session.rewinding { session.setRewindHeld(true) } }
+            .onEnded { _ in session.setRewindHeld(false) })
+        .accessibilityElement()
+        .accessibilityLabel("Rewind")
+        .accessibilityHint("Hold to step back. Activating rewinds one second.")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { session.rewindForAccessibility() }
     }
 
     /// Text replaces the glyph while it runs, so colour is not the only cue.
@@ -334,6 +359,7 @@ private struct PauseMenu: View {
                         menuRow(title: "Load State", action: { showSaves = true })
                     }
                     fastForward
+                    rewindNote
                     if session.supportsCheats {
                         menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
                     }
@@ -387,6 +413,22 @@ private struct PauseMenu: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
+    }
+
+    /// Whether this core can rewind, and why not. Nothing while the setting is off.
+    @ViewBuilder private var rewindNote: some View {
+        let text: String? = switch session.rewindStatus {
+        case .off: nil
+        case .checking: "Rewind: checking this system."
+        case .ready: "Rewind: hold the rewind button, or Options and L1 on a controller."
+        case .unavailable(let reason): "Rewind is off. \(reason)"
+        }
+        if let text {
+            Text(text)
+                .font(.footnote).foregroundStyle(AppTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("rewindNote")
+        }
     }
 
     private var fastForward: some View {

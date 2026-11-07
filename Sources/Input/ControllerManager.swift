@@ -51,12 +51,14 @@ public final class ControllerManager: ObservableObject {
         public var triggerR: Float = 0
         /// Menu and Options together, or Home where the system passes it on. Never reaches a core.
         public var openMenu = false
+        /// Options and L1 held together: rewind, on a core that has it. Never reaches a core either.
+        public var rewind = false
         public static let zero = InputState()
 
         /// Past stick and trigger drift, which a pad nobody is holding can report.
         var isDeliberate: Bool {
             let half: Int32 = 16384
-            return buttons != 0 || openMenu || triggerL > 0.5 || triggerR > 0.5
+            return buttons != 0 || openMenu || rewind || triggerL > 0.5 || triggerR > 0.5
                 || [leftX, leftY, rightX, rightY].contains { abs(Int32($0)) > half }
         }
     }
@@ -270,6 +272,9 @@ public final class ControllerManager: ObservableObject {
         let pair = pad.buttonMenu.isPressed && pad.buttonOptions?.isPressed == true
         state.openMenu = pair || pad.buttonHome?.isPressed == true
         if pair { state.buttons &= ~(Button.start | Button.select) }
+        // Select and L1 alone still reach the game; only the pair means rewind.
+        state.rewind = !pair && pad.buttonOptions?.isPressed == true && pad.leftShoulder.isPressed
+        if state.rewind { state.buttons &= ~(Button.select | Button.l1) }
         state.leftX = axis(pad.leftThumbstick.xAxis.value)
         state.leftY = axis(pad.leftThumbstick.yAxis.value)
         state.rightX = axis(pad.rightThumbstick.xAxis.value)

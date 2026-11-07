@@ -951,6 +951,8 @@ final class AppState: ObservableObject {
     @Published var appearance: AppearanceMode { didSet { save() } }
     @Published var quickStart: Bool { didSet { save() } }
     @Published var autoSaveStates: Bool { didSet { save() } }
+    /// Off by default: it keeps up to `RewindPolicy.budgetBytes` of snapshots while a game runs.
+    @Published var rewind: Bool { didSet { save() } }
     /// Off until the player turns it on. Sends game titles to `LibretroThumbnails.host`, and nothing else does.
     @Published var coverArt: Bool {
         didSet {
@@ -1001,6 +1003,7 @@ final class AppState: ObservableObject {
         /// `coverScraping` instead, which is ignored on purpose: it defaulted to on, and this must not.
         var coverArt: Bool?
         var shaderParameters: [String: ShaderParameterValues]?
+        var rewind: Bool?
         var platformSkins: [String: String]?
         var airPlayFullscreen: Bool
         var iCloudSync: Bool
@@ -1037,6 +1040,7 @@ final class AppState: ObservableObject {
         appearance = snapshot?.appearance ?? .dark
         quickStart = snapshot?.quickStart ?? false
         autoSaveStates = snapshot?.autoSaveStates ?? false
+        rewind = snapshot?.rewind ?? false
         coverArt = snapshot?.coverArt ?? false
         shaderParameters = snapshot?.shaderParameters ?? [:]
         platformSkins = snapshot?.platformSkins ?? [:]
@@ -1350,6 +1354,7 @@ final class AppState: ObservableObject {
                                       respectSilentMode: respectSilentMode,
                                       entitlements: { [store] in store.entitlements })
         session.autoSaveEnabled = { [weak self] in self?.autoSaveEnabled ?? false }
+        session.rewindEnabled = rewind
         session.renderer.apply(shaderParameters[shader] ?? ShaderParameterValues())
         return session
     }
@@ -1580,7 +1585,7 @@ final class AppState: ObservableObject {
         let snapshot = Snapshot(games: games, history: history, nickname: nickname, joined: joined,
                                 avatarIndex: avatarIndex, appearance: appearance, quickStart: quickStart,
                                 autoSaveStates: autoSaveStates, coverArt: coverArt,
-                                shaderParameters: shaderParameters, platformSkins: platformSkins,
+                                shaderParameters: shaderParameters, rewind: rewind, platformSkins: platformSkins,
                                 airPlayFullscreen: airPlayFullscreen, iCloudSync: iCloudSync,
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
                                 rumble: rumble, skinSoundEffects: skinSoundEffects, language: language,

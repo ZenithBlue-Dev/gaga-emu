@@ -567,6 +567,80 @@ final class MgbaCoreTests: GagaTestCase {
         core.stop()
     }
 
+    // MARK: - Rewind
+
+    private func enableRewind(_ core: GagaCoreWrapper, policy: RewindPolicy) -> () -> String?? {
+        final class Verdict { var value: String?? }
+        let verdict = Verdict()
+        core.onRewindVerdict = { verdict.value = .some($0) }
+        core.enableRewind(policy: policy)
+        return { verdict.value }
+    }
+
+    func testRewindRestoresAnEarlierFrame() async throws {
+        let (core, capture) = try await loaded()
+        let verdict = enableRewind(core, policy: RewindPolicy(interval: 1, probeCount: 3))
+        run(core, frames: 12)
+        XCTAssertEqual(verdict(), .some(nil), "mGBA's state is small and quick, so it qualifies")
+        assertPicture(capture, keys: 0, toggle: false)
+        flipToggle(core) // Five frames: 13 to 17.
+        assertPicture(capture, keys: 0, toggle: true)
+        XCTAssertEqual(core.rewindSnapshotCount, 17)
+
+        // The first step redraws frame 17; each one after goes back a frame. Six reach frame 12, before the flip.
+        for _ in 0..<6 { XCTAssertTrue(core.stepBackward()) }
+        assertPicture(capture, keys: 0, toggle: false)
+        XCTAssertEqual(core.rewindSnapshotCount, 11)
+
+        // Play goes on from there, and the toggle still works, so the CPU came back whole.
+        flipToggle(core)
+        assertPicture(capture, keys: 0, toggle: true)
+        core.stop()
+    }
+
+    func testRewindRunsOutAtTheOldestSnapshot() async throws {
+        let (core, _) = try await loaded()
+        _ = enableRewind(core, policy: RewindPolicy(interval: 2, probeCount: 1))
+        run(core, frames: 8)
+        XCTAssertEqual(core.rewindSnapshotCount, 4, "one every second frame")
+        for _ in 0..<4 { XCTAssertTrue(core.stepBackward()) }
+        XCTAssertFalse(core.stepBackward(), "nothing older is kept")
+        core.stop()
+    }
+
+    func testACoreOverTheLimitGetsNoRewind() async throws {
+        let (core, capture) = try await loaded()
+        let verdict = enableRewind(core, policy: RewindPolicy(maxStateBytes: 1024, interval: 1, probeCount: 3))
+        run(core, frames: 6)
+        let reason = try XCTUnwrap(verdict() ?? nil, "refused with a reason")
+        XCTAssertTrue(reason.contains("rewind limit"), reason)
+        XCTAssertEqual(core.rewindSnapshotCount, 0, "no snapshots are taken or kept")
+        flipToggle(core)
+        XCTAssertFalse(core.stepBackward())
+        assertPicture(capture, keys: 0, toggle: true) // Play is untouched.
+        core.stop()
+    }
+
+    @MainActor
+    func testSessionRewindsOnlyWithTheSettingOn() async throws {
+        let off = try await mgbaSession(folder: "off")
+        try await waitForFrames(off)
+        XCTAssertEqual(off.rewindStatus, .off)
+        off.setRewindHeld(true)
+        XCTAssertFalse(off.rewinding)
+        off.stop()
+
+        let on = try await mgbaSession(folder: "on", rewind: true)
+        defer { on.stop() }
+        try await waitForFrames(on)
+        for _ in 0..<100 where on.rewindStatus != .ready { try await Task.sleep(for: .milliseconds(20)) }
+        XCTAssertEqual(on.rewindStatus, .ready)
+        on.setRewindHeld(true)
+        XCTAssertTrue(on.rewinding)
+        on.setRewindHeld(false)
+        XCTAssertFalse(on.rewinding)
+    }
+
     // MARK: - Cheats
 
     private func codes(_ value: UInt32) -> [String] {
@@ -649,7 +723,7 @@ final class MgbaCoreTests: GagaTestCase {
     // MARK: - Session
 
     @MainActor
-    private func mgbaSession(folder: String = "saves",
+    private func mgbaSession(folder: String = "saves", rewind: Bool = false,
                              entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .effective(.free, gateOpen: false) })
     async throws -> GameSession {
         let skins = TouchSkinEngine()
@@ -664,6 +738,7 @@ final class MgbaCoreTests: GagaTestCase {
                                       controllers: controllers, skins: skins, bindings: [], shaderID: "original",
                                       respectSilentMode: false, saveDirectory: directory.appendingPathComponent(folder),
                                       entitlements: entitlements)
+        session.rewindEnabled = rewind
         try await session.prepare()
         session.run()
         return session
