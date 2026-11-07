@@ -326,7 +326,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
     // Drag-and-drop page. PIN is typed once; every upload sends it as a header.
     static let page = """
     <!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-    <title>Gaga-Emu</title>
+    <title>GagaEmu</title>
     <style>
     body{margin:0;background:#0b0c10;color:#fff;font:16px -apple-system,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
     main{width:min(520px,92vw)}h1{font-weight:700;letter-spacing:.04em}
@@ -336,7 +336,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
     #log{white-space:pre-wrap;color:#9aa;font-size:13px}
     </style>
     <main>
-    <h1>GAGA-EMU</h1><p>Drop ROMs, saves, or BIOS files. This local connection is not encrypted.</p>
+    <h1>GagaEmu</h1><p>Drop ROMs, saves, or BIOS files. This local connection is not encrypted.</p>
     <p><input id=pin inputmode=numeric maxlength=4 placeholder=PIN> <button id=go>Upload</button></p>
     <div id=drop>Drop files here or tap to choose<input id=file type=file multiple hidden></div>
     <p id=log></p>

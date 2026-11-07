@@ -346,7 +346,7 @@ private struct AboutPane: View {
         Rule()
         LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
         Rule()
-        ActionRow(title: "Rate Gaga-Emu", symbol: "star") { requestReview() }
+        ActionRow(title: "Rate GagaEmu", symbol: "star") { requestReview() }
         Rule()
         #if DEBUG
         ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer") { state.runBenchmark() }

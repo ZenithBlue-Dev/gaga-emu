@@ -19,7 +19,7 @@ public struct ClipboardImporter: Sendable {
         public var errorDescription: String? {
             switch self {
             case .empty: return "Clipboard is empty."
-            case .unsupported: return "Clipboard has nothing Gaga-Emu can import."
+            case .unsupported: return "Clipboard has nothing GagaEmu can import."
             case .unreadable: return "Clipboard item could not be read."
             }
         }
