@@ -123,6 +123,24 @@ private struct LinkRow: View {
     }
 }
 
+private struct ToggleRow: View {
+    let title: String
+    let note: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                Text(note).font(.footnote).foregroundStyle(AppTheme.muted)
+            }
+        }
+        .tint(AppTheme.accentFill)
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
+    }
+}
+
 private struct PaneNote: View {
     let text: String
     var body: some View {
@@ -140,7 +158,12 @@ private struct PlayPane: View {
         Rule()
         ValueRow(title: "Sessions", value: "\(state.history.count)")
         Rule()
-        PaneNote(text: "Options for running games appear here once a core can run one.")
+        ToggleRow(title: "Quick Start", note: "Opens your most recent game when the app starts.", isOn: $state.quickStart)
+        Rule()
+        ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen)
+        Rule()
+        ToggleRow(title: "Respect Silent Mode", note: "Game sound plays only when the device is not in silent mode.", isOn: $state.respectSilentMode)
+        Rule()
     }
 }
 
@@ -198,6 +221,7 @@ private struct GraphicsPane: View {
 }
 
 private struct ControlsPane: View {
+    @EnvironmentObject private var state: AppState
     @EnvironmentObject private var controllers: ControllerManager
     @State private var showTriggerPro = false
 
@@ -222,6 +246,10 @@ private struct ControlsPane: View {
         }
         ActionRow(title: "TriggerPro") { showTriggerPro = true }
             .sheet(isPresented: $showTriggerPro) { TriggerProEditor() }
+        Rule()
+        ToggleRow(title: "Rumble", note: "The device vibrates when you press a touch control.", isOn: $state.rumble)
+        Rule()
+        ToggleRow(title: "Skin Sound Effects", note: "Touch controls click when you press them.", isOn: $state.skinSoundEffects)
         Rule()
         if controllers.devices.isEmpty {
             PaneNote(text: "No controllers connected. Pair a DualSense, DualShock 4, Xbox, Joy-Con or MFi pad in iOS Settings.")
