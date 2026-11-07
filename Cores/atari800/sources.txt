@@ -11,7 +11,7 @@ upstream/libretro/libretro-common/string/stdstring.c
 upstream/libretro/libretro-common/time/rtime.c
 upstream/libretro/libretro-common/vfs/vfs_implementation.c
 upstream/libretro/carts_hash.c
-upstream/libretro/libretro-core.c
+Atari800Upstream.c
 upstream/libretro/core-mapper.c
 upstream/libretro/graph.c
 upstream/libretro/vkbd.c

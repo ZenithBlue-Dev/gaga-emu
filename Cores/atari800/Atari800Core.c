@@ -41,10 +41,14 @@ static const GagaLibretroVariable s_variables[] = {
     { NULL, NULL },
 };
 
+void atari800_forget_last_game(void); // Atari800Upstream.c
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Atari800",
     .game_kind = "an Atari 5200 or 8-bit game",
     .variables = s_variables,
+    // A second game in one process otherwise draws black and ignores input (device run 5).
+    .after_deinit = atari800_forget_last_game,
 };
 
 const GagaCoreInterface* Atari800_GetInterface(void) {
