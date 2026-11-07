@@ -56,9 +56,9 @@ public final class ShaderManager: ObservableObject {
         didSet { syncUniforms() }
     }
 
-    @Published public var useLinearFilter: Bool = false {
+    @Published public var upscaler: Upscaler = .nearest {
         didSet {
-            previewRenderer?.useLinearFilter = useLinearFilter
+            previewRenderer?.upscaler = upscaler
         }
     }
 
@@ -83,16 +83,28 @@ public final class ShaderManager: ObservableObject {
             curvature: curvature,
             scanlineWeight: scanlineWeight,
             phosphorGlow: phosphorGlow,
-            colorTemp: colorTemp,
-            time: 0.0,
-            viewportW: 256,
-            viewportH: 224
+            colorTemp: colorTemp
         )
         previewRenderer?.uniforms = uniforms
     }
 
     public func select(shaderID: String) {
+        previewRenderer?.setImported(nil)
         selectedPreset = ShaderPreset.from(id: shaderID)
+    }
+
+    /// Runs an imported filter in the preview. It replaces the selected preset's last pass, so Original goes first.
+    public func selectImported(_ pipeline: MTLRenderPipelineState) {
+        selectedPreset = .original
+        previewRenderer?.setImported(pipeline)
+    }
+
+    public func apply(_ values: ShaderParameterValues) {
+        curvature = values.curvature
+        scanlineWeight = values.scanlineWeight
+        phosphorGlow = values.phosphorGlow
+        colorTemp = values.colorTemp
+        upscaler = values.resolvedUpscaler
     }
 
     public func resetToDefaults() {
@@ -100,7 +112,7 @@ public final class ShaderManager: ObservableObject {
         scanlineWeight = 0.50
         phosphorGlow = 0.25
         colorTemp = 0.50
-        useLinearFilter = false
+        upscaler = .nearest
         selectedPreset = .original
         syncUniforms()
     }

@@ -9,6 +9,11 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
     case geomCrt = "geom-crt"
     case geomCrtBorder = "geom-crt-border"
     case film = "film"
+    case crtDeluxe = "crt-deluxe"
+    case anime4k = "anime4k"
+    case lottesCrt = "lottes-crt"
+    case lcd3x = "lcd3x"
+    case sharpBilinear = "sharp-bilinear"
 
     public var id: String { rawValue }
 
@@ -21,32 +26,146 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
         case .geomCrt: return "Geom CRT"
         case .geomCrtBorder: return "Geom CRT Border"
         case .film: return "Film"
+        case .crtDeluxe: return "CRT Deluxe"
+        case .anime4k: return "Anime4K"
+        case .lottesCrt: return "Lottes CRT"
+        case .lcd3x: return "LCD3x"
+        case .sharpBilinear: return "Sharp Bilinear"
         }
     }
 
     public static func from(id: String) -> ShaderPreset {
+        if let preset = ShaderPreset(rawValue: id) { return preset }
         switch id {
-        case "cartoon": return .cartoon
-        case "crt-v1", "crt_v1": return .crtV1
-        case "crt-v2", "crt_v2": return .crtV2
-        case "geom-crt", "geom_crt": return .geomCrt
-        case "geom-crt-border", "geom_crt_border": return .geomCrtBorder
-        case "film": return .film
+        case "crt_v1": return .crtV1
+        case "crt_v2": return .crtV2
+        case "geom_crt": return .geomCrt
+        case "geom_crt_border": return .geomCrtBorder
         default: return .original
         }
     }
 
-    public var fragmentFunctionName: String {
+    /// The passes this preset runs, in order. The last one draws to the screen.
+    public var passes: [ShaderPass] {
         switch self {
-        case .original: return "original_fragment"
-        case .cartoon: return "cartoon_fragment"
-        case .crtV1: return "crt_v1_fragment"
-        case .crtV2: return "crt_v2_fragment"
-        case .geomCrt: return "geom_crt_fragment"
-        case .geomCrtBorder: return "geom_crt_border_fragment"
-        case .film: return "film_fragment"
+        case .original: return [.final("original_fragment")]
+        case .cartoon: return [.final("cartoon_fragment")]
+        case .crtV1: return [.final("crt_v1_fragment")]
+        case .crtV2: return [.final("crt_v2_fragment")]
+        case .geomCrt: return [.final("geom_crt_fragment")]
+        case .geomCrtBorder: return [.final("geom_crt_border_fragment")]
+        case .film: return [.final("film_fragment")]
+        case .crtDeluxe:
+            return [.init(fragment: "crt_deluxe_beam_fragment", size: .source(1), format: .rgba16Float, sampling: .nearest),
+                    .init(fragment: "crt_deluxe_scan_fragment", size: .output, format: .rgba16Float, sampling: .linear),
+                    .final("crt_deluxe_mask_fragment", sampling: .linear)]
+        case .anime4k:
+            return (0..<4).map {
+                .init(fragment: "anime4k_conv\($0)_fragment", size: .source(1), format: .rgba16Float, sampling: .nearest)
+            } + [.init(fragment: "anime4k_output_fragment", size: .source(2), format: .bgra8Unorm, sampling: .nearest),
+                 .final("original_fragment", sampling: .linear)]
+        case .lottesCrt: return [.final("lottes_crt_fragment", sampling: .nearest)]
+        case .lcd3x: return [.final("lcd3x_fragment")]
+        case .sharpBilinear: return [.final("sharp_bilinear_fragment", sampling: .linear)]
         }
     }
+
+    /// Presets that scale for themselves take no upscaling pass.
+    public var usesUpscaler: Bool {
+        switch self {
+        case .crtDeluxe, .anime4k, .lottesCrt, .sharpBilinear: return false
+        default: return true
+        }
+    }
+
+    /// The sliders that change anything for this preset.
+    public var parameters: [ShaderParameterKind] {
+        switch self {
+        case .original, .cartoon, .film, .anime4k, .lcd3x, .sharpBilinear: return [.colorTemp]
+        case .crtV1: return [.scanlines, .colorTemp]
+        case .crtV2: return [.scanlines, .glow, .colorTemp]
+        case .geomCrtBorder: return [.curvature, .scanlines, .colorTemp]
+        case .geomCrt, .crtDeluxe, .lottesCrt: return [.curvature, .scanlines, .glow, .colorTemp]
+        }
+    }
+}
+
+/// One step of the chain. Texture 0 is the previous pass's output, or the core frame for the first
+/// pass, and texture 1 is always the core frame. A nil `size` means the drawable.
+public struct ShaderPass: Equatable {
+    public enum Size: Equatable { case source(Int), output }
+    public enum Sampling: Equatable { case nearest, linear, chosen }
+
+    public let fragment: String
+    public var size: Size?
+    public var format: MTLPixelFormat = .bgra8Unorm
+    public var sampling: Sampling = .chosen
+
+    static func final(_ fragment: String, sampling: Sampling = .chosen) -> ShaderPass {
+        ShaderPass(fragment: fragment, size: nil, sampling: sampling)
+    }
+}
+
+/// The first pass of the chain (docs/05 section 3.4). Nearest and Bilinear need no pass of their own.
+public enum Upscaler: String, CaseIterable, Identifiable {
+    case nearest, bilinear, bicubic, edgeSmooth = "edge-smooth"
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .nearest: return "Nearest"
+        case .bilinear: return "Bilinear"
+        case .bicubic: return "Bicubic"
+        case .edgeSmooth: return "Edge Smooth"
+        }
+    }
+
+    var pass: ShaderPass? {
+        switch self {
+        case .nearest, .bilinear: return nil
+        case .bicubic: return ShaderPass(fragment: "bicubic_fragment", size: .output, sampling: .nearest)
+        case .edgeSmooth: return ShaderPass(fragment: "edge_smooth_fragment", size: .output, sampling: .nearest)
+        }
+    }
+}
+
+public enum ShaderParameterKind: String, CaseIterable, Identifiable {
+    case curvature, scanlines, glow, colorTemp
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .curvature: return "Curvature"
+        case .scanlines: return "Scanlines"
+        case .glow: return "Glow"
+        case .colorTemp: return "Colour"
+        }
+    }
+
+    public var keyPath: WritableKeyPath<ShaderParameterValues, Float> {
+        switch self {
+        case .curvature: return \.curvature
+        case .scanlines: return \.scanlineWeight
+        case .glow: return \.phosphorGlow
+        case .colorTemp: return \.colorTemp
+        }
+    }
+}
+
+/// What the picker saves per preset, in state.json. `upscaler` stays a string so a value from a later
+/// build cannot fail the whole file's decode.
+public struct ShaderParameterValues: Codable, Equatable {
+    public var curvature: Float = 0.20
+    public var scanlineWeight: Float = 0.50
+    public var phosphorGlow: Float = 0.25
+    public var colorTemp: Float = 0.50
+    public var upscaler: String = Upscaler.nearest.rawValue
+
+    public init() {}
+
+    public var resolvedUpscaler: Upscaler { Upscaler(rawValue: upscaler) ?? .nearest }
 }
 
 public struct ShaderUniforms {
@@ -57,6 +176,8 @@ public struct ShaderUniforms {
     public var time: Float = 0.0
     public var viewportW: UInt32 = 0
     public var viewportH: UInt32 = 0
+    public var sourceW: UInt32 = 0
+    public var sourceH: UInt32 = 0
 
     public init(
         curvature: Float = 0.0,
@@ -91,15 +212,26 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
     public let device: MTLDevice
     public let commandQueue: MTLCommandQueue
 
-    private var defaultLibrary: MTLLibrary?
-    private var pipelineStates: [ShaderPreset: MTLRenderPipelineState] = [:]
+    private let library: MTLLibrary
+    private let vertexFunction: MTLFunction
+    private struct PipelineKey: Hashable {
+        let fragment: String
+        let format: MTLPixelFormat
+    }
+    private var pipelineStates: [PipelineKey: MTLRenderPipelineState] = [:]
     private var nearestSampler: MTLSamplerState?
     private var linearSampler: MTLSamplerState?
+    /// One target per chain position, kept across frames.
+    private var intermediates: [MTLTexture?] = []
 
-    private var uniformBuffer: MTLBuffer?
     public var uniforms = ShaderUniforms()
     public var activePreset: ShaderPreset = .original
-    public var useLinearFilter: Bool = false
+    public var upscaler: Upscaler = .nearest
+
+    /// An imported filter (docs/05 section 4). It replaces the preset's last pass.
+    public private(set) var importedPipeline: MTLRenderPipelineState?
+    /// Called on the main thread if the GPU rejected a frame from the imported filter, after it is dropped.
+    public var onImportedFailure: (() -> Void)?
 
     public weak var textureRing: MetalTextureRing?
     public var customTexture: MTLTexture?
@@ -125,51 +257,22 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
                            width: Double(width), height: Double(height), znear: 0, zfar: 1)
     }
 
-    public init?(device: MTLDevice) {
-        self.device = device
-        guard let queue = device.makeCommandQueue() else { return nil }
-        self.commandQueue = queue
-        super.init()
-
-        setupShaders()
-        setupSamplers()
-        setupUniformBuffer()
+    /// The whole chain for this selection, upscaling pass first.
+    public static func chain(preset: ShaderPreset, upscaler: Upscaler) -> [ShaderPass] {
+        let lead = preset.usesUpscaler ? upscaler.pass.map { [$0] } ?? [] : []
+        return lead + preset.passes
     }
 
-    private func setupShaders() {
-        // Attempt default bundle library, fallback to compiling embedded MSL source
-        if let library = device.makeDefaultLibrary() {
-            self.defaultLibrary = library
-        } else if let url = Bundle.main.url(forResource: "default", withExtension: "metallib"),
-                  let library = try? device.makeLibrary(URL: url) {
-            self.defaultLibrary = library
-        } else {
-            // Compile from source if metallib not yet built
-            let mslSource = MetalRenderer.embeddedShaderSource()
-            if let library = try? device.makeLibrary(source: mslSource, options: nil) {
-                self.defaultLibrary = library
-            }
-        }
-
-        guard let library = defaultLibrary,
-              let vertexFunc = library.makeFunction(name: "vertex_main") else {
-            return
-        }
-
-        for preset in ShaderPreset.allCases {
-            guard let fragFunc = library.makeFunction(name: preset.fragmentFunctionName) else {
-                continue
-            }
-
-            let desc = MTLRenderPipelineDescriptor()
-            desc.vertexFunction = vertexFunc
-            desc.fragmentFunction = fragFunc
-            desc.colorAttachments[0].pixelFormat = .bgra8Unorm
-
-            if let pso = try? device.makeRenderPipelineState(descriptor: desc) {
-                pipelineStates[preset] = pso
-            }
-        }
+    public init?(device: MTLDevice) {
+        self.device = device
+        guard let queue = device.makeCommandQueue(),
+              let library = device.makeDefaultLibrary(),
+              let vertex = library.makeFunction(name: "vertex_main") else { return nil }
+        self.commandQueue = queue
+        self.library = library
+        self.vertexFunction = vertex
+        super.init()
+        setupSamplers()
     }
 
     private func setupSamplers() {
@@ -188,25 +291,55 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         linearSampler = device.makeSamplerState(descriptor: linearDesc)
     }
 
-    private func setupUniformBuffer() {
-        let size = MemoryLayout<ShaderUniforms>.stride
-        uniformBuffer = device.makeBuffer(length: max(size, 256), options: .storageModeShared)
-    }
-
     public func setTexture(_ texture: MTLTexture) {
         lock.lock()
         self.customTexture = texture
         lock.unlock()
     }
 
+    /// Sliders and the upscaler. Saved values pass through a clamp, because state.json is a file.
+    public func apply(_ values: ShaderParameterValues) {
+        uniforms.curvature = min(max(values.curvature, 0), 1)
+        uniforms.scanlineWeight = min(max(values.scanlineWeight, 0), 1)
+        uniforms.phosphorGlow = min(max(values.phosphorGlow, 0), 1)
+        uniforms.colorTemp = min(max(values.colorTemp, 0), 1)
+        upscaler = values.resolvedUpscaler
+    }
+
+    public func setImported(_ pipeline: MTLRenderPipelineState?) {
+        importedPipeline = pipeline
+    }
+
+    private func pipeline(fragment: String, format: MTLPixelFormat) -> MTLRenderPipelineState? {
+        let key = PipelineKey(fragment: fragment, format: format)
+        if let cached = pipelineStates[key] { return cached }
+        guard let function = library.makeFunction(name: fragment) else { return nil }
+        let desc = MTLRenderPipelineDescriptor()
+        desc.vertexFunction = vertexFunction
+        desc.fragmentFunction = function
+        desc.colorAttachments[0].pixelFormat = format
+        let state = try? device.makeRenderPipelineState(descriptor: desc)
+        pipelineStates[key] = state
+        return state
+    }
+
+    /// Reuses this chain position's target while its size and format still fit.
+    private func intermediate(at index: Int, width: Int, height: Int, format: MTLPixelFormat) -> MTLTexture? {
+        if intermediates.count <= index { intermediates += Array(repeating: nil, count: index + 1 - intermediates.count) }
+        if let current = intermediates[index], current.width == width, current.height == height, current.pixelFormat == format {
+            return current
+        }
+        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width, height: height, mipmapped: false)
+        desc.usage = [.renderTarget, .shaderRead]
+        desc.storageMode = .private
+        let texture = device.makeTexture(descriptor: desc)
+        intermediates[index] = texture
+        return texture
+    }
+
     // MARK: - MTKViewDelegate
 
-    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        lock.lock()
-        uniforms.viewportW = UInt32(size.width)
-        uniforms.viewportH = UInt32(size.height)
-        lock.unlock()
-    }
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
 
     public func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable,
@@ -214,218 +347,112 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
               let cmdBuffer = commandQueue.makeCommandBuffer() else {
             return
         }
+        encode(into: cmdBuffer, target: rpd, size: view.drawableSize)
+        cmdBuffer.present(drawable)
+        cmdBuffer.commit()
+    }
 
+    /// Renders the current frame into `target`, so a test can read what the screen would get.
+    func render(into target: MTLTexture) {
+        guard let cmdBuffer = commandQueue.makeCommandBuffer() else { return }
+        let rpd = MTLRenderPassDescriptor()
+        rpd.colorAttachments[0].texture = target
+        rpd.colorAttachments[0].loadAction = .clear
+        rpd.colorAttachments[0].storeAction = .store
+        encode(into: cmdBuffer, target: rpd, size: CGSize(width: target.width, height: target.height))
+        cmdBuffer.commit()
+        cmdBuffer.waitUntilCompleted()
+    }
+
+    private func encode(into cmdBuffer: MTLCommandBuffer, target rpd: MTLRenderPassDescriptor, size: CGSize) {
         lock.lock()
-        let currentTexture = self.customTexture
-        let currentPreset = self.activePreset
-        let filterLinear = self.useLinearFilter
-        var currentUniforms = self.uniforms
+        let source = self.customTexture
         lock.unlock()
 
         rpd.colorAttachments[0].clearColor = Self.letterboxColor
 
-        guard let targetTexture = currentTexture else {
-            if let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: rpd) {
-                encoder.endEncoding()
-            }
-            cmdBuffer.present(drawable)
-            cmdBuffer.commit()
+        guard let source else {
+            cmdBuffer.makeRenderCommandEncoder(descriptor: rpd)?.endEncoding()
             return
         }
 
         // Releases one acquired ring slot, if any is waiting. Attaches nothing on a repeat draw.
         textureRing?.attachCompletion(to: cmdBuffer)
 
-        guard let pipelineState = pipelineStates[currentPreset] ?? pipelineStates[.original],
-              let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: rpd) else {
-            cmdBuffer.present(drawable)
-            cmdBuffer.commit()
-            return
+        let viewport = Self.fittedViewport(contentWidth: source.width, contentHeight: source.height, drawable: size)
+        var values = uniforms
+        values.time = Float(CACurrentMediaTime() - startTime)
+        values.viewportW = UInt32(viewport.width)
+        values.viewportH = UInt32(viewport.height)
+        values.sourceW = UInt32(source.width)
+        values.sourceH = UInt32(source.height)
+
+        let chain = Self.chain(preset: activePreset, upscaler: upscaler)
+        let imported = importedPipeline
+        if imported != nil { watchImported(cmdBuffer) }
+        var input = source
+
+        for (index, pass) in chain.enumerated() {
+            let isLast = index == chain.count - 1
+            let state = isLast ? imported ?? pipeline(fragment: pass.fragment, format: pass.format)
+                               : pipeline(fragment: pass.fragment, format: pass.format)
+            let passDescriptor: MTLRenderPassDescriptor
+            var output: MTLTexture?
+            if let passSize = pass.size {
+                let pixels = Self.pixelSize(passSize, source: source, viewport: viewport)
+                guard let texture = intermediate(at: index, width: pixels.width, height: pixels.height, format: pass.format) else { continue }
+                output = texture
+                passDescriptor = MTLRenderPassDescriptor()
+                passDescriptor.colorAttachments[0].texture = texture
+                passDescriptor.colorAttachments[0].loadAction = .dontCare
+                passDescriptor.colorAttachments[0].storeAction = .store
+            } else {
+                passDescriptor = rpd
+            }
+            guard let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: passDescriptor) else { return }
+            if let state {
+                encoder.setRenderPipelineState(state)
+                if let output {
+                    encoder.setViewport(MTLViewport(originX: 0, originY: 0, width: Double(output.width), height: Double(output.height), znear: 0, zfar: 1))
+                } else {
+                    encoder.setViewport(viewport)
+                }
+                encoder.setFragmentBytes(&values, length: MemoryLayout<ShaderUniforms>.size, index: 0)
+                encoder.setFragmentTexture(input, index: 0)
+                encoder.setFragmentTexture(source, index: 1)
+                encoder.setFragmentSamplerState(sampler(pass.sampling), index: 0)
+                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+            }
+            encoder.endEncoding()
+            if let output { input = output }
         }
-
-        // Update uniforms
-        let elapsed = Float(CACurrentMediaTime() - startTime)
-        currentUniforms.time = elapsed
-        if currentUniforms.viewportW == 0 {
-            currentUniforms.viewportW = UInt32(view.drawableSize.width)
-            currentUniforms.viewportH = UInt32(view.drawableSize.height)
-        }
-
-        if let uBuf = uniformBuffer {
-            memcpy(uBuf.contents(), &currentUniforms, MemoryLayout<ShaderUniforms>.size)
-            encoder.setFragmentBuffer(uBuf, offset: 0, index: 0)
-        }
-
-        encoder.setViewport(Self.fittedViewport(contentWidth: targetTexture.width, contentHeight: targetTexture.height,
-                                                drawable: view.drawableSize))
-        encoder.setRenderPipelineState(pipelineState)
-        encoder.setFragmentTexture(targetTexture, index: 0)
-
-        let sampler = filterLinear ? linearSampler : nearestSampler
-        encoder.setFragmentSamplerState(sampler, index: 0)
-
-        // Draw fullscreen quad (6 vertices)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        encoder.endEncoding()
-
-        cmdBuffer.present(drawable)
-        cmdBuffer.commit()
     }
 
-    private static func embeddedShaderSource() -> String {
-        return """
-        #include <metal_stdlib>
-        using namespace metal;
-
-        struct ShaderParameters {
-            float curvature;
-            float scanline_weight;
-            float phosphor_glow;
-            float color_temp;
-            float time;
-            uint  viewport_w;
-            uint  viewport_h;
-        };
-
-        struct VertexOut {
-            float4 position [[position]];
-            float2 uv;
-        };
-
-        vertex VertexOut vertex_main(uint vertex_id [[vertex_id]]) {
-            const float2 positions[6] = {
-                float2(-1.0, -1.0), float2(1.0, -1.0), float2(-1.0, 1.0),
-                float2(-1.0, 1.0), float2(1.0, -1.0), float2(1.0, 1.0)
-            };
-            const float2 uvs[6] = {
-                float2(0.0, 1.0), float2(1.0, 1.0), float2(0.0, 0.0),
-                float2(0.0, 0.0), float2(1.0, 1.0), float2(1.0, 0.0)
-            };
-            VertexOut out;
-            out.position = float4(positions[vertex_id], 0.0, 1.0);
-            out.uv = uvs[vertex_id];
-            return out;
+    private static func pixelSize(_ size: ShaderPass.Size, source: MTLTexture, viewport: MTLViewport) -> (width: Int, height: Int) {
+        switch size {
+        case .source(let scale): return (source.width * scale, source.height * scale)
+        case .output: return (max(Int(viewport.width), 1), max(Int(viewport.height), 1))
         }
+    }
 
-        static inline float luminance(float3 c) { return dot(c, float3(0.2126, 0.7152, 0.0722)); }
-        static inline float3 apply_temp(float3 c, float t) {
-            float3 w = float3(1.10, 0.96, 0.85);
-            float3 cool = float3(0.88, 0.98, 1.12);
-            return clamp(c * mix(w, cool, clamp(t, 0.0, 1.0)), 0.0, 1.0);
+    private func sampler(_ sampling: ShaderPass.Sampling) -> MTLSamplerState? {
+        switch sampling {
+        case .nearest: return nearestSampler
+        case .linear: return linearSampler
+        // After an upscaling pass the texture is already output sized, and curved presets still resample it.
+        case .chosen: return upscaler == .nearest ? nearestSampler : linearSampler
         }
-        static inline float hash(float2 p) {
-            float3 p3 = fract(float3(p.xyx) * 0.1031);
-            p3 += dot(p3, p3.yzx + 33.33);
-            return fract((p3.x + p3.y) * p3.z);
-        }
-        static inline float2 curve(float2 uv, float k) {
-            float2 p = uv * 2.0 - 1.0;
-            p = p * (1.0 + k * dot(p, p));
-            return p * 0.5 + 0.5;
-        }
+    }
 
-        fragment float4 original_fragment(VertexOut in [[stage_in]],
-                                          texture2d<float> tex [[texture(0)]],
-                                          sampler s [[sampler(0)]],
-                                          constant ShaderParameters& p [[buffer(0)]]) {
-            float4 c = tex.sample(s, in.uv);
-            return float4(apply_temp(c.rgb, p.color_temp), c.a);
-        }
-
-        fragment float4 cartoon_fragment(VertexOut in [[stage_in]],
-                                         texture2d<float> tex [[texture(0)]],
-                                         sampler s [[sampler(0)]],
-                                         constant ShaderParameters& p [[buffer(0)]]) {
-            float2 step = 1.0 / max(float2(tex.get_width(), tex.get_height()), float2(1.0));
-            float lum[3][3];
-            for (int y = -1; y <= 1; ++y) {
-                for (int x = -1; x <= 1; ++x) {
-                    lum[y+1][x+1] = luminance(tex.sample(s, in.uv + float2(x, y) * step).rgb);
-                }
+    /// A shader that hangs the GPU fails its command buffers. Stop using it instead of failing every frame.
+    private func watchImported(_ cmdBuffer: MTLCommandBuffer) {
+        cmdBuffer.addCompletedHandler { [weak self] buffer in
+            guard buffer.status == .error else { return }
+            DispatchQueue.main.async {
+                guard let self, self.importedPipeline != nil else { return }
+                self.importedPipeline = nil
+                self.onImportedFailure?()
             }
-            float gx = -lum[0][0] - 2.0*lum[1][0] - lum[2][0] + lum[0][2] + 2.0*lum[1][2] + lum[2][2];
-            float gy = -lum[0][0] - 2.0*lum[0][1] - lum[0][2] + lum[2][0] + 2.0*lum[2][1] + lum[2][2];
-            float edge = sqrt(gx*gx + gy*gy);
-            float4 center = tex.sample(s, in.uv);
-            float3 q = floor(center.rgb * 16.0 + 0.5) / 16.0;
-            float3 res = mix(q, float3(0.05), smoothstep(0.15, 0.35, edge));
-            return float4(apply_temp(res, p.color_temp), 1.0);
         }
-
-        fragment float4 crt_v1_fragment(VertexOut in [[stage_in]],
-                                        texture2d<float> tex [[texture(0)]],
-                                        sampler s [[sampler(0)]],
-                                        constant ShaderParameters& p [[buffer(0)]]) {
-            float4 c = tex.sample(s, in.uv);
-            float lines = float(tex.get_height() > 0 ? tex.get_height() : 224);
-            float scan = sin(in.uv.y * lines * M_PI_F);
-            float factor = 1.0 - (p.scanline_weight * 0.45) * (scan * scan);
-            return float4(apply_temp(c.rgb * factor, p.color_temp), c.a);
-        }
-
-        fragment float4 crt_v2_fragment(VertexOut in [[stage_in]],
-                                        texture2d<float> tex [[texture(0)]],
-                                        sampler s [[sampler(0)]],
-                                        constant ShaderParameters& p [[buffer(0)]]) {
-            float2 step = 1.0 / max(float2(tex.get_width(), tex.get_height()), float2(1.0));
-            float3 bloom = (tex.sample(s, in.uv - float2(step.x*0.5, 0.0)).rgb * 0.25 +
-                            tex.sample(s, in.uv).rgb * 0.50 +
-                            tex.sample(s, in.uv + float2(step.x*0.5, 0.0)).rgb * 0.25);
-            float3 base = mix(tex.sample(s, in.uv).rgb, bloom, clamp(p.phosphor_glow, 0.0, 1.0));
-            uint mod3 = uint(in.position.x) % 3;
-            float3 mask = (mod3 == 0) ? float3(1.25, 0.70, 0.70) : ((mod3 == 1) ? float3(0.70, 1.25, 0.70) : float3(0.70, 0.70, 1.25));
-            float lines = float(tex.get_height() > 0 ? tex.get_height() : 240);
-            float scan = sin(in.uv.y * lines * M_PI_F);
-            float factor = 1.0 - (p.scanline_weight * 0.35) * (scan * scan);
-            return float4(apply_temp(clamp(base * mask * factor, 0.0, 1.0), p.color_temp), 1.0);
-        }
-
-        fragment float4 geom_crt_fragment(VertexOut in [[stage_in]],
-                                          texture2d<float> tex [[texture(0)]],
-                                          sampler s [[sampler(0)]],
-                                          constant ShaderParameters& p [[buffer(0)]]) {
-            float2 cuv = curve(in.uv, p.curvature * 0.30);
-            if (cuv.x < 0.0 || cuv.x > 1.0 || cuv.y < 0.0 || cuv.y > 1.0) return float4(0.0, 0.0, 0.0, 1.0);
-            float2 ca = (cuv - 0.5) * dot(cuv - 0.5, cuv - 0.5) * 0.035;
-            float r = tex.sample(s, cuv + ca).r;
-            float g = tex.sample(s, cuv).g;
-            float b = tex.sample(s, cuv - ca).b;
-            float scan = sin(cuv.y * 240.0 * M_PI_F);
-            float sm = 1.0 - (p.scanline_weight * 0.40) * (scan * scan);
-            float vig = clamp(1.0 - dot(cuv*2.0 - 1.0, cuv*2.0 - 1.0)*0.35, 0.0, 1.0);
-            return float4(apply_temp(clamp((float3(r, g, b) * sm + float3(r, g, b) * (p.phosphor_glow * 0.15)) * vig, 0.0, 1.0), p.color_temp), 1.0);
-        }
-
-        fragment float4 geom_crt_border_fragment(VertexOut in [[stage_in]],
-                                                 texture2d<float> tex [[texture(0)]],
-                                                 sampler s [[sampler(0)]],
-                                                 constant ShaderParameters& p [[buffer(0)]]) {
-            if (in.uv.x < 0.10 || in.uv.x > 0.90 || in.uv.y < 0.10 || in.uv.y > 0.90) {
-                return float4(mix(0.18, 0.08, clamp(length(in.uv * 2.0 - 1.0) * 0.7, 0.0, 1.0)));
-            }
-            float2 suv = (in.uv - 0.10) / 0.80;
-            float2 cuv = curve(suv, max(p.curvature * 0.25, 0.08));
-            if (cuv.x < 0.0 || cuv.x > 1.0 || cuv.y < 0.0 || cuv.y > 1.0) return float4(0.04, 0.04, 0.05, 1.0);
-            float4 sample = tex.sample(s, cuv);
-            float edge = min(min(cuv.x, 1.0 - cuv.x), min(cuv.y, 1.0 - cuv.y));
-            float shadow = smoothstep(0.0, 0.06, edge);
-            float glare = 0.04 * max(0.0, 1.0 - abs(cuv.x + cuv.y * 0.8 - 0.8) * 4.0);
-            float scan = sin(cuv.y * 240.0 * M_PI_F);
-            return float4(apply_temp(clamp((sample.rgb * (1.0 - p.scanline_weight * 0.35 * scan * scan) + glare) * shadow, 0.0, 1.0), p.color_temp), 1.0);
-        }
-
-        fragment float4 film_fragment(VertexOut in [[stage_in]],
-                                      texture2d<float> tex [[texture(0)]],
-                                      sampler s [[sampler(0)]],
-                                      constant ShaderParameters& p [[buffer(0)]]) {
-            float4 c = tex.sample(s, in.uv);
-            float time_step = floor(p.time * 24.0);
-            float noise = hash(in.uv * float2(p.viewport_w > 0 ? p.viewport_w : 800, p.viewport_h > 0 ? p.viewport_h : 600) + float2(time_step * 17.13, time_step * 31.71));
-            float grain = (noise - 0.5) * 0.16;
-            float3 warm = float3(pow(c.r, 0.90) * 1.08, c.g * 0.98, pow(c.b, 1.15) * 0.88);
-            float dust = (hash(float2(time_step * 7.7, 91.3)) > 0.92 && distance(in.uv, float2(hash(float2(time_step, 1.0)), hash(float2(time_step, 2.0)))) < 0.006) ? 0.45 : 0.0;
-            return float4(apply_temp(clamp(warm + grain - dust, 0.0, 1.0), p.color_temp), c.a);
-        }
-        """
     }
 }

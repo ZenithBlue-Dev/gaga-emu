@@ -1,24 +1,8 @@
-#include <metal_stdlib>
-using namespace metal;
+#include "ShaderTypes.h"
 
-// MARK: - Uniform Parameters
-
-struct ShaderParameters {
-    float curvature;       // 0.0 (flat) to 1.0 (deep barrel)
-    float scanline_weight; // 0.0 (off) to 1.0 (heavy)
-    float phosphor_glow;   // Bloom intensity
-    float color_temp;      // Warm (e.g. 0.0) to Cool (e.g. 1.0), neutral around 0.5
-    float time;            // Frame timer for dynamic animation / grain
-    uint  viewport_w;      // Output viewport width in pixels
-    uint  viewport_h;      // Output viewport height in pixels
-};
-
-// MARK: - Vertex Input / Output
-
-struct VertexOut {
-    float4 position [[position]];
-    float2 uv;
-};
+// Every preset samples texture(0), which is the core frame or the previous pass's output.
+// Sizes that mean "one emulated pixel" come from params.source_w and source_h, because the
+// texture may already be upscaled. Alpha is not read: an XRGB frame's X byte is undefined.
 
 // MARK: - Fullscreen Quad Vertex Shader
 
@@ -55,15 +39,6 @@ static inline float luminance(float3 color) {
     return dot(color, float3(0.2126, 0.7152, 0.0722));
 }
 
-// Color temperature tint adjustment
-static inline float3 apply_color_temp(float3 color, float temp) {
-    // temp: 0.0 = warm (amber tint), 0.5 = neutral, 1.0 = cool (cyan-blue tint)
-    float3 warm = float3(1.10, 0.96, 0.85);
-    float3 cool = float3(0.88, 0.98, 1.12);
-    float3 tint = mix(warm, cool, clamp(temp, 0.0, 1.0));
-    return clamp(color * tint, 0.0, 1.0);
-}
-
 // Pseudo-random 2D noise generator
 static inline float hash(float2 p) {
     float3 p3 = fract(float3(p.xyx) * 0.1031);
@@ -95,8 +70,7 @@ fragment float4 original_fragment(VertexOut in [[stage_in]],
                                   sampler tex_sampler [[sampler(0)]],
                                   constant ShaderParameters& params [[buffer(0)]]) {
     float4 color = core_texture.sample(tex_sampler, in.uv);
-    color.rgb = apply_color_temp(color.rgb, params.color_temp);
-    return color;
+    return float4(apply_color_temp(color.rgb, params.color_temp), 1.0);
 }
 
 // MARK: - 2. Cartoon (Sobel Edge + Palette Quantize)
@@ -105,8 +79,7 @@ fragment float4 cartoon_fragment(VertexOut in [[stage_in]],
                                  texture2d<float> core_texture [[texture(0)]],
                                  sampler tex_sampler [[sampler(0)]],
                                  constant ShaderParameters& params [[buffer(0)]]) {
-    float2 tex_size = float2(core_texture.get_width(), core_texture.get_height());
-    float2 pixel_step = 1.0 / max(tex_size, float2(1.0, 1.0));
+    float2 pixel_step = 1.0 / source_size(params);
 
     // 3x3 Sobel kernel taps for luminance
     float lum[3][3];
@@ -146,17 +119,13 @@ fragment float4 crt_v1_fragment(VertexOut in [[stage_in]],
                                 constant ShaderParameters& params [[buffer(0)]]) {
     float4 color = core_texture.sample(tex_sampler, in.uv);
 
-    // Target retro scanlines (typically 224 or 240 lines)
-    float target_lines = float(core_texture.get_height());
-    if (target_lines <= 0.0) target_lines = 224.0;
-
     // Luminance modulation: 1.0 - intensity * sin(uv.y * lines * PI)^2
-    float scanline = sin(in.uv.y * target_lines * M_PI_F);
+    float scanline = sin(in.uv.y * source_size(params).y * M_PI_F);
     float scanline_factor = 1.0 - (params.scanline_weight * 0.45) * (scanline * scanline);
 
     float3 final_rgb = color.rgb * scanline_factor;
     final_rgb = apply_color_temp(final_rgb, params.color_temp);
-    return float4(final_rgb, color.a);
+    return float4(final_rgb, 1.0);
 }
 
 // MARK: - 4. CRT v2 (Aperture Grille & Phosphors)
@@ -165,8 +134,7 @@ fragment float4 crt_v2_fragment(VertexOut in [[stage_in]],
                                 texture2d<float> core_texture [[texture(0)]],
                                 sampler tex_sampler [[sampler(0)]],
                                 constant ShaderParameters& params [[buffer(0)]]) {
-    float2 tex_size = float2(core_texture.get_width(), core_texture.get_height());
-    float2 pixel_step = 1.0 / max(tex_size, float2(1.0, 1.0));
+    float2 pixel_step = 1.0 / source_size(params);
 
     // Multi-tap horizontal blur for subtle phosphor bloom
     float4 c_left  = core_texture.sample(tex_sampler, in.uv - float2(pixel_step.x * 0.5, 0.0));
@@ -190,8 +158,7 @@ fragment float4 crt_v2_fragment(VertexOut in [[stage_in]],
     }
 
     // Horizontal scanline modulation
-    float target_lines = float(tex_size.y > 0.0 ? tex_size.y : 240.0);
-    float scanline = sin(in.uv.y * target_lines * M_PI_F);
+    float scanline = sin(in.uv.y * source_size(params).y * M_PI_F);
     float scan_attenuation = 1.0 - (params.scanline_weight * 0.35) * (scanline * scanline);
 
     float3 final_rgb = base_color * triad_mask * scan_attenuation;
@@ -226,8 +193,7 @@ fragment float4 geom_crt_fragment(VertexOut in [[stage_in]],
     float3 color = float3(r, g, b);
 
     // Scanlines
-    float target_lines = float(core_texture.get_height() > 0 ? core_texture.get_height() : 240);
-    float scan = sin(curved_uv.y * target_lines * M_PI_F);
+    float scan = sin(curved_uv.y * source_size(params).y * M_PI_F);
     float scan_mod = 1.0 - (params.scanline_weight * 0.40) * (scan * scan);
 
     // Corner vignette
@@ -247,7 +213,7 @@ fragment float4 geom_crt_border_fragment(VertexOut in [[stage_in]],
                                          texture2d<float> core_texture [[texture(0)]],
                                          sampler tex_sampler [[sampler(0)]],
                                          constant ShaderParameters& params [[buffer(0)]]) {
-    // Inner active CRT area is mapped inside [0.12, 0.88] x [0.12, 0.88]
+    // Inner active CRT area is mapped inside [0.10, 0.90] x [0.10, 0.90]
     const float2 border_min = float2(0.10, 0.10);
     const float2 border_max = float2(0.90, 0.90);
     const float2 border_range = border_max - border_min;
@@ -288,8 +254,7 @@ fragment float4 geom_crt_border_fragment(VertexOut in [[stage_in]],
     float glare = 0.04 * max(0.0, 1.0 - abs(curved_uv.x + curved_uv.y * 0.8 - 0.8) * 4.0);
 
     // Scanline pass
-    float target_lines = float(core_texture.get_height() > 0 ? core_texture.get_height() : 240);
-    float scan = sin(curved_uv.y * target_lines * M_PI_F);
+    float scan = sin(curved_uv.y * source_size(params).y * M_PI_F);
     float scan_mod = 1.0 - (params.scanline_weight * 0.35) * (scan * scan);
 
     float3 final_rgb = (sample.rgb * scan_mod + glare) * inner_shadow;
@@ -333,5 +298,151 @@ fragment float4 film_fragment(VertexOut in [[stage_in]],
     float3 final_rgb = clamp(warm_graded + grain - dust, 0.0, 1.0);
     final_rgb = apply_color_temp(final_rgb, params.color_temp);
 
-    return float4(final_rgb, color.a);
+    return float4(final_rgb, 1.0);
+}
+
+// MARK: - Upscalers (first pass of the chain, docs/05 section 3.4)
+
+// Catmull-Rom weights for the four taps around a sample at fraction `t`.
+static inline float4 catmull_rom(float t) {
+    float t2 = t * t;
+    float t3 = t2 * t;
+    return float4(-0.5 * t3 + t2 - 0.5 * t,
+                  1.5 * t3 - 2.5 * t2 + 1.0,
+                  -1.5 * t3 + 2.0 * t2 + 0.5 * t,
+                  0.5 * t3 - 0.5 * t2);
+}
+
+fragment float4 bicubic_fragment(VertexOut in [[stage_in]],
+                                 texture2d<float> tex [[texture(0)]],
+                                 sampler s [[sampler(0)]],
+                                 constant ShaderParameters& params [[buffer(0)]]) {
+    float2 size = source_size(params);
+    float2 pos = in.uv * size - 0.5;
+    float2 base = floor(pos);
+    float2 f = pos - base;
+    float4 wx = catmull_rom(f.x);
+    float4 wy = catmull_rom(f.y);
+    float3 sum = float3(0.0);
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            float2 texel = (base + float2(x - 1, y - 1) + 0.5) / size;
+            sum += tex.sample(s, texel).rgb * wx[x] * wy[y];
+        }
+    }
+    return float4(clamp(sum, 0.0, 1.0), 1.0);
+}
+
+// Edge Smooth: GagaEmu's own upscaler. Data-dependent triangulation (Yu, Morse and Sederberg, 2001):
+// each cell between four texels splits along whichever diagonal crosses the smaller colour change,
+// so interpolation follows edges instead of cutting across them. Not derived from xBRZ (GPL-3),
+// Scale2x or the Eagle family. Fractions are sharpened, so flat areas keep their pixel shapes.
+static inline float colour_distance(float3 a, float3 b) {
+    return length(a - b);
+}
+
+fragment float4 edge_smooth_fragment(VertexOut in [[stage_in]],
+                                     texture2d<float> tex [[texture(0)]],
+                                     sampler s [[sampler(0)]],
+                                     constant ShaderParameters& params [[buffer(0)]]) {
+    float2 size = source_size(params);
+    float2 pos = in.uv * size - 0.5;
+    float2 base = floor(pos);
+    float3 t[4][4];
+    for (int y = 0; y < 4; ++y) {
+        for (int x = 0; x < 4; ++x) {
+            t[y][x] = tex.sample(s, (base + float2(x - 1, y - 1) + 0.5) / size).rgb;
+        }
+    }
+    float3 a = t[1][1], b = t[1][2], c = t[2][1], d = t[2][2];
+
+    // Summed colour change along each diagonal direction, over the cell and its neighbours.
+    float falling = colour_distance(a, d) + colour_distance(t[0][0], a) + colour_distance(d, t[3][3])
+                  + colour_distance(t[0][1], b) + colour_distance(c, t[3][2])
+                  + colour_distance(t[1][0], c) + colour_distance(b, t[2][3]);
+    float rising = colour_distance(b, c) + colour_distance(t[0][3], b) + colour_distance(c, t[3][0])
+                 + colour_distance(t[0][2], a) + colour_distance(d, t[3][1])
+                 + colour_distance(t[1][3], d) + colour_distance(a, t[2][0]);
+
+    float2 f = smoothstep(0.2, 0.8, pos - base);
+    float3 result;
+    if (falling < rising) {
+        // Split along a to d.
+        result = f.x >= f.y ? a + f.x * (b - a) + f.y * (d - b) : a + f.y * (c - a) + f.x * (d - c);
+    } else if (rising < falling) {
+        // Split along b to c.
+        result = f.x + f.y <= 1.0 ? a + f.x * (b - a) + f.y * (c - a)
+                                  : d + (1.0 - f.x) * (c - d) + (1.0 - f.y) * (b - d);
+    } else {
+        result = mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+    }
+    return float4(clamp(result, 0.0, 1.0), 1.0);
+}
+
+// MARK: - CRT Deluxe (three passes, written for GagaEmu; not derived from crt-royale)
+
+// Pass 1, source size: gamma to linear light, with the beam's horizontal spread.
+fragment float4 crt_deluxe_beam_fragment(VertexOut in [[stage_in]],
+                                         texture2d<float> tex [[texture(0)]],
+                                         sampler s [[sampler(0)]],
+                                         constant ShaderParameters& params [[buffer(0)]]) {
+    float texel = 1.0 / source_size(params).x;
+    float spread = 0.15 + clamp(params.phosphor_glow, 0.0, 1.0) * 0.35;
+    float3 sum = float3(0.0);
+    float total = 0.0;
+    for (int x = -2; x <= 2; ++x) {
+        float weight = exp(-float(x * x) / (2.0 * spread * spread + 0.0001));
+        float3 c = tex.sample(s, in.uv + float2(float(x) * texel, 0.0)).rgb;
+        sum += pow(c, float3(2.4)) * weight;
+        total += weight;
+    }
+    return float4(sum / total, 1.0);
+}
+
+// Pass 2, output size: tube curvature, and a beam whose height grows with brightness.
+fragment float4 crt_deluxe_scan_fragment(VertexOut in [[stage_in]],
+                                         texture2d<float> tex [[texture(0)]],
+                                         sampler s [[sampler(0)]],
+                                         constant ShaderParameters& params [[buffer(0)]]) {
+    float2 uv = curve_coordinates(in.uv, params.curvature * 0.20);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return float4(0.0, 0.0, 0.0, 1.0);
+    float lines = source_size(params).y;
+    float row = uv.y * lines - 0.5;
+    float base = floor(row);
+    float tightness = mix(1.3, 0.55, clamp(params.scanline_weight, 0.0, 1.0));
+    float3 sum = float3(0.0);
+    for (int i = -1; i <= 2; ++i) {
+        float line = base + float(i);
+        float3 c = tex.sample(s, float2(uv.x, (line + 0.5) / lines)).rgb;
+        float sigma = (0.28 + 0.27 * sqrt(max(max(c.r, c.g), c.b))) * tightness;
+        float distance = row - line;
+        sum += c * exp(-(distance * distance) / (2.0 * sigma * sigma)) / (sigma * 2.5066);
+    }
+    return float4(sum, 1.0);
+}
+
+// Pass 3, drawable: halation, a slot mask in screen pixels, vignette, then back to gamma.
+fragment float4 crt_deluxe_mask_fragment(VertexOut in [[stage_in]],
+                                         texture2d<float> tex [[texture(0)]],
+                                         sampler s [[sampler(0)]],
+                                         constant ShaderParameters& params [[buffer(0)]]) {
+    float2 texel = 1.0 / float2(tex.get_width(), tex.get_height());
+    float3 c = tex.sample(s, in.uv).rgb;
+    float3 halo = float3(0.0);
+    for (int i = 0; i < 8; ++i) {
+        float angle = float(i) * M_PI_F / 4.0;
+        halo += tex.sample(s, in.uv + float2(cos(angle), sin(angle)) * texel * 5.0).rgb;
+    }
+    c += halo * 0.125 * clamp(params.phosphor_glow, 0.0, 1.0) * 0.35;
+
+    uint column = uint(in.position.x);
+    uint slot = column / 3;
+    bool gap = (uint(in.position.y) + slot * 2) % 4 == 0;
+    uint triad = column % 3;
+    float3 mask = triad == 0 ? float3(1.22, 0.78, 0.78) : (triad == 1 ? float3(0.78, 1.22, 0.78) : float3(0.78, 0.78, 1.22));
+    c *= mask * (gap ? 0.85 : 1.0);
+
+    c *= mix(1.0, vignette(in.uv, 0.30), params.curvature > 0.0 ? 1.0 : 0.5);
+    c = pow(max(c * 1.15, float3(0.0)), float3(1.0 / 2.2));
+    return float4(apply_color_temp(c, params.color_temp), 1.0);
 }
