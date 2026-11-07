@@ -562,11 +562,53 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertNil(StoreKitManager.badge(for: .monthly, intro: nil))
         XCTAssertEqual(StoreKitManager.badge(for: .monthly, intro: .paid), "Introductory Offer")
         XCTAssertEqual(StoreKitManager.badge(for: .annual, intro: .freeTrial), "Free Trial")
-        XCTAssertEqual(StoreKitManager.badge(for: .lifetime, intro: nil), "Best Value")
+        XCTAssertEqual(StoreKitManager.badge(for: .lifetime, intro: nil), "One payment")
 
-        XCTAssertEqual(StoreKitManager.disclosure(for: .monthly, intro: nil), "Cancel anytime")
-        XCTAssertEqual(StoreKitManager.disclosure(for: .annual, intro: .freeTrial), "No charges during trial period. Cancel anytime")
+        XCTAssertEqual(StoreKitManager.disclosure(for: .monthly, intro: nil), "Renews until you cancel. Cancel anytime.")
+        XCTAssertEqual(StoreKitManager.disclosure(for: .annual, intro: .freeTrial),
+                       "The trial is free. Renews after it ends unless you cancel. Cancel anytime.")
         XCTAssertNil(StoreKitManager.disclosure(for: .lifetime, intro: nil))
+    }
+
+    // MARK: - Design system
+
+    /// WCAG relative luminance contrast of two sRGB hex colours.
+    private func contrast(_ a: Int, _ b: Int) -> Double {
+        func luminance(_ hex: Int) -> Double {
+            let channels = [hex >> 16 & 0xFF, hex >> 8 & 0xFF, hex & 0xFF].map { value -> Double in
+                let c = Double(value) / 255
+                return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+        }
+        let (high, low) = (max(luminance(a), luminance(b)), min(luminance(a), luminance(b)))
+        return (high + 0.05) / (low + 0.05)
+    }
+
+    func testPaletteTextMeetsAA() {
+        for text in [Palette.ink, Palette.muted, Palette.accent] {
+            for background in [Palette.paper, Palette.surface] {
+                XCTAssertGreaterThanOrEqual(contrast(text.light, background.light), 4.5)
+                XCTAssertGreaterThanOrEqual(contrast(text.dark, background.dark), 4.5)
+            }
+        }
+        XCTAssertGreaterThanOrEqual(contrast(Palette.onAccent, Palette.accentFill), 4.5)
+    }
+
+    // MARK: - Library filter
+
+    @MainActor
+    func testRecentFilterListsOnlyPlayedGamesNewestFirst() {
+        let state = AppState()
+        func game(_ title: String, _ played: Date?) -> GameItem {
+            GameItem(id: UUID(), title: title, platformID: "gba", romPath: "/tmp/\(title)", coverPath: nil,
+                     coreOverride: nil, playTime: 0, lastPlayed: played, isFavorite: false, shaderID: "original")
+        }
+        state.games = [game("Old", Date(timeIntervalSince1970: 1)), game("Never", nil), game("New", Date())]
+        state.platformFilter = "recent"
+        XCTAssertEqual(state.filteredGames.map(\.title), ["New", "Old"])
+        state.search = "old"
+        XCTAssertEqual(state.filteredGames.map(\.title), ["Old"])
     }
 
     @MainActor
