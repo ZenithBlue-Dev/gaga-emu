@@ -1,8 +1,18 @@
 // Builds upstream's libretro core (sources.txt lists this file instead of upstream/dosbox_pure_libretro.cpp) and
 // adds what DosboxPureCore.c needs from its static state. Upstream stays unmodified.
 #define retro_serialize_size dbp_upstream_retro_serialize_size
+#define retro_deinit dbp_upstream_retro_deinit
 #include "upstream/dosbox_pure_libretro.cpp"
 #undef retro_serialize_size
+#undef retro_deinit
+
+// Upstream frees the frame buffers but keeps their sizes, so the next session in this process would draw
+// into a NULL buffer it believes is already allocated.
+extern "C" RETRO_API void retro_deinit(void)
+{
+	dbp_upstream_retro_deinit();
+	for (DBP_Buffer& buf : dbp_buffers) buf = DBP_Buffer();
+}
 
 // Upstream reports the exact size of the current state, which changes from frame to frame. The adapter needs
 // one size per session, so this reports the largest state the machine can produce, the size upstream itself
