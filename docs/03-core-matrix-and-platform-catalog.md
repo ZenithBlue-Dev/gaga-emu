@@ -51,7 +51,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 
 - **App UI, frame presentation and post-processing:** native Metal.
 - **Software-rendered cores:** the core frame goes through the host texture ring and Metal shader chain. libretro cores copy frames unless a host-buffer API exists, so zero copy is not claimed for them.
-- **3D cores:** Vulkan on statically linked MoltenVK to `CAMetalLayer`, the pattern S3 and S4 use. MoltenVK counts as Metal for this project (owner decision, 2026-11-07). A native Metal backend is allowed where upstream has one.
+- **3D cores:** Vulkan on one embedded MoltenVK framework (docs/06 section 2.5) to `CAMetalLayer`, the pattern S3 and S4 use. MoltenVK counts as Metal for this project (owner decision, 2026-11-07). A native Metal backend is allowed where upstream has one.
 - **GLES-only and desktop-GL-only renderers are not accepted.** Such a core needs a Vulkan, Metal or software renderer, or it is out.
 - **libretro has no Metal context type.** [`retro_hw_context_type`](https://raw.githubusercontent.com/libretro/libretro-common/master/include/libretro.h) has OpenGL variants, Vulkan, Direct3D and RSX values, and no Metal value. PPSSPP's [native Metal backend is excluded from its libretro build](https://raw.githubusercontent.com/hrydgard/ppsspp/master/CMakeLists.txt).
 

@@ -22,7 +22,7 @@ The app presents frames from the mock core through the copy path. No real core i
 | Custom presets | planned: the per-filter sliders cover the common case | section 4 |
 | Game view presenting a core frame | built, on the mock core | `Sources/UI/Game/GameView.swift` |
 | Host-buffer path | planned | none |
-| Core-owned layer path | built: MoltenVK v1.4.2 linked into each layer-path core, the libretro Vulkan context, proved by the Vulkan test core | `Cores/shared/LibretroVulkan.c`, `Cores/vktest`, section 2.3 |
+| Core-owned layer path | built: MoltenVK v1.4.2 as one shared framework that each layer-path core links, the libretro Vulkan context, proved by the Vulkan test core | `Cores/shared/LibretroVulkan.c`, `Cores/vktest`, section 2.3 |
 | Core-output texture path | planned | none |
 | Multi-pass chain, Nearest, Bilinear, Bicubic and Edge Smooth upscalers | built | section 3.4 |
 | `anime4k` (MIT port) and `crt-deluxe` (original) | built, premium | sections 3.1 and 5 |
@@ -34,7 +34,7 @@ The app presents frames from the mock core through the copy path. No real core i
 
 1. App UI, frame presentation and the host post-process chain use native Metal.
 2. 2D and software-rendered cores send their frame through the host texture ring and the Metal shader chain.
-3. 3D cores use Vulkan on statically linked MoltenVK, rendering to a `CAMetalLayer`. This is the pattern S3 and S4 use (`S3/ios/SambaS3/App/Game/GameView.swift:7`, `S3/docs/ios/moltenvk-rsx-feature-map.md:3`). A native Metal backend is allowed where upstream has one; PPSSPP has `Common/GPU/Metal`, excluded from its libretro build, and which release ships it is unverified (`docs/03`).
+3. 3D cores use Vulkan on one embedded MoltenVK framework that every such core links, rendering to a `CAMetalLayer`. This is the pattern S3 and S4 use (`S3/ios/SambaS3/App/Game/GameView.swift:7`, `S3/docs/ios/moltenvk-rsx-feature-map.md:3`). A native Metal backend is allowed where upstream has one; PPSSPP has `Common/GPU/Metal`, excluded from its libretro build, and which release ships it is unverified (`docs/03`).
 4. GLES-only and desktop-GL-only renderers are not an accepted path. Such a core needs a Vulkan, Metal or software renderer, or it is out. libretro has no Metal context type: its enum stops at OpenGL variants, Vulkan, Direct3D and RSX ([libretro.h](https://raw.githubusercontent.com/libretro/libretro-common/master/include/libretro.h)).
 5. PS3 and PS4 are external sister projects (S3, S4). They are never catalog rows or frame producers here. S2 and PS2 are non-shipping research.
 
