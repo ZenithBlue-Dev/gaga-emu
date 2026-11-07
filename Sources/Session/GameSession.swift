@@ -261,6 +261,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         onStarted = nil
         onPlayTime = nil
         onFinish = nil
+        #if DEBUG
+        CodeGenCheck.report("session stop, \(game.title)")
+        #endif
         finish?(message)
     }
 

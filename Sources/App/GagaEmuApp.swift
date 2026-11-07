@@ -27,6 +27,7 @@ enum AppStateChecks {
         assert(CoreCatalog.platformID(forExtension: "gdi") == "dreamcast")
         let game = GameItem(id: UUID(), title: "Demo", platformID: "ps1", romPath: "/tmp/a.chd",
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,
+        CodeGenCheck.captureBaseline()
                             isFavorite: false, shaderID: "original")
         assert(game.resolvedCoreID(defaults: [:]) == "pcsx_rearmed")
         assert(game.resolvedCoreID(defaults: ["ps1": "beetle_psx"]) == "beetle_psx")
