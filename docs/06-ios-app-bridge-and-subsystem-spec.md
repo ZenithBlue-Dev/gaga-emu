@@ -530,7 +530,7 @@ The paywall is named Gaga Plus (`GagaPlusView`). Two columns: benefits on the le
 
 ### 3.6 App icon
 
-Steps, chosen by the owner: ink pixel stairs and one vermilion pixel in the air, on a paper tile. `AppIcon.appiconset` holds a single-size 1024 PNG with dark and tinted entries, rendered by `design/icons/render_all.sh`. Original artwork with no third-party imagery. Options and rules are in `docs/BRAND.md`.
+Steps, chosen by the owner: ink pixel stairs and one vermilion pixel in the air, on a dark tile. The default (any) entry is a copy of the dark render, so the icon is dark on light-mode home screens too. `AppIcon.appiconset` holds a single-size 1024 PNG with dark and tinted entries, rendered by `design/icons/render_all.sh`. Original artwork with no third-party imagery. Options and rules are in `docs/BRAND.md`.
 
 ### 3.7 Game view and pause menu
 
