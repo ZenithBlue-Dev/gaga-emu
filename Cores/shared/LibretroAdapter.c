@@ -70,6 +70,8 @@ typedef struct {
     LrBattery batteries[2];
     LrCheat* cheats;
     size_t cheat_count;
+    _Atomic uint16_t rumble[LR_MAX_PLAYERS][2]; // Per port and motor, as the core last set it, from any of its threads.
+    uint16_t rumble_sent[LR_MAX_PLAYERS][2];    // As the host last heard it.
 } LrInstance;
 
 // The instance libretro's callbacks reach. Set before the core can call back and cleared before the
@@ -100,6 +102,25 @@ static void lr_error(char* error, size_t capacity, const char* format, const cha
 static void lr_log(enum retro_log_level level, const char* format, ...) {
     (void)level;
     (void)format; // Without this a core prints to stdout. FATAL is the only message the host acts on.
+}
+
+// Stored only: step_frame sends the change on the host's queue, so a core may call this from any thread.
+static bool lr_set_rumble(unsigned port, enum retro_rumble_effect effect, uint16_t strength) {
+    LrInstance* a = lr_current();
+    if (!a || port >= LR_MAX_PLAYERS || (unsigned)effect > RETRO_RUMBLE_WEAK) return false;
+    atomic_store_explicit(&a->rumble[port][effect], strength, memory_order_relaxed);
+    return true;
+}
+
+static void lr_send_rumble(LrInstance* a) {
+    for (unsigned port = 0; port < LR_MAX_PLAYERS; ++port) {
+        for (unsigned motor = 0; motor < 2; ++motor) {
+            uint16_t strength = atomic_load_explicit(&a->rumble[port][motor], memory_order_relaxed);
+            if (strength == a->rumble_sent[port][motor]) continue;
+            a->rumble_sent[port][motor] = strength;
+            lr_emit(a, GAGA_EVENT_RUMBLE, GAGA_RUMBLE_CODE(port, motor, strength), NULL);
+        }
+    }
 }
 
 static bool lr_environment(unsigned command, void* data) {
@@ -151,11 +172,14 @@ static bool lr_environment(unsigned command, void* data) {
     case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK:
         a->keyboard_cb = ((const struct retro_keyboard_callback*)data)->callback;
         return true;
+    case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE:
+        ((struct retro_rumble_interface*)data)->set_rumble_state = lr_set_rumble;
+        return true;
     default:
 #ifdef GAGA_LIBRETRO_VULKAN
         return lr_vk_environment(command, data);
 #else
-        return false; // No rumble, messages, VFS, core options UI, hardware rendering or other frontend extras.
+        return false; // No messages, VFS, core options UI, hardware rendering or other frontend extras.
 #endif
     }
 }
@@ -583,6 +607,7 @@ void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint
     if (inputs) memcpy(a->inputs, inputs, sizeof(GagaInputState) * (player_count < LR_MAX_PLAYERS ? player_count : LR_MAX_PLAYERS));
     lr_send_keys(a);
     retro_run();
+    lr_send_rumble(a);
     if (++a->frames_since_flush >= LR_FLUSH_INTERVAL_FRAMES) {
         a->frames_since_flush = 0;
         lr_flush(a);
