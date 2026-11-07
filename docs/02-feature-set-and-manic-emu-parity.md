@@ -62,7 +62,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G]. Status: built, a system click on each touch press.
 - **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode. Status: built, not yet tested on a device.
 - **TriggerPro** [S]: subtitle `Create and manage advanced custom buttons.` Nothing more is shown. Turbo at 5 to 30 Hz, hold latch and combos of up to four steps are [G]. Status: built in `Sources/Input/TriggerProManager.swift`.
-- **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. `Assign Skin` is built (3.9): three original touch layouts, per platform or per game. A skin customizer is planned.
+- **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. `Assign Skin` is built (3.9): three original touch layouts, per platform or per game. The skin editor is built: move, size and fade buttons per system, saved as a custom flex skin, with Reset to Default (`docs/06` section 3.7).
 
 ### 2.3 Shaders (Ref: `0BF2D032`)
 - **Sheet** [S]: search field (placeholder `SearchShaders`), edit button, close button, an image button on the preview card (purpose not shown), and an eye icon plus radio button on each row. Status: GagaEmu has a list and a large live preview only (`docs/06` section 3.4).
@@ -86,7 +86,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
   - Accepting http(s) download links and raw ROM data is [G]; neither is shown for Manic.
 - **MultiDisc Helper** [S]: title only. Grouping by disc naming and writing `.m3u` playlists is [G]. Status: built.
 - **RomPatcher** [S]: title only. In-memory IPS, UPS and BPS patching with checksum verification is [G]. Status: built.
-- **Drag & Drop** [S]: `Drag files to any Manic EMU interface for transfer`, so the target is any screen, not only the game grid. Status: built on the Add screen only.
+- **Drag & Drop** [S]: `Drag files to any Manic EMU interface for transfer`, so the target is any screen, not only the game grid. Status: built on the Add screen, the Library and the game view (`docs/06` section 3.2).
 
 ### 2.5 Library & Gameplay (Ref: `FC11608F`, `E2946B38`, `44F4AEE0`)
 - **Navigation** [S]: bottom bar with `Games` (rocket), `Import` (folder), `Settings` (gear). The Games header has a controller button on the left and a crossed-swords button on the right, which opens the Play History side panel.
@@ -156,10 +156,10 @@ Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and lay
 | Advanced | `Emulator Core` | | built |
 | Support | `FAQ`, `Feedback` | | built as links |
 | Support | `Join QQ Channel`, `Join Discord` | | removed; see `docs/06` section 3.3 |
-| Others | `About Us`, `Share Manic EMU` (as `Share GagaEmu`) | | hidden |
+| Others | `About Us`, `Share Manic EMU` (as `Share GagaEmu`) | | built, in About |
 | Others | `Clear Cache` | | built |
-| Others | `Reset Tips` | `Show previously dismissed alerts and tips again` | hidden |
-| Others | `Language` | Shown `English` | hidden |
+| Others | `Reset Tips` | `Show previously dismissed alerts and tips again` | built, in About |
+| Others | `Language` | Shown `English` | hidden: English is the only localisation; the row appears when a second one exists |
 | Others | `Terms of Service`, `Privacy Policy` | | built as links |
 | Others | `Featured Items` | Purpose not shown | removed |
 | More from Manic | BitBop promo, `Try Now` | Manic's own product | **Not applicable.** Not planned. |
