@@ -2,7 +2,7 @@
 
 This document is canonical for phases and status. `docs/03` is canonical for the core list, licences and renderers, `docs/04` for interpreter design and load tiers, `docs/05` for graphics, and `docs/06` for the bridge API and premium spec. Other docs do not fork this plan.
 
-**Where the project stands:** Phase 1 is closed: the code matches the docs, and 1.13 is superseded by the UI redesign. The app is still a shell plus a mock core. The 11 non-mock registry cores are stubs, and no game session exists. Status below comes from reading the code and from unit tests and screens on the iOS Simulator on 2026-11-07, not from a device test.
+**Where the project stands:** Phase 1 is closed: the code matches the docs, and the UI redesign (1.19 to 1.21) resolved 1.13. The app is still a shell plus a mock core. The 11 non-mock registry cores are stubs, and no game session exists. Status below comes from reading the code and from unit tests and screens on the iOS Simulator on 2026-11-07, not from a device test.
 
 **Status terms:**
 
@@ -21,7 +21,7 @@ This document is canonical for phases and status. `docs/03` is canonical for the
 | Phase | Goal | Status | Exit condition |
 |---|---|---|---|
 | 0 | Shell, bridge skeleton and import tools | built | Done |
-| 1 | Bring the code in line with the docs | built | Every milestone in section 4 closed (1.13 superseded) |
+| 1 | Bring the code in line with the docs, and redesign the UI | built | Every milestone in section 4 closed |
 | 2 | First game session with one real core | planned | mGBA runs a game end to end on a device, and the paywall release gate can open |
 | 3 | Shader chain and library features | planned, with parts built in Phase 0 | Listed features work in a game session |
 | 4 | Software-rendered cores | planned | Each core meets section 2. Starts behind the legal gate. |
@@ -51,7 +51,7 @@ A core milestone closes only when all of these hold:
 | ID | Milestone | Status | Detail |
 |---|---|---|---|
 | 0.1 | XcodeGen project | built | `project.yml`. See 1.11. |
-| 0.2 | SwiftUI shell | built | Games, Import and Settings tabs, glass tab bar, Adventurer Card |
+| 0.2 | SwiftUI shell | built, UI replaced by 1.21 | The first shell, with tabs and an Adventurer Card |
 | 0.3 | Bridge, registry, mock core | built | Mock core produces a pattern and a 440 Hz sine. The 12 other cores are stubs. |
 | 0.4 | ROM import | built | Files, WiFi, Read Clipboard, MultiDisc Helper, RomPatcher and drag and drop. No real core has loaded an imported ROM yet; 2.9 proves that path. |
 | 0.5 | Metal ring, renderer, seven presets, preview | built | No core frame reaches it (`docs/05`). |
@@ -67,28 +67,31 @@ ROM import sits here because cores depend on it and it already exists. The previ
 
 These are the code changes the docs expected. Items 1.1 to 1.4 were the mismatches in `docs/03` section 8. Verified on the iOS Simulator, not on a device.
 
-Manic EMU is a feature reference only (owner decision, 2026-11-07). A UI redesign follows Phase 1, and GagaEmu does not copy Manic's screens, labels or layouts.
+Manic EMU is a feature reference only (owner decision, 2026-11-07). GagaEmu does not copy Manic's screens, labels or layouts. The redesign (1.19 to 1.21) closes this phase.
 
 | ID | Milestone | Status | Detail |
 |---|---|---|---|
 | 1.1 | Align `CoreCatalog` with `docs/03` | built | `CoreCatalog` now has the docs/03 defaults and removed cores, plus a Symbian row, so every platform in the master matrix appears. |
 | 1.2 | Align the C registry | built | `Snes9x_GetInterface` and `GenesisPlusGx_GetInterface` deleted, and a JGenesis stub added. The registry has 12 entries: the mock core and 11 stubs. Remaining rows arrive as each core integrates. |
 | 1.3 | Single core ID scheme | built | The short lowercase `core_id` (`mgba`, `pcsx_rearmed`) is the only ID. `StateMigration` upgrades saved `coreOverride` and `defaultCores` values in `state.json` on load. A saved choice of a removed core falls back to the platform default. |
-| 1.4 | Fix `resolvedCoreID` | built | `GameItem.resolvedCoreID(defaults:)` honours `defaultCores`, and launch, `coreName` and `CoreSelectionSheet` share it. |
+| 1.4 | Fix `resolvedCoreID` | built | `GameItem.resolvedCoreID(defaults:)` honours `defaultCores`, and launch, `coreName` and `CorePickerSheet` share it. |
 | 1.5 | Premium spec (`docs/06` section 4) | built | `anime4k` and `crt-royale` are off `premiumShaderIDs`, and `anime4k` is off `ShaderCatalog`; saved selections reset to Original. `canUseAutoSaveState` is the gate, used when 2.6 restores the row. Redeem Offer is wired, and lifetime owners get no subscribe prompts. Offer badges and trial text follow the product's intro offer and eligibility. The paywall states the host shader chain limit. |
-| 1.6 | Paywall release gate | built | One switch: the `PAYWALL_ENABLED` compilation condition (`PaywallGate`, `project.yml`). It is absent, so the banner and premium labels are hidden and limits are lifted. 7.2 opens it. |
-| 1.7 | `PrivacyInfo.xcprivacy` and app icon | built | `Sources/App/PrivacyInfo.xcprivacy` declares no tracking, no collected data and no required-reason APIs, because `Sources` calls none. Add each one when a core does. The asset catalog holds a **placeholder** icon from `scripts/make_placeholder_icon.py`; final art replaces it before submission. |
+| 1.6 | Paywall release gate | built | One switch: the `PAYWALL_ENABLED` compilation condition (`PaywallGate`, `project.yml`). It is absent, so the Gaga Plus category and premium labels are hidden and limits are lifted. 7.2 opens it. |
+| 1.7 | `PrivacyInfo.xcprivacy` and app icon | built | `Sources/App/PrivacyInfo.xcprivacy` declares no tracking, no collected data and no required-reason APIs, because `Sources` calls none. Add each one when a core does. The asset catalog holds an original icon from `scripts/make_app_icon.py`. It needs owner sign-off before submission. |
 | 1.8 | Files app visibility | built | `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are set, so the app's Documents folder is visible in Files. The app does not yet import from Documents (ROMs live in Application Support). |
 | 1.9 | GameKit | built | GameKit is linked, and `GameCenter.authenticate` runs in the background with no failure UI. The entitlement stays. No leaderboards or achievements. |
 | 1.10 | Support links and metadata mismatch | built | The single host is `zenithblue-oss.github.io/gaga-emu-site`, in `SiteLinks`. Discord and QQ rows and pills are removed. FAQ and Feedback go to `support.html`, since the metadata has no support email. The site has no terms page, so Terms links to Apple's standard EULA until it does. |
 | 1.11 | Stop tracking the generated project | built | `GagaEmu.xcodeproj/` is ignored and untracked. `scripts/appstore_release.sh` runs `xcodegen generate` first; run it yourself after a fresh clone. |
 | 1.12 | Ring corrections | built | Row pitch comes from `minimumLinearTextureAlignment(for:)`. `attachCompletion` pairs each acquire with one completion signal (`docs/05` section 2.1). |
-| 1.13 | Screen corrections | superseded by UI redesign | Side panels are not built, because GagaEmu does not copy Manic's layouts. Controllers and Play History stay sheets until the redesign. Featured Items is removed under 1.14, and no JIT row exists. |
-| 1.14 | Empty rows | built | Each stub row in `docs/06` section 3.3 and the empty Featured Items row are hidden or removed; saved values stay in `state.json`. Hidden: Theme, Quick Start, Auto Save States, Assign Skin, Cover Scraping, AirPlay Fullscreen, iCloud Sync, Auto Full Screen, Respect Silent Mode, Online Play Settings, Rumble, Skin Sound Effects, RetroAchievements, About Us, Share Gaga-Emu, Reset Tips, Language, Rate Us. The milestone that restores each is noted at that phase. |
-| 1.15 | WiFi transfer hardening | built | `PINAttemptLimiter`: every 5th wrong PIN locks the server for a minute, and the 15th stops it until the user restarts it with a new PIN. The PIN is header only, and comparison stays timing-safe. Plain HTTP remains; the Import tab and upload page say so, and that it is off by default. |
+| 1.13 | Screen corrections | resolved by 1.19 to 1.21 | Side panels are not built. Controllers live in Settings > Controls, and play history is the Continue panel plus the Recent filter. Featured Items is removed under 1.14, and no JIT row exists. |
+| 1.14 | Empty rows | built | Each stub row and the empty Featured Items row are hidden or removed; saved values stay in `state.json`. Theme was dropped by 1.19, because the palette is fixed. Hidden: Quick Start, Auto Save States, Assign Skin, Cover Scraping, AirPlay Fullscreen, iCloud Sync, Auto Full Screen, Respect Silent Mode, Online Play Settings, Rumble, Skin Sound Effects, RetroAchievements, About Us, Share Gaga-Emu, Reset Tips, Language, Rate Us. `docs/06` section 3.3 lists the settings category and milestone that restores each. |
+| 1.15 | WiFi transfer hardening | built | `PINAttemptLimiter`: every 5th wrong PIN locks the server for a minute, and the 15th stops it until the user restarts it with a new PIN. The PIN is header only, and comparison stays timing-safe. Plain HTTP remains; the Add screen and upload page say so, and that it is off by default. |
 | 1.16 | GPU check | built | A14 required for layer-path 3D cores; 2D cores have no such floor. `GPUFloor.supportsLayerPathCores` wraps `device.supportsFamily(.apple7)`, and `GPUFloor.layerPathMessage` is the text. Nothing is refused today, because no code uses a Metal 3 API. 5.1 is the first caller. |
 | 1.17 | IPS RLE support | built | `RomPatcher.applyIPS` already decoded RLE; only a stale comment and the docs said otherwise. Hand-built test vectors now cover it. |
-| 1.18 | Stale comments | built | Comments corrected in `MetalTextureRing.swift`, `GagaBridge.h` and `ShadersSettingsView.swift`. |
+| 1.18 | Stale comments | built | Comments corrected in `MetalTextureRing.swift`, `GagaBridge.h` and the shader picker, now `FilterPickerView.swift`. |
+| 1.19 | Design system | built | "Paper and ink" tokens and shared styles in `AppTheme.swift` (`docs/06` section 3). The app follows the system appearance, so the Appearance row is gone. A unit test checks AA contrast for every text colour. New icon from `scripts/make_app_icon.py`, awaiting owner sign-off. |
+| 1.20 | Landscape only | built | Landscape left and right on iPhone and iPad, with `UIRequiresFullScreen`. Device rotation and the portrait refusal were checked on the Simulator (iOS 27.0), not on a device. App Store validation was not run. The key is deprecated, so 7.6 rechecks it. `NSLocalNetworkUsageDescription` now names WiFi transfer only. |
+| 1.21 | Screens redesign | built | Left rail, Library with Continue panel and shelves, Add, two-pane Settings, split filter picker, core picker sheet, and the Gaga Plus paywall (`docs/06` section 3). Paywall logic, import, security and migration behaviour are unchanged. Play buttons still only record state. Checked with screenshots on the Simulator, in light and dark, with empty and seeded libraries, on iPhone 18 Pro Max, iPhone 17e and iPad Pro 11-inch. |
 
 ---
 
@@ -118,11 +121,11 @@ Manic EMU is a feature reference only (owner decision, 2026-11-07). A UI redesig
 | 3.2 | Parameter sliders | planned | Properties exist; no UI does. |
 | 3.3 | Multi-pass chain | planned | Bicubic and xBRZ upscalers (`docs/05` section 3.4). |
 | 3.4 | `anime4k`, `crt-royale` | planned | They may return to the premium list only once implemented. |
-| 3.5 | Import tab, `.metal` | planned | Runtime `makeLibrary(source:)` (`docs/05` section 4). |
-| 3.6 | Import tab, `.slangp` | planned | Decide the translation path first. |
-| 3.7 | RetroArch tab | planned | Offline-converted presets with licences recorded. |
+| 3.5 | Filter import, `.metal` | planned | Runtime `makeLibrary(source:)` (`docs/05` section 4). |
+| 3.6 | Filter import, `.slangp` | planned | Decide the translation path first. |
+| 3.7 | RetroArch filter presets | planned | Offline-converted presets with licences recorded. |
 | 3.8 | Cover scraping | planned | OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration. Restores the row hidden by 1.14. |
-| 3.9 | Theme, Assign Skin | planned | Restores the rows hidden by 1.14. |
+| 3.9 | Assign Skin | planned | Restores the rows hidden by 1.14. |
 | 3.10 | RetroAchievements | planned | Sign-in and achievements. Restores the row hidden by 1.14. |
 | 3.11 | AirPlay Fullscreen, iCloud Sync | planned | Restores the rows hidden by 1.14. |
 
@@ -186,7 +189,7 @@ A failed spike removes the platform's row from `docs/03`.
 | 7.3 | No-JIT audit of the final binary | planned | Rerun the gate on every embedded framework. Attribute JIT denial to OS enforcement (W^X, no public iOS entitlement), not to a guideline. |
 | 7.4 | Guideline 4.7 review | planned | 4.7 covers "retro game console and PC emulator apps". Apple defines no generations. Confirm the catalog against the current text. |
 | 7.5 | Licence notices | planned | Every shipped core's licence and any source offer appear in the app (`docs/03` section 5). Restores the About Us row to show them (1.14). |
-| 7.6 | Screens and rows | planned | No empty rows (1.14). Restores the Share Gaga-Emu row, using the system share sheet. Screenshots show real gameplay. Privacy manifest present (1.7), and the placeholder icon replaced with final art. |
+| 7.6 | Screens and rows | planned | No empty rows (1.14). Restores the Share Gaga-Emu row, using the system share sheet. Screenshots show real gameplay in this app's own landscape UI; `AppStore/screenshots` must be replaced, because `scripts/make_screenshots.py` builds them from the Manic reference images. Privacy manifest present (1.7), and the icon signed off by the owner. Recheck `UIRequiresFullScreen` against the current iPadOS SDK (`docs/06` section 3). |
 
 ---
 
