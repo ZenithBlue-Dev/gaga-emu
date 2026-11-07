@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// Paywall. Annual is preselected and badged 50% off, matching 0596EA12.
+/// Paywall. Annual is preselected, matching 0596EA12. Badges reflect configured offers only.
 struct MembershipPaywallView: View {
     @EnvironmentObject private var store: StoreKitManager
     @Environment(\.dismiss) private var dismiss
     @State private var selected: StoreKitManager.ProductID = .annual
     @State private var buying = false
+    @State private var showRedeem = false
 
     private let perks: [(String, String)] = [
         ("forward.fill", "5x Speed"),
@@ -20,17 +21,27 @@ struct MembershipPaywallView: View {
             header
             ScrollView {
                 VStack(spacing: 12) {
-                    ForEach(ordered) { offer in offerRow(offer) }
-                    Text("No charges during trial period. Cancel anytime")
-                        .font(.system(size: 13)).foregroundStyle(AppTheme.textSecondary).padding(.top, 8)
-                    Button { buy() } label: {
-                        Text(buying ? "Working…" : cta)
-                            .font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
-                            .frame(maxWidth: .infinity).padding(.vertical, 16)
-                            .background(AppTheme.accent, in: Capsule())
+                    if store.entitlements.showsSubscribePrompts {
+                        ForEach(ordered) { offer in offerRow(offer) }
+                        if let disclosure = ordered.first(where: { $0.productID == selected })?.disclosure {
+                            Text(disclosure)
+                                .font(.system(size: 13)).foregroundStyle(AppTheme.textSecondary).padding(.top, 8)
+                        }
+                        Button { buy() } label: {
+                            Text(buying ? "Working…" : cta)
+                                .font(.system(size: 18, weight: .bold)).foregroundStyle(.white)
+                                .frame(maxWidth: .infinity).padding(.vertical, 16)
+                                .background(AppTheme.accent, in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(buying || store.offers.isEmpty && !store.isLoading)
+                    } else {
+                        Text("Your Lifetime Pass is active.")
+                            .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white).padding(.vertical, 8)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(buying || store.offers.isEmpty && !store.isLoading)
+                    Text("Premium Filters apply only to cores that use the host shader chain.")
+                        .font(.system(size: 12)).foregroundStyle(AppTheme.textSecondary)
+                        .multilineTextAlignment(.center)
                     HStack(spacing: 8) {
                         Link("Terms of Service", destination: URL(string: "https://gagaemu.app/terms")!)
                         Text("|").foregroundStyle(AppTheme.textTertiary)
@@ -46,6 +57,9 @@ struct MembershipPaywallView: View {
         }
         .background(AppTheme.background.ignoresSafeArea())
         .task { await store.refresh() }
+        .offerCodeRedemption(isPresented: $showRedeem) { _ in
+            Task { await store.refresh() }
+        }
     }
 
     private var header: some View {
@@ -60,7 +74,7 @@ struct MembershipPaywallView: View {
                     }
                     .buttonStyle(.plain).accessibilityLabel("Close")
                     Spacer()
-                    Button("Redeem Offer") {}.buttonStyle(.plain)
+                    Button("Redeem Offer") { showRedeem = true }.buttonStyle(.plain)
                     Button("Restore Purchases") { Task { await store.restore() } }.buttonStyle(.plain)
                 }
                 .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).padding(.horizontal, 16)
@@ -142,8 +156,8 @@ struct MembershipPaywallView: View {
 
     /// Shown before StoreKit answers so the layout never flashes empty.
     static let placeholders: [StoreKitManager.Offer] = [
-        .init(productID: .annual, displayPrice: "—", price: 0, periodSuffix: "/year", badge: "50% Off", subtitle: nil),
-        .init(productID: .monthly, displayPrice: "—", price: 0, periodSuffix: "/month", badge: "Introductory Offer", subtitle: nil),
-        .init(productID: .lifetime, displayPrice: "—", price: 0, periodSuffix: "", badge: "Best Value", subtitle: nil)
+        .init(productID: .annual, displayPrice: "—", price: 0, periodSuffix: "/year", intro: nil, subtitle: nil),
+        .init(productID: .monthly, displayPrice: "—", price: 0, periodSuffix: "/month", intro: nil, subtitle: nil),
+        .init(productID: .lifetime, displayPrice: "—", price: 0, periodSuffix: "", intro: nil, subtitle: nil)
     ]
 }

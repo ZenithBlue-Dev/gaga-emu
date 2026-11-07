@@ -276,6 +276,15 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertNil(StateMigration.migrated(reloaded))
     }
 
+    func testStateMigrationResetsRemovedShaders() throws {
+        var legacy = try JSONDecoder().decode(AppState.Snapshot.self, from: Data(legacyStateJSON.utf8))
+        legacy.shaderID = "anime4k"
+        legacy.games[2].shaderID = "crt-royale"
+        let migrated = try XCTUnwrap(StateMigration.migrated(legacy))
+        XCTAssertEqual(migrated.shaderID, "original")
+        XCTAssertEqual(migrated.games.map(\.shaderID), ["crt-v1", "original", "original"])
+    }
+
     func testStateMigrationKeepsCurrentAndUnknownIDs() {
         XCTAssertEqual(StateMigration.coreID("mgba"), "mgba")
         XCTAssertEqual(StateMigration.coreID("org.example.future"), "org.example.future")
@@ -385,6 +394,42 @@ final class GagaEmuTests: XCTestCase {
         // Frame 2: Turbo cycles on again
         let outFrame2 = triggerPro.process(rawInput, frame: 2)
         XCTAssertEqual(outFrame2.buttons & GAGA_BTN_SOUTH.rawValue, GAGA_BTN_SOUTH.rawValue)
+    }
+
+    // MARK: - Premium Spec Tests (docs/06 section 4)
+
+    @MainActor
+    func testPremiumListMatchesImplementedShaders() {
+        XCTAssertEqual(StoreKitManager.premiumShaderIDs, ["geom-crt", "geom-crt-border"])
+        XCTAssertFalse(ShaderCatalog.builtIn.contains { $0.id == "anime4k" })
+        let premium = Set(ShaderCatalog.builtIn.filter(\.premium).map(\.id))
+        XCTAssertEqual(premium, StoreKitManager.premiumShaderIDs)
+    }
+
+    @MainActor
+    func testOfferBadgesAndDisclosureMatchTheProduct() {
+        XCTAssertNil(StoreKitManager.badge(for: .annual, intro: nil))
+        XCTAssertNil(StoreKitManager.badge(for: .monthly, intro: nil))
+        XCTAssertEqual(StoreKitManager.badge(for: .monthly, intro: .paid), "Introductory Offer")
+        XCTAssertEqual(StoreKitManager.badge(for: .annual, intro: .freeTrial), "Free Trial")
+        XCTAssertEqual(StoreKitManager.badge(for: .lifetime, intro: nil), "Best Value")
+
+        XCTAssertEqual(StoreKitManager.disclosure(for: .monthly, intro: nil), "Cancel anytime")
+        XCTAssertEqual(StoreKitManager.disclosure(for: .annual, intro: .freeTrial), "No charges during trial period. Cancel anytime")
+        XCTAssertNil(StoreKitManager.disclosure(for: .lifetime, intro: nil))
+    }
+
+    @MainActor
+    func testLifetimeOwnersSeeNoSubscribePrompts() {
+        XCTAssertTrue(StoreKitManager.Entitlements.free.showsSubscribePrompts)
+        XCTAssertTrue(StoreKitManager.Entitlements(premium: true).showsSubscribePrompts)
+        XCTAssertFalse(StoreKitManager.Entitlements(premium: true, lifetime: true).showsSubscribePrompts)
+    }
+
+    @MainActor
+    func testAutoSaveStateIsPremium() {
+        XCTAssertFalse(StoreKitManager.Entitlements.free.autoSaveState)
+        XCTAssertTrue(StoreKitManager.Entitlements(premium: true).autoSaveState)
     }
 
     // MARK: - StoreKit Entitlements Tests

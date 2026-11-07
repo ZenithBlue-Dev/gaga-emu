@@ -170,6 +170,9 @@ enum StateMigration {
         "org.libretro.picodrive", "org.libretro.snes9x", "org.libretro.fbneo"
     ]
 
+    /// Not implemented (milestone 3.4), so never offered. A saved choice falls back to Original.
+    static let removedShaderIDs: Set<String> = ["anime4k", "crt-royale"]
+
     /// nil means "no saved choice". Current and unknown IDs pass through untouched.
     static func coreID(_ saved: String) -> String? {
         removedCoreIDs.contains(saved) ? nil : legacyCoreIDs[saved] ?? saved
@@ -182,6 +185,14 @@ enum StateMigration {
         for index in next.games.indices {
             guard let saved = next.games[index].coreOverride, coreID(saved) != saved else { continue }
             next.games[index].coreOverride = coreID(saved)
+            changed = true
+        }
+        for index in next.games.indices where removedShaderIDs.contains(next.games[index].shaderID) {
+            next.games[index].shaderID = "original"
+            changed = true
+        }
+        if removedShaderIDs.contains(next.shaderID) {
+            next.shaderID = "original"
             changed = true
         }
         let cores = next.defaultCores.compactMapValues(coreID)
@@ -206,8 +217,7 @@ enum ShaderCatalog {
         .init(id: "crt-v2", name: "CRT v2", premium: false),
         .init(id: "geom-crt-border", name: "Geom CRT Border", premium: true),
         .init(id: "geom-crt", name: "Geom CRT", premium: true),
-        .init(id: "film", name: "Film", premium: false),
-        .init(id: "anime4k", name: "Anime4K / xBRZ", premium: true)
+        .init(id: "film", name: "Film", premium: false)
     ]
 }
 

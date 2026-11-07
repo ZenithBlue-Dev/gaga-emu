@@ -86,21 +86,12 @@ struct SettingsView: View {
     }
 
     private var membershipBanner: some View {
-        Button { showPaywall = true } label: {
+        Button { if store.entitlements.showsSubscribePrompts { showPaywall = true } } label: {
             VStack(spacing: 8) {
                 Text(store.entitlements.premium ? "GAGA-EMU Membership Active" : "Unlock GAGA-EMU membership")
                     .font(.system(size: 18, weight: .heavy)).foregroundStyle(.white)
                 Text("You are the protagonist of this story")
                     .font(.system(size: 14)).foregroundStyle(.white.opacity(0.85))
-                if !store.entitlements.premium {
-                    HStack(spacing: 6) {
-                        Image(systemName: "gift.fill")
-                        Text("50% Off").fontWeight(.bold)
-                    }
-                    .font(.system(size: 14)).foregroundStyle(.white)
-                    .padding(.horizontal, 14).padding(.vertical, 7)
-                    .background(.black, in: Capsule())
-                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 20)
