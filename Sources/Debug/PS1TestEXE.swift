@@ -358,14 +358,15 @@ enum PS1TestEXE {
 
     // MARK: - Assembler
 
-    private enum Reg: UInt32 {
+    enum Reg: UInt32 {
         case zero = 0, v0 = 2, v1 = 3, a0 = 4, a1 = 5, a2 = 6, a3 = 7, t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12
         case s0 = 16, s1, s2, s3, s4, s5, s6, s7, sp = 29, ra = 31
     }
 
     /// Just enough of a MIPS I assembler. Every branch and jump gets a nop in its delay slot, and every load a
-    /// nop after it, so no instruction depends on delay-slot rules.
-    private struct Assembler {
+    /// nop after it, so no instruction depends on delay-slot rules. N64TestROM uses it too: the VR4300 runs
+    /// these MIPS I encodings unchanged.
+    struct Assembler {
         let origin: UInt32
         private var words: [UInt32] = []
         private var labels: [String: Int] = [:]

@@ -126,6 +126,7 @@ final class BenchmarkRun {
         case "megadrive": (data, ext) = (MDTestROM.build(), "md")
         case "vktest": (data, ext) = (VkTestROM.build(), "gagavk")
         case "dos": (data, ext) = (DOSTestCOM.build(), "com")
+        case "n64": (data, ext) = (N64TestROM.build(), "z64")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
