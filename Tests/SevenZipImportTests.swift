@@ -159,6 +159,49 @@ final class SevenZipImportTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: archive.path))
     }
 
+    /// Device run 6's three imports, through the function every entry point shares (here as `-GagaImportROM`
+    /// does): a PSP 7z named .zip, a PS1 7z disc set with its track first as 7-Zip packs it, and a disksys.rom
+    /// whose System copy had been emptied.
+    @MainActor
+    func testDeviceRunSixImportsThroughTheSharedImport() throws {
+        let state = AppState()
+        let saved = state.games
+        let stem = "7zshared-\(UUID().uuidString)"
+        state.systemDirectory = dir.appendingPathComponent("System")
+        let romDisksys = state.romDirectory.appendingPathComponent("disksys.rom")
+        try XCTSkipIf(FileManager.default.fileExists(atPath: romDisksys.path), "a real disksys.rom is in ROMs")
+        defer {
+            cleanUp(state, saved, stem: stem)
+            try? FileManager.default.removeItem(at: romDisksys)
+        }
+
+        var iso = Data(count: 40960)
+        iso.replaceSubrange(32776..<32784, with: Data("PSP GAME".utf8))
+        let psp = try XCTUnwrap(try state.importDebugROM(at: write("\(stem)-psp.zip", SevenZipTestArchive.build([("\(stem).iso", iso)]))))
+        XCTAssertEqual(psp.platformID, "psp")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: psp.romPath)), iso)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: state.romDirectory.appendingPathComponent("\(stem)-psp.zip").path))
+        XCTAssertEqual(state.search, psp.title, "a Debug import puts its game on screen")
+        XCTAssertEqual(state.platformFilter, "psp")
+
+        var track = Data(count: 2352 * 20)
+        track.replaceSubrange((16 * 2352 + 32)..<(16 * 2352 + 43), with: Data("PLAYSTATION".utf8))
+        let cue = Data("FILE \"\(stem).bin\" BINARY\n  TRACK 01 MODE2/2352\n    INDEX 01 00:00:00\n".utf8)
+        let ps1 = try XCTUnwrap(try state.importDebugROM(at: write("\(stem)-ps1.7z", SevenZipTestArchive.build([("\(stem).bin", track), ("\(stem).cue", cue)]))))
+        XCTAssertEqual(ps1.platformID, "ps1")
+        XCTAssertEqual(URL(fileURLWithPath: ps1.romPath).lastPathComponent, "\(stem).cue")
+
+        let system = state.systemDirectory.appendingPathComponent("disksys.rom")
+        try FileManager.default.createDirectory(at: state.systemDirectory, withIntermediateDirectories: true)
+        try Data().write(to: system)
+        let bios = Data(repeating: 0x4C, count: 8 << 10)
+        XCTAssertNil(try state.importDebugROM(at: write("disksys.rom", bios)))
+        XCTAssertNil(state.lastImportNote)
+        XCTAssertEqual(try Data(contentsOf: system), bios, "the emptied System copy is replaced")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: romDisksys.path), "not left in ROMs")
+        XCTAssertNil(state.launchFailure)
+    }
+
     func testBIOSAndFirmwareNames() {
         XCTAssertEqual(BIOSManagerView.sizes["dsp1.data.rom"], [2048])
         XCTAssertEqual(BIOSManagerView.sizes["dsp1.program.rom"], [6144])

@@ -1014,10 +1014,22 @@ final class AppState: ObservableObject {
     /// A file uploaded again with the same bytes keeps its name, so it must not become a second shelf entry.
     /// A name is a path under the ROM folder, as "Game/Game.cue" for a disc set.
     func addUploads(_ names: [String]) {
-        for name in names where !games.contains(where: { ClipboardImporter.relativePath(URL(fileURLWithPath: $0.romPath), in: romDirectory) == name
-                                                          || (!name.contains("/") && URL(fileURLWithPath: $0.romPath).lastPathComponent == name) }) {
-            importROM(at: romDirectory.appendingPathComponent(name))
+        for name in names { importArrived(romDirectory.appendingPathComponent(name)) }
+    }
+
+    /// Every import ends here: Files, drop, clipboard, download, WiFi Transfer and the Debug launch arguments.
+    /// `url` is a file already placed in the ROM folder (`ClipboardImporter.persist` or `download`, or the WiFi
+    /// server). A file a game already uses is that game, not a second entry. The note says why no game was
+    /// stored or an older file was kept, as `lastImportNote`.
+    @discardableResult
+    func importArrived(_ url: URL) -> (game: GameItem?, note: String?) {
+        let name = ClipboardImporter.relativePath(url, in: romDirectory)
+        if let existing = games.first(where: { ClipboardImporter.relativePath(URL(fileURLWithPath: $0.romPath), in: romDirectory) == name
+                                               || (!name.contains("/") && URL(fileURLWithPath: $0.romPath).lastPathComponent == name) }) {
+            return (existing, nil)
         }
+        let game = importROM(at: url)
+        return (game, lastImportNote)
     }
 
     var totalPlayTime: TimeInterval { games.reduce(0) { $0 + $1.playTime } }
@@ -1147,9 +1159,17 @@ final class AppState: ObservableObject {
         }
     }
 
-    func importDebugROM(at url: URL) throws {
-        let dest = try ClipboardImporter.persist(.file(url), into: romDirectory)
-        addUploads([ClipboardImporter.relativePath(dest, in: romDirectory)])
+    /// As Files import: copied in, then `importArrived`. A note is shown as an Import failure, and the game is
+    /// filtered onto the screen, since the Library builds only the shelves in view and a walk looks for it there.
+    @discardableResult
+    func importDebugROM(at url: URL) throws -> GameItem? {
+        let (game, note) = importArrived(try ClipboardImporter.persist(.file(url), into: romDirectory))
+        if let note { launchFailure = LaunchFailure(title: "Import", message: note) }
+        if let game {
+            platformFilter = game.platformID
+            search = game.title
+        }
+        return game
     }
 
     /// `-GagaImportTestROM <core-id>`: adds that core's generated test ROM (the benchmark's) to the Library,
@@ -1161,9 +1181,7 @@ final class AppState: ObservableObject {
                 throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
             }
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("GagaTestROM", isDirectory: true)
-            let name = try BenchmarkRun.writeTestROM(platformID: platformID, to: folder).lastPathComponent
-            try importDebugROM(at: folder.appendingPathComponent(name))
-            if let game = games.first(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }) {
+            if let game = try importDebugROM(at: BenchmarkRun.writeTestROM(platformID: platformID, to: folder)) {
                 update(game.id) { $0.coreOverride = coreID }
             }
         } catch {
@@ -1283,6 +1301,11 @@ final class AppState: ObservableObject {
         if platformID == nil, inROMFolder, let size, BIOSManagerView.sizes[fileName]?.contains(size) == true {
             try? FileManager.default.createDirectory(at: systemDirectory, withIntermediateDirectories: true)
             let dest = systemDirectory.appendingPathComponent(fileName)
+            // A copy at a size no core reads (an emptied file: device run 6's disksys.rom) is damaged, not kept.
+            let keptSize = (try? FileManager.default.attributesOfItem(atPath: dest.path))?[.size] as? Int
+            if let keptSize, BIOSManagerView.sizes[fileName]?.contains(keptSize) != true {
+                try? FileManager.default.removeItem(at: dest)
+            }
             if !FileManager.default.fileExists(atPath: dest.path) {
                 try? FileManager.default.moveItem(at: url, to: dest)
             } else if ClipboardImporter.sameContents(url, dest) {

@@ -80,11 +80,11 @@ struct AddView: View {
     /// Returns why import stored no game or kept an older file, for the notice.
     @discardableResult
     private func add(_ dest: URL) -> String? {
-        let game = state.importROM(at: dest)
+        let (game, note) = state.importArrived(dest)
         if let game, game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath)) != nil {
             unplaced.append(game)
         }
-        return state.lastImportNote
+        return note
     }
 
     private var dropTarget: some View {
@@ -193,8 +193,11 @@ struct AddView: View {
             provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
                 guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 Task { @MainActor in
-                    if let dest = try? ClipboardImporter.persist(.file(url), into: state.romDirectory) {
+                    do {
+                        let dest = try ClipboardImporter.persist(.file(url), into: state.romDirectory)
                         notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
+                    } catch {
+                        notice = error.localizedDescription
                     }
                 }
             }
