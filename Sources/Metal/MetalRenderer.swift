@@ -107,6 +107,24 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
     private var startTime: CFTimeInterval = CACurrentMediaTime()
     private let lock = NSLock()
 
+    /// Light-mode ink in both appearances: the picture needs a dark surround.
+    static let letterboxColor = MTLClearColor(red: Double(Palette.ink.light >> 16 & 0xFF) / 255,
+                                              green: Double(Palette.ink.light >> 8 & 0xFF) / 255,
+                                              blue: Double(Palette.ink.light & 0xFF) / 255, alpha: 1)
+
+    /// Aspect fit, centred. The clear colour shows in the rest.
+    /// shortcut: treats core pixels as square, add a display aspect to the frame descriptor when a core needs it (SNES 8:7).
+    static func fittedViewport(contentWidth: Int, contentHeight: Int, drawable: CGSize) -> MTLViewport {
+        guard contentWidth > 0, contentHeight > 0, drawable.width > 0, drawable.height > 0 else {
+            return MTLViewport(originX: 0, originY: 0, width: Double(drawable.width), height: Double(drawable.height), znear: 0, zfar: 1)
+        }
+        let scale = min(drawable.width / CGFloat(contentWidth), drawable.height / CGFloat(contentHeight))
+        let width = (CGFloat(contentWidth) * scale).rounded()
+        let height = (CGFloat(contentHeight) * scale).rounded()
+        return MTLViewport(originX: Double((drawable.width - width) / 2), originY: Double((drawable.height - height) / 2),
+                           width: Double(width), height: Double(height), znear: 0, zfar: 1)
+    }
+
     public init?(device: MTLDevice) {
         self.device = device
         guard let queue = device.makeCommandQueue() else { return nil }
@@ -204,9 +222,9 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         var currentUniforms = self.uniforms
         lock.unlock()
 
+        rpd.colorAttachments[0].clearColor = Self.letterboxColor
+
         guard let targetTexture = currentTexture else {
-            // No texture to render, clear to dark OLED
-            rpd.colorAttachments[0].clearColor = MTLClearColor(red: 0.043, green: 0.047, blue: 0.063, alpha: 1.0)
             if let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: rpd) {
                 encoder.endEncoding()
             }
@@ -238,6 +256,8 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
             encoder.setFragmentBuffer(uBuf, offset: 0, index: 0)
         }
 
+        encoder.setViewport(Self.fittedViewport(contentWidth: targetTexture.width, contentHeight: targetTexture.height,
+                                                drawable: view.drawableSize))
         encoder.setRenderPipelineState(pipelineState)
         encoder.setFragmentTexture(targetTexture, index: 0)
 

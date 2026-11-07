@@ -145,7 +145,7 @@ final class GagaEmuTests: XCTestCase {
 
     // MARK: - Metal Texture Ring Tests
 
-    func testMetalTextureRingAlignment() {
+    func testMetalTextureRingAlignment() throws {
         guard let device = MTLCreateSystemDefaultDevice() else { return }
 
         let ring = MetalTextureRing(device: device, width: 256, height: 224, pixelFormat: .rgba8Unorm)
@@ -156,8 +156,7 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(ring.bytesPerRow % device.minimumLinearTextureAlignment(for: .rgba8Unorm), 0)
         XCTAssertGreaterThanOrEqual(ring.bytesPerRow, 256 * 4)
 
-        let (ptr, texture, idx) = ring.acquireWritableBuffer()
-        XCTAssertNotNil(ptr)
+        let (_, texture, idx) = try XCTUnwrap(ring.acquireWritableBuffer())
         XCTAssertEqual(texture.width, 256)
         XCTAssertEqual(texture.height, 224)
         XCTAssertTrue(idx >= 0 && idx < 3)
@@ -179,7 +178,9 @@ final class GagaEmuTests: XCTestCase {
         first.waitUntilCompleted()
 
         // The slot came back: all three acquire without blocking.
-        for _ in 0..<3 { _ = ring.acquireWritableBuffer() }
+        for _ in 0..<3 { XCTAssertNotNil(ring.acquireWritableBuffer()) }
+        // All three out: the frame drops instead of blocking emulation.
+        XCTAssertNil(ring.acquireWritableBuffer())
         for _ in 0..<3 { XCTAssertTrue(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer()))) }
         XCTAssertFalse(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer())))
     }

@@ -21,6 +21,14 @@ public final class MetalTextureRing {
     public private(set) var bufferSize: Int
 
     private let lock = NSLock()
+    private var framesWritten = 0
+    private var framesDropped = 0
+
+    public var stats: (written: Int, dropped: Int, width: Int, height: Int, pixelFormat: MTLPixelFormat) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (framesWritten, framesDropped, width, height, pixelFormat)
+    }
 
     public init(device: MTLDevice, width: Int, height: Int, pixelFormat: MTLPixelFormat = .rgba8Unorm) {
         self.device = device
@@ -44,11 +52,24 @@ public final class MetalTextureRing {
         lock.unlock()
     }
 
+    /// The table in docs/05 section 2.1. Nil means the format is not one the bridge defines.
+    public static func metalFormat(for format: GagaPixelFormat) -> MTLPixelFormat? {
+        switch format {
+        case GAGA_PIXEL_FORMAT_RGB565: return .b5g6r5Unorm
+        case GAGA_PIXEL_FORMAT_XRGB8888: return .bgra8Unorm
+        case GAGA_PIXEL_FORMAT_RGBA8888: return .rgba8Unorm
+        default: return nil
+        }
+    }
+
+    static func bytesPerPixel(_ pixelFormat: MTLPixelFormat) -> Int {
+        pixelFormat == .b5g6r5Unorm ? 2 : 4
+    }
+
     /// The alignment comes from the device and must not be hard-coded (docs/05 section 2.1).
     static func alignedBytesPerRow(device: MTLDevice, width: Int, pixelFormat: MTLPixelFormat) -> Int {
-        let bytesPerPixel = pixelFormat == .b5g6r5Unorm ? 2 : 4
         let alignment = device.minimumLinearTextureAlignment(for: pixelFormat)
-        return ((width * bytesPerPixel + alignment - 1) / alignment) * alignment
+        return ((width * bytesPerPixel(pixelFormat) + alignment - 1) / alignment) * alignment
     }
 
     private func allocateBuffers() {
@@ -107,10 +128,12 @@ public final class MetalTextureRing {
         writeIndex = 0
     }
 
-    /// Acquires direct raw CPU pointer for the core interpreter to write into.
-    /// Thread blocks if all 3 buffers are currently in flight on the GPU.
-    public func acquireWritableBuffer() -> (pointer: UnsafeMutableRawPointer, texture: MTLTexture, index: Int) {
-        inflightSemaphore.wait()
+    /// Acquires a slot's CPU pointer, or returns nil when all three are unreleased. It never blocks: a
+    /// paused or slow view must not stall emulation or audio, and a pause or teardown waits for the
+    /// frame in flight on the main thread, which is the thread whose draws release slots.
+    /// shortcut: a repeat draw holds no token, so a GPU stall longer than two frames can tear one frame, pair tokens with slots if it shows.
+    public func acquireWritableBuffer() -> (pointer: UnsafeMutableRawPointer, texture: MTLTexture, index: Int)? {
+        guard inflightSemaphore.wait(timeout: .now()) == .success else { return nil }
 
         lock.lock()
         inFlightCount += 1
@@ -125,15 +148,34 @@ public final class MetalTextureRing {
     }
 
     /// Writes raw pixel data with pitch into the next available shared buffer.
-    public func writeFrame(pixelData: UnsafeRawPointer, width: Int, height: Int, pitch: Int, pixelFormat: MTLPixelFormat) -> MTLTexture {
+    /// Returns nil, dropping the frame, when no slot is free. One writer thread only.
+    public func writeFrame(pixelData: UnsafeRawPointer, width: Int, height: Int, pitch: Int, pixelFormat: MTLPixelFormat) -> MTLTexture? {
+        #if targetEnvironment(simulator)
+        // The simulator's GPU has no 16-bit formats, and asking for one aborts. Expand to BGRA there.
+        let expand565 = pixelFormat == .b5g6r5Unorm
+        reconfigureIfNeeded(width: width, height: height, pixelFormat: expand565 ? .bgra8Unorm : pixelFormat)
+        #else
         reconfigureIfNeeded(width: width, height: height, pixelFormat: pixelFormat)
+        #endif
 
-        let (dstPtr, texture, _) = acquireWritableBuffer()
-        let bytesToCopyPerRow = min(pitch, bytesPerRow)
+        guard let (dstPtr, texture, _) = acquireWritableBuffer() else {
+            lock.lock()
+            framesDropped += 1
+            lock.unlock()
+            return nil
+        }
+        // A pitch wider than the row is padding in the core's buffer, which the slot has no room for.
+        let bytesToCopyPerRow = min(pitch, width * Self.bytesPerPixel(pixelFormat))
 
         for row in 0..<height {
             let srcRow = pixelData.advanced(by: row * pitch)
             let dstRow = dstPtr.advanced(by: row * bytesPerRow)
+            #if targetEnvironment(simulator)
+            if expand565 {
+                Self.expand565(srcRow, to: dstRow, pixels: bytesToCopyPerRow / 2)
+                continue
+            }
+            #endif
             memcpy(dstRow, srcRow, bytesToCopyPerRow)
         }
 
@@ -142,8 +184,23 @@ public final class MetalTextureRing {
         texture.replace(region: region, mipmapLevel: 0, withBytes: dstPtr, bytesPerRow: bytesPerRow)
         #endif
 
+        lock.lock()
+        framesWritten += 1
+        lock.unlock()
         return texture
     }
+
+    #if targetEnvironment(simulator)
+    static func expand565(_ source: UnsafeRawPointer, to destination: UnsafeMutableRawPointer, pixels: Int) {
+        let input = source.assumingMemoryBound(to: UInt16.self)
+        let output = destination.assumingMemoryBound(to: UInt32.self)
+        for index in 0..<pixels {
+            let pixel = UInt32(input[index])
+            let r = pixel >> 11 & 0x1F, g = pixel >> 5 & 0x3F, b = pixel & 0x1F
+            output[index] = 0xFF00_0000 | (r << 3 | r >> 2) << 16 | (g << 2 | g >> 4) << 8 | (b << 3 | b >> 2)
+        }
+    }
+    #endif
 
     /// Called by the Metal render submitter. Each acquire pairs with exactly one completion signal,
     /// so redrawing the same frame attaches nothing and returns false.
