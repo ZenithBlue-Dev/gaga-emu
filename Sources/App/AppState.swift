@@ -114,12 +114,6 @@ enum CoreCatalog {
         ]),
         .init(id: "dos", name: "MS-DOS", manufacturer: "Vintage", cores: [
             .init(id: "dosbox_pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)
-        ]),
-        .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
-            .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
-        ]),
-        .init(id: "symbian", name: "Symbian", manufacturer: "Vintage", cores: [
-            .init(id: "eka2l1", name: "EKA2L1", note: "Interpreter", recommended: true)
         ])
     ] + debugPlatforms
 
@@ -153,7 +147,7 @@ enum CoreCatalog {
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
-                       "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC"]
+                       "arcade": "ARC", "unknown": "ETC"]
         return special[id] ?? id.uppercased()
     }
 
@@ -410,14 +404,15 @@ enum StateMigration {
         "org.libretro.mupen64plus-next": "mupen64plus_next",
         "org.ppsspp.ppsspp": "ppsspp",
         "org.libretro.mame": "mame",
-        "org.libretro.dosbox-pure": "dosbox_pure",
-        "org.j2mejs": "j2mejs"
+        "org.libretro.dosbox-pure": "dosbox_pure"
     ]
 
     /// Cores removed by docs/03 section 6. A choice of one falls back to the platform default.
+    /// J2meJS and EKA2L1 failed their spikes (docs/07 6.4 and 6.6).
     static let removedCoreIDs: Set<String> = [
         "org.libretro.swanstation", "org.libretro.kronos", "org.libretro.genesis-plus-gx",
-        "org.libretro.picodrive", "org.libretro.snes9x", "org.libretro.fbneo"
+        "org.libretro.picodrive", "org.libretro.snes9x", "org.libretro.fbneo",
+        "org.j2mejs", "j2mejs", "eka2l1"
     ]
 
     /// crt-royale is GPL and never shipped (docs/05 section 5). A saved choice falls back to Original.

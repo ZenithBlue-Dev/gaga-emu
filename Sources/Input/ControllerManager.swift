@@ -80,7 +80,7 @@ public final class ControllerManager: ObservableObject {
         public static let r3: UInt32     = 1 << 15
     }
 
-    /// Keyboard defaults for computer cores (DOSBox, EKA2L1, J2meJS).
+    /// Keyboard defaults for computer cores (DOSBox).
     public struct KeyMap: Equatable, Sendable {
         public var bindings: [GCKeyCode: UInt32]
         public static let standard = KeyMap(bindings: [
