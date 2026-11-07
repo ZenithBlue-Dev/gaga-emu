@@ -412,7 +412,7 @@ enum CoreCatalog {
     /// Saturn: "SEGA SEGASATURN" opening the first sector. Dreamcast: "SEGA SEGAKATANA" opening it (IP.BIN).
     /// Mega-CD: "SEGADISCSYSTEM" or any other "SEGA" opening it. Any other ISO 9660 disc, and any .iso or
     /// .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry, a .toc through
-    /// its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it (a PC Engine CD when that says
+    /// its first FILE or DATAFILE that names a console, and a CloneCD .ccd through the .img beside it (a PC Engine CD when that says
     /// nothing). A .cue whose first FILE names no console and whose first track is audio is a PC Engine CD: those
     /// open with a warning track, and PS1, Mega-CD and DOS discs with data. A .chd
     /// is placed by `chdPlatformID(_:)`.
@@ -421,19 +421,26 @@ enum CoreCatalog {
         if ext == "chd" { return chdPlatformID(url) }
         if ext == "ccd" {
             // The .img holds raw sectors, which the ISO 9660 rule would call DOS; DOSBox Pure cannot open a .ccd.
-            // Only the PC Engine cores and Beetle Saturn open a .ccd, and a Saturn disc always names itself, so
-            // anything else, a missing .img included, is a PC Engine CD.
-            let id = depth < 2 ? discPlatformID(url.deletingPathExtension().appendingPathExtension("img"), depth: 1) : nil
+            // PS1, Saturn and Dreamcast discs name themselves in the .img's sector 16 or IP.BIN, so those are read
+            // first; anything else, a missing .img included, is a PC Engine CD. The extension may be upper case.
+            let sibling = ["img", "IMG", "Img"].map { url.deletingPathExtension().appendingPathExtension($0) }
+                .first { FileManager.default.fileExists(atPath: $0.path) }
+            let id = depth < 2 ? sibling.flatMap { discPlatformID($0, depth: 1) } : nil
             return id == nil || id == "dos" ? "pce" : id
         }
         if ext == "toc" {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-            // FILE "name" 0 or DATAFILE "name", in cdrdao's format.
-            let line = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
-                .first { $0.uppercased().hasPrefix("FILE ") || $0.uppercased().hasPrefix("DATAFILE ") }
-            guard let name = line?.split(separator: "\"").dropFirst().first.map(String.init) else { return nil }
-            let id = discPlatformID(url.deletingLastPathComponent().appendingPathComponent(name), depth: 1)
-            return id == "dos" ? nil : id
+            // FILE "name" 0 or DATAFILE "name", in cdrdao's format. The first file that names a console wins, so
+            // an audio track ahead of the data track does not hide it.
+            let names = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { $0.uppercased().hasPrefix("FILE ") || $0.uppercased().hasPrefix("DATAFILE ") }
+                .compactMap { $0.split(separator: "\"").dropFirst().first.map(String.init) }
+            for name in names {
+                if let id = discPlatformID(url.deletingLastPathComponent().appendingPathComponent(name), depth: 1), id != "dos" {
+                    return id
+                }
+            }
+            return nil
         }
         if ext == "cue" || ext == "m3u" {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
