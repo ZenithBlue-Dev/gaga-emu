@@ -52,11 +52,16 @@ final class PpssppCoreTests: GagaTestCase {
         return (core, capture)
     }
 
-    /// Loads and runs until the program has drawn its bands. PPSSPP boots over several frames.
+    /// Loads and runs until the program has drawn its bands. PPSSPP boots on a loader thread (PSP_InitStart),
+    /// and a frame stepped before it finishes presents nothing. Stepped with no pacing, a fixed 120 frames could
+    /// all fall inside the boot (device runs 5 and 7, "no frame presented"), so the count starts at the first
+    /// presented frame.
     private func loaded() async throws -> (GagaCoreWrapper, Capture) {
         let (core, capture) = try makeCore()
         try await core.loadROM(path: elfPath)
         XCTAssertTrue(core.attachMetalLayer(layer, width: 960, height: 544, scale: 2))
+        let deadline = Date().addingTimeInterval(20)
+        while capture.frames == 0 && Date() < deadline { run(core, frames: 1) }
         run(core, frames: 120)
         return (core, capture)
     }
