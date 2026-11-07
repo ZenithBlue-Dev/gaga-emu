@@ -448,6 +448,9 @@ GagaInstance* gaga_lr_create(const char* system_dir, const char* save_dir) {
     return (GagaInstance*)a;
 }
 
+static void lr_cheat_reset(void);
+static void lr_apply_cheats(LrInstance* a);
+
 void gaga_lr_destroy(GagaInstance* inst) {
     LrInstance* a = (LrInstance*)inst;
     if (!a) return;
@@ -459,7 +462,7 @@ void gaga_lr_destroy(GagaInstance* inst) {
     if (a->abandoned) return;
     if (a->loaded) {
         lr_flush(a);
-        retro_cheat_reset();
+        lr_cheat_reset();
 #ifdef GAGA_LIBRETRO_VULKAN
         lr_vk_destroy_context(); // libretro order: context_destroy, unload, then the device.
         retro_unload_game();
@@ -595,7 +598,9 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
 
 void gaga_lr_reset(GagaInstance* inst) {
     LrInstance* a = (LrInstance*)inst;
-    if (a && a->loaded) retro_reset();
+    if (!a || !a->loaded) return;
+    retro_reset();
+    if (a->cheat_count > 0) lr_apply_cheats(a); // FBNeo reloads its cheat file on reset, dropping what was on.
 }
 
 // The host's timer sets the pace, and fast-forward calls this several times in a tick. retro_run runs
@@ -708,8 +713,13 @@ bool gaga_lr_load_state(GagaInstance* inst, const void* buffer, size_t size, cha
 
 // libretro has no remove: the only way to take a code back is to reset and set the rest again.
 // Each line gets its own index, so a core that picks a format per index can mix formats in one cheat.
+static void lr_cheat_reset(void) {
+    if (gaga_libretro_core.cheat_reset) gaga_libretro_core.cheat_reset();
+    else retro_cheat_reset();
+}
+
 static void lr_apply_cheats(LrInstance* a) {
-    retro_cheat_reset();
+    lr_cheat_reset();
     unsigned index = 0;
     for (size_t i = 0; i < a->cheat_count; ++i) {
         if (!a->cheats[i].enabled) continue;
@@ -722,7 +732,8 @@ static void lr_apply_cheats(LrInstance* a) {
         char* cursor = NULL;
         for (char* line = copy ? strtok_r(copy, "\r\n", &cursor) : NULL; line; line = strtok_r(NULL, "\r\n", &cursor)) {
             if (gaga_libretro_core.unapply_cheats) gaga_libretro_core.unapply_cheats();
-            retro_cheat_set(index++, true, line);
+            if (gaga_libretro_core.cheat_set) gaga_libretro_core.cheat_set(index++, true, line);
+            else retro_cheat_set(index++, true, line);
         }
         free(copy);
     }
