@@ -13,6 +13,8 @@ struct GameItem: Identifiable, Codable, Equatable {
     var lastPlayed: Date?
     var isFavorite: Bool
     var shaderID: String
+    /// A touch layout for this game only. Nil follows the platform's choice.
+    var skinID: String? = nil
 
     /// Resolution order: game override, platform default, catalog recommendation.
     func resolvedCoreID(defaults: [String: String]) -> String {
@@ -193,8 +195,8 @@ enum StateMigration {
         "org.libretro.picodrive", "org.libretro.snes9x", "org.libretro.fbneo"
     ]
 
-    /// Not implemented (milestone 3.4), so never offered. A saved choice falls back to Original.
-    static let removedShaderIDs: Set<String> = ["anime4k", "crt-royale"]
+    /// crt-royale is GPL and never shipped (docs/05 section 5). A saved choice falls back to Original.
+    static let removedShaderIDs: Set<String> = ["crt-royale"]
 
     /// nil means "no saved choice". Current and unknown IDs pass through untouched.
     static func coreID(_ saved: String) -> String? {
@@ -242,6 +244,7 @@ enum ShaderCatalog {
         let id: String
         let name: String
         let premium: Bool
+        var credit: String? = nil
     }
     static let builtIn: [Shader] = [
         .init(id: "original", name: "Original", premium: false),
@@ -250,8 +253,17 @@ enum ShaderCatalog {
         .init(id: "crt-v2", name: "CRT v2", premium: false),
         .init(id: "geom-crt-border", name: "Geom CRT Border", premium: true),
         .init(id: "geom-crt", name: "Geom CRT", premium: true),
-        .init(id: "film", name: "Film", premium: false)
+        .init(id: "film", name: "Film", premium: false),
+        .init(id: "crt-deluxe", name: "CRT Deluxe", premium: true),
+        .init(id: "anime4k", name: "Anime4K", premium: true)
     ]
+    /// Offline conversions that may ship because each source file says so (docs/05 section 5).
+    static let community: [Shader] = [
+        .init(id: "lottes-crt", name: "Lottes CRT", premium: false, credit: "Timothy Lottes, public domain"),
+        .init(id: "lcd3x", name: "LCD3x", premium: false, credit: "Gigaherz, public domain"),
+        .init(id: "sharp-bilinear", name: "Sharp Bilinear", premium: false, credit: "Themaister, public domain")
+    ]
+    static var all: [Shader] { builtIn + community }
 }
 
 /// Saved value only. The app follows the system appearance; this keeps old state.json files decoding.
@@ -296,7 +308,19 @@ final class AppState: ObservableObject {
     @Published var appearance: AppearanceMode { didSet { save() } }
     @Published var quickStart: Bool { didSet { save() } }
     @Published var autoSaveStates: Bool { didSet { save() } }
-    @Published var coverScraping: Bool { didSet { save() } }
+    /// Off until the player turns it on. Sends game titles to `LibretroThumbnails.host`, and nothing else does.
+    @Published var coverArt: Bool {
+        didSet {
+            save()
+            refreshCovers()
+        }
+    }
+    /// Bumped when a cover lands, so covers on screen redraw.
+    @Published private(set) var coverRevision = 0
+    /// Saved per preset ID or imported filter ID. A preset with no entry uses the defaults.
+    @Published var shaderParameters: [String: ShaderParameterValues] { didSet { save() } }
+    /// Touch layout per platform ID. A platform with no entry uses the standard layout.
+    @Published var platformSkins: [String: String] { didSet { save() } }
     @Published var airPlayFullscreen: Bool { didSet { save() } }
     @Published var iCloudSync: Bool { didSet { save() } }
     @Published var autoFullScreen: Bool { didSet { save() } }
@@ -314,6 +338,9 @@ final class AppState: ObservableObject {
     let skins = TouchSkinEngine()
     let store = StoreKitManager()
     let wifi: WiFiTransferServer
+    let filters: ImportedFilterStore
+    var coverFetcher = CoverArtFetcher()
+    private var coverTask: Task<Void, Never>?
 
     var romDirectory: URL
     private let storeURL: URL
@@ -327,7 +354,11 @@ final class AppState: ObservableObject {
         var appearance: AppearanceMode
         var quickStart: Bool
         var autoSaveStates: Bool
-        var coverScraping: Bool
+        /// Optional, like the two below, so an older state.json still decodes. Older files carry
+        /// `coverScraping` instead, which is ignored on purpose: it defaulted to on, and this must not.
+        var coverArt: Bool?
+        var shaderParameters: [String: ShaderParameterValues]?
+        var platformSkins: [String: String]?
         var airPlayFullscreen: Bool
         var iCloudSync: Bool
         var autoFullScreen: Bool
@@ -347,6 +378,7 @@ final class AppState: ObservableObject {
         romDirectory = root.appendingPathComponent("ROMs", isDirectory: true)
         storeURL = root.appendingPathComponent("state.json")
         wifi = WiFiTransferServer(romDirectory: romDirectory)
+        filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
         let stored = (try? Data(contentsOf: storeURL)).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) }
         let migrated = stored.flatMap(StateMigration.migrated)
         let snapshot = migrated ?? stored
@@ -358,7 +390,9 @@ final class AppState: ObservableObject {
         appearance = snapshot?.appearance ?? .dark
         quickStart = snapshot?.quickStart ?? false
         autoSaveStates = snapshot?.autoSaveStates ?? false
-        coverScraping = snapshot?.coverScraping ?? true
+        coverArt = snapshot?.coverArt ?? false
+        shaderParameters = snapshot?.shaderParameters ?? [:]
+        platformSkins = snapshot?.platformSkins ?? [:]
         airPlayFullscreen = snapshot?.airPlayFullscreen ?? false
         iCloudSync = snapshot?.iCloudSync ?? false
         autoFullScreen = snapshot?.autoFullScreen ?? true
@@ -435,6 +469,7 @@ final class AppState: ObservableObject {
             do {
                 let next = try makeSession(for: game)
                 try await next.prepare()
+                await applyImportedFilter(to: next)
                 if let slot {
                     do {
                         try next.loadState(slot)
@@ -497,6 +532,8 @@ final class AppState: ObservableObject {
         guard let romPath = game.resolvedROMPath(romDirectory: romDirectory) else {
             throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
         }
+        skins.loadBuiltIn(TouchSkinEngine.layoutID(game: game.skinID, platform: platformSkins[game.platformID],
+                                                   platformID: game.platformID))
         skins.hapticsEnabled = rumble
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
@@ -505,7 +542,43 @@ final class AppState: ObservableObject {
                                       respectSilentMode: respectSilentMode,
                                       entitlements: { [store] in store.entitlements })
         session.autoSaveEnabled = { [weak self] in self?.autoSaveEnabled ?? false }
+        session.renderer.apply(shaderParameters[shader] ?? ShaderParameterValues())
         return session
+    }
+
+    /// A filter that no longer builds is not a failed launch: Original runs, and the player is told.
+    private func applyImportedFilter(to session: GameSession) async {
+        let id = session.game.shaderID
+        guard ImportedFilter.isImported(id) else { return }
+        let renderer = session.renderer
+        do {
+            renderer.setImported(try await filters.pipeline(for: id, device: renderer.device))
+            renderer.onImportedFailure = { [weak session] in
+                session?.notice = "The imported filter failed on the GPU. Original is on."
+            }
+        } catch {
+            session.notice = "The imported filter did not load, so Original is on.\n\n\(error.localizedDescription)"
+        }
+    }
+
+    // MARK: - Cover art
+
+    /// The only way covers are fetched, so the toggle alone decides whether a title leaves the device.
+    func refreshCovers() {
+        coverTask?.cancel()
+        guard coverArt else { return }
+        let games = self.games
+        let fetcher = coverFetcher
+        coverTask = Task { [weak self] in
+            await fetcher.fetchMissing(games: games, isEnabled: { [weak self] in self?.coverArt ?? false }) {
+                self?.coverRevision += 1
+            }
+        }
+    }
+
+    /// Nil while the toggle is off, or until a cover has landed.
+    func coverURL(for game: GameItem) -> URL? {
+        coverArt ? coverFetcher.cachedCover(for: game) : nil
     }
 
     private func recordStart(of game: GameItem) {
@@ -550,6 +623,7 @@ final class AppState: ObservableObject {
                             isFavorite: false, shaderID: shaderID)
         games.append(item)
         save()
+        refreshCovers()
         return item
     }
 
@@ -575,7 +649,8 @@ final class AppState: ObservableObject {
     private func save() {
         let snapshot = Snapshot(games: games, history: history, nickname: nickname, joined: joined,
                                 avatarIndex: avatarIndex, appearance: appearance, quickStart: quickStart,
-                                autoSaveStates: autoSaveStates, coverScraping: coverScraping,
+                                autoSaveStates: autoSaveStates, coverArt: coverArt,
+                                shaderParameters: shaderParameters, platformSkins: platformSkins,
                                 airPlayFullscreen: airPlayFullscreen, iCloudSync: iCloudSync,
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
                                 rumble: rumble, skinSoundEffects: skinSoundEffects, language: language,

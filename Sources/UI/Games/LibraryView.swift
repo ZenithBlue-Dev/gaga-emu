@@ -13,12 +13,13 @@ struct LibraryView: View {
     @ScaledMetric(relativeTo: .footnote) private var tileScale: CGFloat = 1
 
     private enum GameSheet: Identifiable {
-        case core(GameItem), saves(GameItem), edit(GameItem)
+        case core(GameItem), saves(GameItem), edit(GameItem), skin(GameItem)
         var id: String {
             switch self {
             case .core(let game): return "core\(game.id)"
             case .saves(let game): return "saves\(game.id)"
             case .edit(let game): return "edit\(game.id)"
+            case .skin(let game): return "skin\(game.id)"
             }
         }
     }
@@ -47,6 +48,7 @@ struct LibraryView: View {
             case .saves(let game):
                 ManageSavesSheet(title: game.title, store: state.saveStore(for: game)) { pendingLoad = (game, $0) }
             case .edit(let game): EditDetailsSheet(game: game)
+            case .skin(let game): GameSkinSheet(game: game)
             }
         }
         .fullScreenCover(item: $filterGame) { FilterPickerView(game: $0) }
@@ -260,6 +262,7 @@ struct LibraryView: View {
         Button { state.launch(game) } label: { Label("Play", systemImage: "play") }
         Button { sheet = .core(game) } label: { Label("Change Core", systemImage: "cpu") }
         Button { filterGame = game } label: { Label("Choose Filter", systemImage: "camera.filters") }
+        Button { sheet = .skin(game) } label: { Label("Assign Skin", systemImage: "gamecontroller") }
         Button { sheet = .saves(game) } label: { Label("Manage Saves", systemImage: "tray.full") }
         Button { sheet = .edit(game) } label: { Label("Edit Details", systemImage: "pencil") }
         Button(role: .destructive) { pendingDelete = game } label: { Label("Delete", systemImage: "trash") }

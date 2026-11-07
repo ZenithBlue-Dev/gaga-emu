@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct GagaEmuApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var state = AppState()
 
     var body: some Scene {
@@ -16,6 +17,7 @@ struct GagaEmuApp: App {
                 .tint(AppTheme.accent)
                 .task {
                     GameCenter.authenticate()
+                    state.refreshCovers()
                     #if DEBUG
                     state.runBenchmarkIfRequested()
                     #endif

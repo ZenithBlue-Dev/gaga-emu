@@ -13,7 +13,7 @@ struct GagaPlusView: View {
         ("Faster fast-forward", "Up to 5x instead of 2x."),
         ("More save states", "No limit instead of 3."),
         ("More cheat codes", "No limit instead of 3."),
-        ("Premium Filters", "Adds Geom CRT and Geom CRT Border."),
+        ("Premium Filters", "Adds Geom CRT, Geom CRT Border, CRT Deluxe and Anime4K."),
         ("Auto save state", "Saves your place for you.")
     ]
 

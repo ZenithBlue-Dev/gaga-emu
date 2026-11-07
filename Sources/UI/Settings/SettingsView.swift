@@ -185,6 +185,10 @@ private struct LibraryPane: View {
     var body: some View {
         ValueRow(title: "Games", value: "\(state.games.count)")
         Rule()
+        ToggleRow(title: "Cover Art",
+                  note: "Off by default. When on, your game titles are sent to \(LibretroThumbnails.host) to look for box art, and pictures are kept in the cache.",
+                  isOn: $state.coverArt)
+        Rule()
         ActionRow(title: "BIOS Files") { showBIOS = true }
             .sheet(isPresented: $showBIOS) { BIOSManagerView() }
         Rule()
@@ -222,10 +226,13 @@ private struct GraphicsPane: View {
     @State private var showFilters = false
 
     var body: some View {
-        ActionRow(title: "Default Filter", value: ShaderCatalog.builtIn.first { $0.id == state.shaderID }?.name) {
+        ActionRow(title: "Default Filter", value: ShaderCatalog.all.first { $0.id == state.shaderID }?.name
+                  ?? state.filters.name(of: state.shaderID) ?? "Original") {
             showFilters = true
         }
         Rule()
+        // AirPlay Fullscreen (ExternalDisplay.swift) stays hidden until it is checked on a real second screen:
+        // this Xcode has no Simulator app, so no external display could be attached (docs/07 milestone 3.11).
         PaneNote(text: "New games start with this filter. Touch and hold a game to choose one for that game.")
             .fullScreenCover(isPresented: $showFilters) { FilterPickerView() }
     }
@@ -235,6 +242,7 @@ private struct ControlsPane: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var controllers: ControllerManager
     @State private var showTriggerPro = false
+    @State private var showSkins = false
 
     var body: some View {
         ValueRow(title: "Touch Control", value: controllers.touchOwnsPlayerOne ? "Player 1" : "Unassigned")
@@ -260,6 +268,9 @@ private struct ControlsPane: View {
             }
             Rule()
         }
+        ActionRow(title: "Assign Skin") { showSkins = true }
+            .sheet(isPresented: $showSkins) { AssignSkinView() }
+        Rule()
         ActionRow(title: "TriggerPro") { showTriggerPro = true }
             .sheet(isPresented: $showTriggerPro) { TriggerProEditor() }
         Rule()

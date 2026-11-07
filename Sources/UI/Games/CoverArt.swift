@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Cover with its platform spine. A generated typographic placeholder stands in until boxart exists.
+/// Cover with its platform spine. A generated typographic placeholder stands in without boxart.
 struct CoverArt: View {
+    @EnvironmentObject private var state: AppState
     let game: GameItem
     let width: CGFloat
 
@@ -9,7 +10,7 @@ struct CoverArt: View {
 
     var body: some View {
         ZStack(alignment: .leading) {
-            if let path = game.coverPath, let image = UIImage(contentsOfFile: path) {
+            if let path = state.coverURL(for: game)?.path, let image = UIImage(contentsOfFile: path) {
                 Image(uiImage: image).resizable().scaledToFill().frame(width: width, height: height).clipped()
             } else {
                 placeholder

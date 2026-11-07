@@ -304,7 +304,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testStateMigrationResetsRemovedShaders() throws {
         var legacy = try JSONDecoder().decode(AppState.Snapshot.self, from: Data(legacyStateJSON.utf8))
-        legacy.shaderID = "anime4k"
+        legacy.shaderID = "crt-royale"
         legacy.games[2].shaderID = "crt-royale"
         let migrated = try XCTUnwrap(StateMigration.migrated(legacy))
         XCTAssertEqual(migrated.shaderID, "original")
@@ -550,8 +550,8 @@ final class GagaEmuTests: XCTestCase {
 
     @MainActor
     func testPremiumListMatchesImplementedShaders() {
-        XCTAssertEqual(StoreKitManager.premiumShaderIDs, ["geom-crt", "geom-crt-border"])
-        XCTAssertFalse(ShaderCatalog.builtIn.contains { $0.id == "anime4k" })
+        XCTAssertEqual(StoreKitManager.premiumShaderIDs, ["geom-crt", "geom-crt-border", "crt-deluxe", "anime4k"])
+        XCTAssertFalse(ShaderCatalog.all.contains { $0.id == "crt-royale" })
         let premium = Set(ShaderCatalog.builtIn.filter(\.premium).map(\.id))
         XCTAssertEqual(premium, StoreKitManager.premiumShaderIDs)
     }

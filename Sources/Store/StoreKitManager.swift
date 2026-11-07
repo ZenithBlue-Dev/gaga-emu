@@ -68,8 +68,8 @@ public final class StoreKitManager: ObservableObject {
         }
     }
 
-    /// Sell only what works: anime4k and crt-royale return with milestone 3.4.
-    public static let premiumShaderIDs: Set<String> = ["geom-crt", "geom-crt-border"]
+    /// Sell only what works. crt-deluxe replaces crt-royale, which is GPL (docs/05 section 5).
+    public static let premiumShaderIDs: Set<String> = ["geom-crt", "geom-crt-border", "crt-deluxe", "anime4k"]
 
     @Published public private(set) var offers: [Offer] = []
     @Published public private(set) var entitlements: Entitlements = .effective(.free)
