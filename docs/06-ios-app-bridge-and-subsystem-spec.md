@@ -285,7 +285,7 @@ Per `docs/03` section 5: each core is a dynamic, embedded xcframework that expor
 
 Frameworks are signed and shipped inside the app bundle. Code is never loaded from user paths or downloaded. Dynamic linking does not change the GPL analysis in `docs/03` section 5.
 
-Status: built for mGBA, Gambatte and Nestopia. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
+Status: built for mGBA, Gambatte, Nestopia and PCSX-ReARMed. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
 
 **Core set.** `GAGA_CORE_SET` picks which cores a build links, for example an MPL-only TestFlight build with no GPL code. `GAGA_CORE_SET="mgba" scripts/generate-project.sh` links only mGBA. Unset, it links every `Cores/*/core.env`. The script refuses an unknown ID or a missing xcframework. It writes `build/core-set.yml`, which embeds each framework, sets the `GAGA_CORE_SET` build setting and defines `GAGA_HAS_<ID>=1`. The post-build no-JIT gate fails if a framework in the set is missing from the app, or a framework outside it is embedded, which happens when a build folder from a wider set is reused. `scripts/appstore_release.sh` defaults to `GAGA_CORE_SET=mgba` until the GPL gate in `docs/07` milestone 4.0 closes. A core left out keeps its guarded stub (section 2.2) and is hidden from the catalog, and its tests skip.
 
@@ -306,6 +306,8 @@ For a libretro core, steps 3 to 7 below become:
 - Put in the variable table every core option whose upstream default is wrong for this app, such as a boot ROM option. The adapter answers false for a key not in the table, which the core reads as its own default.
 - Leave out any upstream file whose licence is not the core's licence, and stub what it provided. Gambatte's `cc_resampler.c` is GPLv3 and is replaced by two empty functions (`docs/03` section 5).
 - Read the core's `retro_get_memory_*` and options before writing tests: battery saves need `RETRO_MEMORY_SAVE_RAM`, and a boot ROM option must stay off unless the core has its own free boot ROM.
+- A core whose interpreter still names a few dynarec symbols: compile the dynarec out with the core's own define and define those symbols as empty in a GagaEmu file, as `Cores/pcsx_rearmed/nodrc.c` does with `DRC_DISABLE`, instead of patching upstream.
+- A disc core loads by path (`need_fullpath`). Its battery file is named after what was opened, so a `.m3u` gives every disc one memory card. The Multi-Disc Helper imports each playlist with its discs' platform, because an `.m3u` alone names none.
 
 **Adding the next core.** Follow these in order. `<id>` is the `core_id` in `CoreCatalog`, `<Name>` is the prefix of its stub in `GagaCoreRegistry.c`.
 
@@ -325,6 +327,8 @@ For a libretro core, steps 3 to 7 below become:
    - `CORE_CFLAGS` and `CORE_CXXFLAGS`. Paths are relative to `Cores/<id>/`. `Sources/Bridge` is already on the include path, and `GAGA_CORE_VERSION` is already defined.
    - `FORBIDDEN_STRINGS`, the core's JIT runtime names from its audit. Never bare `jit` (`docs/04` section 8).
    - `FORBIDDEN_IMPORTS`, a regex of APIs from features you disabled, such as `_socket$`.
+   - `FORBIDDEN_SOURCES`, optional: a regex of source paths that must not be compiled, such as a dynarec directory in the same tree. The build checks it against the source paths in the dSYM and prints `forbidden sources (<sdk>): none`. Use it when the core's own text names its dynarec, so the word cannot be in `FORBIDDEN_STRINGS`.
+   - The framework's bundle identifier is `com.zenithblue.gagaemu.<id>` with `_` written as `-`, and its short version is `CORE_VERSION` with everything but digits and dots removed.
 4. **Write `Cores/<id>/<Framework>.exports`.** One line: `_<Name>_GetInterface`.
 5. **Write `Cores/<id>/flags.h` if the core needs build defines.** Force it with `-include flags.h` in `CORE_CFLAGS`. Disable debuggers, frontends, scripting, networking, updaters and any dynarec.
 6. **Write `Cores/<id>/sources.txt`.** One path per line, relative to `Cores/<id>/`, listing the bridge and exactly the upstream files needed. `.c` uses `CORE_CFLAGS`, `.cpp` and `.cc` use `CORE_CXXFLAGS`. Upstream's own build system is not run. Check each third-party file's licence and add it to `docs/03`.

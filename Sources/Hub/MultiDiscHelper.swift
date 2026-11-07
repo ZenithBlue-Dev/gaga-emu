@@ -17,6 +17,16 @@ public struct MultiDiscHelper: Sendable {
         case saturn = "Sega Saturn"
         case dreamcast = "Dreamcast"
 
+        /// The `CoreCatalog` platform a playlist of these discs plays on. An `.m3u` alone does not say.
+        public var platformID: String {
+            switch self {
+            case .ps1: return "ps1"
+            case .megaCD: return "megacd"
+            case .saturn: return "saturn"
+            case .dreamcast: return "dreamcast"
+            }
+        }
+
         var extensions: Set<String> {
             switch self {
             case .ps1: return ["bin", "cue", "chd", "pbp", "iso", "img"]
@@ -50,7 +60,10 @@ public struct MultiDiscHelper: Sendable {
         let urls = (try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
         var buckets: [String: [(disc: Int, url: URL, platform: Platform?)]] = [:]
+        // A cue sheet is the disc. Its track file beside it, under the same name, is not a disc of its own.
+        let sheets = Set(urls.filter { $0.pathExtension.lowercased() == "cue" }.map { $0.deletingPathExtension().lastPathComponent })
         for url in urls {
+            if ["bin", "img"].contains(url.pathExtension.lowercased()), sheets.contains(url.deletingPathExtension().lastPathComponent) { continue }
             guard let parsed = parse(url) else { continue }
             let key = parsed.platform.map { "\($0.rawValue)|\(parsed.title.lowercased())" } ?? parsed.title.lowercased()
             buckets[key, default: []].append((parsed.disc, url, parsed.platform))
@@ -109,6 +122,13 @@ enum MultiDiscHelperChecks {
         let dc = URL(fileURLWithPath: "/roms/Skies of Arcadia (Disc 2).gdi")
         assert(MultiDiscHelper.parse(dc)?.platform == .dreamcast)
         assert(MultiDiscHelper.parse(URL(fileURLWithPath: "/roms/solo.gba")) == nil)
+
+        let sheets = dir.appendingPathComponent("sheets")
+        try? FileManager.default.createDirectory(at: sheets, withIntermediateDirectories: true)
+        for name in ["Gaga (Disc 1).cue", "Gaga (Disc 1).bin", "Gaga (Disc 2).cue", "Gaga (Disc 2).bin"] {
+            FileManager.default.createFile(atPath: sheets.appendingPathComponent(name).path, contents: Data())
+        }
+        assert(MultiDiscHelper.scan(sheets).first?.discs.map(\.lastPathComponent) == ["Gaga (Disc 1).cue", "Gaga (Disc 2).cue"])
     }
 }
 #endif

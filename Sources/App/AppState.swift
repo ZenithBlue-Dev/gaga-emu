@@ -160,7 +160,8 @@ enum CoreCatalog {
         case "n64", "z64", "v64": return "n64"
         case "nds": return "nds"
         case "3ds", "cia": return "n3ds"
-        case "iso", "bin", "cue", "chd", "pbp": return "ps1"
+        // shortcut: every .exe is a PS-EXE. Check the "PS-X EXE" magic when a DOS core (milestone 4.8) arrives.
+        case "iso", "bin", "cue", "chd", "pbp", "img", "exe": return "ps1"
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "sms": return "megadrive"
@@ -643,9 +644,9 @@ final class AppState: ObservableObject {
     }
 
     @discardableResult
-    func importROM(at url: URL, title: String? = nil) -> GameItem? {
+    func importROM(at url: URL, title: String? = nil, platformID: String? = nil) -> GameItem? {
         let ext = url.pathExtension.lowercased()
-        let platform = CoreCatalog.platformID(forExtension: ext) ?? "unknown"
+        let platform = platformID ?? CoreCatalog.platformID(forExtension: ext) ?? "unknown"
         let name = title ?? url.deletingPathExtension().lastPathComponent
         let item = GameItem(id: UUID(), title: name, platformID: platform, romPath: url.path,
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,

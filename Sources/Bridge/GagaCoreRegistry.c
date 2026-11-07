@@ -381,8 +381,10 @@ DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",
 #ifndef GAGA_HAS_NESTOPIA
 DEFINE_CORE_INTERFACE(Nestopia_GetInterface,      "nestopia",        "Nestopia UE",       GAGA_CORE_EXCLUDED, "nes",      60.0988, 48000)
 #endif
+#ifndef GAGA_HAS_PCSX_REARMED
+DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX-ReARMed",      GAGA_CORE_EXCLUDED, "bin|cue|img|mdf|pbp|toc|cbn|m3u|chd|iso|exe", 60.0, 44100)
+#endif
 
-DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX ReARMed",      "r23",    "cue|bin|chd|pbp|iso", 60.0, 44100)
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
 DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             "115",    "smc|sfc",             60.0988, 32040)

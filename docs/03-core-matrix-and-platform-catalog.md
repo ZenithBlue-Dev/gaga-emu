@@ -35,7 +35,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | NES | Nestopia UE | Not seen | FCEUMM, QuickNES | [GPL-2.0-or-later](https://github.com/libretro/nestopia) (source headers say "version 2 of the License, or (at your option) any later version"), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | Static gate passes on both slices, runtime check passes on the Simulator; device pending. Built on branch `core/nestopia`, legal gate open | Active, last push 2026-10-31 ([libretro/nestopia](https://github.com/libretro/nestopia), the libretro port of [0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)). No release tags; pinned to master commit `f1e02d12664834536edbf7352995a3d0cd1caef4` | 1 |
 | SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt) | Software | Unverified | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro)) | 2 |
 | Genesis / Mega-CD | JGenesis (self-maintained iOS port) | JGenesis (Mega-CD row) | ClownMDEmu | [GPL-3.0](https://raw.githubusercontent.com/jsgroth/jgenesis/master/README.md) | Software frames expected; port needed, since upstream's frontend uses wgpu | Unverified. [`Cargo.lock`](https://raw.githubusercontent.com/jsgroth/jgenesis/master/Cargo.lock) lists no cranelift, dynasm or wasmtime crate | Active, last push 2026-11-06. Linux, Windows and web are official; iOS is not | 2 |
-| PS1 | PCSX-ReARMed (`DYNAREC=0`) | Beetle PSX HW | Beetle PSX HW (software, or Vulkan via MoltenVK) | [GPL-2.0](https://github.com/libretro/pcsx_rearmed) | Software (`BUILTIN_GPU = neon`) | Confirmed for the build config: [`ios-arm64` sets `DYNAREC = 0`](https://raw.githubusercontent.com/libretro/pcsx_rearmed/master/Makefile.libretro) | Active, last push 2026-10-29 | 1 |
+| PS1 | PCSX-ReARMed (`DYNAREC=0`) | Beetle PSX HW | Beetle PSX HW (software, or Vulkan via MoltenVK) | [GPL-2.0-or-later](https://github.com/libretro/pcsx_rearmed) (section 5) | Software (`BUILTIN_GPU = neon`, its C SIMD path) | Built at `7b0e8f8f` with `DRC_DISABLE` and no dynarec source; the no-JIT gate and the forbidden-source check pass on both slices. Upstream [`ios-arm64` sets `DYNAREC = 0`](https://raw.githubusercontent.com/libretro/pcsx_rearmed/master/Makefile.libretro) | Active, last push 2026-10-29 | 1 |
 | DS | melonDS DS | melonDS DS | DeSmuME | [GPL-3.0](https://github.com/JesseTG/melonds-ds) | Software (its OpenGL modes are not an accepted path) | Confirmed for the build config: ["JIT is disabled by default in iOS builds"](https://raw.githubusercontent.com/JesseTG/melonds-ds/main/CMakeLists.txt) | Active, last push 2026-10-28. README lists iOS arm64 | 2 |
 | Saturn | Beetle Saturn | Beetle Saturn | None confirmed | [GPL-2.0](https://github.com/libretro/beetle-saturn-libretro) | Software | Unverified. A [forum thread](https://forums.libretro.com/t/what-would-it-take-to-get-a-dynarec-into-beetle-saturn/47739?page=3) discusses adding a dynarec, which suggests none exists | Active, last push 2026-11-02 | 3 |
 | N64 | Mupen64Plus-Next (ParaLLEl-RDP) | Not seen. Public repo: `mupen64plus.next` | parallel-n64 | [GPL-2.0](https://github.com/libretro/mupen64plus-libretro-nx) | Vulkan via MoltenVK. [ParaLLEl-RDP](https://raw.githubusercontent.com/Themaister/parallel-rdp/master/README.md) needs Vulkan 1.1 plus 8-bit and 16-bit storage; MoltenVK behaviour unverified | **Fails as configured upstream.** The CPU side is clean ([`WITH_DYNAREC=` empty on `ios-arm64`](https://raw.githubusercontent.com/libretro/mupen64plus-libretro-nx/develop/Makefile)), but `HAVE_PARALLEL_RSP = 1` [compiles `rsp_jit.cpp` and GNU Lightning](https://raw.githubusercontent.com/libretro/mupen64plus-libretro-nx/develop/Makefile.common). A non-JIT RSP is required (section 4) | Active, last push 2026-10-29 | 2 |
@@ -110,7 +110,7 @@ GPL cores in an App Store binary carry legal risk. The FSF had [GNU Go removed](
 
 - Legal review is a required gate before the first GPL core ships.
 - The likely posture is publishing the app source under a compatible licence. [Manic](https://github.com/Manic-EMU/ManicEMU) and [Delta](https://github.com/rileytestut/Delta) publish app source under AGPL-3.0.
-- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core. Nestopia is GPL-2.0-or-later, so it does not add to that conflict.
+- The mix of GPL-2.0 (Gambatte's headers say version 2, with no "or later"), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix. A GPL-2.0-only part is commonly read as not combinable with GPL-3.0 code, which matters for an app that would carry both Gambatte and a GPL-3.0 core. Nestopia is GPL-2.0-or-later, and PCSX-ReARMed's headers say "version 2 or later", so neither adds to that conflict.
 - Until this gate closes, release builds use `GAGA_CORE_SET=mgba` (`docs/06` section 2.5), so no GPL code ships.
 - This is an open owner decision. Counsel is needed.
 
@@ -168,12 +168,32 @@ Source: [github.com/libretro/nestopia](https://github.com/libretro/nestopia), th
 
 No file outside these groups is compiled, and the build fetches nothing. `NST_NO_ZLIB` is upstream's own define: states are never compressed and no zlib is linked. The FDS disk BIOS (`disksys.rom`) is not bundled and `.fds` is not offered, so only cartridges run. `NstHomebrew.cpp` imports `exit` for an exit port that only the `Api::Homebrew` interface turns on, which `libretro.cpp` never calls. The test ROM is GagaEmu's own generated program (`Sources/Debug/NESTestROM.swift`).
 
+### PCSX-ReARMed licence obligations
+
+Source: [github.com/libretro/pcsx_rearmed](https://github.com/libretro/pcsx_rearmed), the repository libretro-super builds from, at master commit `7b0e8f8fadfbce3d170d195b9d9eecaabfa08c8e` (`git describe`: `r26l-137-g7b0e8f8f`), as the unmodified submodule `Cores/pcsx_rearmed/upstream`. `Cores/pcsx_rearmed/PcsxReArmedCore.c`, `nodrc.c`, `revision.h` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files, linked with it into `PcsxReArmedCore.framework`. This is on branch `core/pcsx_rearmed` only and must not ship until the legal gate above closes.
+
+| Part (as in `Cores/pcsx_rearmed/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `libpcsxcore` (22 files), `plugins/dfsound` (4 files), `plugins/gpu_neon/psx_gpu/psx_gpu_simd.c`, and `psx_gpu.c`, `psx_gpu_parse.c` and `psx_gpu_4x.c`, which `psx_gpu_if.c` includes | GPL-2.0-or-later | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `frontend/libretro.c`, `main.c`, `plugin.c`, `cspace.c`, `plugins/gpulib/gpu.c`, `vout_pl.c`, `plugins/gpu_neon/psx_gpu_if.c` | GPLv2 or later (notaz's short header) | As above. |
+| `libpcsxcore/database.c`, `psxevents.c`, `gte_nf.c`, `plugins/dfsound/out.c`, `nullsnd.c`, `plugins/gpulib/prim.c` | No header; the repository's `COPYING` is the GPL-2.0 text | Treat as GPL-2.0. |
+| `libpcsxcore/gte_divider.c` (from MAME) | BSD-3-Clause | Reproduce its copyright notice and licence. |
+| `deps/libchdr` (13 files) | BSD-3-Clause | Reproduce its copyright notice and licence. |
+| `dr_flac.h`, compiled inside `libchdr_flac.c` | Public domain or MIT-0, at the user's choice | None. |
+| `deps/libchdr/deps/lzma-26.02` (`LzmaDec.c`) | Public domain | None. |
+| `deps/libchdr/deps/zstd-1.5.7` (`zstddeclib.c`) | BSD-3-Clause or GPL-2.0, at the user's choice | Take BSD: reproduce its notice. |
+| `deps/libchdr/deps/miniz-3.1.2` (`miniz.c`) | MIT | Reproduce its notice. |
+| `deps/libretro-common/include` (headers only, `libretro.h` and the file stream headers) | MIT | Reproduce its notice. |
+
+No dynarec file is compiled: not `libpcsxcore/new_dynarec` (ari64), not `deps/lightrec`, not `deps/lightning`. `nodrc.c` defines the three symbols the interpreter path still names (`ndrc_g`, `ndrc_freeze`, `ndrc_clear_full`) as empty, so no upstream file is patched. The built-in HLE BIOS (`psxbios.c`) runs every game; `pcsx_rearmed_bios` is set to `HLE`, so the core never looks for a Sony BIOS, and none is bundled. The test program `Sources/Debug/PS1TestEXE.swift` is GagaEmu's own hand-assembled MIPS code with no Sony bytes.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
 
 - `scripts/nojit-gate.sh`, an `nm` and `strings` check as in `S3/scripts/ios/build-core.sh:45-54`, which refuses `_pthread_jit_write_protect_np`, `_sys_icache_invalidate`, `___clear_cache`, `_mach_vm_protect`, `_vm_protect` and each core's own string list in `Cores/<id>/core.env` (for example GNU Lightning, Dynarmic, Oaknut).
 - `CodeGenCheck`, a check for code generation at runtime, which a symbol scan can miss.
+- `FORBIDDEN_SOURCES` in `core.env`, for a core that ships its dynarec in the same tree. `scripts/build-core.sh` refuses the framework if any compiled source path in its dSYM matches. PCSX-ReARMed uses it for `new_dynarec`, `lightrec` and `lightning`, because its option help text names "lightrec" and "dynarec", so those words cannot be in `FORBIDDEN_STRINGS`.
 
 ---
 
@@ -288,7 +308,7 @@ static const CoreGetterFunc s_core_getters[] = {
 };
 ```
 
-Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework`, Gambatte from `GambatteCore.xcframework` and Nestopia from `NestopiaCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, Gambatte takes `.gb` and `.gbc`, and Nestopia takes `.nes` (iNES and NES 2.0) only. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. mGBA comes from `MgbaCore.xcframework`, Gambatte from `GambatteCore.xcframework`, Nestopia from `NestopiaCore.xcframework` and PCSX-ReARMed from `PcsxReArmedCore.xcframework`. Each keeps a stub inside `#ifndef GAGA_HAS_<ID>`, used only by a build whose `GAGA_CORE_SET` leaves the core out, and the catalog then hides it (`docs/06` section 2.5). Everything else except the mock core is a stub whose `self_test` fails, so the app refuses to start it and says the core is not part of this build. This mGBA build is GBA only: it takes `.gba`, Gambatte takes `.gb` and `.gbc`, and Nestopia takes `.nes` (iNES and NES 2.0) only. PCSX-ReARMed takes `.cue`, `.bin`, `.img`, `.chd`, `.pbp`, `.iso`, `.m3u` and a bare PS-EXE `.exe`. JGenesis's stub comes first in the registry and also lists `.bin` and `.cue`, so a lookup by those extensions alone finds it; the Library picks the core through the platform, which is `ps1` for all of them. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
 
 ### Storage (current code)
 

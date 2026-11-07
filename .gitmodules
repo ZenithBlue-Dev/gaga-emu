@@ -7,3 +7,6 @@
 [submodule "Cores/nestopia/upstream"]
 	path = Cores/nestopia/upstream
 	url = https://github.com/libretro/nestopia.git
+[submodule "Cores/pcsx_rearmed/upstream"]
+	path = Cores/pcsx_rearmed/upstream
+	url = https://github.com/libretro/pcsx_rearmed.git

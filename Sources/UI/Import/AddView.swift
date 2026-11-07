@@ -13,7 +13,7 @@ struct AddView: View {
 
     private let romTypes: [UTType] = {
         var types: [UTType] = [.zip, .data, .item]
-        for ext in ["gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "nds", "3ds", "iso", "chd", "cue", "bin", "pbp", "cso", "gdi", "cdi", "7z", "rar", "m3u"] {
+        for ext in ["gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "nds", "3ds", "iso", "chd", "cue", "bin", "pbp", "cso", "gdi", "cdi", "7z", "rar", "m3u", "exe"] {
             if let type = UTType(filenameExtension: ext) { types.append(type) }
         }
         return types
@@ -204,9 +204,12 @@ struct MultiDiscSheet: View {
                     Rule()
                 }
                 Button("Generate Playlists") {
-                    written = (try? MultiDiscHelper.generateAll(in: state.romDirectory))?.map(\.lastPathComponent) ?? []
-                    for name in written {
-                        _ = state.importROM(at: state.romDirectory.appendingPathComponent(name), title: name.replacingOccurrences(of: ".m3u", with: ""))
+                    written = []
+                    // The discs' platform, because an .m3u alone does not name one.
+                    for group in MultiDiscHelper.scan(state.romDirectory) {
+                        guard let playlist = try? MultiDiscHelper.writePlaylist(for: group, into: state.romDirectory) else { continue }
+                        written.append(playlist.lastPathComponent)
+                        _ = state.importROM(at: playlist, title: group.title, platformID: group.platform.platformID)
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle())

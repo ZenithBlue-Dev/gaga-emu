@@ -50,6 +50,7 @@ build_slice() { # core dir sdk target
         -o "$binary" "${objects[@]}"
     xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
 
+    # A bundle identifier allows no underscore, and the short version string only digits and dots.
     cat >"$framework/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -57,11 +58,11 @@ build_slice() { # core dir sdk target
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleExecutable</key><string>$CORE_FRAMEWORK</string>
-    <key>CFBundleIdentifier</key><string>com.zenithblue.gagaemu.$core</string>
+    <key>CFBundleIdentifier</key><string>com.zenithblue.gagaemu.${core//_/-}</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>$CORE_FRAMEWORK</string>
     <key>CFBundlePackageType</key><string>FMWK</string>
-    <key>CFBundleShortVersionString</key><string>$CORE_VERSION</string>
+    <key>CFBundleShortVersionString</key><string>${CORE_VERSION//[^0-9.]/}</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>MinimumOSVersion</key><string>$min_ios</string>
 </dict>
@@ -83,6 +84,16 @@ PLIST
         exit 1
     fi
     "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS"
+
+    # Optional: source paths that must never be compiled, such as a dynarec's. The dSYM names every compiled
+    # file, including any a source file includes, so this checks what was built, not what sources.txt says.
+    if [ -n "${FORBIDDEN_SOURCES:-}" ]; then
+        if found=$(strings -a "$out/$CORE_FRAMEWORK.framework.dSYM/Contents/Resources/DWARF/$CORE_FRAMEWORK" | grep -E "$FORBIDDEN_SOURCES"); then
+            echo "$CORE_FRAMEWORK ($sdk) compiled a forbidden source: $(head -n 3 <<<"$found")" >&2
+            exit 1
+        fi
+        echo "forbidden sources ($sdk): none"
+    fi
 }
 
 build_core() {
