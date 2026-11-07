@@ -431,6 +431,24 @@ DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast", 
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            GAGA_CORE_EXCLUDED, "iso|cso|pbp|elf", 59.94, 44100)
 #endif
 
+// Non-commercial licences (docs/03 section 5): only GAGA_CORE_SET=sideload links these, so every App Store
+// and TestFlight build has the refusing row and CoreCatalog hides the core.
+#ifndef GAGA_HAS_SNES9X
+DEFINE_CORE_INTERFACE(Snes9x_GetInterface,        "snes9x",          "Snes9x",            GAGA_CORE_EXCLUDED, "sfc|smc",  60.0988, 32040)
+#endif
+#ifndef GAGA_HAS_GENESIS_PLUS_GX
+DEFINE_CORE_INTERFACE(GenesisPlusGX_GetInterface, "genesis_plus_gx", "Genesis Plus GX",   GAGA_CORE_EXCLUDED, "md|gen|smd|sms|gg|sg|bin|cue|chd|iso|m3u", 59.9227, 44100)
+#endif
+#ifndef GAGA_HAS_PICODRIVE
+DEFINE_CORE_INTERFACE(Picodrive_GetInterface,     "picodrive",       "PicoDrive",         GAGA_CORE_EXCLUDED, "32x|md|gen|smd|sms|gg|sg|bin|cue|chd|iso|m3u", 60.0, 44100)
+#endif
+#ifndef GAGA_HAS_FBNEO
+DEFINE_CORE_INTERFACE(Fbneo_GetInterface,         "fbneo",           "FinalBurn Neo",     GAGA_CORE_EXCLUDED, "zip|7z",   60.0,    48000)
+#endif
+#ifndef GAGA_HAS_SWANSTATION
+DEFINE_CORE_INTERFACE(SwanStation_GetInterface,   "swanstation",     "SwanStation",       GAGA_CORE_EXCLUDED, "exe|psexe|cue|bin|img|iso|chd|pbp|ecm|mds|psf|m3u", 60.0, 44100)
+#endif
+
 // ============================================================================
 // REGISTRY DISPATCH TABLE
 // ============================================================================
@@ -461,6 +479,11 @@ static const CoreGetterFunc s_core_getters[] = {
     BeetleNgp_GetInterface,
     BeetleWswan_GetInterface,
     PokeMini_GetInterface,
+    Snes9x_GetInterface, // After the default core of each platform, so FindByExtension keeps the default.
+    GenesisPlusGX_GetInterface,
+    Picodrive_GetInterface,
+    Fbneo_GetInterface,
+    SwanStation_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

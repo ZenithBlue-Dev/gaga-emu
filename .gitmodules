@@ -94,3 +94,18 @@
 [submodule "Cores/pokemini/upstream"]
 	path = Cores/pokemini/upstream
 	url = https://github.com/libretro/PokeMini.git
+[submodule "Cores/snes9x/upstream"]
+	path = Cores/snes9x/upstream
+	url = https://github.com/libretro/snes9x.git
+[submodule "Cores/genesis_plus_gx/upstream"]
+	path = Cores/genesis_plus_gx/upstream
+	url = https://github.com/libretro/Genesis-Plus-GX.git
+[submodule "Cores/picodrive/upstream"]
+	path = Cores/picodrive/upstream
+	url = https://github.com/libretro/picodrive.git
+[submodule "Cores/swanstation/upstream"]
+	path = Cores/swanstation/upstream
+	url = https://github.com/libretro/swanstation.git
+[submodule "Cores/fbneo/upstream"]
+	path = Cores/fbneo/upstream
+	url = https://github.com/libretro/FBNeo.git

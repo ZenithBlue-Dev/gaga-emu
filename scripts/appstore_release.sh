@@ -12,8 +12,9 @@ EXPORT=build/export
 # GPL cores do not ship while the legal gate is open (docs/07 milestone 4.0). This is the MPL-only set.
 GAGA_CORE_SET=${GAGA_CORE_SET:-mgba}
 export GAGA_CORE_SET
-# The Vulkan test core (Cores/vktest) is for debug and test builds only.
-case " $GAGA_CORE_SET " in *" vktest "*) echo "GAGA_CORE_SET must not include vktest in a release" >&2; exit 1 ;; esac
+# Refuses the sideload profile, the Vulkan test core (debug and test builds only) and any core with a
+# non-commercial licence (docs/03 section 5). The archive is checked again below.
+scripts/nojit-gate.sh --release-set "$GAGA_CORE_SET"
 
 git submodule update --init
 # shellcheck disable=SC2086 # a word list.
@@ -25,7 +26,9 @@ xcodebuild -project GagaEmu.xcodeproj -scheme GagaEmu \
   -archivePath "$ARCHIVE" \
   archive \
   DEVELOPMENT_TEAM="$TEAM" \
-  CODE_SIGN_STYLE=Automatic
+  CODE_SIGN_STYLE=Automatic \
+  GAGA_RELEASE=1
+scripts/nojit-gate.sh --release-app "$ARCHIVE/Products/Applications/GagaEmu.app"
 xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" \
   -exportPath "$EXPORT" \

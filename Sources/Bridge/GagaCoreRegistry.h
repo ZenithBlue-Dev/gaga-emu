@@ -32,6 +32,12 @@ const GagaCoreInterface* BeetleVb_GetInterface(void);
 const GagaCoreInterface* BeetleNgp_GetInterface(void);
 const GagaCoreInterface* BeetleWswan_GetInterface(void);
 const GagaCoreInterface* PokeMini_GetInterface(void);
+const GagaCoreInterface* SwanStation_GetInterface(void);
+// Non-commercial licences, sideload builds only (docs/03 section 5).
+const GagaCoreInterface* Snes9x_GetInterface(void);
+const GagaCoreInterface* GenesisPlusGX_GetInterface(void);
+const GagaCoreInterface* Picodrive_GetInterface(void);
+const GagaCoreInterface* Fbneo_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

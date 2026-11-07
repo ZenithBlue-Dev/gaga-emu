@@ -67,16 +67,27 @@ enum CoreCatalog {
     private static let allPlatforms: [PlatformInfo] = [
         .init(id: "ps1", name: "PlayStation", manufacturer: "Sony", cores: [
             .init(id: "beetle_psx", name: "Beetle PSX HW", note: "PGXP, Vulkan", recommended: false),
-            .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true)
+            .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true),
+            // Cached interpreter and software renderer only. Boots its embedded OpenBIOS when no BIOS is present.
+            .init(id: "swanstation", name: "SwanStation", note: "Interpreter", recommended: false)
         ]),
         .init(id: "saturn", name: "Sega Saturn", manufacturer: "Sega", cores: [
             .init(id: "beetle_saturn", name: "Beetle Saturn", note: "Cycle accuracy", recommended: true)
         ]),
         .init(id: "megacd", name: "Mega-CD", manufacturer: "Sega", cores: [
-            .init(id: "jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true)
+            .init(id: "jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
         ]),
+        // Genesis Plus GX and PicoDrive also run the .sms and .gg files this platform takes; JGenesis runs Mega Drive only.
         .init(id: "megadrive", name: "Mega Drive", manufacturer: "Sega", cores: [
-            .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true)
+            .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false),
+            .init(id: "picodrive", name: "PicoDrive", note: "Sideload", recommended: false)
+        ]),
+        // Sideload builds only, so App Store builds have no 32X platform (docs/03 section 5).
+        .init(id: "sega32x", name: "32X", manufacturer: "Sega", cores: [
+            .init(id: "picodrive", name: "PicoDrive", note: "Default", recommended: true)
         ]),
         .init(id: "dreamcast", name: "Dreamcast", manufacturer: "Sega", cores: [
             .init(id: "flycast", name: "Flycast", note: "JITLess", recommended: true)
@@ -101,7 +112,9 @@ enum CoreCatalog {
             .init(id: "gambatte", name: "Gambatte", note: "Default", recommended: true)
         ]),
         .init(id: "snes", name: "Super Famicom", manufacturer: "Nintendo", cores: [
-            .init(id: "bsnes", name: "bsnes", note: "Cycle accuracy", recommended: true)
+            .init(id: "bsnes", name: "bsnes", note: "Cycle accuracy", recommended: true),
+            // Sideload builds only: a non-commercial licence (docs/03 section 5). Hidden when excluded.
+            .init(id: "snes9x", name: "Snes9x", note: "Speed", recommended: false)
         ]),
         .init(id: "nes", name: "NES", manufacturer: "Nintendo", cores: [
             .init(id: "nestopia", name: "Nestopia UE", note: "Default", recommended: true),
@@ -132,7 +145,9 @@ enum CoreCatalog {
             .init(id: "pokemini", name: "PokeMini", note: "Free BIOS built in", recommended: true)
         ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
-            .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
+            .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true),
+            // Sideload builds only. FBNeo names some sets differently, so the player picks it per game (docs/03 section 8).
+            .init(id: "fbneo", name: "FinalBurn Neo", note: "Sideload", recommended: false)
         ]),
         .init(id: "dos", name: "MS-DOS", manufacturer: "Vintage", cores: [
             .init(id: "dosbox_pure", name: "DOSBox Pure", note: "ZIP launch", recommended: true)
@@ -168,7 +183,7 @@ enum CoreCatalog {
 
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
-        let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
+        let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "sega32x": "32X", "dreamcast": "DC", "n3ds": "3DS",
                        "arcade": "ARC", "unknown": "ETC"]
         return special[id] ?? id.uppercased()
     }
@@ -207,7 +222,7 @@ enum CoreCatalog {
         case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
         case "cso", "elf": return "psp"
         case "gdi", "cdi": return "dreamcast"
-        case "md", "gen", "smd", "sms": return "megadrive"
+        case "md", "gen", "smd", "sms", "gg": return "megadrive"
         // A .ccd is a CloneCD disc, which only the PC Engine core opens. A PC Engine .cue is placed by its contents.
         case "pce", "ccd": return "pce"
         case "sgx": return "sgx"
@@ -215,6 +230,8 @@ enum CoreCatalog {
         case "ngp", "ngc", "ngpc", "npc": return "ngp"
         case "ws", "wsc", "pc2": return "ws"
         case "min": return "pokemini"
+        // PicoDrive is the only 32X core and sideload only, so an App Store set has no 32X platform and no .32x.
+        case "32x": return platform("sega32x") == nil ? nil : "sega32x"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

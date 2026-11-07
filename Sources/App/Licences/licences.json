@@ -1286,6 +1286,218 @@
      "file": "licence-ea43b1de38a6.txt"
     }
    ]
+  },
+  {
+   "id": "snes9x",
+   "title": "Snes9x",
+   "licence": "Snes9x licence (non-commercial), with LGPL-2.1 and MIT parts",
+   "source": "https://github.com/libretro/snes9x, commit fae2fea. Sideload builds only: its licence forbids commercial use.",
+   "cores": [
+    "snes9x"
+   ],
+   "framework": "Snes9xCore",
+   "texts": [
+    {
+     "title": "Snes9x",
+     "file": "licence-70efeee282d8.txt"
+    },
+    {
+     "title": "snes_ntsc (LGPL-2.1)",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "genesis_plus_gx",
+   "title": "Genesis Plus GX",
+   "licence": "Genesis Plus GX licence (non-commercial), with LGPL-2.1, BSD, CC0, zlib and public-domain parts",
+   "source": "https://github.com/libretro/Genesis-Plus-GX, commit f27655b, built unmodified. Sideload builds only: its licence forbids commercial use.",
+   "cores": [
+    "genesis_plus_gx"
+   ],
+   "framework": "GenesisPlusGXCore",
+   "texts": [
+    {
+     "title": "Genesis Plus GX, Nuked OPN2, Tremor, minimp3, libchdr, zlib, Zstandard and LZMA",
+     "file": "licence-642c16362426.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-fad6ee1dcbed.txt"
+    }
+   ]
+  },
+  {
+   "id": "picodrive",
+   "title": "PicoDrive",
+   "licence": "PicoDrive licence (non-commercial), with FAME, CZ80 and MAME non-commercial parts, and BSD, zlib, MIT-0 and public-domain parts",
+   "source": "https://github.com/libretro/picodrive, commit 1890c29, built unmodified. Sideload builds only: its licence and those of FAME and CZ80 forbid commercial use.",
+   "cores": [
+    "picodrive"
+   ],
+   "framework": "PicodriveCore",
+   "texts": [
+    {
+     "title": "PicoDrive",
+     "file": "licence-a36c54a11967.txt"
+    },
+    {
+     "title": "FAME Motorola 68000 Emulation Library by Oscar Orallo (oscar@m68k.com)",
+     "file": "licence-1107d2721c70.txt"
+    },
+    {
+     "title": "CZ80",
+     "file": "licence-d4401ac4bfa1.txt"
+    },
+    {
+     "title": "MAME SH-2 core",
+     "file": "licence-e1649583e9c2.txt"
+    },
+    {
+     "title": "Tremor",
+     "file": "licence-d2ab57583364.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-365db9b693fd.txt"
+    },
+    {
+     "title": "dr_libs",
+     "file": "licence-dd1c647e6f76.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "fbneo",
+   "title": "FinalBurn Neo",
+   "licence": "FB Neo licence (non-commercial, no donations), with MAME, Final Burn, BSD, zlib, MIT and public-domain parts",
+   "source": "https://github.com/libretro/FBNeo, commit 4cdb31f, built unmodified. Sideload builds only: its licence forbids seeking profit from it and asking for donations.",
+   "cores": [
+    "fbneo"
+   ],
+   "framework": "FbneoCore",
+   "texts": [
+    {
+     "title": "FB Neo, Final Burn, MAME and libspng",
+     "file": "licence-a60e56a96bf5.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-1ed215a9dd43.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-91e669b8e3b1.txt"
+    },
+    {
+     "title": "dr_libs",
+     "file": "licence-dd1c647e6f76.txt"
+    },
+    {
+     "title": "stb_vorbis",
+     "file": "licence-6a17177a99bf.txt"
+    },
+    {
+     "title": "r8brain-free-src",
+     "file": "licence-b9795878a8a8.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "swanstation",
+   "title": "SwanStation",
+   "licence": "GPL-3.0, with MIT, BSD, zlib, Apache-2.0 and public-domain parts",
+   "source": "https://github.com/libretro/swanstation, commit 631f0fb, built unmodified without its recompiler. Embeds OpenBIOS (MIT), so it needs no Sony BIOS.",
+   "cores": [
+    "swanstation"
+   ],
+   "framework": "SwanStationCore",
+   "texts": [
+    {
+     "title": "SwanStation",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "OpenBIOS (PCSX-Redux)",
+     "file": "licence-b721b99dd738.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-91e669b8e3b1.txt"
+    },
+    {
+     "title": "xxHash",
+     "file": "licence-ca3ca9945fb4.txt"
+    },
+    {
+     "title": "stb_image",
+     "file": "licence-7587efcca32d.txt"
+    },
+    {
+     "title": "stb_image_resize",
+     "file": "licence-7587efcca32d.txt"
+    },
+    {
+     "title": "Khronos platform header (glad)",
+     "file": "licence-03fcb3c8f76d.txt"
+    },
+    {
+     "title": "Vulkan headers",
+     "file": "licence-96bbba876828.txt"
+    },
+    {
+     "title": "Apache License 2.0",
+     "file": "licence-44b0a56e80b4.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
   }
  ]
 }

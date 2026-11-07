@@ -5,6 +5,8 @@
 #   nojit-gate.sh <binary or object> [forbidden-strings-regex]   one core binary
 #   nojit-gate.sh --entitlements <plist>                         refuses JIT entitlement keys
 #   nojit-gate.sh --app <App.app> <entitlements plist>           Xcode build step: everything in a built app
+#   nojit-gate.sh --release-set "<core ids>"                     refuses a release set with a non-commercial core
+#   nojit-gate.sh --release-app <App.app>                        refuses an app that embeds a non-commercial core
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
@@ -53,9 +55,57 @@ strings_for_framework() {
     echo "$default_strings"
 }
 
+# Legal gate for non-commercial licences (docs/03 section 5): snes9x, Genesis Plus GX, PicoDrive and FBNeo
+# forbid commercial use, and GagaEmu is a paid app, so they never enter an App Store or TestFlight build.
+noncommercial_framework() { # framework name -> core id, or nothing
+    local env
+    for env in "$root"/Cores/*/core.env; do
+        if grep -qx "CORE_FRAMEWORK=$1" "$env" && grep -qx 'CORE_NONCOMMERCIAL=1' "$env"; then
+            basename "$(dirname "$env")"
+            return
+        fi
+    done
+}
+
+# A release core set: an explicit list, never the sideload profile, the debug core or a non-commercial core.
+check_release_set() {
+    local core
+    [ -n "$1" ] || { echo "release gate: the release core set is empty" >&2; return 1; }
+    for core in $1; do
+        case "$core" in
+            sideload) echo "release gate: GAGA_CORE_SET=sideload is for free personal builds, never a release" >&2; return 1 ;;
+            vktest) echo "release gate: GAGA_CORE_SET must not include vktest in a release" >&2; return 1 ;;
+        esac
+        if grep -qx 'CORE_NONCOMMERCIAL=1' "$root/Cores/$core/core.env" 2>/dev/null; then
+            echo "release gate: $core has a non-commercial licence and must not be in a release core set" >&2
+            return 1
+        fi
+    done
+    echo "release gate: pass $1"
+}
+
+# A built release app (an archive's): no non-commercial core framework inside it.
+check_release_app() {
+    local framework core
+    for framework in "$1"/Frameworks/*.framework; do
+        [ -d "$framework" ] || continue
+        core=$(noncommercial_framework "$(basename "$framework" .framework)")
+        if [ -n "$core" ]; then
+            echo "release gate: $1 embeds $core, which has a non-commercial licence" >&2
+            return 1
+        fi
+    done
+    echo "release gate: pass $(basename "$1")"
+}
+
 check_app() {
     local app=$1 framework name binary env core links contents
     check_entitlements "$2"
+    # Xcode passes build settings to this step. GAGA_RELEASE=1 comes from scripts/appstore_release.sh, and a
+    # build that can sell (PAYWALL_ENABLED) is commercial, so neither may carry a non-commercial core.
+    if [ "${GAGA_RELEASE:-}" = 1 ] || [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" PAYWALL_ENABLED "* ]]; then
+        check_release_app "$app"
+    fi
     for env in "$root"/Cores/*/core.env; do
         # shellcheck source=/dev/null
         name=$(source "$env" && echo "$CORE_FRAMEWORK")
@@ -115,6 +165,8 @@ check_moltenvk() {
 case "${1:-}" in
     --entitlements) check_entitlements "${2:?usage: nojit-gate.sh --entitlements <plist>}" ;;
     --app) check_app "${2:?usage: nojit-gate.sh --app <App.app> <plist>}" "${3:?usage: nojit-gate.sh --app <App.app> <plist>}" ;;
+    --release-set) check_release_set "${2:-}" ;;
+    --release-app) check_release_app "${2:?usage: nojit-gate.sh --release-app <App.app>}" ;;
     "") echo "usage: nojit-gate.sh <binary> [strings-regex]" >&2; exit 2 ;;
     *) check_binary "$1" "${2:-$default_strings}" ;;
 esac
