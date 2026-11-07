@@ -83,6 +83,16 @@ PLIST
         exit 1
     fi
     "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS"
+
+    # Optional: source paths that must never be compiled, such as a dynarec's. The dSYM names every compiled
+    # file, including any a source file includes, so this checks what was built, not what sources.txt says.
+    if [ -n "${FORBIDDEN_SOURCES:-}" ]; then
+        if found=$(strings -a "$out/$CORE_FRAMEWORK.framework.dSYM/Contents/Resources/DWARF/$CORE_FRAMEWORK" | grep -E "$FORBIDDEN_SOURCES"); then
+            echo "$CORE_FRAMEWORK ($sdk) compiled a forbidden source: $(head -n 3 <<<"$found")" >&2
+            exit 1
+        fi
+        echo "forbidden sources ($sdk): none"
+    fi
 }
 
 build_core() {
