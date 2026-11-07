@@ -135,7 +135,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard phase == .idle else { return }
         let interface = self.interface
         let core = try await Task.detached(priority: .userInitiated) {
-            try GagaCoreWrapper(interface: interface)
+        let saveDirectory = GagaCoreWrapper.saveDirectory(forROM: romPath)
+            try GagaCoreWrapper(interface: interface, saveDirectory: saveDirectory)
         }.value
 
         targetFPS = core.targetFPS

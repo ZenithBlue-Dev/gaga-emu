@@ -9,6 +9,8 @@ TEAM=9227VF8RW4
 ARCHIVE=build/GagaEmu.xcarchive
 EXPORT=build/export
 
+git submodule update --init
+scripts/build-core.sh
 xcodegen generate
 xcodebuild -project GagaEmu.xcodeproj -scheme GagaEmu \
   -destination 'generic/platform=iOS' \

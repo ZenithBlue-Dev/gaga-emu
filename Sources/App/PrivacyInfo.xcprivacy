@@ -9,9 +9,18 @@
     <array/>
     <key>NSPrivacyCollectedDataTypes</key>
     <array/>
-    <!-- Empty because Sources calls no required-reason API today. Declare each one when a core adds it
-         (S3 and S4 declare file timestamps and boot time for their cores). -->
+    <!-- Sources calls no required-reason API. Declare each one when a core adds it. MgbaCore imports
+         fstat, for the size of its own ROM and save files inside the app container. -->
     <key>NSPrivacyAccessedAPITypes</key>
-    <array/>
+    <array>
+        <dict>
+            <key>NSPrivacyAccessedAPIType</key>
+            <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+            <key>NSPrivacyAccessedAPITypeReasons</key>
+            <array>
+                <string>C617.1</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

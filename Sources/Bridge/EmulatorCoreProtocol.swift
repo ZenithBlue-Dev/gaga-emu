@@ -167,6 +167,18 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public init(interface: GagaCoreInterface, systemDirectory: String? = nil, saveDirectory: String? = nil) throws {
         guard interface.abi_version == GAGA_BRIDGE_ABI_VERSION else {
             throw EmulatorCoreError.abiMismatch(found: interface.abi_version, expected: GAGA_BRIDGE_ABI_VERSION)
+    private static var baseDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("GagaEmu")
+    }
+
+    /// One folder per game, named after the ROM file rather than a Library ID, so a save survives
+    /// removing a game from the Library and adding it back.
+    public static func saveDirectory(forROM romPath: String) -> String {
+        baseDirectory.appendingPathComponent("Saves")
+            .appendingPathComponent(URL(fileURLWithPath: romPath).lastPathComponent).path
+    }
+
         }
         if let selfTest = interface.self_test {
             var error = [CChar](repeating: 0, count: 256)
@@ -179,8 +191,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         self.coreInterface = interface
 
         let fileManager = FileManager.default
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let baseDir = appSupport.appendingPathComponent("GagaEmu")
+        let baseDir = Self.baseDirectory
 
         self.systemDirectory = systemDirectory ?? baseDir.appendingPathComponent("System").path
         self.saveDirectory = saveDirectory ?? baseDir.appendingPathComponent("Saves").path

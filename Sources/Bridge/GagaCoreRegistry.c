@@ -380,7 +380,6 @@ __attribute__((weak)) const GagaCoreInterface* getter(void) { \
 
 DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX ReARMed",      "r23",    "cue|bin|chd|pbp|iso", 60.0, 44100)
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
-DEFINE_CORE_INTERFACE(Mgba_GetInterface,          "mgba",            "mGBA",              "0.10.3", "gba|gb|gbc",          59.7275, 32768)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
 DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             "115",    "smc|sfc",             60.0988, 32040)
 DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",          "0.5.0",  "gb|gbc",              59.7275, 32768)
