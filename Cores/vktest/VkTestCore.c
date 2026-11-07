@@ -1,7 +1,7 @@
 // A libretro core written for GagaEmu, for debug and test builds only. It renders with Vulkan through
 // the adapter's layer path (Cores/shared/LibretroVulkan.c), so the path can be proved without a 3D
 // emulator (docs/07 milestone 5.1): a clear and one flat triangle that the D-pad moves, a tone, a boot
-// counter in battery RAM and a save state.
+// counter in battery RAM, a save state and rumble.
 //
 // File (.gagavk): "GAGAVK1" and one flags byte (Sources/Debug/VkTestROM.swift writes it).
 #include "LibretroVulkan.h"
@@ -319,6 +319,13 @@ void retro_run(void) {
     if (s_input(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN)) s_state.y += VT_STEP;
     if (s_input(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP)) s_state.y -= VT_STEP;
     s_state.frame++;
+
+    // Rumble on player 2's port, so a test sees the port carried: A holds the strong motor full, B the weak one at half.
+    struct retro_rumble_interface rumble = { 0 };
+    if (s_env(RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE, &rumble) && rumble.set_rumble_state) {
+        rumble.set_rumble_state(1, RETRO_RUMBLE_STRONG, s_input(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A) ? 0xFFFF : 0);
+        rumble.set_rumble_state(1, RETRO_RUMBLE_WEAK, s_input(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B) ? 0x8000 : 0);
+    }
 
     // A 500 Hz square wave.
     for (size_t i = 0; i < VT_RATE / VT_FPS; ++i, ++s_state.tone_phase) {

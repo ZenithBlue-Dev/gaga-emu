@@ -39,6 +39,10 @@ typedef struct {
     void* event_userdata;
     color_t video[MGBA_WIDTH * MGBA_HEIGHT];
     int16_t audio[MGBA_AUDIO_CAPACITY * 2];
+    struct mRumble rumble; // A cartridge's motor, such as Drill Dozer's.
+    int rumble_on, rumble_off; // Writes this frame.
+    bool rumble_last;          // The last write, for a frame with none.
+    uint16_t rumble_sent;
 } MgbaInstance;
 
 // shortcut: mGBA's logger is one process-wide pointer, so only the newest instance gets FATAL logs. The host runs one session at a time; pass the instance through mLogger if that changes.
@@ -61,6 +65,24 @@ static void mgba_log(struct mLogger* logger, int category, enum mLogLevel level,
 
 static struct mLogger s_logger = { .log = mgba_log };
 
+static void mgba_set_rumble(struct mRumble* rumble, int enable) {
+    MgbaInstance* m = (MgbaInstance*)((char*)rumble - offsetof(MgbaInstance, rumble));
+    if (enable) ++m->rumble_on; else ++m->rumble_off;
+    m->rumble_last = enable != 0;
+}
+
+// The cartridge switches its motor many times a frame, so the share of writes that turned it on is the
+// strength, as in mGBA's libretro port. Both motors get it.
+static void mgba_send_rumble(MgbaInstance* m) {
+    int writes = m->rumble_on + m->rumble_off;
+    uint16_t strength = writes ? (uint16_t)((uint32_t)m->rumble_on * 0xFFFFu / (uint32_t)writes) : (m->rumble_last ? 0xFFFF : 0);
+    m->rumble_on = m->rumble_off = 0;
+    if (strength == m->rumble_sent) return;
+    m->rumble_sent = strength;
+    mgba_emit(m, GAGA_EVENT_RUMBLE, GAGA_RUMBLE_CODE(0, GAGA_RUMBLE_STRONG, strength), NULL);
+    mgba_emit(m, GAGA_EVENT_RUMBLE, GAGA_RUMBLE_CODE(0, GAGA_RUMBLE_WEAK, strength), NULL);
+}
+
 static GagaInstance* mgba_create(const char* system_dir, const char* save_dir) {
     (void)system_dir; // No BIOS or other system file is read.
     MgbaInstance* m = calloc(1, sizeof(MgbaInstance));
@@ -79,6 +101,8 @@ static GagaInstance* mgba_create(const char* system_dir, const char* save_dir) {
     }
     mCoreInitConfig(m->core, NULL);
     m->core->opts.skipBios = true;
+    m->rumble.setRumble = mgba_set_rumble;
+    m->core->setPeripheral(m->core, mPERIPH_RUMBLE, &m->rumble);
     m->core->setVideoBuffer(m->core, m->video, MGBA_WIDTH);
     m->core->setAudioBufferSize(m->core, MGBA_AUDIO_CAPACITY / 2);
     blip_set_rates(m->core->getAudioChannel(m->core, 0), m->core->frequency(m->core), MGBA_SAMPLE_RATE);
@@ -169,6 +193,7 @@ static void mgba_step_frame(GagaInstance* inst, const GagaInputState inputs[4], 
     if (!m) return;
     m->core->setKeys(m->core, inputs && player_count > 0 ? mgba_keys(inputs[0].buttons) : 0);
     m->core->runFrame(m->core);
+    mgba_send_rumble(m);
 
     if (m->video_cb) {
         // mGBA leaves the top byte zero, and the host's shaders pass alpha through.

@@ -282,7 +282,23 @@ private struct ControlsPane: View {
         ActionRow(title: "TriggerPro") { showTriggerPro = true }
             .sheet(isPresented: $showTriggerPro) { TriggerProEditor() }
         Rule()
-        ToggleRow(title: "Rumble", note: "The device vibrates when you press a touch control.", isOn: $state.rumble)
+        ToggleRow(title: "Rumble", note: "The device vibrates when you press a touch control, and when a game rumbles while you play on touch.", isOn: $state.rumble)
+        Rule()
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text("Rumble Strength")
+                Spacer(minLength: 12)
+                Text(state.rumbleStrength == 0 ? "Off" : "\(Int((state.rumbleStrength * 100).rounded()))%")
+                    .font(.meta).foregroundStyle(AppTheme.muted)
+            }
+            Slider(value: $state.rumbleStrength, in: 0...1, step: 0.1) { Text("Rumble Strength") }
+                .tint(AppTheme.accentFill)
+                .accessibilityValue(state.rumbleStrength == 0 ? "Off" : "\(Int((state.rumbleStrength * 100).rounded())) percent")
+            Text("How hard a game shakes your controller or device. Off stops game rumble everywhere.")
+                .font(.footnote).foregroundStyle(AppTheme.muted)
+        }
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
         Rule()
         ToggleRow(title: "Skin Sound Effects", note: "Touch controls click when you press them.", isOn: $state.skinSoundEffects)
         Rule()

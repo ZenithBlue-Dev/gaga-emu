@@ -93,6 +93,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private let bindings: [TriggerProManager.Binding]
     private let respectSilentMode: Bool
     private let entitlements: @MainActor () -> StoreKitManager.Entitlements
+    /// The game's rumble. Nil plays none.
+    let rumble: RumbleManager?
 
     private var core: GagaCoreWrapper?
     private var hasRun = false
@@ -119,7 +121,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     init(game: GameItem, interface: GagaCoreInterface, romPath: String, audio: AudioEngineManager = .shared,
          controllers: ControllerManager, skins: TouchSkinEngine, bindings: [TriggerProManager.Binding],
-         shaderID: String, respectSilentMode: Bool, saveDirectory: URL? = nil,
+         shaderID: String, respectSilentMode: Bool, saveDirectory: URL? = nil, rumble: RumbleManager? = nil,
          entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .effective(.free) }) throws {
         guard let device = MTLCreateSystemDefaultDevice(), let renderer = MetalRenderer(device: device) else {
             throw GameLaunchError.metalUnavailable
@@ -136,6 +138,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         self.skins = skins
         self.bindings = bindings
         self.respectSilentMode = respectSilentMode
+        self.rumble = rumble
         self.renderer = renderer
         self.ring = MetalTextureRing(device: device, width: 256, height: 224)
         super.init()
@@ -234,7 +237,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         #else
         core.onAudioPacket = { [audio] packet in audio.writeAudioPacket(packet) }
         #endif
-        core.onEvent = { [weak self] event in
+        core.onEvent = { [weak self, rumble] event in
+            if event.severity == GAGA_EVENT_RUMBLE { rumble?.receive(RumbleManager.Change(code: event.code)) }
             guard event.severity == GAGA_EVENT_FATAL else { return }
             // A fatal during load surfaces through the error prepare() throws, so fatal() ignores it here.
             Task { @MainActor in self?.fatal(event.message) }
@@ -284,6 +288,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         updateDisplayLink()
         guard phase == .running else { return }
         core?.pause()
+        rumble?.pause()
         audio.pause()
         flushPlayTime()
         phase = .paused
@@ -296,6 +301,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         audio.start(respectSilentMode: respectSilentMode)
         pushInputs()
         core?.resume()
+        rumble?.resume()
         runningSince = CACurrentMediaTime()
         phase = .running
     }
@@ -321,6 +327,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         displayLink = nil
         core?.stop()
         core = nil
+        rumble?.pause() // After the core: it sends no more.
         audio.stop()
         clearTouches()
         flushPlayTime()
