@@ -984,6 +984,8 @@ final class AppState: ObservableObject {
     let store = StoreKitManager()
     let wifi: WiFiTransferServer
     let filters: ImportedFilterStore
+    /// Saved filter presets, in Documents (in the test root under a test).
+    let presets: ShaderPresetStore
     var coverFetcher = CoverArtFetcher()
     private var coverTask: Task<Void, Never>?
 
@@ -1029,6 +1031,9 @@ final class AppState: ObservableObject {
         storeURL = root.appendingPathComponent("state.json")
         wifi = WiFiTransferServer(romDirectory: romDirectory)
         filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
+        let documents = Self.rootOverride.map { $0.appendingPathComponent("Documents", isDirectory: true) }
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first ?? root
+        presets = ShaderPresetStore(directory: documents)
         let stored = (try? Data(contentsOf: storeURL)).flatMap { try? JSONDecoder().decode(Snapshot.self, from: $0) }
         let migrated = stored.flatMap(StateMigration.migrated)
         let snapshot = migrated ?? stored

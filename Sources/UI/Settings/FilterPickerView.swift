@@ -14,11 +14,22 @@ struct FilterPickerView: View {
     @State private var importing = false
     @State private var importFailure: ImportFailure?
     @State private var imported: [ImportedFilterStore.Entry] = []
+    @State private var presets: [SavedFilterPreset] = []
+    @State private var naming: Naming?
+    @State private var deleting: SavedFilterPreset?
     @StateObject private var shaderManager = ShaderManager.shared
 
     private struct ImportFailure: Identifiable {
         let id = UUID()
+        var title = "Filter Not Imported"
+        var subtitle: String? = "Original is selected"
         let message: String
+    }
+
+    /// The name field for a new preset (`preset` nil) or a rename.
+    private struct Naming {
+        var preset: SavedFilterPreset?
+        var text: String
     }
 
     private var selected: String {
@@ -32,8 +43,10 @@ struct FilterPickerView: View {
         return CoreCatalog.drawsOwnPicture((state.games.first { $0.id == game.id } ?? game).resolvedCoreID(defaults: state.defaultCores))
     }
 
-    private var selectedName: String {
-        ShaderCatalog.all.first { $0.id == selected }?.name ?? imported.first { $0.id == selected }?.name ?? "Original"
+    private var selectedName: String { filterName(selected) }
+
+    private func filterName(_ id: String) -> String {
+        ShaderCatalog.all.first { $0.id == id }?.name ?? imported.first { $0.id == id }?.name ?? "Original"
     }
 
     var body: some View {
@@ -60,6 +73,7 @@ struct FilterPickerView: View {
                             row(shader)
                             Rule()
                         }
+                        savedSection
                         importedSection
                     }
                     .disabled(filtersSkipped)
@@ -72,6 +86,9 @@ struct FilterPickerView: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text(selectedName).font(.gameTitle)
                     Spacer(minLength: 0)
+                    Button("Save Preset") { naming = Naming(text: selectedName) }
+                        .buttonStyle(QuietButtonStyle())
+                        .disabled(filtersSkipped)
                     Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
                 }
                 HStack(alignment: .top, spacing: 12) {
@@ -98,15 +115,29 @@ struct FilterPickerView: View {
             }
         }
         .sheet(item: $importFailure) { failure in
-            PaperSheet(title: "Filter Not Imported", subtitle: "Original is selected") {
+            PaperSheet(title: failure.title, subtitle: failure.subtitle) {
                 Text(failure.message)
                     .font(.meta)
                     .textSelection(.enabled)
                     .accessibilityIdentifier("filterImportError")
             }
         }
+        .alert(naming?.preset == nil ? "Save Preset" : "Rename Preset", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+            TextField("Name", text: Binding(get: { naming?.text ?? "" }, set: { naming?.text = $0 }))
+            Button("Save", action: commitName)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(naming?.preset == nil ? "Saves \(selectedName) with its sliders and upscaler." : "A new name for this preset.")
+        }
+        .confirmationDialog(deleting.map { "Delete \($0.name)?" } ?? "", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                            titleVisibility: .visible, presenting: deleting) { preset in
+            Button("Delete", role: .destructive) { deletePreset(preset) }
+        } message: { _ in
+            Text("The filter it uses stays.")
+        }
         .onAppear {
             imported = state.filters.entries
+            presets = state.presets.presets
             preview(selected)
         }
         .onChange(of: selected) { _, newID in preview(newID) }
@@ -120,6 +151,72 @@ struct FilterPickerView: View {
             .font(.subheadline.weight(.semibold))
             .accessibilityAddTraits(.isHeader)
             .padding(.top, 16).padding(.bottom, 4)
+    }
+
+    private var savedSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sectionHeader("Saved")
+            Rule()
+            if presets.isEmpty {
+                Text("Set a filter's sliders, then Save Preset to keep them under a name.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .padding(.vertical, 8)
+            }
+            ForEach(presets) { preset in
+                let base = ShaderCatalog.all.first { $0.id == preset.shaderID }
+                let locked = base.map { $0.premium && !store.canUseShader($0.id) } ?? false
+                let isOn = selected == preset.shaderID && (state.shaderParameters[preset.shaderID] ?? ShaderParameterValues()) == preset.values
+                HStack(spacing: 0) {
+                    Button { if locked { showPlans = true } else { apply(preset) } } label: {
+                        rowLabel(preset.name, credit: filterName(preset.shaderID), selected: isOn, locked: locked, premium: base?.premium ?? false)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(locked ? "\(preset.name), needs Gaga Plus" : "\(preset.name), \(filterName(preset.shaderID))")
+                    .accessibilityAddTraits(isOn ? .isSelected : [])
+                    iconButton("pencil", label: "Rename \(preset.name)") { naming = Naming(preset: preset, text: preset.name) }
+                    iconButton("trash", label: "Delete \(preset.name)") { deleting = preset }
+                }
+                Rule()
+            }
+        }
+    }
+
+    private func iconButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).foregroundStyle(AppTheme.muted).frame(width: 44, height: 44).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// A preset of an imported filter whose file was deleted falls back like any missing filter: to Original.
+    private func apply(_ preset: SavedFilterPreset) {
+        state.shaderParameters[preset.shaderID] = preset.values
+        select(preset.shaderID)
+    }
+
+    private func commitName() {
+        guard let naming else { return }
+        do {
+            if let preset = naming.preset {
+                try state.presets.rename(preset.id, to: naming.text)
+            } else {
+                try state.presets.save(name: naming.text, shaderID: selected,
+                                       values: state.shaderParameters[selected] ?? ShaderParameterValues())
+            }
+            presets = state.presets.presets
+        } catch {
+            importFailure = ImportFailure(title: "Preset Not Saved", subtitle: nil, message: error.localizedDescription)
+        }
+    }
+
+    private func deletePreset(_ preset: SavedFilterPreset) {
+        do {
+            try state.presets.delete(preset.id)
+        } catch {
+            importFailure = ImportFailure(title: "Preset Not Deleted", subtitle: nil, message: error.localizedDescription)
+        }
+        presets = state.presets.presets
     }
 
     private var importedSection: some View {
@@ -256,6 +353,8 @@ private struct FilterControls: View {
         }
         .onAppear(perform: load)
         .onChange(of: shaderID) { load() }
+        // Applying a saved preset can change the values of the filter already selected.
+        .onChange(of: state.shaderParameters[shaderID]) { load() }
     }
 
     private func load() {
