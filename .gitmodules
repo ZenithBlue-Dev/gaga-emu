@@ -136,3 +136,9 @@
 [submodule "Cores/prboom/upstream"]
 	path = Cores/prboom/upstream
 	url = https://github.com/libretro/libretro-prboom.git
+[submodule "Cores/azahar/upstream"]
+	path = Cores/azahar/upstream
+	url = https://github.com/azahar-emu/azahar.git
+[submodule "Cores/azahar/deps/robin-map"]
+	path = Cores/azahar/deps/robin-map
+	url = https://github.com/Tessil/robin-map.git

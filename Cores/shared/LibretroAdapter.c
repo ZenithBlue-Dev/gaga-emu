@@ -648,8 +648,13 @@ bool gaga_lr_save_state(GagaInstance* inst, void* buffer, size_t size) {
 bool gaga_lr_load_state(GagaInstance* inst, const void* buffer, size_t size, char* error, size_t error_capacity) {
     LrInstance* a = (LrInstance*)inst;
     size_t payload = a && a->loaded ? retro_serialize_size() : 0;
+    size_t current = payload; // The running game's size, for the snapshot.
     const char* name = gaga_libretro_core.name;
     LrStateHeader header;
+    if (gaga_libretro_core.state_size_varies && buffer && size > sizeof(header)) {
+        memcpy(&header, buffer, sizeof(header));
+        if (payload) payload = header.payload_size; // Checked against size just below.
+    }
     if (payload == 0 || !buffer || size != sizeof(header) + payload) {
         lr_error(error, error_capacity, "This save state is the wrong size for %s.", name);
         return false;
@@ -659,15 +664,15 @@ bool gaga_lr_load_state(GagaInstance* inst, const void* buffer, size_t size, cha
         lr_error(error, error_capacity, "This save state belongs to another game or another version of this game.", NULL);
         return false;
     }
-    void* snapshot = malloc(payload);
-    if (!snapshot || !retro_serialize(snapshot, payload)) {
+    void* snapshot = malloc(current);
+    if (!snapshot || !retro_serialize(snapshot, current)) {
         free(snapshot);
         lr_error(error, error_capacity, "%s could not load this save state.", name);
         return false;
     }
     bool loaded = retro_unserialize((const uint8_t*)buffer + sizeof(header), payload);
     if (!loaded) {
-        retro_unserialize(snapshot, payload);
+        retro_unserialize(snapshot, current);
         lr_error(error, error_capacity, "%s could not load this save state.", name);
     }
     free(snapshot);

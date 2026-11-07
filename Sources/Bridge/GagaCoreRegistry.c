@@ -423,7 +423,9 @@ DEFINE_CORE_INTERFACE(BeetleWswan_GetInterface,  "beetle_wswan",    "Beetle Wond
 #ifndef GAGA_HAS_POKEMINI
 DEFINE_CORE_INTERFACE(PokeMini_GetInterface,     "pokemini",        "PokeMini",          GAGA_CORE_EXCLUDED, "min", 60.0, 44100)
 #endif
-DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
+#ifndef GAGA_HAS_AZAHAR
+DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar",            GAGA_CORE_EXCLUDED, "3ds|3dsx|cci|cxi|app|elf|axf", 60.0, 32728)
+#endif
 #ifndef GAGA_HAS_FLYCAST
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast",           GAGA_CORE_EXCLUDED, "gdi|cdi|chd|cue", 59.9453, 44100)
 #endif
