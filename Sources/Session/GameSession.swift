@@ -100,6 +100,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private var runningSince: CFTimeInterval?
     private var touchMask: UInt32 = 0
     private var accessibilityMask: UInt32 = 0
+    private var pointer: (x: Int16, y: Int16)?
+    /// The view the device's own picture is drawn in. Not the external screen's: fingers are not there.
+    weak var pictureView: UIView?
 
     #if DEBUG
     private let log = Logger(subsystem: "com.zenithblue.gagaemu", category: "session")
@@ -461,16 +464,32 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     // MARK: - Input
 
-    /// `points` are normalized in the touch canvas.
-    func setTouches(_ points: [CGPoint]) {
+    /// `points` are normalized in the touch canvas. `windowPoints` are the same fingers in window
+    /// coordinates: the first one on the picture is the pointer, for a core with a touch screen.
+    func setTouches(_ points: [CGPoint], windowPoints: [CGPoint] = []) {
         touchMask = skins.setTouches(points)
+        pointer = windowPoints.lazy.compactMap { [self] point -> (x: Int16, y: Int16)? in
+            guard let view = pictureView, let content = renderer.contentSize else { return nil }
+            return Self.libretroPointer(view.convert(point, from: nil), bounds: view.bounds.size, content: content)
+        }.first
         pushInputs()
     }
 
     func clearTouches() {
         skins.releaseAll()
         touchMask = 0
+        pointer = nil
         pushInputs()
+    }
+
+    /// libretro's pointer scale, -32767 to 32767 across the frame as the renderer fits it in `bounds`.
+    /// Nil off the picture, in the letterbox.
+    static func libretroPointer(_ point: CGPoint, bounds: CGSize, content: CGSize) -> (x: Int16, y: Int16)? {
+        let fit = MetalRenderer.fittedViewport(contentWidth: Int(content.width), contentHeight: Int(content.height), drawable: bounds)
+        guard fit.width > 0, fit.height > 0 else { return nil }
+        let u = (Double(point.x) - fit.originX) / fit.width, v = (Double(point.y) - fit.originY) / fit.height
+        guard (0..<1).contains(u), (0..<1).contains(v) else { return nil }
+        return (Int16((u * 65534 - 32767).rounded()), Int16((v * 65534 - 32767).rounded()))
     }
 
     /// VoiceOver has no press and hold, so its activate action holds the button long enough for a core to see it.
@@ -492,7 +511,13 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         if controllers.touchOwnsPlayerOne { states[0].buttons |= touchMask | accessibilityMask }
         states[0].buttons |= controllers.keyboardButtons()
         for (slot, state) in states.enumerated() {
-            core.setInput(player: slot, state: GagaInputState(state))
+            var input = GagaInputState(state)
+            if slot == 0, let pointer {
+                input.pointer_x = pointer.x
+                input.pointer_y = pointer.y
+                input.pointer_down = true
+            }
+            core.setInput(player: slot, state: input)
         }
         #if DEBUG
         if states[0].buttons != loggedButtons {
