@@ -42,6 +42,16 @@ build_slice() { # core dir sdk target
         case "$source" in *.cpp | *.cc) link_driver=clang++ ;; esac
     done <"$dir/sources.txt"
 
+    # Optional: a Rust part of the core, a static library linked with the bridge sources (Cores/jgenesis).
+    # --locked builds exactly what Cargo.lock pins; after the first fetch it needs no network.
+    if [ -n "${CORE_CARGO_MANIFEST:-}" ]; then
+        local rust_target=aarch64-apple-ios
+        [ "$sdk" = iphonesimulator ] && rust_target=aarch64-apple-ios-sim
+        IPHONEOS_DEPLOYMENT_TARGET=$min_ios cargo build --quiet --release --locked --target "$rust_target" \
+            --manifest-path "$dir/$CORE_CARGO_MANIFEST" --target-dir "$root/build/cores/$core/cargo"
+        objects+=("$root/build/cores/$core/cargo/$rust_target/release/$CORE_CARGO_LIB")
+    fi
+
     # -x keeps local symbols out of the binary. They stay available in the dSYM.
     xcrun --sdk "$sdk" "$link_driver" -dynamiclib -target "$target" -isysroot "$sysroot" \
         -install_name "@rpath/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK" \
@@ -105,7 +115,7 @@ PLIST
 build_core() {
     local core=$1 dir="$root/Cores/$1"
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
-    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS # Optional, so one core's value must not reach the next.
+    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB # Optional, so one core's value must not reach the next.
     # shellcheck source=/dev/null
     source "$dir/core.env"
 

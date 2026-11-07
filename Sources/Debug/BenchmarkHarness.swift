@@ -123,6 +123,7 @@ final class BenchmarkRun {
         case "ps1": (data, ext) = (PS1TestEXE.build(), "exe") // PCSX-ReARMed boots a PS-EXE by its name.
         case "snes": data = SNESTestROM.build()
         case "nds": data = NDSTestROM.build()
+        case "megadrive": (data, ext) = (MDTestROM.build(), "md")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

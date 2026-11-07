@@ -1,0 +1,32 @@
+# GagaEmu's bridge to JGenesis, built by scripts/build-core.sh into a static library that JgenesisCore.c
+# links into JgenesisCore.framework. Only the emulation crates are used: no wgpu, SDL, egui or frontend.
+# Cargo.lock pins every crate; the build runs with --locked.
+[package]
+name = "jgenesis-gaga"
+version = "0.14.1"
+edition = "2024"
+license = "GPL-3.0-only"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+path = "src/lib.rs"
+
+[dependencies]
+bincode = "2"
+cdrom = { path = "../upstream/common/cdrom" }
+genesis-components = { path = "../upstream/backend/genesis-components" }
+genesis-config = { path = "../upstream/config/genesis-config" }
+genesis-core = { path = "../upstream/backend/genesis-core" }
+jgenesis-common = { path = "../upstream/common/jgenesis-common" }
+segacd-core = { path = "../upstream/backend/segacd-core" }
+
+# Its own workspace, so cargo never treats it as a member of upstream's.
+[workspace]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+# Unwinding, not abort: a panic in upstream code is caught at the bridge and becomes a FATAL event.
+panic = "unwind"
