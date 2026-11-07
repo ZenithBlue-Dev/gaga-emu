@@ -477,7 +477,7 @@
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
     },
     {
-      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next", "ppsspp", "flycast", "azahar"], "licence": "Apache-2.0",
+      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next", "ppsspp", "flycast", "azahar", "beetle_psx"], "licence": "Apache-2.0",
       "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Shipped once, as MoltenVK.framework, which every core that draws its own 3D picture links.",
       "texts": [
         { "title": "MoltenVK", "from": "build/moltenvk/LICENSE" },
@@ -559,6 +559,28 @@
         { "title": "Vulkan headers", "from": "Cores/swanstation/upstream/dep/vulkan-loader/include/vulkan/vulkan_core.h", "comment": true },
         { "title": "Apache License 2.0", "from": "build/moltenvk/licenses/SPIRV-Cross/LICENSES/Apache-2.0.txt" },
         { "title": "libretro-common", "from": "Cores/swanstation/upstream/dep/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "beetle_psx", "title": "Beetle PSX HW", "cores": ["beetle_psx"], "framework": "BeetlePsxCore",
+      "licence": "GPL-2.0, with GPL-2.0-or-later, MIT, ISC, Apache-2.0 and public-domain parts",
+      "source": "https://github.com/libretro/beetle-psx-libretro, commit 71ee81e, built without its dynarec (lightrec) and without OpenGL. Embeds OpenBIOS (MIT), so it needs no Sony BIOS. It links MoltenVK, listed separately.",
+      "texts": [
+        { "title": "Beetle PSX and Mednafen", "from": "Cores/beetle_psx/upstream/COPYING" },
+        { "title": "Mednafen PSX (GPL-2.0-or-later)", "from": "Cores/beetle_psx/upstream/mednafen/psx/cpu.c", "comment": true },
+        { "title": "dvdisaster error correction (GPL-2.0-or-later)", "from": "Cores/beetle_psx/upstream/mednafen/cdrom/galois.c", "comment": true },
+        { "title": "PGXP (GPL-2.0-or-later)", "from": "Cores/beetle_psx/upstream/pgxp/pgxp_gpu.c", "comment": true },
+        { "title": "parallel-psx (Vulkan renderer)", "from": "Cores/beetle_psx/upstream/parallel-psx/COPYING" },
+        { "title": "volk", "text": "rhi/rhi_lib_vulkan.c folds in volk, Copyright (c) 2018 Arseny Kapoulkine, under the MIT licence.\n" },
+        { "title": "SPIRV-Cross", "from": "Cores/beetle_psx/upstream/parallel-psx/SPIRV-Cross/spirv_cross.cpp", "comment": true },
+        { "title": "SPIR-V headers", "from": "Cores/beetle_psx/upstream/parallel-psx/SPIRV-Cross/spirv.hpp", "comment": true },
+        { "title": "Vulkan headers", "from": "Cores/beetle_psx/upstream/parallel-psx/khronos/include/vulkan/vulkan_core.h", "comment": true },
+        { "title": "Apache License 2.0", "from": "build/moltenvk/licenses/SPIRV-Cross/LICENSES/Apache-2.0.txt" },
+        { "title": "OpenBIOS (PCSX-Redux)", "from": "Cores/beetle_psx/upstream/deps/openbios/LICENSE.txt" },
+        { "title": "rflac (from dr_flac)", "from": "Cores/beetle_psx/upstream/libretro-common/formats/flac/rflac.c", "lines": [6307, 6353] },
+        { "title": "rmp3 and rvorbis", "text": "rmp3.c is derived from minimp3 (CC0-1.0) and rvorbis.c from stb_vorbis (public domain or MIT).\n" },
+        { "title": "LZMA SDK", "text": "r7z_lzma.c is derived from the public-domain LZMA SDK by Igor Pavlov.\n" },
+        { "title": "libretro-common", "from": "Cores/beetle_psx/upstream/libretro-common/include/libretro.h", "comment": true }
       ]
     },
     {

@@ -66,6 +66,7 @@ enum CoreCatalog {
 
     private static let allPlatforms: [PlatformInfo] = [
         .init(id: "ps1", name: "PlayStation", manufacturer: "Sony", cores: [
+            // Interpreter and Vulkan on MoltenVK (layer path). Boots its embedded OpenBIOS when no BIOS is present.
             .init(id: "beetle_psx", name: "Beetle PSX HW", note: "PGXP, Vulkan", recommended: false),
             .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true),
             // Cached interpreter and software renderer only. Boots its embedded OpenBIOS when no BIOS is present.

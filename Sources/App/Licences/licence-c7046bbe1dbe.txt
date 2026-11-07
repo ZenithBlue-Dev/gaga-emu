@@ -1,0 +1,1 @@
+rhi/rhi_lib_vulkan.c folds in volk, Copyright (c) 2018 Arseny Kapoulkine, under the MIT licence.

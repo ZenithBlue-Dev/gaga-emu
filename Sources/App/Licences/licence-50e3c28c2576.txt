@@ -1,0 +1,1 @@
+rmp3.c is derived from minimp3 (CC0-1.0) and rvorbis.c from stb_vorbis (public domain or MIT).

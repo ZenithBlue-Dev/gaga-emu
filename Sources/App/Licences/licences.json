@@ -1743,7 +1743,8 @@
     "mupen64plus_next",
     "ppsspp",
     "flycast",
-    "azahar"
+    "azahar",
+    "beetle_psx"
    ],
    "texts": [
     {
@@ -1985,6 +1986,78 @@
     {
      "title": "libretro-common",
      "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
+   "id": "beetle_psx",
+   "title": "Beetle PSX HW",
+   "licence": "GPL-2.0, with GPL-2.0-or-later, MIT, ISC, Apache-2.0 and public-domain parts",
+   "source": "https://github.com/libretro/beetle-psx-libretro, commit 71ee81e, built without its dynarec (lightrec) and without OpenGL. Embeds OpenBIOS (MIT), so it needs no Sony BIOS. It links MoltenVK, listed separately.",
+   "cores": [
+    "beetle_psx"
+   ],
+   "framework": "BeetlePsxCore",
+   "texts": [
+    {
+     "title": "Beetle PSX and Mednafen",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "Mednafen PSX (GPL-2.0-or-later)",
+     "file": "licence-fb59dd61fa0c.txt"
+    },
+    {
+     "title": "dvdisaster error correction (GPL-2.0-or-later)",
+     "file": "licence-4b83fceef6cc.txt"
+    },
+    {
+     "title": "PGXP (GPL-2.0-or-later)",
+     "file": "licence-9f44c72697af.txt"
+    },
+    {
+     "title": "parallel-psx (Vulkan renderer)",
+     "file": "licence-55dc27c8de99.txt"
+    },
+    {
+     "title": "volk",
+     "file": "licence-c7046bbe1dbe.txt"
+    },
+    {
+     "title": "SPIRV-Cross",
+     "file": "licence-379d0019bb03.txt"
+    },
+    {
+     "title": "SPIR-V headers",
+     "file": "licence-e05c06c5e1d2.txt"
+    },
+    {
+     "title": "Vulkan headers",
+     "file": "licence-6563754b546d.txt"
+    },
+    {
+     "title": "Apache License 2.0",
+     "file": "licence-44b0a56e80b4.txt"
+    },
+    {
+     "title": "OpenBIOS (PCSX-Redux)",
+     "file": "licence-b721b99dd738.txt"
+    },
+    {
+     "title": "rflac (from dr_flac)",
+     "file": "licence-1e3d12bc24ca.txt"
+    },
+    {
+     "title": "rmp3 and rvorbis",
+     "file": "licence-50e3c28c2576.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-7d117e1dcc53.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-f38c560d46af.txt"
     }
    ]
   },
