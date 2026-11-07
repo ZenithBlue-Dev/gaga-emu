@@ -449,17 +449,19 @@ struct BIOSManagerView: View {
     /// The cores' system folder, so a file listed here is the file a core opens.
     private var biosDirectory: URL { GagaCoreWrapper.systemDirectory }
 
-    private let required: [(String, String)] = [
+    /// File name, then the system it serves. The names are the ones each core opens in the system folder.
+    static let required: [(String, String)] = [
         ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
-        ("firmware.bin", "DS firmware")
+        ("firmware.bin", "DS firmware"),
+        ("mpr-17933.bin", "Saturn (US, EU)"), ("sega_101.bin", "Saturn (JP)")
     ]
 
     var body: some View {
         PaperSheet(title: "BIOS Files", scrolls: false) {
             List {
                 Section("Required") {
-                    ForEach(required, id: \.0) { name, system in
+                    ForEach(Self.required, id: \.0) { name, system in
                         HStack {
                             VStack(alignment: .leading) {
                                 Text(name)
