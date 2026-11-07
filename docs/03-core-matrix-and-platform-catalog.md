@@ -57,6 +57,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Atari Lynx | Handy | `handy` | holani (not built) | [Zlib](https://github.com/libretro/libretro-handy) (`lynx/license.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 65C02 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-handy](https://github.com/libretro/libretro-handy)), last push 2026-04-20, no tags. Pinned to `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1`. Chosen over [holani-retro](https://github.com/LLeny/holani-retro): GPL-3.0 and Rust, which `scripts/build-core.sh` does not build | 1 |
 | Atari 5200, Atari 8-bit | Atari800 | `atari800` | None | [GPL-2.0-or-later](https://github.com/libretro/libretro-atari800) (`atari800/COPYING`), plus all-permissive, Zlib and MIT parts (section 5) | Software | 6502 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-atari800](https://github.com/libretro/libretro-atari800)), last push 2026-09-01, no tags. Pinned to `4e7fbc73765c1a9670c7506616046ad1d4ccda51` | 1 |
 | Atari Jaguar | Virtual Jaguar | `virtualjaguar` | None (optional `jagboot.rom`) | [GPL-3.0-or-later](https://github.com/libretro/virtualjaguar-libretro) (`LICENSE`), plus BSD, MIT and public-domain parts (section 5) | Software | 68000, GPU and DSP interpreters. Heavy tier: a full-speed claim needs a device benchmark with real games. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro)). Pinned to tag `v3.11.0`, `34696082dbc0448caf23aa4ecb5ed40817cb8da0` | 3 |
+| Commodore 64 | VICE (x64sc) | `vice` | Player's `kernal-901227-03.bin`, `basic-901226-01.bin`, `chargen-901225-01.bin` | [GPL-2.0-or-later](https://github.com/libretro/vice-libretro) (`COPYING`), plus Zlib, MIT and public-domain parts (section 5) | Software | 6510, VIC-II and SID interpreters, cycle-exact. Static gate passes on both slices; runtime check passes on a macOS host harness with all-zero stand-in ROM files; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/vice-libretro](https://github.com/libretro/vice-libretro)), last push 2026-10-30, no tags. Pinned to `5ebe7d333ab15be57a9dde5f46c29a5bbd5f44f8` | 2 |
 
 ### Renderer rules
 
@@ -444,6 +445,23 @@ Upstream's `src/bios/jag*.c` embed Atari's boot ROMs and are never compiled: `bi
 
 No boot ROM or game is bundled. Carts start by HLE; `jagboot.rom` is the player's and optional on the BIOS Files screen (the bridge leaves the BIOS option off). The test program `Sources/Debug/JaguarTestROM.swift` is GagaEmu's own hand-assembled 68000.
 
+### VICE licence obligations
+
+Source: [github.com/libretro/vice-libretro](https://github.com/libretro/vice-libretro), libretro's port of VICE 3.10, commit `5ebe7d333ab15be57a9dde5f46c29a5bbd5f44f8` (upstream has no tags), as the unmodified submodule `Cores/vice/upstream`, built as x64sc. `Cores/vice/ViceCore.c`, `vice_embedded.c`, `vice_sysfile.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/vice/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `vice/src` (6510, VIC-II, CIA, SID with reSID and reSID-fp, drives, cartridges, tape), `libretro/`, `retrodep/` | GPL-2.0-or-later (`COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `vice/src/lib/p64` | Zlib (Benjamin Rosseaux) | Keep the notice. |
+| `libretro/libretro-dc.c` | MIT | Reproduce the notice. |
+| `deps/libz` | Zlib | Keep the notice. |
+| `deps/7zip` | Public domain | None. |
+| `libretro-common` | MIT | Reproduce the notice. |
+
+Upstream compiles Commodore's KERNAL, BASIC, character and drive ROMs into the core (`include/embedded/*.h`, through `retrodep/embedded.c` and `retrodep/embedded/c64embedded.c`). GagaEmu builds neither file: `vice_embedded.c` answers "not embedded", `include/embedded` is not on the include path, and `FORBIDDEN_SOURCES` fails the build if any of them reaches the binary. A byte check of the built framework finds no KERNAL bytes. `vice_sysfile.c` builds upstream's `sysfile.c` so the player's ROM files are also found at the top of the system folder, where the BIOS Files screen lists them. `config.h` undefines `HAVE_NETWORK`, and `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`. `stat`, `access`, `opendir`, `readdir` and `localtime` are imported; `stat` is covered by the app's File Timestamp reason C617.1.
+
+No Commodore ROM or game is bundled. The player adds `kernal-901227-03.bin`, `basic-901226-01.bin` and `chargen-901225-01.bin` on the BIOS Files screen; without them the bridge refuses the game with a message, because upstream crashes. Upstream makes `<system>/vice` and writes its defaults there once (`vicerc-dump-C64SC`). Disk images are write-protected, so the player's files are never changed. The test cartridge `Sources/Debug/C64TestROM.swift` is GagaEmu's own hand-assembled 6502; the tests' stand-in ROM files are all zeros and never run.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -511,7 +529,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar); Commodore 64 (VICE x64sc).
 
 ---
 

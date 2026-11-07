@@ -4,10 +4,10 @@
 # (NDSTestROM), .md (MDTestROM, with battery SRAM), .exe (PS1TestEXE), .cue (PS1TestEXE.disc, which also writes the
 # .bin beside it), .gagavk (VkTestROM, for the layer-path test core), .com (DOSTestCOM), .z64 (N64TestROM, with
 # battery SRAM), or .zip (GridleeTestSet, a MAME ROM set: MAME runs it only from a file named gridlee.zip).
-# Backlog cores (group-retro): .sms (SMSTestROM, with cartridge RAM), .a26 (Atari2600TestROM), .a78 (Atari7800TestROM), .lnx (LynxTestROM), .a52 and .xex (Atari800TestROM), .j64 (JaguarTestROM).
-# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26|output.a78|output.lnx|output.a52|output.xex|output.j64>
+# Backlog cores (group-retro): .sms (SMSTestROM, with cartridge RAM), .a26 (Atari2600TestROM), .a78 (Atari7800TestROM), .lnx (LynxTestROM), .a52 and .xex (Atari800TestROM), .j64 (JaguarTestROM), .crt (C64TestROM).
+# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26|output.a78|output.lnx|output.a52|output.xex|output.j64|output.crt>
 set -euo pipefail
-output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26|output.a78|output.lnx|output.a52|output.xex|output.j64>}
+output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.sms|output.a26|output.a78|output.lnx|output.a52|output.xex|output.j64|output.crt>}
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -38,6 +38,7 @@ case "lnx": try LynxTestROM.build().write(to: url)
 case "a52": try Atari800TestROM.a52().write(to: url)
 case "xex": try Atari800TestROM.xex().write(to: url)
 case "j64": try JaguarTestROM.build().write(to: url)
+case "crt": try C64TestROM.crt().write(to: url)
 default: try GBATestROM.build().write(to: url)
 }
 SWIFT
@@ -47,7 +48,7 @@ xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAs
     "$root/Sources/Debug/VkTestROM.swift" "$root/Sources/Debug/DOSTestCOM.swift" "$root/Sources/Debug/GridleeTestSet.swift" \
     "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/SMSTestROM.swift" "$root/Sources/Debug/Atari2600TestROM.swift" \
     "$root/Sources/Debug/Atari7800TestROM.swift" "$root/Sources/Debug/LynxTestROM.swift" "$root/Sources/Debug/Atari800TestROM.swift" \
-    "$root/Sources/Debug/JaguarTestROM.swift" \
+    "$root/Sources/Debug/JaguarTestROM.swift" "$root/Sources/Debug/C64TestROM.swift" \
     "$root/Sources/Hub/RomPatcher.swift" -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

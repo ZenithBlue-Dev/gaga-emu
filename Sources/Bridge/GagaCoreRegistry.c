@@ -420,6 +420,9 @@ DEFINE_CORE_INTERFACE(Atari800_GetInterface,      "atari800",        "Atari800",
 #ifndef GAGA_HAS_VIRTUALJAGUAR
 DEFINE_CORE_INTERFACE(VirtualJaguar_GetInterface, "virtualjaguar",   "Virtual Jaguar",    GAGA_CORE_EXCLUDED, "j64|jag",  60.05,   48044)
 #endif
+#ifndef GAGA_HAS_VICE
+DEFINE_CORE_INTERFACE(Vice_GetInterface,          "vice",            "VICE",              GAGA_CORE_EXCLUDED, "d64|t64|prg|crt|tap", 50.12, 48000)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,      "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
@@ -454,6 +457,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Handy_GetInterface,
     Atari800_GetInterface,
     VirtualJaguar_GetInterface,
+    Vice_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

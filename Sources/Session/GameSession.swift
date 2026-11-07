@@ -546,7 +546,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     }
 
     /// Platforms whose core takes the hardware keyboard key by key (GagaInputState.keys).
-    static let typingPlatforms: Set<String> = ["dos", "atari8bit"]
+    static let typingPlatforms: Set<String> = ["dos", "atari8bit", "c64"]
 
     private func pushInputs() {
         guard let core else { return }

@@ -143,6 +143,9 @@ enum CoreCatalog {
         .init(id: "jaguar", name: "Atari Jaguar", manufacturer: "Atari", cores: [
             .init(id: "virtualjaguar", name: "Virtual Jaguar", note: "Heavy", recommended: true)
         ]),
+        .init(id: "c64", name: "Commodore 64", manufacturer: "Commodore", cores: [
+            .init(id: "vice", name: "VICE", note: "x64sc", recommended: true)
+        ]),
         .init(id: "javame", name: "Java ME", manufacturer: "Vintage", cores: [
             .init(id: "j2mejs", name: "J2meJS", note: "MIDP", recommended: true)
         ]),
@@ -183,7 +186,7 @@ enum CoreCatalog {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "dreamcast": "DC", "n3ds": "3DS",
                        "arcade": "ARC", "javame": "JME", "symbian": "SYM", "unknown": "ETC",
                        "mastersystem": "SMS", "gamegear": "GG", "sg1000": "SG", "atari2600": "2600",
-                       "atari7800": "7800", "atari5200": "5200", "atari8bit": "A8", "jaguar": "JAG"]
+                       "atari7800": "7800", "atari5200": "5200", "atari8bit": "A8", "jaguar": "JAG", "c64": "C64"]
         return special[id] ?? id.uppercased()
     }
 
@@ -231,6 +234,7 @@ enum CoreCatalog {
         case "a52": return "atari5200"
         case "xex", "atr", "xfd", "dcm", "atx": return "atari8bit"
         case "j64", "jag": return "jaguar"
+        case "d64", "t64", "prg", "crt", "tap": return "c64"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

@@ -926,6 +926,42 @@
    ]
   },
   {
+   "id": "vice",
+   "title": "VICE",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/vice-libretro, commit 5ebe7d3, built as x64sc. Commodore's ROMs are not built.",
+   "cores": [
+    "vice"
+   ],
+   "framework": "ViceCore",
+   "texts": [
+    {
+     "title": "VICE",
+     "file": "licence-b8a2f73f743d.txt"
+    },
+    {
+     "title": "P64",
+     "file": "licence-68b75c23c710.txt"
+    },
+    {
+     "title": "libretro disk control",
+     "file": "licence-30382152b8f6.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-d0f474ed713f.txt"
+    },
+    {
+     "title": "7-Zip decoder",
+     "file": "licence-e598cb06c410.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

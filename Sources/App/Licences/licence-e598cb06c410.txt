@@ -1,0 +1,1 @@
+The 7-Zip decoder files in deps/7zip are in the public domain, as each file header says (Igor Pavlov).

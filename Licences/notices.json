@@ -234,6 +234,18 @@
       ]
     },
     {
+      "id": "vice", "title": "VICE", "cores": ["vice"], "framework": "ViceCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/vice-libretro, commit 5ebe7d3, built as x64sc. Commodore's ROMs are not built.",
+      "texts": [
+        { "title": "VICE", "from": "Cores/vice/upstream/COPYING" },
+        { "title": "P64", "from": "Cores/vice/upstream/vice/src/lib/p64/p64.c", "comment": true },
+        { "title": "libretro disk control", "from": "Cores/vice/upstream/libretro/libretro-dc.c", "comment": true },
+        { "title": "zlib", "from": "Cores/vice/upstream/deps/libz/zlib.h", "comment": true },
+        { "title": "7-Zip decoder", "text": "The 7-Zip decoder files in deps/7zip are in the public domain, as each file header says (Igor Pavlov).\n" },
+        { "title": "libretro-common", "from": "Cores/vice/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
