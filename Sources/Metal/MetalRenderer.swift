@@ -244,6 +244,17 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
                                               green: Double(Palette.ink.light >> 8 & 0xFF) / 255,
                                               blue: Double(Palette.ink.light & 0xFF) / 255, alpha: 1)
 
+    /// What both picture paths hand the screen: 8-bit UNORM holding sRGB-encoded values, tagged sRGB, so
+    /// nothing applies gamma a second time. MoltenVK sets the same on a layer-path core's layer from its
+    /// `B8G8R8A8_UNORM` / `SRGB_NONLINEAR` swapchain (`LibretroVulkan.c`).
+    static let outputPixelFormat: MTLPixelFormat = .bgra8Unorm
+    static let outputColorSpace = CGColorSpace(name: CGColorSpace.sRGB)
+
+    static func configureOutput(_ layer: CAMetalLayer) {
+        layer.pixelFormat = outputPixelFormat
+        layer.colorspace = outputColorSpace
+    }
+
     /// Aspect fit, centred. The clear colour shows in the rest.
     /// shortcut: treats core pixels as square, add a display aspect to the frame descriptor when a core needs it (SNES 8:7).
     static func fittedViewport(contentWidth: Int, contentHeight: Int, drawable: CGSize) -> MTLViewport {

@@ -138,6 +138,20 @@ final class VkTestCoreTests: XCTestCase {
         }
     }
 
+    /// The layer path hands the screen what the texture path does: UNORM bytes tagged sRGB. The core clears
+    /// to (0, 0.25, 0.5) in a UNORM image, so 0.25 must read 64 (not 137, which a second gamma encode gives),
+    /// through the same copy the swapchain gets.
+    func testLayerColourMatchesTheTexturePath() async throws {
+        MetalRenderer.configureOutput(layer)
+        let (core, _) = try await loaded()
+        run(core, frames: 3)
+        let frame = try XCTUnwrap(core.readLayerPixels())
+        XCTAssertEqual(pixel(frame, x: 5, y: 5), [128, 64, 0, 255], "exact clear bytes, B G R A")
+        XCTAssertEqual(layer.pixelFormat, MetalRenderer.outputPixelFormat, "MoltenVK kept the texture path's format")
+        XCTAssertEqual(layer.colorspace?.name as String?, CGColorSpace.sRGB as String, "MoltenVK kept the sRGB tag")
+        core.stop()
+    }
+
     /// A finger on a layer-path picture reaches the core: the session takes the frame size from the core's
     /// size-only frames, as it takes the texture's on the copy path.
     func testASessionPlacesAFingerOnTheLayerPicture() async throws {

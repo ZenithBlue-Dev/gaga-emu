@@ -115,7 +115,8 @@ private struct MetalPicture: UIViewRepresentable {
         let view = MTKView(frame: .zero, device: session.renderer.device)
         if takesTouch { session.pictureView = view }
         view.delegate = session.renderer
-        view.colorPixelFormat = .bgra8Unorm
+        view.colorPixelFormat = MetalRenderer.outputPixelFormat
+        if let layer = view.layer as? CAMetalLayer { MetalRenderer.configureOutput(layer) }
         view.clearColor = MetalRenderer.letterboxColor
         view.preferredFramesPerSecond = Int(session.targetFPS.rounded(.up))
         return view
@@ -153,6 +154,7 @@ final class MetalLayerView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = UIColor(AppTheme.letterbox)
+        if let layer = layer as? CAMetalLayer { MetalRenderer.configureOutput(layer) }
     }
 
     required init?(coder: NSCoder) { fatalError("Not used from a storyboard") }
