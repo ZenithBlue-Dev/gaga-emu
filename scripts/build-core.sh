@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# Builds emulator cores into build/cores/<Framework>.xcframework: dynamic, arm64 only, for simulator and
+# device, exporting only the bridge getter. A core that fails the no-JIT gate or the export check is
+# refused and no xcframework is written. Needs Xcode and the core's submodule, nothing else.
+#
+#   scripts/build-core.sh [core-id ...]     no arguments: every core in Cores/
+set -euo pipefail
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+min_ios=17.0
+
+# xargs runs this script again per source file. Run from the core's directory, so sources.txt and the
+# include paths in core.env stay relative to it.
+if [ "${1:-}" = --compile-one ]; then
+    source=$2 object="$COMPILE_OUT/obj/$2.o" tool=clang flags=$CORE_CFLAGS
+    case "$source" in *.cpp | *.cc) tool=clang++ flags=$CORE_CXXFLAGS ;; esac
+    mkdir -p "$(dirname "$object")"
+    # shellcheck disable=SC2086 # the flag strings are word lists.
+    exec xcrun --sdk "$COMPILE_SDK" "$tool" -target "$COMPILE_TARGET" -isysroot "$COMPILE_SYSROOT" -g \
+        -I"$root/Sources/Bridge" -DGAGA_CORE_VERSION="\"$COMPILE_VERSION\"" \
+        $flags -c "$source" -o "$object"
+fi
+
+build_slice() { # core dir sdk target
+    local core=$1 dir=$2 sdk=$3 target=$4
+    local out="$root/build/cores/$core/$sdk"
+    local framework="$out/$CORE_FRAMEWORK.framework" binary="$out/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK"
+    local sysroot source link_driver=clang objects=()
+    sysroot=$(xcrun --sdk "$sdk" --show-sdk-path)
+    rm -rf "$out"
+    mkdir -p "$framework"
+
+    (
+        cd "$dir"
+        export COMPILE_OUT="$out" COMPILE_SDK="$sdk" COMPILE_TARGET="$target" COMPILE_SYSROOT="$sysroot" \
+            COMPILE_VERSION="$CORE_VERSION ${UPSTREAM_COMMIT:0:8}" CORE_CFLAGS CORE_CXXFLAGS
+        xargs -n 1 -P "$(sysctl -n hw.ncpu)" "$root/scripts/build-core.sh" --compile-one <sources.txt
+    )
+
+    while IFS= read -r source; do
+        objects+=("$out/obj/$source.o")
+        case "$source" in *.cpp | *.cc) link_driver=clang++ ;; esac
+    done <"$dir/sources.txt"
+
+    # -x keeps local symbols out of the binary. They stay available in the dSYM.
+    xcrun --sdk "$sdk" "$link_driver" -dynamiclib -target "$target" -isysroot "$sysroot" \
+        -install_name "@rpath/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK" \
+        -compatibility_version 1 -current_version 1 \
+        -Wl,-exported_symbols_list,"$dir/$CORE_FRAMEWORK.exports" -Wl,-dead_strip -Wl,-x \
+        -o "$binary" "${objects[@]}"
+    xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
+
+    cat >"$framework/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleExecutable</key><string>$CORE_FRAMEWORK</string>
+    <key>CFBundleIdentifier</key><string>com.zenithblue.gagaemu.$core</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleName</key><string>$CORE_FRAMEWORK</string>
+    <key>CFBundlePackageType</key><string>FMWK</string>
+    <key>CFBundleShortVersionString</key><string>$CORE_VERSION</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>MinimumOSVersion</key><string>$min_ios</string>
+</dict>
+</plist>
+PLIST
+
+    # Only the bridge getter may be visible (docs/06 section 2.5).
+    local exports found
+    exports=$(nm -gU "$binary" | awk '{print $3}')
+    if [ "$exports" != "$CORE_EXPORT" ]; then
+        echo "$CORE_FRAMEWORK ($sdk) exports more than $CORE_EXPORT:" >&2
+        echo "$exports" >&2
+        exit 1
+    fi
+    echo "exports ($sdk): $exports"
+
+    if found=$(nm -u "$binary" | grep -E "$FORBIDDEN_IMPORTS"); then
+        echo "$CORE_FRAMEWORK ($sdk) imports a disabled feature's API: $found" >&2
+        exit 1
+    fi
+    "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS"
+}
+
+build_core() {
+    local core=$1 dir="$root/Cores/$1"
+    [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
+    # shellcheck source=/dev/null
+    source "$dir/core.env"
+
+    if [ ! -e "$dir/upstream/.git" ]; then
+        echo "Missing source. Run: git submodule update --init Cores/$core/upstream" >&2
+        exit 1
+    fi
+    local commit hits
+    commit=$(git -C "$dir/upstream" rev-parse HEAD)
+    if [ "$commit" != "$UPSTREAM_COMMIT" ]; then
+        echo "Cores/$core/upstream is at $commit, but core.env pins $UPSTREAM_COMMIT" >&2
+        exit 1
+    fi
+
+    # Source audit, docs/04 section 8. A hit needs a read and a per-core decision, not a silent build.
+    if hits=$(cd "$dir" && xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit' <sources.txt); then
+        echo "Source audit found code-generation calls in Cores/$core:" >&2
+        echo "$hits" >&2
+        exit 1
+    fi
+
+    build_slice "$core" "$dir" iphonesimulator "arm64-apple-ios$min_ios-simulator"
+    build_slice "$core" "$dir" iphoneos "arm64-apple-ios$min_ios"
+
+    local output="$root/build/cores/$CORE_FRAMEWORK.xcframework"
+    rm -rf "$output"
+    xcodebuild -create-xcframework -output "$output" \
+        -framework "$root/build/cores/$core/iphonesimulator/$CORE_FRAMEWORK.framework" \
+        -debug-symbols "$root/build/cores/$core/iphonesimulator/$CORE_FRAMEWORK.framework.dSYM" \
+        -framework "$root/build/cores/$core/iphoneos/$CORE_FRAMEWORK.framework" \
+        -debug-symbols "$root/build/cores/$core/iphoneos/$CORE_FRAMEWORK.framework.dSYM" >/dev/null
+    echo "$core: $output"
+}
+
+cores=("$@")
+if [ $# -eq 0 ]; then
+    cores=()
+    for env in "$root"/Cores/*/core.env; do
+        cores+=("$(basename "$(dirname "$env")")")
+    done
+fi
+for core in "${cores[@]}"; do
+    build_core "$core"
+done
