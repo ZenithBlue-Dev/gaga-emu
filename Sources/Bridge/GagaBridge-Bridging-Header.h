@@ -4,5 +4,6 @@
 
 #import "GagaBridge.h"
 #import "GagaCoreRegistry.h"
+#import "../Archive/GagaSevenZip.h"
 
 #endif /* GagaBridge_Bridging_Header_h */
