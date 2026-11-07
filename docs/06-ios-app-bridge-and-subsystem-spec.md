@@ -707,8 +707,14 @@ targets:
       - name: No-JIT gate
         script: '"$SRCROOT/scripts/nojit-gate.sh" --app "$TARGET_BUILD_DIR/$WRAPPER_NAME" "$SRCROOT/$CODE_SIGN_ENTITLEMENTS"'
         basedOnDependencyAnalysis: false
+      # The declared output makes CodeSign wait for this file and sign it again when it changes, so a build
+      # where only the commit moved still has a valid signature. Rewritten only when the commit differs.
       - name: Record build commit
-        script: 'git -C "$SRCROOT" describe --always --dirty --exclude "*" > "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/build-commit.txt"'
+        script: |
+          commit=$(git -C "$SRCROOT" describe --always --dirty --exclude "*")
+          [ "$(cat "$SCRIPT_OUTPUT_FILE_0" 2>/dev/null)" = "$commit" ] || echo "$commit" > "$SCRIPT_OUTPUT_FILE_0"
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/build-commit.txt
         basedOnDependencyAnalysis: false
 
   GagaEmuTests:
