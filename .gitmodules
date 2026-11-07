@@ -58,3 +58,6 @@
 [submodule "Cores/beetle_supergrafx/upstream"]
 	path = Cores/beetle_supergrafx/upstream
 	url = https://github.com/libretro/beetle-supergrafx-libretro.git
+[submodule "Cores/beetle_vb/upstream"]
+	path = Cores/beetle_vb/upstream
+	url = https://github.com/libretro/beetle-vb-libretro.git
