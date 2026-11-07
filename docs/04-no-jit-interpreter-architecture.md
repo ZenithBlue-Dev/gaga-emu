@@ -464,6 +464,18 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 
 Short runs, not the three of section 7.2. No MD, PS1, N64, NDS, PSP or PCE game was available on the owner's drive.
 
+**Game-scene device runs, 2026-11-08, build `fe0c85c`.** Same phone, one 10 s run after 5 s warm-up each, Debug host with Release core, thermal nominal throughout, no generated code. Owner-supplied games imported from an archive on the phone, not kept in the repo:
+
+| Platform | Core | Game | Archive | fps | 1% low | Core CPU ms per frame (mean, p99) | Peak footprint | Audio underruns |
+|---|---|---|---|---|---|---|---|---|
+| NES | Nestopia UE | owner-supplied NES game | .zip | 60.10 | 56.9 | 2.87, 3.34 | 187 MB | 0 |
+| SNES | bsnes | owner-supplied SNES game | .zip | 60.10 | 56.8 | 6.05, 7.74 | 260 MB | 0 |
+| N64 | Mupen64Plus-Next | owner-supplied N64 game | .zip | 59.21 | 20.1 | 5.60, 9.52 | 579 MB | 6 |
+| GBA | mGBA | owner-supplied GBA game | .zip | 59.73 | 56.5 | 2.59, 4.02 | 176 MB | 0 |
+| DS | melonDS DS | owner-supplied DS game | .7z | 59.83 | 56.5 | 5.41, 11.03 | 308 MB | 0 |
+
+The N64 1% low of 20.1 fps with 6 underruns is the first game-scene sign of dropped frames; one short run, so not a verdict. PSP: the owner-supplied .zip imported with platform "unknown" and stayed a .zip in the ROM folder, and `-GagaBenchmarkCore ppsspp` on it wrote no record (the run was ended after 60 s); no PSP number. Mega-CD: the owner-supplied disc zip unpacked to a .cue and .bin tracks and imported as Mega-CD; no Mega-CD BIOS was installed, so `-GagaBenchmarkCore jgenesis` wrote no record. The refusal text is only an in-app alert, which this run did not capture; `JgenesisCoreTests.testAMegaCDDiscWithoutABIOSSaysWhatIsMissing` passed and covers it. Archives of 7z and zip type unpacked to the right platform on the device for NES, SNES, N64, GBA, DS and Mega-CD.
+
 **Backlog cores, group-retro** (`docs/07` section 8.x). Logic checked on a macOS host harness only; no device numbers yet.
 
 | Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
