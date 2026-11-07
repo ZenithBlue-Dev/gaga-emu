@@ -5,6 +5,7 @@
 #include "GagaBridge.h"
 
 // shim/src/lib.rs. Its structs mirror GagaBridge.h, and these prototypes match its signatures.
+_Static_assert(sizeof(GagaInputState) == 72, "update GagaInputState in shim/src/lib.rs, which asserts the same size");
 GagaInstance* jg_create(const char* system_dir, const char* save_dir);
 void jg_destroy(GagaInstance* inst);
 bool jg_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_data, size_t rom_size);
@@ -28,7 +29,6 @@ _Static_assert(sizeof(GagaEventSeverity) == sizeof(int32_t), "event severity is 
 // Nothing runs between step_frame calls, so there is nothing to stop or restart.
 static void jg_pause(GagaInstance* inst) { (void)inst; }
 static void jg_resume(GagaInstance* inst) { (void)inst; }
-static bool jg_attach_metal_layer(GagaInstance* inst, void* layer) { (void)inst; (void)layer; return false; }
 
 static const GagaCoreInterface s_interface = {
     .abi_version = GAGA_BRIDGE_ABI_VERSION,
@@ -46,7 +46,6 @@ static const GagaCoreInterface s_interface = {
     .load_rom = jg_load_rom,
     .reset = jg_reset,
     .step_frame = jg_step_frame,
-    .attach_metal_layer = jg_attach_metal_layer,
     .set_video_callback = jg_set_video_callback,
     .set_audio_callback = jg_set_audio_callback,
     .state_version = 0x000E0001u, // STATE_VERSION in shim/src/lib.rs: upstream's state format 0.14.0-1.

@@ -56,7 +56,11 @@ pub struct GagaInputState {
     pointer_x: i16,
     pointer_y: i16,
     pointer_down: bool,
+    keys: [u8; 32],
 }
+// The host passes an array of these, so a size that differs from C reads player 2 onward from the wrong bytes.
+// JgenesisCore.c asserts the same size on the C side.
+const _: () = assert!(core::mem::size_of::<GagaInputState>() == 72);
 
 #[repr(C)]
 pub struct GagaFrameDescriptor {
