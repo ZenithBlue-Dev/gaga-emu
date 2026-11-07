@@ -35,7 +35,8 @@ enum LibretroThumbnails {
         "atari8bit": "Atari - 8-bit",
         "jaguar": "Atari - Jaguar",
         "c64": "Commodore - 64",
-        "amiga": "Commodore - Amiga"
+        "amiga": "Commodore - Amiga",
+        "doom": "DOOM"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.

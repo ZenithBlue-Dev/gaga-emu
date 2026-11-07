@@ -426,6 +426,9 @@ DEFINE_CORE_INTERFACE(Vice_GetInterface,          "vice",            "VICE",    
 #ifndef GAGA_HAS_PUAE
 DEFINE_CORE_INTERFACE(Puae_GetInterface,          "puae",            "PUAE",              GAGA_CORE_EXCLUDED, "adf|hdf",  50.0,    44100)
 #endif
+#ifndef GAGA_HAS_PRBOOM
+DEFINE_CORE_INTERFACE(Prboom_GetInterface,        "prboom",          "PrBoom",            GAGA_CORE_EXCLUDED, "wad",      60.0,    48000)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,      "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast Dreamcast", "2.1",    "cdi|gdi|chd",         60.0, 44100)
 DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",            "1.17.1", "iso|cso|pbp",         60.0, 44100)
@@ -462,6 +465,7 @@ static const CoreGetterFunc s_core_getters[] = {
     VirtualJaguar_GetInterface,
     Vice_GetInterface,
     Puae_GetInterface,
+    Prboom_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

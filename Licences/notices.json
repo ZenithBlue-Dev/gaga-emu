@@ -264,6 +264,23 @@
       ]
     },
     {
+      "id": "prboom", "title": "PrBoom", "cores": ["prboom"], "framework": "PrboomCore", "licence": "GPL-3.0-or-later",
+      "source": "https://github.com/libretro/libretro-prboom, commit 4849268. Mostly GPL-2.0-or-later; src/sc88.c is GPL-3.0-or-later, so the whole is GPL-3.0-or-later. No game WAD is included.",
+      "texts": [
+        { "title": "PrBoom (GPL-2.0-or-later), with prboom.wad", "from": "Cores/prboom/upstream/COPYING" },
+        { "title": "GNU General Public License 3", "from": "Cores/gearsystem/upstream/LICENSE" },
+        { "title": "SC-88 emulation", "from": "Cores/prboom/upstream/src/sc88.c", "comment": true },
+        { "title": "Nuked-SC55", "from": "Cores/prboom/upstream/src/sc55.c", "comment": true },
+        { "title": "DOSBox OPL", "from": "Cores/prboom/upstream/src/dbopl.c", "comment": true },
+        { "title": "UMAPINFO (LGPL, version 2 or later)", "from": "Cores/prboom/upstream/src/u_mapinfo.c", "comment": true },
+        { "title": "GNU Lesser General Public License 2.1", "from": "Cores/nestopia/upstream/source/nes_ntsc/license.txt" },
+        { "title": "Scanner", "from": "Cores/prboom/upstream/src/scanner.c", "comment": true },
+        { "title": "micromod", "from": "Cores/prboom/upstream/libretro/libretro-common/formats/mod/rmodtracker.c", "lines": [4897, 4931] },
+        { "title": "rvorbis and rmp3", "text": "libretro-common's rvorbis is derived from stb_vorbis (Sean Barrett, public domain or MIT) and rmp3 from minimp3 (lieff, CC0).\n" },
+        { "title": "libretro-common", "from": "Cores/prboom/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]

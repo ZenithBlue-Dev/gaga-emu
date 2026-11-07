@@ -137,6 +137,7 @@ final class BenchmarkRun {
         case "jaguar": (data, ext) = (JaguarTestROM.build(), "j64")
         case "c64": (data, ext) = (C64TestROM.crt(), "crt") // Still needs the player's KERNAL files to start.
         case "amiga": (data, ext) = (AmigaTestROM.adf(), "adf")
+        case "doom": (data, ext) = (DoomTestWAD.wad(), "wad")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

@@ -76,3 +76,6 @@
 [submodule "Cores/puae/upstream"]
 	path = Cores/puae/upstream
 	url = https://github.com/libretro/libretro-uae
+[submodule "Cores/prboom/upstream"]
+	path = Cores/prboom/upstream
+	url = https://github.com/libretro/libretro-prboom.git

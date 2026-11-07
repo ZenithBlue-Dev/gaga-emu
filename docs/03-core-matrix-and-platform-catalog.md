@@ -59,6 +59,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Atari Jaguar | Virtual Jaguar | `virtualjaguar` | None (optional `jagboot.rom`) | [GPL-3.0-or-later](https://github.com/libretro/virtualjaguar-libretro) (`LICENSE`), plus BSD, MIT and public-domain parts (section 5) | Software | 68000, GPU and DSP interpreters. Heavy tier: a full-speed claim needs a device benchmark with real games. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro)). Pinned to tag `v3.11.0`, `34696082dbc0448caf23aa4ecb5ed40817cb8da0` | 3 |
 | Commodore 64 | VICE (x64sc) | `vice` | Player's `kernal-901227-03.bin`, `basic-901226-01.bin`, `chargen-901225-01.bin` | [GPL-2.0-or-later](https://github.com/libretro/vice-libretro) (`COPYING`), plus Zlib, MIT and public-domain parts (section 5) | Software | 6510, VIC-II and SID interpreters, cycle-exact. Static gate passes on both slices; runtime check passes on a macOS host harness with all-zero stand-in ROM files; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/vice-libretro](https://github.com/libretro/vice-libretro)), last push 2026-10-30, no tags. Pinned to `5ebe7d333ab15be57a9dde5f46c29a5bbd5f44f8` | 2 |
 | Amiga | PUAE | `puae` | None: upstream's built-in AROS Kickstart replacement. Player's `kick34005.A500` and `kick40068.A1200` optional | [GPL-2.0-or-later](https://github.com/libretro/libretro-uae) (`COPYING`), plus AROS Public License 1.1 (the AROS ROM), SoftFloat-2a, BSD, Zlib, MIT and public-domain parts (section 5) | Software | 68000 interpreter (no JIT source compiled), OCS/ECS chipset. Static gate passes on both slices; runtime check passes on a macOS host harness on AROS; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-uae](https://github.com/libretro/libretro-uae)), last commit 2026-11-04, no tags (`VERSION` 5.3.1). Pinned to `c1d1d49d5c7cdad2005e86f1cbb279d39e041efc` | 2 |
+| Doom (WAD) | PrBoom | `prboom` | None. The player's game WAD (an IWAD such as `doom2.wad` or `freedoom2.wad`, or a PWAD beside one); none bundled | [GPL-3.0-or-later](https://github.com/libretro/libretro-prboom) as a whole: mostly GPL-2.0-or-later (`COPYING`), `src/sc88.c` GPL-3.0-or-later, plus LGPL, BSD and MIT parts (section 5) | Software | Software renderer, no CPU to emulate. Static gate passes on both slices; runtime check passes on a macOS host harness with GagaEmu's generated IWAD; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-prboom](https://github.com/libretro/libretro-prboom)), last commit 2026-10-18, no tags (`v2.5.0` in `retro_get_system_info`). Pinned to `4849268e7342494193f2bbf2d0128a751cf58da7` | 1 |
 
 ### Renderer rules
 
@@ -485,6 +486,24 @@ Upstream also compiles WHDLoad's Amiga-side files (`retrodep/WHDLoad_files.zip.c
 
 No Kickstart ROM or game is bundled. The core boots on AROS when no Kickstart is in the system folder; `kick34005.A500` and `kick40068.A1200` are the player's and optional on the BIOS Files screen. Floppies are write-protected and shared NVRAM is off, so the player's files are never changed; a host harness run left the system and save folders empty. The test floppy `Sources/Debug/AmigaTestROM.swift` is GagaEmu's own hand-assembled 68000 bootblock.
 
+### PrBoom licence obligations
+
+Source: [github.com/libretro/libretro-prboom](https://github.com/libretro/libretro-prboom), libretro's PrBoom (`v2.5.0`, with Heretic and Hexen support), commit `4849268e7342494193f2bbf2d0128a751cf58da7` (upstream has no tags), as the unmodified submodule `Cores/prboom/upstream`. `Cores/prboom/PrboomCore.c`, `prboom_memmap.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/prboom/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src` (Doom engine, `heretic/`, `hexen/`, `udmf.c`, DOSBox OPL `dbopl.c`, `opl.c`, Nuked-SC55 `sc55.c`), `libretro/libretro.c`, and `prboom.wad` compiled in as `src/prboom_wad_data.h` | GPL-2.0-or-later (`COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `src/sc88.c` (Roland SC-88 emulation, from gearmulator) | GPL-3.0-or-later | Makes the combined core GPL-3.0-or-later: the GPL-3.0 text, and the gate above under version 3. |
+| `src/u_mapinfo.c` | LGPL, version 2 or later | Keep the notice and the LGPL text; the source is offered with the rest. |
+| `src/scanner.c`, `src/u_scanner.c` | BSD-3-Clause (Braden Obrzut) | Reproduce the notice. |
+| `libretro-common/formats/mod/rmodtracker.c` (micromod) | BSD-3-Clause (Martin Cameron) | Reproduce the notice. |
+| `libretro-common/formats/vorbis/rvorbis.c`, `mp3/rmp3.c` | Derived from stb_vorbis (public domain or MIT) and minimp3 (CC0); the files carry no header | None beyond libretro-common's MIT notice. |
+| `libretro-common` (rest) | MIT | Reproduce the notice. |
+
+libretro-common's `memmap/memmap.c` is not built: it also holds helpers that map executable memory (`memprotect`, `memjit_alloc`). `prboom_memmap.c` gives its six address-reservation functions upstream's own answers for a platform without reservation, so `data_transfer.c` reads whole files, and `FORBIDDEN_SOURCES` fails the build if memmap.c reaches the binary. Built without `HAVE_THREADS`, so `rthreads` is not compiled, the threaded renderer and the SC-55/SC-88 workers run inline, and `FORBIDDEN_IMPORTS` refuses `pthread_create` with sockets, `dlopen`, `dlsym` and `mprotect`. FluidSynth (`WANT_FLUIDSYNTH`) is off, as upstream's default. `stat`, `opendir`, `readdir`, `mmap` (read-only, for WAD mapping, off by default), `mkdir`, `rename`, `remove`, `unlink` and `utimes` are imported; `stat` is covered by the app's File Timestamp reason C617.1.
+
+No game WAD is bundled: neither id Software's nor Freedoom's. The SC-55 and SC-88 synthesisers run only from Roland ROM files the player supplies (`sc55player.c` looks for them by name); none are bundled. Upstream writes `prboom.cfg` and savegames under `<save>/<game name>/`. The test IWAD `Sources/Debug/DoomTestWAD.swift` is GagaEmu's own: a one-room map, a palette, stripes and a square-wave sound, with no id Software or Freedoom lump.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -552,7 +571,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar); Commodore 64 (VICE x64sc); Amiga (PUAE).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar); Commodore 64 (VICE x64sc); Amiga (PUAE); Doom WADs (PrBoom).
 
 ---
 

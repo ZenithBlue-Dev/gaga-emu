@@ -1,0 +1,1 @@
+libretro-common's rvorbis is derived from stb_vorbis (Sean Barrett, public domain or MIT) and rmp3 from minimp3 (lieff, CC0).

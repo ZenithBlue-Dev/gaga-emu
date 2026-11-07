@@ -1022,6 +1022,62 @@
    ]
   },
   {
+   "id": "prboom",
+   "title": "PrBoom",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/libretro/libretro-prboom, commit 4849268. Mostly GPL-2.0-or-later; src/sc88.c is GPL-3.0-or-later, so the whole is GPL-3.0-or-later. No game WAD is included.",
+   "cores": [
+    "prboom"
+   ],
+   "framework": "PrboomCore",
+   "texts": [
+    {
+     "title": "PrBoom (GPL-2.0-or-later), with prboom.wad",
+     "file": "licence-1cba07ce0f6d.txt"
+    },
+    {
+     "title": "GNU General Public License 3",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "SC-88 emulation",
+     "file": "licence-c20b3c13a233.txt"
+    },
+    {
+     "title": "Nuked-SC55",
+     "file": "licence-704d9d3c08f4.txt"
+    },
+    {
+     "title": "DOSBox OPL",
+     "file": "licence-8cd15f66dbce.txt"
+    },
+    {
+     "title": "UMAPINFO (LGPL, version 2 or later)",
+     "file": "licence-82616726a90a.txt"
+    },
+    {
+     "title": "GNU Lesser General Public License 2.1",
+     "file": "licence-5df070071989.txt"
+    },
+    {
+     "title": "Scanner",
+     "file": "licence-087cc0ade161.txt"
+    },
+    {
+     "title": "micromod",
+     "file": "licence-bcc3ec643ced.txt"
+    },
+    {
+     "title": "rvorbis and rmp3",
+     "file": "licence-f4d0ad4cbd63.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
