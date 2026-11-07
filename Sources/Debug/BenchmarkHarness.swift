@@ -118,6 +118,7 @@ final class BenchmarkRun {
         case "gba": data = GBATestROM.build()
         case "gb": data = GBTestROM.build()
         case "gbc": data = GBTestROM.build(color: true)
+        case "nds": data = NDSTestROM.build()
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
