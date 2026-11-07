@@ -1,202 +1,266 @@
-# 03 — Core Matrix & Multi-Core Platform Catalog
+# 03 — Core Matrix & Platform Catalog
 
-Gaga-Emu adopts a multi-core architecture per platform. Users can assign a global default core for any system or override the core for individual titles by long-pressing a game cover in the library.
+This document is canonical for the GagaEmu core list, licences and renderer paths. Other docs reference it and do not fork the table. `docs/04` owns interpreter design and performance tiers, `docs/06` owns the bridge API, and `docs/07` owns phases and status.
 
----
+**Status: planned.** The app today is a shell plus a mock core. The 12 non-mock cores in `Sources/Bridge/GagaCoreRegistry.c:279-290` are stubs, and no emulator core in this document is integrated. The tables below are design, not current state.
 
-## 1. Master System & Core Taxonomy
-
-```
-   ┌──────────────────────────────────────────────────────────────────────────┐
-   │                       GAGA-EMU MASTER CORE MATRIX                        │
-   ├────────────────────┬──────────────────────┬──────────────────────────────┤
-   │ System / Console   │ Primary Core         │ Alternative Cores & Purpose  │
-   ├────────────────────┼──────────────────────┼──────────────────────────────┤
-   │ Nintendo GBA       │ mGBA                 │ gpSP (speed), VBA-M (compat) │
-   │ Nintendo GB / GBC  │ Gambatte             │ SameBoy (accuracy), Gearboy  │
-   │ Nintendo SNES      │ Snes9x (fast)        │ bsnes (cycle-accuracy)       │
-   │ Nintendo NES / FDS │ Nestopia UE          │ FCEUMM (broad mappers)       │
-   │ Nintendo N64       │ Mupen64Plus-Next     │ Video: GLideN64 / ParaLLEl   │
-   │ Nintendo DS        │ melonDS DS           │ DeSmuME (legacy hacks)       │
-   │ Nintendo 3DS       │ Azahar               │ (PabloMK7 optimized interp)  │
-   │ Sony PlayStation 1 │ PCSX-ReARMed (fast)  │ Beetle PSX HW, SwanStation   │
-   │ Sony PSP           │ PPSSPP (IR Interp)   │ Native Metal Backend         │
-   │ Sega Saturn        │ Beetle Saturn        │ Kronos (hardware rasterizer) │
-   │ Sega Mega-CD       │ Genesis Plus GX      │ JGenesis, ClownMDEmu         │
-   │ Sega Mega Drive    │ Genesis Plus GX      │ ClownMDEmu, Picodrive (32X)  │
-   │ Sega Dreamcast     │ Flycast (JITLess)    │ Provenance SH-4 interpreter  │
-   │ Arcade (CPS/NeoGeo)│ FBNeo                │ MAME (wide arcade catalog)   │
-   │ MS-DOS / Win9x     │ DOSBox Pure          │ ZIP launch, controller maps  │
-   ├────────────────────┴──────────────────────┴──────────────────────────────┤
-   │ EXPERIMENTAL / SISTER ARCHITECTURE TARGETS                               │
-   ├────────────────────┬──────────────────────┬──────────────────────────────┤
-   │ Sony PlayStation 2 │ Balero-S2            │ Play! (pure C++ interpreter) │
-   │ Nintendo GC / Wii  │ Dolphin iOS          │ Cached Interpreter           │
-   └────────────────────┴──────────────────────┴──────────────────────────────┘
-```
-
-> **App Store Scope Isolation**: 7th and 8th-generation console architectures (`samba-s3` PS3, `bachata-s4` PS4) are strictly maintained in separate research repositories. They are not bundled in the Gaga-Emu App Store binary to guarantee compliance with App Store Rule 4.7 ("retro console emulators only") and prevent binary bloat.
+**Sources.** Upstream state and licences were checked on 2026-11-07. Manic EMU facts are marked by source: "seen in screenshot", "App Store listing", "public repo", or "release notes". Licensing text is engineering guidance, not legal advice.
 
 ---
 
-## 2. In-Depth Multi-Core Analysis by System
+## 1. Scope
 
-### 2.1 Game Boy Advance (GBA)
-- **`mGBA` (Primary)**:
-  - *Strengths*: Highly accurate cycle timing, clean C99 architecture, native support for Game Boy Camera, solar sensor (Boktai), gyro sensors (WarioWare Twisted), and cartridge rumble.
-  - *No-JIT Profile*: Fast direct interpreter; runs at full 60 FPS on all 64-bit iOS devices with negligible power draw.
-- **`VBA-M` (Alternative — High Compatibility)**:
-  - *Strengths*: Long-standing compatibility with thousands of older ROM hacks and translation patches that rely on imprecise emulator quirks.
-- **`gpSP` (Alternative — Maximum Battery Savings)**:
-  - *Strengths*: Originally built for low-power handhelds (PSP). Operates with the smallest CPU instruction footprint; ideal for maximum battery life on older iPhones.
+The App Store binary contains exactly the platforms in the master matrix. There is no rule based on console generation.
 
-### 2.2 Game Boy & Game Boy Color (GB / GBC)
-- **`Gambatte` (Primary)**:
-  - *Strengths*: State-of-the-art cycle-accurate video and audio emulation. Built-in color palettes for DMG games.
-  - *No-JIT Profile*: Highly efficient C++ interpreter; negligible CPU usage.
-- **`SameBoy` (Alternative — Audio & Boot Accuracy)**:
-  - *Strengths*: Bit-perfect APU emulation, official boot ROM execution, real-time Game Boy Printer emulation, and built-in text-to-speech debugger.
-- **`Gearboy` & `Mesen-S` (Alternative)**:
-  - *Strengths*: Minimalist C++17 implementations, ideal for clean fallback.
+- Guideline 4.7 covers "retro game console and PC emulator apps". Apple defines no generations and does not define "retro". [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+- Guideline 4.7.2 is about exposing native platform APIs. It is not a rule about which systems may be emulated.
+- JIT denial comes from OS enforcement (W^X, no public iOS entitlement), not from a guideline. See `docs/04`.
+- PS3 and PS4 are never catalog rows or frame producers (section 7).
+- GameCube, Wii and PS2 are non-shipping research and are not promised (section 6).
 
-### 2.3 Super Nintendo Entertainment System (SNES / SFC)
-- **`bsnes` (Primary)**:
-  - *Strengths*: Cycle-exact PPU/APU accuracy. Flawlessly supports special enhancement chips (SuperFX, SA-1, DSP-1/2/3/4, Cx4, ST010, SPC7110) without external HLE hacks.
-  - *No-JIT Profile*: Deterministic instruction interpreter; runs at full speed on A13 Bionic and newer.
-- **`Snes9x` (Alternative — Fast / Low-Power)**:
-  - *Strengths*: Excellent balance of accuracy and raw speed. Runs at 60 FPS on any iOS device with virtually zero heat output.
-- **`Mesen-S` (Alternative — Precision)**:
-  - *Strengths*: Audio DSP cycle precision; supports HD-SNES widescreen mods.
-
-### 2.4 Nintendo 64 (N64)
-- **`Mupen64Plus-Next` (Master Core)**:
-  - Supports dynamic switching between two distinct graphics RDP paths:
-    1. **`GLideN64` (HLE)**: High-level graphics emulation translated into Metal via custom shader pipeline. Upscales to native Retina resolutions (2x to 4x).
-    2. **`ParaLLEl RDP / Angrylion` (LLE)**: Bit-exact, pixel-perfect software rasterization of the SGI Reality Coprocessor. Eliminates every graphical glitch found in HLE plugins.
-  - *No-JIT Strategy*: Uses Mupen64Plus Pure Interpreter with cached opcode decoding.
-
-### 2.5 Nintendo DS (NDS)
-- **`melonDS DS` (Primary)**:
-  - *Strengths*: Modern C++ architecture, accurate 3D rasterizer, DSi NAND emulation, camera injection, local WiFi multiplayer, and microphone input via iOS `AVAudioEngine`.
-  - *No-JIT Profile*: ARM946E-S and ARM7TDMI pure interpreter with fast memory mapping.
-- **`DeSmuME` (Alternative — Legacy Hacks)**:
-  - *Strengths*: Mature core with deep support for obscure homebrew and custom touchscreen layout profiles.
-
-### 2.6 Nintendo 3DS
-- **`Azahar` (Primary — PabloMK7 Citra Fork)**:
-  - *Strengths*: Purpose-built optimizations for ARM64 and low-memory devices. Supports real-time microphone input, camera capture, amiibo `.bin` scanning via NFC, and built-in Action Replay cheat engine.
-  - *No-JIT Profile*: Dual-core ARM11 interpreter with fast SIMD math routines and SPIR-V to Metal PICA200 fragment shader translation.
-- **`Citra` (Alternative)**:
-  - *Strengths*: Upstream baseline reference.
-
-### 2.7 Sony PlayStation 1 (PS1 / PSX)
-- **`Beetle PSX HW` (Primary)**:
-  - *Strengths*: Mednafen-derived accuracy. Includes **PGXP (Precision Geometry Transform Pipeline)** which fixes the infamous PS1 3D polygon jittering and affine texture warping. Internal resolution upscaled up to 4K via Metal.
-  - *No-JIT Profile*: R3000A MIPS interpreter.
-- **`PCSX-ReARMed` (Alternative — Speed)**:
-  - *Strengths*: Optimized specifically for ARM; lowest memory footprint and lowest battery impact.
-- **`SwanStation` (Alternative — Modern DuckStation Core)**:
-  - *Strengths*: Comprehensive rewind support, automatic widescreen patches, and adaptive texture filtering.
-
-### 2.8 Sony PlayStation 2 (PS2)
-- **`Balero-S2` (Primary — Sister Project Integration)**:
-  - *Architecture*: 100% pure interpreter. Pre-decoded Intermediate Representation (IR) blocks stored in static memory arenas. Direct-threaded dispatch with `[[clang::musttail]]`.
-  - *Vector Emulation*: EE MMI and VU0/VU1 128-bit SIMD lowered directly to ARM64 NEON intrinsics (`vld1q_u32`, `vaddq_s32`, `vfmaq_f32`).
-  - *Graphics*: Native Metal 3/4 Graphics Synthesizer engine with compute swizzling of the 4 MB eDRAM.
-- **`Play!` (Alternative — Pure C++ Interpreter)**:
-  - *Strengths*: Clean, modular, standalone C++ codebase requiring zero JIT. Highly stable fallback.
-
-### 2.9 Sony PlayStation 3 & 4 (PS3 & PS4)
-- **`Samba-S3` (PS3)**: Modular RPCS3 interpreter mode with PPU/SPU execution mapped to Apple Silicon P/E cluster scheduling.
-- **`Bachata-S4` (PS4)**: shadPS4 interpreter mode with Liverpool GPU GCN instruction packets translated directly into Metal Compute Command Encoders.
-
-### 2.10 Sony PlayStation Portable (PSP)
-- **`PPSSPP`**:
-  - *No-JIT Configuration*: Compiled with `CPU_INTERPRETER`. Emulates the Allegrex MIPS R4000 CPU via direct-threaded execution.
-  - *Graphics*: Direct Apple Metal backend (`GPU_BACKEND_METAL`) rendering the GE (Graphics Engine) pipeline natively on Apple Silicon.
-
-### 2.11 Sega Saturn & Dreamcast
-- **Sega Saturn — `Beetle Saturn`**:
-  - Emulates dual SH-2 RISC CPUs and complex VDP1/VDP2 sprite and plane processors with cycle fidelity.
-  - *Alternatives*: `Kronos` (hardware-accelerated rasterization), `Yabause` (lightweight).
-- **Sega Dreamcast — `Flycast (JITLess)`**:
-  - Incorporates the Provenance JITLess interpreter developed specifically for App Store compliance.
-  - Translates PowerVR2 graphics to Metal and executes SH-4 instructions via optimized NEON dispatch.
-
-### 2.12 Sega Mega-CD & 16-Bit Ecosystem
-- **`JGenesis` (Primary for Mega-CD)**:
-  - Modern Rust-based core providing cycle accuracy for the dual Motorola 68000 + Ricoh PCM sound chip setup in the Mega-CD.
-- **`Genesis Plus GX`**:
-  - Gold standard for Genesis / Mega Drive, Sega CD, Master System, and Game Gear.
-- **`ClownMDEmu` & `Picodrive`**:
-  - `ClownMDEmu`: High accuracy cycle-based Genesis core.
-  - `Picodrive`: Best-in-class support for the complex Sega 32X dual SH-2 architecture on mobile devices.
-
-### 2.13 Arcade Systems
-- **`FBNeo` (FinalBurn Neo)**:
-  - The premier arcade core for Neo Geo, Capcom CPS-1, CPS-2, CPS-3, Cave, and Sega System 16/18. Full support for RetroAchievements.
-- **`MAME`**:
-  - Universal arcade emulation library supporting tens of thousands of historical arcade titles.
-
-### 2.14 Vintage & Mobile Platforms
-- **Symbian OS (`EKA2L1`)**:
-  - Emulates Nokia N-Gage and Symbian S60v1 through Symbian^3 mobile devices.
-- **Java ME (`J2meJS` & `FreeJ2ME`)**:
-  - Emulates MIDP 1.0/2.0 J2ME retro mobile phone games (e.g. Gameloft, EA Mobile titles).
-- **MS-DOS & Windows 9x (`DOSBox Pure`)**:
-  - Supports direct execution from `.zip` files, virtual gamepad mapping, and Windows 95/98 VHD booting.
+**GPU floor:** A14 or newer (Apple7), the first chip listed with Metal 3. Metal 4 is optional and never the baseline. [Metal Feature Set Tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf) The deployment target stays iOS 17.0 (`project.yml:5`). No code in `Sources/` checks the GPU family yet, so the floor is stated but not enforced. Milestone 1.16 in `docs/07` is the runtime check.
 
 ---
 
-## 3. Core Switching Mechanism & Static Linking Model
+## 2. Master Matrix
+
+One row per platform. Licence, renderer, no-JIT status and upstream state describe the GagaEmu default; section 3 covers alternates. Load tier is expected CPU load, not delivery order. Tier meanings are in `docs/04`, and phases in `docs/07` may schedule differently.
+
+"Unverified" means no source was found that settles the question. Every core must still pass the no-JIT gate (section 5), including those marked confirmed.
+
+| Platform | GagaEmu default | Manic default (screenshot) | Alternates | Licence | Renderer path | No-JIT status | Upstream state | Load tier |
+|---|---|---|---|---|---|---|---|---|
+| Game Boy / GBC | Gambatte | Gambatte | SameBoy, Gearboy | [GPL-2.0](https://github.com/libretro/gambatte-libretro) (source header says version 2) | Software | Unverified | Active, last push 2026-10-30 | 1 |
+| GBA | mGBA | mGBA | VBA-M, gpSP (interpreter) | [MPL-2.0](https://github.com/mgba-emu/mgba) | Software | Unverified | Active, last push 2026-11-06 | 1 |
+| NES | Nestopia | Not seen | FCEUMM, QuickNES | [GPL-2.0](https://raw.githubusercontent.com/libretro/nestopia/master/COPYING) | Software | Unverified | Active, last push 2026-09-13 ([0ldsk00l/nestopia](https://github.com/0ldsk00l/nestopia)) | 1 |
+| SNES / Super Famicom | bsnes | bsnes | bsnes-jg, bsnes-mercury | [GPL-3.0-or-later](https://raw.githubusercontent.com/bsnes-emu/bsnes/master/LICENSE.txt) | Software | Unverified | Active, last push 2026-11-06 ([libretro fork](https://github.com/libretro/bsnes-libretro)) | 2 |
+| Genesis / Mega-CD | JGenesis (self-maintained iOS port) | JGenesis (Mega-CD row) | ClownMDEmu | [GPL-3.0](https://raw.githubusercontent.com/jsgroth/jgenesis/master/README.md) | Software frames expected; port needed, since upstream's frontend uses wgpu | Unverified. [`Cargo.lock`](https://raw.githubusercontent.com/jsgroth/jgenesis/master/Cargo.lock) lists no cranelift, dynasm or wasmtime crate | Active, last push 2026-11-06. Linux, Windows and web are official; iOS is not | 2 |
+| PS1 | PCSX-ReARMed (`DYNAREC=0`) | Beetle PSX HW | Beetle PSX HW (software, or Vulkan via MoltenVK) | [GPL-2.0](https://github.com/libretro/pcsx_rearmed) | Software (`BUILTIN_GPU = neon`) | Confirmed for the build config: [`ios-arm64` sets `DYNAREC = 0`](https://raw.githubusercontent.com/libretro/pcsx_rearmed/master/Makefile.libretro) | Active, last push 2026-10-29 | 1 |
+| DS | melonDS DS | melonDS DS | DeSmuME | [GPL-3.0](https://github.com/JesseTG/melonds-ds) | Software (its OpenGL modes are not an accepted path) | Confirmed for the build config: ["JIT is disabled by default in iOS builds"](https://raw.githubusercontent.com/JesseTG/melonds-ds/main/CMakeLists.txt) | Active, last push 2026-10-28. README lists iOS arm64 | 2 |
+| Saturn | Beetle Saturn | Beetle Saturn | None confirmed | [GPL-2.0](https://github.com/libretro/beetle-saturn-libretro) | Software | Unverified. A [forum thread](https://forums.libretro.com/t/what-would-it-take-to-get-a-dynarec-into-beetle-saturn/47739?page=3) discusses adding a dynarec, which suggests none exists | Active, last push 2026-11-02 | 3 |
+| N64 | Mupen64Plus-Next (ParaLLEl-RDP) | Not seen. Public repo: `mupen64plus.next` | parallel-n64 | [GPL-2.0](https://github.com/libretro/mupen64plus-libretro-nx) | Vulkan via MoltenVK. [ParaLLEl-RDP](https://raw.githubusercontent.com/Themaister/parallel-rdp/master/README.md) needs Vulkan 1.1 plus 8-bit and 16-bit storage; MoltenVK behaviour unverified | **Fails as configured upstream.** The CPU side is clean ([`WITH_DYNAREC=` empty on `ios-arm64`](https://raw.githubusercontent.com/libretro/mupen64plus-libretro-nx/develop/Makefile)), but `HAVE_PARALLEL_RSP = 1` [compiles `rsp_jit.cpp` and GNU Lightning](https://raw.githubusercontent.com/libretro/mupen64plus-libretro-nx/develop/Makefile.common). A non-JIT RSP is required (section 4) | Active, last push 2026-10-29 | 2 |
+| PSP | PPSSPP (`IR_INTERPRETER`) | Not seen. Public repo: `ppsspp.libretro` | None | [GPL-2.0-or-later](https://raw.githubusercontent.com/hrydgard/ppsspp/master/README.md) | Native Metal on non-libretro builds ([`Common/GPU/Metal`](https://github.com/hrydgard/ppsspp/tree/master/Common/GPU/Metal); which release ships it is unverified), otherwise Vulkan via MoltenVK | Confirmed: [official post](https://www.ppsspp.org/news/live-on-app-store/) says the App Store build has no JIT and uses the IR interpreter | Active, last push 2026-11-06 | 2 |
+| Dreamcast | Flycast JIT-less fork (fork to be named and maintained) | Not seen. Public repo: `flycast-jitless`; [App Store](https://apps.apple.com/us/app/manic-emu/id6743335790) 1.7.1 notes credit a Provenance developer | None | [GPL-2.0](https://github.com/flyinghead/flycast) | Vulkan via MoltenVK expected. Upstream lists Vulkan and OpenGL; the fork's renderer is unverified | Unverified for any fork we would adopt. [Reported](https://retrododo.com/ifly-testflight-spots-are-available-for-iphone-dreamcast-emulator/) as Flycast with the dynarec removed; fork source not located | Upstream active, but [dropped iOS support](https://raw.githubusercontent.com/flyinghead/flycast/master/README.md). GagaEmu would maintain the fork | 3 |
+| 3DS | Azahar (experimental) | Azahar | None | [GPL-3.0](https://raw.githubusercontent.com/azahar-emu/azahar/master/LICENSE.txt) | Vulkan via MoltenVK ([README](https://raw.githubusercontent.com/azahar-emu/azahar/master/README.md): Vulkan 1.1 or GLES 3.2; GLES is not accepted), or software | Unverified end to end. Interpreter present (`arm/dyncom`). [`use_cpu_jit` and `use_shader_jit`](https://raw.githubusercontent.com/azahar-emu/azahar/master/src/common/settings.h) default to true and must be off and compiled out | Active, last push 2026-11-06. [CMake](https://raw.githubusercontent.com/azahar-emu/azahar/master/CMakeLists.txt) has an iOS path | 3 |
+| Arcade | MAME (GPL) | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases): MAME in the App Store version | None | [GPL](https://raw.githubusercontent.com/mamedev/mame/master/COPYING) | Software expected; libretro output path unverified | Unverified. Needs an audit for dynamic-recompiler paths | Active, last push 2026-11-07 | 2 |
+| DOS / Win9x | DOSBox Pure (normal core) | Not seen. Public repo: `dosbox.pure` | DOSBox Staging, DOSBox-X | [GPL-2.0-or-later](https://github.com/schellingb/dosbox-pure) | Software | Unverified. The dynamic core must be compiled out, not only left unselected | Active, last push 2026-10-06 | 2 |
+| Java ME | J2meJS | J2meJS | None | Unknown; upstream not identified | Unverified | **Unverified: spike required.** JS runtime path unknown (section 4) | Unknown | 2 |
+| Symbian | EKA2L1 | Not seen. [Release notes](https://github.com/Manic-EMU/ManicEMU/releases) list JIT modes for it | None | [GPL-3.0](https://github.com/EKA2L1/EKA2L1) | **Port needed.** [iOS path links OpenGLES.framework](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/drivers/CMakeLists.txt), which is not an accepted path. A Vulkan backend file exists; completeness unverified | **Unverified: spike required.** [dyncom interpreter is in the tree](https://raw.githubusercontent.com/EKA2L1/EKA2L1/master/src/emu/cpu/CMakeLists.txt); a full no-JIT run is unproven | Active, last push 2026-11-06. README calls development a part-time hobby | 3 |
+
+### Renderer rules
+
+- **App UI, frame presentation and post-processing:** native Metal.
+- **Software-rendered cores:** the core frame goes through the host texture ring and Metal shader chain. libretro cores copy frames unless a host-buffer API exists, so zero copy is not claimed for them.
+- **3D cores:** Vulkan on statically linked MoltenVK to `CAMetalLayer`, the pattern S3 and S4 use. MoltenVK counts as Metal for this project (owner decision, 2026-11-07). A native Metal backend is allowed where upstream has one.
+- **GLES-only and desktop-GL-only renderers are not accepted.** Such a core needs a Vulkan, Metal or software renderer, or it is out.
+- **libretro has no Metal context type.** [`retro_hw_context_type`](https://raw.githubusercontent.com/libretro/libretro-common/master/include/libretro.h) has OpenGL variants, Vulkan, Direct3D and RSX values, and no Metal value. PPSSPP's [native Metal backend is excluded from its libretro build](https://raw.githubusercontent.com/hrydgard/ppsspp/master/CMakeLists.txt).
+
+---
+
+## 3. Alternates
+
+Alternates are GagaEmu design choices. Manic's alternates are outside the reference images: the screenshots show one core per platform. Where Manic ships a core, the source is its public repo or release notes.
+
+| Platform | Alternate | Licence | Renderer path | No-JIT status | Upstream state |
+|---|---|---|---|---|---|
+| GB / GBC | SameBoy | [Expat](https://raw.githubusercontent.com/LIJI32/SameBoy/master/LICENSE). The upstream `iOS` directory needs written permission for App Store use; use the core only | Software | Unverified | Active, last push 2026-11-02 |
+| GB / GBC | Gearboy | [GPL-3.0](https://github.com/drhelius/Gearboy) | Software | Unverified | Active, last push 2026-11-06 |
+| GBA | VBA-M | [GPL-2.0](https://github.com/visualboyadvance-m/visualboyadvance-m) | Software | Unverified | Active, last push 2026-11-01 |
+| GBA | gpSP (interpreter) | [GPL-2.0](https://github.com/libretro/gpsp) | Software | Unverified. [README](https://raw.githubusercontent.com/libretro/gpsp/master/README.md): dynarec is the fast path and the interpreter is "albeit slower". Its speed reputation does not apply here | Active, last push 2026-09-19 |
+| NES | FCEUMM | [GPL-2.0](https://github.com/libretro/libretro-fceumm) | Software | Unverified | Active, last push 2026-11-02 |
+| NES | QuickNES | [GPL-2.0](https://raw.githubusercontent.com/libretro/QuickNES_Core/master/LICENSE) | Software | Unverified | Unchecked |
+| SNES | bsnes-jg | [GPL-3.0](https://raw.githubusercontent.com/libretro/bsnes-jg/master/COPYING) | Software | Unverified | Unchecked |
+| SNES | bsnes-mercury | [GPL-3.0](https://raw.githubusercontent.com/libretro/bsnes-mercury/master/LICENSE) | Software | Unverified | Unchecked |
+| Genesis / Mega-CD | ClownMDEmu | [AGPLv3](https://raw.githubusercontent.com/Clownacy/clownmdemu/master/README.md) | Software | Unverified | README states some standard features are unemulated. Last push unchecked |
+| PS1 | Beetle PSX HW | [GPLv2](https://docs.libretro.com/library/beetle_psx_hw/) | Software, or Vulkan via MoltenVK. Docs list GL and Vulkan, up to 16x, and no Metal. The iOS Vulkan build config is unverified | Confirmed for the build config: [iOS stanza sets `HAVE_LIGHTREC = 0`](https://raw.githubusercontent.com/libretro/beetle-psx-libretro/master/Makefile). The "CPU Dynarec" option must stay disabled | Active, last push 2026-11-01 |
+| DS | DeSmuME | [GPL-2.0](https://github.com/TASEmulators/desmume) | Software (its OpenGL renderer is not accepted) | Confirmed for the build config: [AArch64 builds the interpreter core](https://raw.githubusercontent.com/libretro/desmume/master/desmume/src/frontend/libretro/Makefile.libretro) | Active, last push 2026-11-06 |
+| N64 | parallel-n64 | Unchecked | Vulkan via MoltenVK (ParaLLEl plugin, `HAVE_PARALLEL` off by default) | Unverified. [Makefile](https://raw.githubusercontent.com/libretro/parallel-n64/master/Makefile) has dynarec targets, and the same RSP question applies | Unchecked |
+| DOS | DOSBox Staging | [GPL-2.0-or-later](https://raw.githubusercontent.com/dosbox-staging/dosbox-staging/main/LICENSE) | Port needed: standalone app, not a core | Unverified | Unchecked |
+| DOS | DOSBox-X | [GPL-2.0](https://raw.githubusercontent.com/joncampbell123/dosbox-x/master/COPYING) | Port needed: standalone app, not a core | Unverified | Unchecked |
+
+---
+
+## 4. Platform Notes
+
+Only sourced claims appear here. Expected performance is a target (unmeasured); `docs/04` owns tiers.
+
+- **GBA (mGBA):** [README](https://raw.githubusercontent.com/mgba-emu/mgba/master/README.md) lists motion sensor and rumble cartridges, Boktai solar sensor, and Game Boy Camera and Printer.
+- **GB (SameBoy):** ships open-source DMG and CGB boot ROMs, not official ones. [Printer emulation](https://sameboy.github.io/features/) is listed on its site.
+- **SNES (bsnes):** [coprocessor firmware files are optional](https://docs.libretro.com/library/bsnes/). How each chip behaves without firmware is unverified.
+- **N64:** ParaLLEl-RDP is [Vulkan compute](https://raw.githubusercontent.com/Themaister/parallel-rdp/master/README.md), not software rasterisation. GLideN64 is GLES on iOS and is not accepted. `HAVE_PARALLEL_RSP` must be off or its JIT removed. Whether an interpreter RSP can drive ParaLLEl-RDP at usable speed on iOS is an open spike, and the tier 2 rating depends on it.
+- **DS (melonDS DS):** DSi camera support is ["planned, but has not yet been integrated"](https://raw.githubusercontent.com/JesseTG/melonds-ds/main/README.md). Do not promise it. Delta's author [reported melonDS at 100% speed on most newer devices](https://rileytestut.com/blog/2021/04/21/delta-1-3-ds-for-everyone) in 2021.
+- **3DS (Azahar):** the PICA200 shader path differs by stage.
+  - Fragment shaders have a direct SPIR-V generator, [`spv_fs_shader_gen.cpp`](https://github.com/azahar-emu/azahar/tree/master/src/video_core/shader/generator). That file listing supports the fragment wording used here.
+  - No SPIR-V vertex generator is in that directory. The vertex path appears to go through `glsl_shader_gen` and `glsl_shader_decompiler`. This is inferred from file names, not traced in code.
+  - MoltenVK then translates SPIR-V to MSL at runtime, which the project accepts for GPU shaders.
+  - `shader_jit_a64_compiler` is in the tree and must not ship.
+- **PS1 (Beetle PSX HW):** PGXP is documented as "Parallel/Precision Geometry Transform Pipeline". Upscaling runs on the GL or Vulkan renderer, not directly on Metal.
+- **PSP (PPSSPP):** the [CPU modes](https://raw.githubusercontent.com/hrydgard/ppsspp/master/Core/ConfigValues.h) are `CPUCore` values, not a build flag. Use `IR_INTERPRETER`, not the plain `INTERPRETER`. The developer states iOS devices are ["generally fast enough to run nearly all PSP games at full speed"](https://www.ppsspp.org/news/live-on-app-store/) without JIT. A native Metal build means integrating outside libretro.
+- **Dreamcast:** tier 3 is deliberate. [Anecdotal reports](https://mjtsai.com/blog/?p=48998) describe struggling on iPhone 16 Pro and running well on M4 iPad. No benchmark was found. Provenance's JIT-free update was reported stuck in App Review in August 2025.
+- **Java ME (J2meJS):** the name is seen in the screenshot, and release notes mention J2meJS. No upstream repo was identified. [mozilla/pluotsorbet](https://github.com/mozilla/pluotsorbet) (GPL-2.0, archived) is a possible origin only. The spike must establish the source, licence, JS runtime path (for example whether it runs in a web view), and whether that path uses any JIT that counts against the no-JIT rule.
+- **Symbian (EKA2L1):** the spike must prove the dyncom interpreter runs games and that a Vulkan or software renderer exists. If either fails, the row is out under the renderer rules.
+
+---
+
+## 5. Licensing and Build Gates
+
+### Legal gate (open owner decision)
+
+GPL cores in an App Store binary carry legal risk. The FSF had [GNU Go removed](https://lwn.net/Articles/391423), and [VLC was pulled](https://www.macrumors.com/2010/10/31/last-chance-to-get-vlc-for-iphone-ipad-likely-to-be-pulled-from-app-store/) over the same conflict. Nearly every row above is GPL.
+
+- Legal review is a required gate before the first GPL core ships.
+- The likely posture is publishing the app source under a compatible licence. [Manic](https://github.com/Manic-EMU/ManicEMU) and [Delta](https://github.com/rileytestut/Delta) publish app source under AGPL-3.0.
+- The mix of GPL-2.0 (Gambatte's header says version 2), GPL-3.0 and AGPLv3 needs a compatibility check. This review could not read the FSF compatibility matrix.
+- This is an open owner decision. Counsel is needed.
+
+### Linking
+
+**Recommendation: build each core as a dynamic, embedded framework that exports only the bridge.** S3 does this:
+
+- `S3/ios/SambaS3/project-core.yml:11-12` embeds `SambaCore.xcframework` with `embed: true`.
+- `rpcsx/ios/CMakeLists.txt:75` declares `add_library(SambaCore SHARED ...)`, and `:82` restricts exports with `-exported_symbols_list`.
+- S4 follows the same shape (`S4/CMakeLists.txt:1684-1689`).
+
+Reasons: several libretro cores in one image would collide on `retro_*` symbols, and an export list keeps each core's internals private. Frameworks are signed and shipped inside the app bundle. Code is never loaded from user paths or downloaded. `docs/06` section 2.5 owns the bridge details and matches this.
+
+Dynamic linking does not change the GPL analysis above.
+
+### No-JIT gate
+
+No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end:
+
+- An `nm` and `strings` check as in `S3/scripts/ios/build-core.sh:45-54`, which refuses `_pthread_jit_write_protect_np`, `_sys_icache_invalidate`, `___clear_cache`, `_mach_vm_protect`, `_vm_protect` and a known JIT runtime symbol. Extend the string list per core (for example GNU Lightning, Dynarmic, Oaknut).
+- A check for code generation at startup, which a symbol scan can miss.
+
+---
+
+## 6. Excluded, Research, Candidates and Backlog
+
+### Excluded
+
+| Core | Reason |
+|---|---|
+| snes9x | [Non-commercial licence](https://raw.githubusercontent.com/snes9xgit/snes9x/master/LICENSE). Not in a paid app. Manic lists it as [sideload only](https://github.com/Manic-EMU/ManicEMU/releases) |
+| Genesis Plus GX | [Non-commercial licence](https://raw.githubusercontent.com/ekeeke/Genesis-Plus-GX/master/LICENSE.txt) |
+| FBNeo | [Non-commercial licence](https://raw.githubusercontent.com/finalburnneo/FBNeo/master/src/license.txt). Manic lists it as [sideload only](https://github.com/Manic-EMU/ManicEMU/releases) |
+| PicoDrive | [Non-commercial licence](https://raw.githubusercontent.com/notaz/picodrive/master/COPYING) |
+| Play! | [Requires JIT](https://raw.githubusercontent.com/jpd002/Play-/master/README.md): crashes on game launch without it |
+| FreeJ2ME | [Needs a Java runtime](https://raw.githubusercontent.com/hex007/freej2me/master/README.md) |
+| Kronos | [Requires OpenGL 4.3 compute](https://docs.libretro.com/library/kronos/) |
+| Citra | [Shut down in March 2024](https://pcgamer.com/software/nintendo-3ds-emulator-citra-taken-offline-as-collateral-damage-in-yuzu-settlement/). Azahar replaces it |
+| Panda3DS | Fails the no-JIT rule today. CPU is Dynarmic (a recompiler) in the [CMake path checked](https://raw.githubusercontent.com/wheremyfoodat/Panda3DS/master/CMakeLists.txt); no interpreter was found |
+| Mesen-S, Mesen2 | [Archived](https://github.com/SourMesen/Mesen2); not active picks |
+| DuckStation | [CC-BY-NC-ND](https://raw.githubusercontent.com/stenzek/duckstation/master/README.md) |
+| GLideN64 | GLES on iOS; not an accepted renderer path |
+| SwanStation | Not selected. [GPL-3.0 hard fork](https://raw.githubusercontent.com/libretro/swanstation/main/README.md) of DuckStation; removed from the plan with no accepted role |
+| Yabause | Not selected. Last push 2024-03 |
+| Angrylion RDP | Not selected. CPU-side RDP; ParaLLEl-RDP is the chosen path |
+
+### Non-shipping research
+
+Not in the App Store binary and not promised.
+
+| Platform | Project | Facts |
+|---|---|---|
+| GameCube / Wii | Dolphin (GPL-2.0-or-later) | Has a [native Metal backend](https://raw.githubusercontent.com/dolphin-emu/dolphin/master/Source/Core/VideoBackends/CMakeLists.txt) and a No JIT mode, but the Cached Interpreter [cannot reach full speed at default settings](https://oatmealdome.me/?p=1695): Mario Kart Wii runs about 30 fps (50% speed) on iPhone 16 Pro Max. The DolphiniOS team says an App Store release is "simply not a good idea at the moment" |
+| PS2 | Balero-S2 (sister project, `balero-s2`) | Its README describes a cached IR interpreter with `musttail` and NEON lowering. Not part of the GagaEmu binary; no performance data here |
+
+### Candidates, not in the plan
+
+These repos exist. **Licence and no-JIT status are unchecked for all of them.** None is adopted until both are checked and it passes section 5.
+
+| Platform | Candidate |
+|---|---|
+| GBA | [NanoBoyAdvance](https://github.com/nba-emu/NanoBoyAdvance) |
+| SNES | [bsnes-hd](https://github.com/DerKoun/bsnes-hd) |
+| NES | [libretro Mesen](https://github.com/libretro/mesen) |
+| Saturn | [Ymir](https://github.com/StrikerX3/Ymir) (URL redirects) |
+| DOS | [dosbox-core](https://github.com/libretro/dosbox-core) |
+| Arcade | [mame2003-plus](https://github.com/libretro/mame2003-plus-libretro). Older MAME licensing is a known concern; check before any use |
+| PS2 (research only) | [ARMSX2](https://github.com/ARMSX2/ARMSX2) (GitHub reports GPL-3.0; no-JIT unchecked) |
+
+### Backlog: seen in Manic listing, not planned for v1
+
+Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790), with core names from the [public repo](https://github.com/Manic-EMU/ManicEMU/tree/main/Cores) where they could be matched by name. Core names are Manic's and are not GagaEmu picks.
+
+- **Nintendo:** Virtual Boy (`mednafen.vb`), Pokémon Mini (`pokemini`), Famicom Disk System
+- **Sega:** Master System, Game Gear (`gearsystem`), SG-1000, 32X
+- **NEC:** PC Engine, TurboGrafx-16, TurboGrafx-CD, SuperGrafx (`mednafen.pce`)
+- **SNK:** Neo Geo Pocket, Neo Geo Pocket Color (`mednafen.ngp`)
+- **Atari:** 2600 (`stella`), 5200 (`atari800`), 7800 (`prosystem`), Jaguar (`virtualjaguar`), Lynx (`holani`)
+- **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
+- **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
+
+---
+
+## 7. PS3 and PS4: External Sister Projects
+
+S3 (`samba-s3-ui`) and S4 (`Bachata-S4-Dev`) are external sister projects. They are not catalog rows, frame producers, or part of the GagaEmu binary. GagaEmu reuses their build patterns only.
+
+- **S3 thread placement:** the iOS path is a QoS hint (`rpcsx/rpcs3/util/Thread.cpp:2249-2253`). big.LITTLE placement is `#ifdef ANDROID` code, not an iOS scheduling scheme.
+- **S4 graphics:** GCN shaders go to SPIR-V, then Vulkan on static MoltenVK, presenting to `CAMetalLayer` (`S4/CMakeLists.txt:1667-1686`). There are no direct Metal compute encoders.
+
+---
+
+## 8. Core Selection and Registry
+
+### Core switching
+
+**Manic (seen in screenshot):** the Emulator Core list shows one core per platform, with the caption "switch cores by long-pressing a game in the library." Long-press is the only switching visible in the reference images. The alternates Manic offers are outside the images.
+
+**GagaEmu (design; shell code exists in `Sources/UI/Games/CoreSelectionSheet.swift`):** long-press a game to open the core sheet, with an option to set the choice as the platform default.
 
 ```
-   ┌────────────────────────────────────────────────────────┐
-   │                  Game Library Grid                     │
-   └──────────────────────────┬─────────────────────────────┘
-                              │ Long-Press Gesture
-                              ▼
-   ┌────────────────────────────────────────────────────────┐
-   │             Context Menu: "Switch Core"                │
-   └──────────────────────────┬─────────────────────────────┘
-                              │ Presents Bottom Sheet
-                              ▼
-   ┌────────────────────────────────────────────────────────┐
-   │             Core Selection Sheet (Modal)               │
-   │                                                        │
-   │  ● PCSX-ReARMed (Fast / Recommended)      [Selected]   │
-   │  ○ Beetle PSX HW (PGXP, Metal Hardware)                │
-   │  ○ SwanStation (DuckStation, Rewind)                   │
-   │                                                        │
-   │  [ Set as Global Default for PlayStation ]             │
-   └────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│ Core Selection                                         │
+│                                                        │
+│  ● PCSX-ReARMed                           [Selected]   │
+│  ○ Beetle PSX HW                                       │
+│                                                        │
+│  [ Set as Default for PlayStation ]                    │
+└────────────────────────────────────────────────────────┘
 ```
 
-1. **Static Table Registration (App Store 2.5.2 Compliance)**:
-   - To strictly comply with Guideline 2.5.2, all cores are **statically compiled into the application binary** or shipped as pre-signed embedded frameworks.
-   - Arbitrary dynamic code loading via `dlopen()` on user paths is strictly prohibited. Cores register into a compile-time static registry:
+### C registry (current code)
+
+`Sources/Bridge/GagaCoreRegistry.c:296-312` is a compile-time table of getter functions, each returning a pointer to a `GagaCoreInterface`:
 
 ```c
-typedef struct {
-    const char* core_id;
-    const char* display_name;
-    const char* platform_id;
-    bool        is_recommended;
-    GagaCoreInterface (*get_interface)(void);
-} GagaCoreRegistryEntry;
+typedef const GagaCoreInterface* (*CoreGetterFunc)(void);
 
-static const GagaCoreRegistryEntry g_core_registry[] = {
-    { "org.libretro.pcsx-rearmed", "PCSX-ReARMed", "ps1", true,  PcsxReArmed_GetInterface },
-    { "org.libretro.beetle-psx",   "Beetle PSX HW", "ps1", false, BeetlePsx_GetInterface   },
-    { "org.libretro.mgba",         "mGBA",          "gba", true,  Mgba_GetInterface        },
-    { "org.libretro.gpsp",         "gpSP",          "gba", false, Gpsp_GetInterface        },
-    { "org.libretro.snes9x",       "Snes9x",        "snes", true, Snes9x_GetInterface      },
-    { "org.libretro.bsnes",        "bsnes",         "snes", false, Bsnes_GetInterface       },
-    { NULL, NULL, NULL, false, NULL }
+static const CoreGetterFunc s_core_getters[] = {
+    MockCore_GetInterface,
+    Mgba_GetInterface,
+    Gambatte_GetInterface,
+    Snes9x_GetInterface,
+    Bsnes_GetInterface,
+    GenesisPlusGx_GetInterface,
+    PcsxReArmed_GetInterface,
+    BeetlePsx_GetInterface,
+    Gpsp_GetInterface,
+    MelonDS_GetInterface,
+    Azahar_GetInterface,
+    Flycast_GetInterface,
+    Ppsspp_GetInterface,
 };
 ```
 
-2. **Storage Schema**:
-   - Stored in local SQLite / CoreData schema:
-     `GameEntity.coreOverride: String?` (e.g., `"org.libretro.pcsx-rearmed"`).
-   - If `coreOverride == nil`, system resolves to `UserPreferences.defaultCoreForPlatform[platformID]`.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. Everything except the mock core is a stub (`:279-290`).
+
+### Known code mismatches (roadmap items)
+
+The code does not yet match this document. `docs/07` tracks the changes.
+
+1. **Two ID schemes.** Swift `CoreCatalog` uses reverse-DNS IDs such as `org.libretro.mgba` (`Sources/App/AppState.swift:74`), `org.azahar.azahar` and `org.ppsspp.ppsspp`. The C registry uses short IDs such as `mgba` (`GagaCoreRegistry.c:281`). A catalog ID therefore cannot resolve through `GagaCoreRegistry_FindByID`.
+   - **Planned single scheme:** the C registry's short lowercase `core_id` (`mgba`, `pcsx_rearmed`) is the only ID. `CoreCatalog` adopts it, and saved `coreOverride` and `defaultCores` values in `state.json` are migrated. The assertion at `Sources/App/GagaEmuApp.swift:30` changes with it.
+2. **Catalog defaults conflict with this document.** `CoreCatalog` still recommends Snes9x for SNES (`AppState.swift:87`), Genesis Plus GX for Mega Drive (`:60`) and FBNeo for Arcade (`:100`), and it lists Kronos, SwanStation and PicoDrive. Its comment at `:43` says it mirrors this document, which is no longer true.
+3. **C registry contains excluded cores.** `Snes9x_GetInterface` and `GenesisPlusGx_GetInterface` are stubs to remove, and JGenesis needs a registry entry.
+4. **`resolvedCoreID` ignores `defaultCores`.** `GameItem.resolvedCoreID` (`AppState.swift:17-19`) falls straight from `coreOverride` to `CoreCatalog.defaultCore`. The launch path (`:313`), `coreName` (`:300`) and the core sheet do honour `defaultCores`, so the bug affects only `resolvedCoreID`, whose one current use is the assertion above.
+
+### Storage (current code)
+
+State persists as JSON at `Application Support/GagaEmu/state.json` (`AppState.swift:248`), through the `Snapshot` struct (`:221-240`). It does not use SQLite or Core Data.
+
+- **Per game:** `GameItem.coreOverride: String?` (`:5,11`).
+- **Per platform:** `AppState.defaultCores: [String: String]`, keyed by platform ID (`:208`).
+- **Resolution order:** `coreOverride`, then `defaultCores[platformID]`, then `CoreCatalog.defaultCore(for:)` (`:313`).

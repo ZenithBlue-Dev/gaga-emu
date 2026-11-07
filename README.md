@@ -1,34 +1,35 @@
 # Gaga-Emu — All-in-One Multi-Model Emulator for iOS
 
-High-performance, App Store-compliant multi-system console emulator designed natively for iOS and iPadOS.
+Multi-system emulator for iOS and iPadOS, designed for App Store distribution with no JIT in any shipped core.
 
-Built with strict **No-JIT Interpreter Execution**, native **Apple Metal 3 Graphics**, and an idiomatic **SwiftUI** interface achieving complete feature parity with the gold standard **Manic EMU**.
+**Status: early shell with a mock core; no real emulation core runs yet** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md)). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and a **SwiftUI** interface that uses **Manic EMU** screenshots as a reference, without claiming feature parity.
 
 ---
 
 ## Core Pillars
 
-1. **Strict No-JIT Execution Engine**:
-   - Compliant with Apple App Store Review Guidelines 4.7 and 2.5.2 (no `mprotect(PROT_EXEC)`, no writable-executable pages, zero dynamic code generation).
-   - High-throughput direct-threaded dispatch using `[[clang::musttail]]` and pre-decoded 16-byte Intermediate Representation (IR) block caches.
-   - Vector instructions lowered directly to 128-bit ARM64 NEON intrinsics.
-   - Runloop yield safety via slice cycle budgets and static `BlockExit` handlers.
+1. **No-JIT Execution** (design):
+   - iOS enforces W^X and offers no public JIT entitlement for App Store apps, so no shipped core uses JIT, RWX memory or a dynarec. Each core build gets a no-JIT gate. Guideline 4.7 covers "retro game console and PC emulator apps"; Apple defines no generations.
+   - Third-party cores keep their upstream interpreters, built dynarec-free. No CPU-core rewrite is assumed.
+   - `docs/04` also holds an in-house design: `[[clang::musttail]]` threaded dispatch, pre-decoded 16-byte ops, NEON lowering, and a cycle budget charged at block exit. It would be separately scheduled work, and none is scheduled.
 
-2. **Native Apple Metal 3 Graphics Pipeline**:
-   - True zero-copy Unified Memory Architecture (UMA) streaming via triple-buffered shared memory `MTLBuffer` wrapped with `makeTexture(descriptor:offset:bytesPerRow:)`.
-   - Built-in MSL shader engine featuring real-time preview (Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT, Film).
-   - Offline precompiled community Slang shaders updated via dynamic parameter uniform buffers.
+2. **Metal Graphics Pipeline**:
+   - App UI, frame presentation and the host post-process chain use native Metal. 3D cores use Vulkan on statically linked MoltenVK to `CAMetalLayer` (design), and a native Metal backend is allowed where upstream has one. GLES-only and desktop-GL-only renderers are not accepted.
+   - GPU floor: A14 (Apple7, Metal 3). This is stated but not enforced yet, because iOS 17.0 also runs on A12 and A13. Milestone 1.16 in `docs/07` is the runtime check.
+   - 2D and software cores copy each frame into a triple-buffered shared `MTLBuffer` ring, with textures from `MTLBuffer.makeTexture(descriptor:offset:bytesPerRow:)`. The copy path is not zero copy; only the planned host-buffer path may be described that way.
+   - Built-in MSL presets with live preview (Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT, Film). They run only in the preview today, because no core frame reaches the renderer.
+   - Planned: community Slang presets converted offline, runtime `.metal` import, and `.slangp` import once a translation path exists.
 
-3. **Multi-Core Flexibility per Platform**:
-   - Every system supports multiple selectable cores with sensible defaults (e.g. GBA: mGBA / gpSP; SNES: Snes9x / bsnes; PS1: PCSX-ReARMed / Beetle PSX HW / SwanStation; 3DS: Azahar).
-   - Hot-swappable per game via library long-press; global system default fallbacks.
-   - Statically registered core registry ensuring zero unsigned `dlopen()` App Store hazards.
+3. **Multi-Core Flexibility per Platform** (design):
+   - Defaults and alternates come from `docs/03`, for example GBA: mGBA, with VBA-M and gpSP; SNES: bsnes, with bsnes-jg and bsnes-mercury; PS1: PCSX-ReARMed, with Beetle PSX HW; 3DS: Azahar (experimental). Some platforms have no usable alternate yet.
+   - Selected per game through a library long-press, with a per-platform default.
+   - Compile-time core registry. Planned packaging is one dynamic, embedded framework per core, exporting only the bridge. Code is never loaded from user paths or downloaded.
 
-4. **Complete Manic EMU Reference Parity**:
-   - Adventurer Profile Card with cumulative playtime tracking and custom retro avatars.
-   - Integrated Ingestion Hub: Local Files/iCloud, LAN browser WiFi upload (PIN-protected), tap-only clipboard paste extraction, MultiDisc M3U helper, and in-memory RomPatcher (IPS/BPS/UPS).
-   - Input engine: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and dynamic SVG), and TriggerPro macro/turbo controls.
-   - Clear architectural boundary: Sister 7th/8th-gen projects (`samba-s3` PS3, `bachata-s4` PS4) kept as decoupled research repositories outside the App Store binary to guarantee Rule 4.7 compliance.
+4. **Manic EMU as a Feature Reference** (no parity claim; `docs/02` tags each item by source and status):
+   - Adventurer Card with nickname, play time, joined date and avatar. Play time tracking across cores and selectable avatars are planned.
+   - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, MultiDisc M3U helper, and in-memory RomPatcher (IPS/BPS/UPS, without IPS RLE records).
+   - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built, but there is no game session to feed yet.
+   - Scope is an explicit platform list in `docs/03`. PS3 (`samba-s3`) and PS4 (`bachata-s4`) are external sister projects, never catalog rows or frame producers. PS2 (`balero-s2`) and GameCube/Wii are non-shipping research and are not promised.
 
 ---
 
@@ -36,10 +37,10 @@ Built with strict **No-JIT Interpreter Execution**, native **Apple Metal 3 Graph
 
 Detailed engineering specifications located in [`docs/`](./docs/):
 
-- [**01 — Problem Statement & Executive Summary**](./docs/01-problem-statement-and-executive-summary.md): App Store Rule 4.7 & 2.5.2 constraints, market landscape, reference analysis of Manic EMU, and sister project lineage (`balero-s2`, `samba-s3`, `bachata-s4`).
-- [**02 — Feature Set & Manic EMU Reference Parity**](./docs/02-feature-set-and-manic-emu-parity.md): 1:1 functional mapping against the 14 reference screenshots across Adventurer Card, Controller Engine, Shaders, Import Hub, Library, and StoreKit 2 paywall.
-- [**03 — Core Matrix & Multi-Core Platform Catalog**](./docs/03-core-matrix-and-platform-catalog.md): Complete taxonomy of all supported systems and multi-core alternatives with trade-offs between cycle accuracy and interpreter speed.
-- [**04 — No-JIT Interpreter Architecture**](./docs/04-no-jit-interpreter-architecture.md): W^X compliance, `[[clang::musttail]]` direct threading, pre-decoded IR block caches, ARM64 NEON vector lowering, and core performance audit.
-- [**05 — Metal Graphics Pipeline & Shaders**](./docs/05-metal-graphics-pipeline-and-shaders.md): UMA zero-copy texture ring, 2D/3D render paths, MSL shader equations, live interactive preview canvas, and Slang-to-Metal compilation.
-- [**06 — iOS App Architecture & C-Bridge Specification**](./docs/06-ios-app-bridge-and-subsystem-spec.md): `GagaBridge.h` C-ABI, SwiftUI view hierarchy, WiFi file server, MultiDisc helper, RomPatcher, and XcodeGen project manifest.
-- [**07 — Roadmap & Implementation Plan**](./docs/07-roadmap-and-implementation-plan.md): 7-phase engineering execution plan from scaffolding to App Store submission.
+- [**01 — Problem Statement & Executive Summary**](./docs/01-problem-statement-and-executive-summary.md): OS and App Review constraints, existing iOS options, reference analysis of Manic EMU, and sister projects (`balero-s2`, `samba-s3`, `bachata-s4`).
+- [**02 — Feature Set & Manic EMU Reference**](./docs/02-feature-set-and-manic-emu-parity.md): Feature inventory checked against the 14 reference screenshots, tagged by source and status, with no parity claim.
+- [**03 — Core Matrix & Platform Catalog**](./docs/03-core-matrix-and-platform-catalog.md): Canonical core list, alternates, licences, renderer paths, and the legal and no-JIT gates.
+- [**04 — No-JIT Interpreter Architecture & Execution Engine**](./docs/04-no-jit-interpreter-architecture.md): iOS execution constraints, sister-project evidence, ranked optimisations, in-house interpreter design, performance tiers (target, unmeasured), benchmark method, and the per-core gate.
+- [**05 — Metal Graphics Pipeline & Shader Subsystem**](./docs/05-metal-graphics-pipeline-and-shaders.md): Graphics rules, GPU floor, frame paths, shader picker and presets, and runtime shader policy.
+- [**06 — iOS App Architecture, C-Bridge & Subsystem Specification**](./docs/06-ios-app-bridge-and-subsystem-spec.md): `GagaBridge.h` interface and planned additions, screen specifications, the canonical premium and in-app purchase spec, and the XcodeGen project manifest.
+- [**07 — Roadmap & Implementation Plan**](./docs/07-roadmap-and-implementation-plan.md): Phases 0 to 7, status, milestones, and the definition of done for a core.
