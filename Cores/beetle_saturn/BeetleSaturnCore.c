@@ -72,6 +72,14 @@ static bool saturn_save_battery(void) {
     return ok;
 }
 
+// upstream's failed-write flag is a static that outlives a game: the last session's unload into a folder that
+// could not be written left it set, and this game's first flush then refused to load. Flushing here takes that
+// stale report and starts this game's own cartridge write, whose outcome save_battery reports.
+static void saturn_finish_load(void) {
+    (void)SS_FlushCartNV();
+    save_writer_drain();
+}
+
 static bool saturn_is_hex(const char* text, size_t count) {
     for (size_t i = 0; i < count; ++i) {
         char c = text[i];
@@ -93,6 +101,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .is_cheat = saturn_is_cheat,
     .save_battery = saturn_save_battery,
     .refuse_load = saturn_refuse_load,
+    .finish_load = saturn_finish_load,
 };
 
 const GagaCoreInterface* BeetleSaturn_GetInterface(void) {
