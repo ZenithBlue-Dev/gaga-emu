@@ -301,7 +301,7 @@ public final class TouchSkinEngine: ObservableObject {
                     button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
                     button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
                 ],
-                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx"])
+                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx", "ngp"])
         }()
 
         /// For pads with a second D-pad on the right, as on the Virtual Boy. That pad sends L2 up, L3 down,
@@ -335,7 +335,7 @@ public final class TouchSkinEngine: ObservableObject {
 
         /// The layout a platform starts on when the player has chosen none: the one shaped like its controller.
         /// Platforms added before milestone 8.x keep Standard.
-        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button", "vb": "twin-pad"]
+        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button", "vb": "twin-pad", "ngp": "two-button"]
 
         static func defaultID(for platformID: String) -> String { platformDefaults[platformID] ?? standard.id }
 

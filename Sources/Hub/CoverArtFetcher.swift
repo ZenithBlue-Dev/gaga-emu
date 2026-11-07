@@ -27,7 +27,8 @@ enum LibretroThumbnails {
         "dos": "DOS",
         "pce": "NEC - PC Engine - TurboGrafx 16",
         "sgx": "NEC - PC Engine SuperGrafx",
-        "vb": "Nintendo - Virtual Boy"
+        "vb": "Nintendo - Virtual Boy",
+        "ngp": "SNK - Neo Geo Pocket Color"
     ]
 
     /// Libretro's own rule: these characters become an underscore in a thumbnail's file name.
