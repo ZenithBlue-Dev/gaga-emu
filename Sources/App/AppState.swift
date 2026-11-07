@@ -164,7 +164,7 @@ enum CoreCatalog {
         case "iso", "bin", "cue", "chd", "pbp", "img", "exe": return "ps1"
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
-        case "md", "gen", "sms": return "megadrive"
+        case "md", "gen", "smd", "sms": return "megadrive"
         default: return nil
         }
     }
