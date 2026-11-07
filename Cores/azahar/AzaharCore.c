@@ -8,6 +8,15 @@
 // is off); Azahar's own open-source system archives stand in for the shared font and Mii data.
 #include "LibretroAdapter.h"
 #include "LibretroVulkan.h"
+#include <stdio.h>
+
+// Azahar returns no RETRO_MEMORY_SAVE_RAM: the emulated 3DS writes its save data, extdata and SD card as files
+// under <game's save folder>/Azahar/ through stdio. Pushing every buffered write out on each flush (pause,
+// background, quit and the periodic one) means a kill after pause loses nothing.
+// shortcut: fflush reaches the kernel, not the disk (no fsync), enough for an app kill, not for power loss.
+static bool azahar_save_battery(void) {
+    return fflush(NULL) == 0;
+}
 
 // Option values are upstream's spelling (upstream/src/citra_libretro/core_settings.cpp).
 static const GagaLibretroVariable s_variables[] = {
@@ -39,6 +48,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .variables = s_variables,
     // retro_serialize_size returns the size of a fresh, compressed state each time.
     .state_size_varies = true,
+    .save_battery = azahar_save_battery,
 };
 
 const GagaCoreInterface* Azahar_GetInterface(void) {
