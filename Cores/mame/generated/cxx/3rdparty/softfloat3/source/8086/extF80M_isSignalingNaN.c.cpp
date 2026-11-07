@@ -1,0 +1,1 @@
+#include "3rdparty/softfloat3/source/8086/extF80M_isSignalingNaN.c"

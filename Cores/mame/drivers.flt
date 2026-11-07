@@ -1,0 +1,31 @@
+// The MAME machines GagaEmu lists: those whose ROMs MAMEdev lists as free to distribute,
+// https://www.mamedev.org/roms/. Add a line "+<short name>", then run Cores/mame/generate.py.
+// Other machines in the same source files are compiled but not listed, so MAME cannot start them.
++gridlee
++robby
++carpolo
++circus
++robotbwl
++crash
++ripcord
++sidetrac
++targ
++spectar
++teetert
++hardhat
++fax
++starfire
++fireone
++topgunnr
++victory
++falcnwld
++witchcrd
++witchgme
++wstrike
++witchjol
++wtchjack
++wupndown
++wldwitch
++looping
++supertnk
++alienar
