@@ -192,11 +192,14 @@ final class LibretroProbe {
         }
     }
 
-    /// The Mednafen state format starts with its own header, whose version field is the interface's.
+    /// The Mednafen state format starts with its own header, whose version field is the interface's. The
+    /// libretro Beetle cores write "MDFNSVST" and 8 zero bytes (MDFNSS_SaveSM in mednafen/state.c); only their
+    /// loader still accepts the old "MEDNAFENSVESTATE".
     func assertMednafenStateVersion(file: StaticString = #filePath, line: UInt = #line) throws {
         let state = [UInt8](try core.saveState())
         let header = 16 // The adapter's.
-        XCTAssertEqual(Array(state[header..<(header + 16)]), Array("MEDNAFENSVESTATE".utf8), file: file, line: line)
+        XCTAssertEqual(Array(state[header..<(header + 16)]), Array("MDFNSVST".utf8) + [UInt8](repeating: 0, count: 8),
+                       file: file, line: line)
         let version = state[(header + 16)..<(header + 20)].reversed().reduce(UInt32(0)) { $0 << 8 | UInt32($1) }
         XCTAssertEqual(version, interface.state_version, file: file, line: line)
     }
