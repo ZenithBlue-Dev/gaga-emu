@@ -129,6 +129,7 @@ final class BenchmarkRun {
         case "arcade": (data, name, ext) = (GridleeTestSet.build(), GridleeTestSet.machine, "zip") // MAME finds the machine by name.
         case "n64": (data, ext) = (N64TestROM.build(), "z64")
         case "pce": data = PCETestROM.build()
+        case "sgx": data = PCETestROM.build(superGrafx: true)
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

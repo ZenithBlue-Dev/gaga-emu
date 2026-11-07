@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertEqual(count, 18, "Mock, the real cores, the stubs, the Vulkan test core, MAME, Mupen64Plus-Next and Beetle PCE Fast")
+        XCTAssertEqual(count, 19, "Mock, the real cores, the stubs, the Vulkan test core, MAME, Mupen64Plus-Next and the Beetle PC Engine cores")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
