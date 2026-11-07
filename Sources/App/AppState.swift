@@ -165,6 +165,8 @@ enum CoreCatalog {
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "sms": return "megadrive"
+        // shortcut: every archive is a MAME ROM set, kept zipped as MAME reads it. Look inside when DOSBox Pure (milestone 4.8) also takes .zip.
+        case "zip", "7z": return "arcade"
         default: return nil
         }
     }

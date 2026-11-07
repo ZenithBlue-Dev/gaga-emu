@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertEqual(count, 13, "Mock, the real cores and the stubs")
+        XCTAssertEqual(count, 14, "Mock, the real cores and the stubs")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
@@ -31,6 +31,7 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertNotNil(GagaCoreRegistry_FindByID("beetle_psx"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("melonds_ds"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("flycast"))
+        XCTAssertNotNil(GagaCoreRegistry_FindByID("mame"))
 
         // Validate tier 3 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("azahar"))
@@ -243,7 +244,7 @@ final class GagaEmuTests: XCTestCase {
         }
         XCTAssertEqual(CoreCatalog.defaultCore(for: "snes"), GagaCoreRegistry_IsExcluded("bsnes") ? "" : "bsnes")
         XCTAssertEqual(CoreCatalog.defaultCore(for: "megadrive"), "jgenesis")
-        XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), "mame")
+        XCTAssertEqual(CoreCatalog.defaultCore(for: "arcade"), GagaCoreRegistry_IsExcluded("mame") ? "" : "mame")
 
         // Every registry stub resolves to a catalog row, so a saved ID always names a real core.
         for index in 0..<GagaCoreRegistry_GetCount() {
