@@ -25,6 +25,7 @@ const GagaCoreInterface* Ppsspp_GetInterface(void);
 const GagaCoreInterface* VkTest_GetInterface(void); // Layer-path test core, Debug builds only.
 const GagaCoreInterface* DosboxPure_GetInterface(void);
 const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
+const GagaCoreInterface* SwanStation_GetInterface(void);
 // Non-commercial licences, sideload builds only (docs/03 section 5).
 const GagaCoreInterface* Snes9x_GetInterface(void);
 const GagaCoreInterface* GenesisPlusGX_GetInterface(void);

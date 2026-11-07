@@ -419,6 +419,9 @@ DEFINE_CORE_INTERFACE(Picodrive_GetInterface,     "picodrive",       "PicoDrive"
 #ifndef GAGA_HAS_FBNEO
 DEFINE_CORE_INTERFACE(Fbneo_GetInterface,         "fbneo",           "FinalBurn Neo",     GAGA_CORE_EXCLUDED, "zip|7z",   60.0,    48000)
 #endif
+#ifndef GAGA_HAS_SWANSTATION
+DEFINE_CORE_INTERFACE(SwanStation_GetInterface,   "swanstation",     "SwanStation",       GAGA_CORE_EXCLUDED, "exe|psexe|cue|bin|img|iso|chd|pbp|ecm|mds|psf|m3u", 60.0, 44100)
+#endif
 
 // ============================================================================
 // REGISTRY DISPATCH TABLE
@@ -447,6 +450,7 @@ static const CoreGetterFunc s_core_getters[] = {
     GenesisPlusGX_GetInterface,
     Picodrive_GetInterface,
     Fbneo_GetInterface,
+    SwanStation_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

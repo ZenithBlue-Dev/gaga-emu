@@ -63,7 +63,9 @@ enum CoreCatalog {
     private static let allPlatforms: [PlatformInfo] = [
         .init(id: "ps1", name: "PlayStation", manufacturer: "Sony", cores: [
             .init(id: "beetle_psx", name: "Beetle PSX HW", note: "PGXP, Vulkan", recommended: false),
-            .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true)
+            .init(id: "pcsx_rearmed", name: "PCSX-ReARMed", note: "Fast", recommended: true),
+            // Cached interpreter and software renderer only. Boots its embedded OpenBIOS when no BIOS is present.
+            .init(id: "swanstation", name: "SwanStation", note: "Interpreter", recommended: false)
         ]),
         .init(id: "saturn", name: "Sega Saturn", manufacturer: "Sega", cores: [
             .init(id: "beetle_saturn", name: "Beetle Saturn", note: "Cycle accuracy", recommended: true)

@@ -450,7 +450,8 @@ struct BIOSManagerView: View {
     private var biosDirectory: URL { GagaCoreWrapper.systemDirectory }
 
     private let required: [(String, String)] = [
-        ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
+        // SwanStation also reads scph5500.bin; without one it boots its own OpenBIOS.
+        ("scph5500.bin", "PS1 (JP)"), ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
         ("firmware.bin", "DS firmware"),
         // JGenesis and Genesis Plus GX read the same names.

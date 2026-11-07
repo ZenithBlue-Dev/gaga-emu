@@ -237,6 +237,26 @@
         { "title": "r8brain-free-src", "from": "Cores/fbneo/upstream/src/dep/libs/r8brain/r8bbase.h", "comment": true },
         { "title": "libretro-common", "from": "Cores/fbneo/upstream/src/burner/libretro/libretro-common/file/file_path.c", "comment": true }
       ]
+    },
+    {
+      "id": "swanstation", "title": "SwanStation", "cores": ["swanstation"], "framework": "SwanStationCore",
+      "licence": "GPL-3.0, with MIT, BSD, zlib, Apache-2.0 and public-domain parts",
+      "source": "https://github.com/libretro/swanstation, commit 631f0fb, built unmodified without its recompiler. Embeds OpenBIOS (MIT), so it needs no Sony BIOS.",
+      "texts": [
+        { "title": "SwanStation", "from": "Cores/swanstation/upstream/LICENSE" },
+        { "title": "OpenBIOS (PCSX-Redux)", "from": "Cores/swanstation/upstream/dep/openbios/LICENSE.txt" },
+        { "title": "libchdr", "from": "Cores/swanstation/upstream/dep/libchdr/LICENSE.txt" },
+        { "title": "LZMA SDK", "from": "Cores/swanstation/upstream/dep/libchdr/deps/lzma-25.01/LICENSE" },
+        { "title": "miniz", "from": "Cores/swanstation/upstream/dep/libchdr/deps/miniz-3.1.1/miniz.c", "comment": true },
+        { "title": "Zstandard", "from": "Cores/swanstation/upstream/dep/libchdr/deps/zstd-1.5.7/zstddeclib.c", "comment": true },
+        { "title": "xxHash", "from": "Cores/swanstation/upstream/dep/xxhash/LICENSE" },
+        { "title": "stb_image", "from": "Cores/swanstation/upstream/dep/stb/include/stb_image.h", "lines": [7393, 7433] },
+        { "title": "stb_image_resize", "from": "Cores/swanstation/upstream/dep/stb/include/stb_image_resize.h", "lines": [2591, 2631] },
+        { "title": "Khronos platform header (glad)", "from": "Cores/swanstation/upstream/dep/glad/include/khrplatform.h", "comment": true },
+        { "title": "Vulkan headers", "from": "Cores/swanstation/upstream/dep/vulkan-loader/include/vulkan/vulkan_core.h", "comment": true },
+        { "title": "Apache License 2.0", "from": "build/moltenvk/licenses/SPIRV-Cross/LICENSES/Apache-2.0.txt" },
+        { "title": "libretro-common", "from": "Cores/swanstation/upstream/dep/libretro-common/file/file_path.c", "comment": true }
+      ]
     }
   ]
 }

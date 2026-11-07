@@ -940,6 +940,70 @@
      "file": "licence-d9877dd11360.txt"
     }
    ]
+  },
+  {
+   "id": "swanstation",
+   "title": "SwanStation",
+   "licence": "GPL-3.0, with MIT, BSD, zlib, Apache-2.0 and public-domain parts",
+   "source": "https://github.com/libretro/swanstation, commit 631f0fb, built unmodified without its recompiler. Embeds OpenBIOS (MIT), so it needs no Sony BIOS.",
+   "cores": [
+    "swanstation"
+   ],
+   "framework": "SwanStationCore",
+   "texts": [
+    {
+     "title": "SwanStation",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "OpenBIOS (PCSX-Redux)",
+     "file": "licence-b721b99dd738.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    },
+    {
+     "title": "Zstandard",
+     "file": "licence-91e669b8e3b1.txt"
+    },
+    {
+     "title": "xxHash",
+     "file": "licence-ca3ca9945fb4.txt"
+    },
+    {
+     "title": "stb_image",
+     "file": "licence-7587efcca32d.txt"
+    },
+    {
+     "title": "stb_image_resize",
+     "file": "licence-7587efcca32d.txt"
+    },
+    {
+     "title": "Khronos platform header (glad)",
+     "file": "licence-03fcb3c8f76d.txt"
+    },
+    {
+     "title": "Vulkan headers",
+     "file": "licence-96bbba876828.txt"
+    },
+    {
+     "title": "Apache License 2.0",
+     "file": "licence-44b0a56e80b4.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
   }
  ]
 }
