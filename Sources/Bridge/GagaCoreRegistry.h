@@ -11,6 +11,7 @@ extern "C" {
 // Compile-time core getters
 const GagaCoreInterface* PcsxReArmed_GetInterface(void);
 const GagaCoreInterface* BeetlePsx_GetInterface(void);
+const GagaCoreInterface* BeetleSaturn_GetInterface(void);
 const GagaCoreInterface* Mgba_GetInterface(void);
 const GagaCoreInterface* Gpsp_GetInterface(void);
 const GagaCoreInterface* Bsnes_GetInterface(void);

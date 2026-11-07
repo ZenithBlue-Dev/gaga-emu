@@ -51,6 +51,17 @@
       ]
     },
     {
+      "id": "beetle_saturn", "title": "Beetle Saturn", "cores": ["beetle_saturn"], "framework": "BeetleSaturnCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/beetle-saturn-libretro, commit 30f4c12 (Mednafen SS, v1.32.1)",
+      "texts": [
+        { "title": "Beetle Saturn and Mednafen", "from": "Cores/beetle_saturn/upstream/COPYING" },
+        { "title": "Tremor (Xiph.org)", "from": "Cores/beetle_saturn/upstream/mednafen/tremor/COPYING" },
+        { "title": "rflac (from dr_flac)", "from": "Cores/beetle_saturn/upstream/libretro-common/formats/flac/rflac.c", "lines": [6307, 6353] },
+        { "title": "LZMA SDK", "text": "r7z_lzma.c is derived from the public-domain LZMA SDK by Igor Pavlov.\n" },
+        { "title": "libretro-common", "from": "Cores/beetle_saturn/upstream/libretro-common/include/libretro.h", "comment": true }
+      ]
+    },
+    {
       "id": "bsnes", "title": "bsnes", "cores": ["bsnes"], "framework": "BsnesCore", "licence": "GPL-3.0-or-later",
       "source": "https://github.com/libretro/bsnes-libretro, commit b51612a",
       "texts": [

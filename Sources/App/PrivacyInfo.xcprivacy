@@ -41,7 +41,8 @@
         <!-- SaveStore reads save state modification dates to list them, LibraryView reads a game file's
              size with attributesOfItem, and the cores import stat, fstat or lstat for their own ROM, disc,
              save and memory card files: MgbaCore, GambatteCore, PcsxReArmedCore, BsnesCore, MelonDSCore,
-             JgenesisCore, DosboxPureCore and MameCore. All of these files are inside the app container. -->
+             JgenesisCore, DosboxPureCore, MameCore and BeetleSaturnCore. All of these files are inside the app
+             container. -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
@@ -61,8 +62,10 @@
                 <string>E174.1</string>
             </array>
         </dict>
-        <!-- 35F9.1: MoltenVK, linked into each layer-path core (Mupen64PlusNextCore, VkTestCore), imports
-             mach_absolute_time to time GPU work and frames inside the app. No boot time leaves the device. -->
+        <!-- 35F9.1: MoltenVK, linked by each layer-path core (Mupen64PlusNextCore, VkTestCore), imports
+             mach_absolute_time to time GPU work and frames inside the app. BeetleSaturnCore imports it through
+             libretro-common's rtime and features_cpu, for elapsed-time counters inside the app. No boot time
+             leaves the device. -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategorySystemBootTime</string>

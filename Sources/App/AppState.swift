@@ -203,7 +203,7 @@ enum CoreCatalog {
     /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
     static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u"]
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
-    static var discPlatforms: [PlatformInfo] { ["ps1", "megacd", "dos"].compactMap(platform) }
+    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos"].compactMap(platform) }
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
@@ -245,8 +245,8 @@ enum CoreCatalog {
     }
 
     /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
-    /// the system ID in sector 16, or SYSTEM.CNF in the root directory. Mega-CD: "SEGADISCSYSTEM" or "SEGA"
-    /// opening the first sector (Saturn's "SEGA SEGASATURN" is left out). Any other ISO 9660 disc, and any
+    /// the system ID in sector 16, or SYSTEM.CNF in the root directory. Saturn: "SEGA SEGASATURN" opening the
+    /// first sector. Mega-CD: "SEGADISCSYSTEM" or any other "SEGA" opening it. Any other ISO 9660 disc, and any
     /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry.
     /// shortcut: a .chd is compressed, so it always asks; read its first hunk if players import many.
     static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
@@ -285,7 +285,7 @@ enum CoreCatalog {
         }
         // A raw image's first sector has 16 bytes of sync and header before the data.
         for start in [0, 16] where has("SEGA", in: start..<(start + 4)) {
-            return has("SEGASATURN", in: start..<(start + 16)) ? nil : "megacd"
+            return has("SEGA SEGASATURN", in: start..<(start + 15)) ? "saturn" : "megacd"
         }
         if ext == "iso" || ext == "img" || pvdStarts.contains(where: { has("CD001", in: ($0 + 1)..<($0 + 6)) }) {
             return "dos"

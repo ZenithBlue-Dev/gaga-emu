@@ -169,7 +169,7 @@ Online play is not scheduled. It is not promised or gated until built, and its S
 | ID | Milestone | Status | Detail |
 |---|---|---|---|
 | 6.0 | Memory entitlements | planned | Add `com.apple.developer.kernel.extended-virtual-addressing` (address space) and `com.apple.developer.kernel.increased-memory-limit` (RAM limit) to the entitlements file and App ID before any Tier 3 core. |
-| 6.1 | Saturn: Beetle Saturn | planned | |
+| 6.1 | Saturn: Beetle Saturn | built, legal gate open, device pending | Branch `core/saturn`. Beetle Saturn at `30f4c120`, interpreter only, texture path. Needs the player's BIOS (`mpr-17933.bin` or `sega_101.bin`), refused with a message otherwise. Discs with `SEGA SEGASATURN` import as Saturn. 6.0 is not needed to build; RAM use on device is unmeasured, and a save state is about 6.8 MB. |
 | 6.2 | Dreamcast: Flycast JIT-less fork | planned | Name and maintain the fork first. Upstream dropped iOS support, and the fork source was not located. |
 | 6.3 | 3DS: Azahar (experimental) | planned | `use_cpu_jit` and `use_shader_jit` must be off and compiled out, and `shader_jit_a64_compiler` must not ship. Vulkan on MoltenVK, or the software renderer. PICA200 path per `docs/03` section 4: fragment shaders use `spv_fs_shader_gen.cpp`. No SPIR-V vertex generator was found; the vertex path appears to go through GLSL, which is inferred from file names and not traced. |
 | 6.4 | **J2meJS spike** | planned | Establish the source, licence and JS runtime path, and whether that path uses any JIT that counts against the no-JIT rule. No upstream repo has been identified. |

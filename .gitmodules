@@ -52,3 +52,6 @@
 [submodule "Cores/mupen64plus_next/upstream"]
 	path = Cores/mupen64plus_next/upstream
 	url = https://github.com/libretro/mupen64plus-libretro-nx.git
+[submodule "Cores/beetle_saturn/upstream"]
+	path = Cores/beetle_saturn/upstream
+	url = https://github.com/libretro/beetle-saturn-libretro
