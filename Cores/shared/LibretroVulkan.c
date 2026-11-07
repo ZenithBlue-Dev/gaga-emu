@@ -578,7 +578,11 @@ static bool lr_vk_bind(VkMemoryRequirements needs, VkMemoryPropertyFlags flags, 
 
 // Rare, so it builds and frees what it needs each time and waits for the GPU.
 bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity, uint32_t* width, uint32_t* height) {
-    if (!inst || !width || !height || !s_vk.device || !s_vk.presented) return false;
+    if (!inst || !width || !height || !s_vk.device) return false;
+    if (!s_vk.presented) {
+        fprintf(stderr, "[gaga-vk] read back: nothing presented (has_image %d)\n", s_vk.has_image);
+        return false;
+    }
     LrVkImage src = s_vk.last;
     src.queue_family = VK_QUEUE_FAMILY_IGNORED; // The present gave it back already.
     *width = src.width;
@@ -593,6 +597,9 @@ bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity
     VkCommandBuffer cmd = VK_NULL_HANDLE;
     VkFence fence = VK_NULL_HANDLE;
     bool ok = false;
+    // Device run 5: PPSSPP's 3rd and later games in one process read back nothing although they present.
+    // Logs the step that failed, so the next run names the cause.
+    const char* step = "image";
 
     VkImageCreateInfo image_info = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
                                      .format = VK_FORMAT_B8G8R8A8_UNORM, .extent = { src.width, src.height, 1 }, .mipLevels = 1,
@@ -602,11 +609,15 @@ bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity
     VkMemoryRequirements needs;
     if (vkCreateImage(device, &image_info, NULL, &image) != VK_SUCCESS) goto done;
     vkGetImageMemoryRequirements(device, image, &needs);
+    step = "image memory";
     if (!lr_vk_bind(needs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &image_memory) || vkBindImageMemory(device, image, image_memory, 0) != VK_SUCCESS) goto done;
+    step = "buffer";
     if (vkCreateBuffer(device, &buffer_info, NULL, &buffer) != VK_SUCCESS) goto done;
     vkGetBufferMemoryRequirements(device, buffer, &needs);
+    step = "buffer memory";
     if (!lr_vk_bind(needs, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &buffer_memory) ||
         vkBindBufferMemory(device, buffer, buffer_memory, 0) != VK_SUCCESS) goto done;
+    step = "command buffer";
 
     VkCommandBufferAllocateInfo alloc = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, .commandPool = s_vk.pool,
                                           .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, .commandBufferCount = 1 };
@@ -627,13 +638,18 @@ bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity
     VkResult submitted = vkQueueSubmit(s_vk.queue, 1, &submit, fence);
     lr_vk_unlock();
     void* mapped = NULL;
-    if (submitted != VK_SUCCESS || vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS ||
-        vkMapMemory(device, buffer_memory, 0, bytes, 0, &mapped) != VK_SUCCESS) goto done;
+    step = "submit";
+    if (submitted != VK_SUCCESS) goto done;
+    step = "wait";
+    if ((submitted = vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX)) != VK_SUCCESS) goto done;
+    step = "map";
+    if (vkMapMemory(device, buffer_memory, 0, bytes, 0, &mapped) != VK_SUCCESS) goto done;
     memcpy(pixels, mapped, bytes);
     vkUnmapMemory(device, buffer_memory);
     ok = true;
 
 done:
+    if (!ok) fprintf(stderr, "[gaga-vk] read back %ux%u failed at %s\n", src.width, src.height, step);
     if (fence) vkDestroyFence(device, fence, NULL);
     if (cmd) vkFreeCommandBuffers(device, s_vk.pool, 1, &cmd);
     if (buffer) vkDestroyBuffer(device, buffer, NULL);
