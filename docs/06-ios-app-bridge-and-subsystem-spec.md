@@ -35,7 +35,7 @@ Status comes from reading the code, not from a device test.
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │
  ┌───────────────────────────────┴─────────────────────────────────────┐
- │ Mock core (built). 12 weak stubs (stub). Real cores (planned, docs/03)│
+ │ Mock core (built). 11 weak stubs (stub). Real cores (planned, docs/03)│
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ video and audio callbacks
  ┌───────────────────────────────┴─────────────────────────────────────┐
@@ -271,11 +271,11 @@ Status: planned. Today everything compiles into the app target, and no framework
 
 **Header** (seen in screenshot `FC11608F`): controller button on the left, logo in the centre, Play History button on the right. Status: built.
 
-**Empty state** (seen in screenshot `FC11608F`): "Welcome to MANIC EMU's World", then "Tap the [import icon] button to import", a star divider, a "Join Discord for assistance" pill and an "Ensure game ROMs are legally obtained" pill. There is no hero illustration and no import button on this screen; the "Your adventure begins here!" hero belongs to the Import tab. GagaEmu uses its own name in the welcome line. Status: built, with a placeholder Discord link (`https://discord.com`).
+**Empty state** (seen in screenshot `FC11608F`): "Welcome to MANIC EMU's World", then "Tap the [import icon] button to import", a star divider, a "Join Discord for assistance" pill and an "Ensure game ROMs are legally obtained" pill. GagaEmu has no Discord pill, because no invite exists. There is no hero illustration and no import button on this screen; the "Your adventure begins here!" hero belongs to the Import tab. GagaEmu uses its own name in the welcome line. Status: built.
 
-**Controllers panel** (seen in screenshot `026FA2CF`): a side panel that slides in from the left while the main view stays visible at the right edge. It has help and more buttons, a "Touch Control" row with a "Player 1" picker, and a controller illustration. Status: content built, but presented as a `.sheet` in `MainTabView`. Side-panel presentation is planned.
+**Controllers panel** (seen in screenshot `026FA2CF`): a side panel that slides in from the left while the main view stays visible at the right edge. It has help and more buttons, a "Touch Control" row with a "Player 1" picker, and a controller illustration. Status: content built, presented as a `.sheet` in `MainTabView`. Manic's side panel is not copied; the UI redesign decides the presentation (`docs/07` 1.13).
 
-**Play History panel** (seen in screenshot `E2946B38`): slides in from the opposite side, with the main view visible at the left edge. The empty state shows crossed swords, "No Play History" and an "Import Games" button. Status: content built, also presented as a `.sheet`. Side-panel presentation is planned.
+**Play History panel** (seen in screenshot `E2946B38`): slides in from the opposite side, with the main view visible at the left edge. The empty state shows crossed swords, "No Play History" and an "Import Games" button. Status: content built, also presented as a `.sheet`, pending the UI redesign.
 
 **Populated library** (GagaEmu design; no populated library appears in the reference images): a "Recently Played" carousel, platform filter chips and a game grid. Tap launches and long-press opens the menu below. Status: built, but launch only records state.
 
@@ -302,72 +302,71 @@ Seen in screenshots `A59F001A` and `443B8BE2`. The header has a plus button on t
 | WiFi | LAN upload server, **off by default**, started only by the user's toggle. Each start creates a fresh 4-digit PIN. Port 8080. The PIN is required for every write, and uploads are capped at 2 GiB with sanitized file names (`Sources/Hub/WiFiTransferServer.swift`). | built |
 | Read Clipboard | **Tap only**: `ClipboardImporter.scan` is called from the button and never automatically. Supports files copied from macOS or the Files app. | built |
 | MultiDisc Helper | Groups disc files into one `.m3u` entry. | built |
-| RomPatcher | IPS, BPS and UPS patches, in memory, on a copy of the source. IPS RLE records are not supported and throw an error (`Sources/Hub/RomPatcher.swift:91`). | built |
+| RomPatcher | IPS, BPS and UPS patches, in memory, on a copy of the source. IPS RLE records are supported. | built |
 | Drag & Drop | Drop target on the Import tab (`onDrop`). The screenshot's wording says any interface; app-wide coverage is planned. | built |
-| Join Discord pill | Same link as Support. | built, placeholder link |
 
-**Security note on WiFi transfer.** Traffic is plain HTTP, so the PIN and files cross the local network unencrypted. The code has no limit on PIN attempts, a 4-digit PIN has only 10,000 values, and the PIN is also accepted in the query string, where it can end up in browser history. The server stays off by default and should stay on only while the user is transferring. `docs/07` tracks an attempt limit and removal of the query-string PIN. `NSLocalNetworkUsageDescription` is present in `Info.plist`.
+**Security note on WiFi transfer.** Traffic is plain HTTP, so the PIN and files cross the local network unencrypted, and the Import tab and upload page say so. A 4-digit PIN has only 10,000 values, so `PINAttemptLimiter` bounds guessing: every 5th wrong PIN locks the server for a minute, and the 15th stops it until the user restarts it with a new PIN. The PIN is accepted only in the `X-Gaga-Pin` header, never the query string. The server stays off by default and should stay on only while the user is transferring. `NSLocalNetworkUsageDescription` is present in `Info.plist`.
 
 ### 3.3 Settings tab
 
 **Top of screen** (seen in screenshot `F7ADD189`): a membership banner reading "Unlock MANIC EMU membership" with "You are the protagonist of this story" and a "50% Off" pill, followed by the "Adventurer Card" with Nickname, Play Time, Joined and an avatar. Status: both built, with GagaEmu's name in the banner. Banner behaviour follows section 4.
 
-The tables below use the labels seen in the screenshots. A row marked stub must be implemented or hidden before submission (`docs/07`).
+The tables below use the labels seen in the screenshots. A row marked hidden has no working behaviour yet and returns in the milestone noted in `docs/07`. Saved values for hidden rows stay in `state.json`.
 
 **General** (seen in `F7ADD189`, `44F4AEE0`)
 
 | Row | GagaEmu behaviour | Status |
 |---|---|---|
 | Appearance | Dark, Light and System | built |
-| Theme | App icons, theme colours, boxart settings, console ordering | stub |
-| Quick Start | Skip preparation page | stub |
-| Auto Save States | Automatic save states. Premium item, section 4. | stub: a free toggle today |
-| Assign Skin | Choose a touch skin. `TouchSkinEngine` loads `.deltaskin` and flex (JSON and SVG) skins. | stub: row empty, engine built |
-| Cover Scraping | OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration | stub |
+| Theme | App icons, theme colours, boxart settings, console ordering | hidden |
+| Quick Start | Skip preparation page | hidden |
+| Auto Save States | Automatic save states. Premium item, section 4. | hidden |
+| Assign Skin | Choose a touch skin. `TouchSkinEngine` loads `.deltaskin` and flex (JSON and SVG) skins. | hidden |
+| Cover Scraping | OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration | hidden |
 
 **Advanced** (seen in `44F4AEE0`, `C4E3779B`, `8A17681E`)
 
 | Row | GagaEmu behaviour | Status |
 |---|---|---|
-| AirPlay Fullscreen | Full-screen mirroring | stub |
-| iCloud Sync | Save sync | stub: flips a stored flag |
-| Auto Full Screen | Enters full screen when a controller connects | stub |
+| AirPlay Fullscreen | Full-screen mirroring | hidden |
+| iCloud Sync | Save sync | hidden |
+| Auto Full Screen | Enters full screen when a controller connects | hidden |
 | BIOS | Lists BIOS files and shows SHA-1 once imported | built |
-| Respect Silent Mode | Plays audio only when not in silent mode | stub |
-| Online Play Settings | Not promised. Netplay is not gated or promised until built. | stub: row empty |
-| Rumble | Device vibration during certain events | stub |
-| Skin Sound Effects | Sound on touch skin presses | stub |
-| RetroAchievements | Sign-in and achievements | stub: row empty |
+| Respect Silent Mode | Plays audio only when not in silent mode | hidden |
+| Online Play Settings | Not promised. Netplay is not gated or promised until built. | hidden |
+| Rumble | Device vibration during certain events | hidden |
+| Skin Sound Effects | Sound on touch skin presses | hidden |
+| RetroAchievements | Sign-in and achievements | hidden |
 | TriggerPro | "Create and manage advanced custom buttons." | built: editor and logic, no session to apply it |
 | JIT | **Deliberately dropped.** Manic shows this row (`C4E3779B`). GagaEmu ships no JIT, so there is nothing to configure, and the row must not be added. | not applicable |
 | Shaders | `docs/05` section 3 | built |
-| Emulator Core | Lists platforms with their current core (seen in `3D38E22D`, `DE9D26E2`). GagaEmu's defaults come from `docs/03`, not from Manic's list. | built, using the old catalog |
+| Emulator Core | Lists platforms with their current core (seen in `3D38E22D`, `DE9D26E2`). GagaEmu's defaults come from `docs/03`, not from Manic's list. | built |
 
 **Support** (seen in `8A17681E`). Scope is a GagaEmu decision.
 
 | Row | Scope decision | Status |
 |---|---|---|
-| FAQ | Keep | built: link to `https://gagaemu.app/faq`, reachability unverified |
-| Feedback | Keep | built: `mailto:support@gagaemu.app` |
-| Join QQ Channel | Out of v1 unless the owner runs a channel. Remove the row until then. | stub: link to `https://gagaemu.app/qq`, unverified |
-| Join Discord | Keep only with a real invite. Without a server, remove this row and both Discord pills. | stub: placeholder link |
+| FAQ | Keep | built: link to `support.html` on the site, which is its "Support & FAQ" page |
+| Feedback | Keep | built: link to `support.html`, because the App Store metadata has no support email |
+| Join QQ Channel | Out of v1 unless the owner runs a channel. | removed |
+| Join Discord | Keep only with a real invite. None exists. | removed, with the pills |
 
 **Others** (seen in `8A17681E`, `9EFF77AC`). Scope is a GagaEmu decision.
 
 | Row | Scope decision | Status |
 |---|---|---|
-| About Us | Keep | stub |
-| Share Gaga-Emu | Keep, using the system share sheet | stub |
+| About Us | Keep | hidden |
+| Share Gaga-Emu | Keep, using the system share sheet | hidden |
 | Clear Cache | Keep. Asks for confirmation, then removes the Caches directory. | built |
-| Reset Tips | Keep once the app has dismissible tips; hide until then | stub |
-| Language | Keep once a second localisation exists; English only until then | stub: display only |
-| Terms of Service | Keep; required | built: link |
-| Privacy Policy | Keep; required | built: link |
-| Featured Items | Dropped. GagaEmu has no catalogue to feature. Remove the empty row. | stub |
+| Reset Tips | Keep once the app has dismissible tips; hide until then | hidden |
+| Language | Keep once a second localisation exists; English only until then | hidden |
+| Terms of Service | Keep; required | built: Apple's standard EULA, because the site has no terms page |
+| Privacy Policy | Keep; required | built: link to `privacy.html` on the site |
+| Featured Items | Dropped. GagaEmu has no catalogue to feature. | removed |
 | More from Manic | Dropped. This is Manic's cross-promotion; GagaEmu has no equivalent. | not built |
-| Rate Us | Keep, using the system review prompt, after a real core runs. Reword the "5-star" copy. | stub: card only |
+| Rate Us | Keep, using the system review prompt, after a real core runs. Reword the "5-star" copy. | hidden |
 
-The Terms, Privacy, FAQ and QQ links use `gagaemu.app`, while the App Store metadata uses `zenithblue-oss.github.io/gaga-emu-site`. One host must be chosen (`docs/07`).
+All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
 
 ---
 
@@ -401,29 +400,29 @@ Premium is the five items on Manic's paywall (seen in screenshot `0596EA12`). Fr
 | Unlimited Save States | 3 | Unlimited | No: `canAddSaveState` has no caller and no save state UI exists. |
 | Unlimited Cheat Codes | 3 | Unlimited | No: `canAddCheat` has no caller and no cheat UI exists. |
 | Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film | Geom CRT, Geom CRT Border | Yes: `canUseShader` in `ShadersSettingsView.swift:65`. |
-| Auto Save State | Off | Available | No: `Entitlements` has no such member, and `AppState.autoSaveStates` is a free toggle. |
+| Auto Save State | Off | Available | Gate exists: `canUseAutoSaveState`. Its row is hidden until 2.6. |
 
-**Sell only what works.** `anime4k` and `crt-royale` are not premium items until implemented. Both are in `premiumShaderIDs` today, and `anime4k` is in `ShaderCatalog` and falls back to Original. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
+**Sell only what works.** `anime4k` and `crt-royale` are not premium items until implemented (milestone 3.4): neither is in `premiumShaderIDs` or `ShaderCatalog`. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
 
 ### 4.4 Paywall requirements
 
 | Requirement | Status in `MembershipPaywallView.swift` |
 |---|---|
 | Restore Purchases | built: `AppStore.sync` |
-| Redeem Offer | stub: the button action is empty (`:63`). Planned: system offer-code redemption. |
-| Terms and Privacy links | built, on the unsettled host above |
-| Trial and cancel disclosure | built as fixed text (`:24`). It must match what the selected product actually offers. |
+| Redeem Offer | built: system offer-code redemption (`offerCodeRedemption`) |
+| Terms and Privacy links | built, using `SiteLinks` |
+| Trial and cancel disclosure | built: `StoreKitManager.disclosure` follows the selected product |
 | Five paywall items | built |
-| Premium Filters item states that filters apply only to cores using the host shader chain, so it does not imply they work on layer-path cores | planned |
+| Premium Filters item states that filters apply only to cores using the host shader chain, so it does not imply they work on layer-path cores | built, as a line on the paywall |
 | Prices from `Product.displayPrice` | built |
-| Entitlement from StoreKit 2 `Transaction.currentEntitlements` | built (`StoreKitManager.swift:128-135`) |
-| Lifetime owners never see subscribe prompts | planned: `hasPremium` does not distinguish lifetime, and the banner opens the paywall for every user |
+| Entitlement from StoreKit 2 `Transaction.currentEntitlements` | built (`StoreKitManager.currentEntitlements`) |
+| Lifetime owners never see subscribe prompts | built: `Entitlements.showsSubscribePrompts` |
 
-The "50% Off" and "Introductory Offer" badges are hard-coded (`StoreKitManager.swift:144,148`). A badge may show only when App Store Connect has that offer configured.
+Offer badges come from `StoreKitManager.badge`, which needs an intro offer configured in App Store Connect that the user is eligible for. The "50% Off" badge and banner pill are gone.
 
 ### 4.5 Release gate
 
-The paywall stays off in submitted builds until a real core runs end to end. While it is off, the banner is hidden and premium limits are lifted, so no shipped feature sits behind a purchase the user cannot make. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist. The code has no such gate yet (`docs/07`).
+The paywall stays off in submitted builds until a real core runs end to end. While it is off, the banner is hidden and premium limits are lifted, so no shipped feature sits behind a purchase the user cannot make. The one switch is the `PAYWALL_ENABLED` compilation condition (`PaywallGate`, `project.yml`), absent today; `docs/07` 7.2 opens it. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist.
 
 ---
 
@@ -436,7 +435,7 @@ The paywall stays off in submitted builds until a real core runs end to end. Whi
 | Controllers | `ControllerManager`: MFi, DualShock 4, DualSense, Xbox, Joy-Con and keyboards | built, no session to feed |
 | Touch skins | `TouchSkinEngine`: `.deltaskin` and flex skins, CoreHaptics | built, no session to feed |
 | TriggerPro | `TriggerProManager`: turbo, hold and combo | built, no session to feed |
-| Game Center | `com.apple.developer.game-center` entitlement present; GameKit is not linked or used | stub |
+| Game Center | Entitlement present, GameKit linked. `GameCenter.authenticate` signs in the local player in the background, with no failure UI. No leaderboards or achievements. | built |
 
 ---
 
@@ -525,4 +524,4 @@ Future addition, not in `project.yml` today. Each integrated core adds one embed
         embed: true
 ```
 
-`GagaEmu.xcodeproj/project.pbxproj` is tracked in git, which works against generating the project from `project.yml`. S3 and S4 do not commit their generated project (`S3/ios/.gitignore:2`, `S4/ios/BachataS4/project.yml:4-5`). `docs/07` tracks removing it.
+`GagaEmu.xcodeproj/` is generated and ignored by git, as in S3 and S4 (`S3/ios/.gitignore:2`, `S4/ios/BachataS4/project.yml:4-5`). Run `xcodegen generate` after a fresh clone; `scripts/appstore_release.sh` runs it first.

@@ -50,19 +50,19 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Card** [S]: heading `Adventurer Card`, with `Nickname: Adventurer`, `Play Time: Start your adventure now`, `Joined: 6 Nov 2026` and a mascot image. Status: built.
 - **Banner** [S]: `Unlock MANIC EMU membership`, `You are the protagonist of this story`, `50% Off`.
 - **Behaviour** [G]: editable nickname, play time tracked across cores, joined date set at first launch, selectable avatars. Using the nickname as a RetroAchievements or netplay handle needs those features first. Status: planned.
-- **Community links** [S]: `FAQ`, `Feedback`, `Join QQ Channel`, `Join Discord`. Status: `FAQ` and `Feedback` built as links; `Join QQ Channel` and `Join Discord` are stubs (`docs/06` section 3.3). The Discord link points to the generic `https://discord.com` (`Sources/UI/Settings/SettingsView.swift:52`).
+- **Community links** [S]: `FAQ`, `Feedback`, `Join QQ Channel`, `Join Discord`. Status: `FAQ` and `Feedback` built as links; `Join QQ Channel` and `Join Discord` removed, since GagaEmu has neither (`docs/06` section 3.3).
 - **Clear Cache** [S]: label only. What it clears (temp ROMs, covers, shader caches) is [G].
 
 ### 2.2 Controllers & Input (Ref: `026FA2CF`, `C4E3779B`)
-- **Controllers panel** [S]: a side panel that slides in with the main screen visible at its edge, opened from the top-left button on Games. It has a `Touch Control` row with a `Player 1` picker, plus `?` and `...` buttons. Status: built, but as a sheet rather than a side panel (`Sources/UI/MainTabView.swift:23`).
+- **Controllers panel** [S]: a side panel that slides in with the main screen visible at its edge, opened from the top-left button on Games. It has a `Touch Control` row with a `Player 1` picker, plus `?` and `...` buttons. Status: built, as a sheet. Manic's side panel is not copied (`docs/07` 1.13).
 - **Player slots**: only `Player 1` is seen [S]. Players 1 to 4 and touch fallback are [G]. Status: built in `Sources/Input/ControllerManager.swift`.
 - **Hardware controllers** [G]: `GameController.framework` for DualShock 4, DualSense, Xbox, Joy-Con and MFi pads. Brands are not shown in any screenshot.
 - **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure, EKA2L1 and J2meJS. Status: built in `Sources/Input/ControllerManager.swift`, with no session to feed.
-- **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: stub for core events.
+- **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: row hidden until 2.4.
 - **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G].
 - **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode.
 - **TriggerPro** [S]: subtitle `Create and manage advanced custom buttons.` Nothing more is shown. Turbo at 5 to 30 Hz, hold latch and combos of up to four steps are [G]. Status: built in `Sources/Input/TriggerProManager.swift`.
-- **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. The `Assign Skin` row is a stub. A skin customizer is planned.
+- **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. The `Assign Skin` row is hidden until 3.9. A skin customizer is planned.
 
 ### 2.3 Shaders (Ref: `0BF2D032`)
 - **Sheet** [S]: search field (placeholder `SearchShaders`), edit button, close button, an image button on the preview card (purpose not shown), and an eye icon plus radio button on each row. Status: built, except that the edit and image buttons are not in the code.
@@ -91,13 +91,13 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 ### 2.5 Library & Gameplay (Ref: `FC11608F`, `E2946B38`, `44F4AEE0`)
 - **Navigation** [S]: bottom bar with `Games` (rocket), `Import` (folder), `Settings` (gear). The Games header has a controller button on the left and a crossed-swords button on the right, which opens the Play History side panel.
 - **Empty state** [S]: `Welcome to MANIC EMU's World`, `Tap the [icon] button to import` (a text hint, not a button), `Join Discord for assistance`, `Ensure game ROMs are legally obtained`. There is no hero art here; the mascot art is on Import.
-- **Play History** [S]: the empty state only, with an `Import Games` button. Timeline and quick resume are [G]. Status: built, but as a sheet rather than a side panel (`Sources/UI/MainTabView.swift:24`).
+- **Play History** [S]: the empty state only, with an `Import Games` button. Timeline and quick resume are [G]. Status: built, as a sheet. Manic's side panel is not copied (`docs/07` 1.13).
 - **Library** [G]: search, platform filter, console ordering (`Console Ordering` appears as a Theme subtitle [S]) and favourites. No populated library appears in any screenshot. Search is not visible on Manic's empty Games header.
 - **Long-press** [S for core switching only]: a caption says cores switch by long-pressing a game. Other sheet actions are [G]; see `docs/06` section 3.1.
-- **Cover Scraping** [S]: row only. Status: stub. Sources are [G]: OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration. Status: planned.
-- **Save states**: `Auto Save States` is a toggle, shown off [S]. Manual slots with thumbnails and a proposed 50-slot rolling auto-save are [G]. Status: the toggle is a stub, and the free-tier cap exists in `StoreKitManager` but has no caller.
-- **iCloud Sync** [S]: shows `iCloud Not Enabled`. Sync across devices is [G]. Status: stub.
-- **Other enhancements** [G], status planned: rewind on qualifying cores, RetroAchievements Softcore and Hardcore (the row is [S], status stub), AirPlay mirroring (`AirPlay Fullscreen` toggle is [S], greyed off, status stub).
+- **Cover Scraping** [S]: row only. Status: row hidden until 3.8. Sources are [G]: OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration. Status: planned.
+- **Save states**: `Auto Save States` is a toggle, shown off [S]. Manual slots with thumbnails and a proposed 50-slot rolling auto-save are [G]. Status: the toggle is hidden until 2.6, and the free-tier cap exists in `StoreKitManager` but has no caller.
+- **iCloud Sync** [S]: shows `iCloud Not Enabled`. Sync across devices is [G]. Status: row hidden until 3.11.
+- **Other enhancements** [G], status planned: rewind on qualifying cores, RetroAchievements Softcore and Hardcore (the row is [S], status hidden), AirPlay mirroring (`AirPlay Fullscreen` toggle is [S], greyed off, status hidden).
 
 ### 2.6 Premium & StoreKit 2 (Ref: `0596EA12`)
 `docs/06` is canonical for this spec. This section is a summary.
@@ -114,7 +114,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 **GagaEmu policy** [G]:
 1. **Emulation stays free**: every core, ROM import, saves, baseline shaders and local multi-controller play. No core or platform is ever gated.
 2. **Premium is five items**: higher fast-forward speed, unlimited save states, unlimited cheat codes, premium filters and auto save state.
-3. **Sell only what works**: `anime4k` and `crt-royale` are not premium items until implemented. Premium Filters cover only cores whose frames pass through the host shader chain (`docs/06` section 4.3). Netplay is not gated or promised until built.
+3. **Sell only what works**: `anime4k` and `crt-royale` are not premium items until implemented (`docs/07` 3.4). Premium Filters cover only cores whose frames pass through the host shader chain (`docs/06` section 4.3). Netplay is not gated or promised until built.
 4. **Paywall contents**: Restore Purchases, Redeem Offer, Terms and Privacy links, and trial/cancel disclosure. Prices come from `Product.displayPrice` and are never hard-coded. Lifetime owners never see subscribe prompts. Entitlement comes from StoreKit 2 `Transaction.currentEntitlements`.
 5. **Release gate**: the paywall stays off in submitted builds until a real core runs end to end. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist.
 
@@ -125,7 +125,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 | Save states | 3 | Unlimited | Lines 37, 109 |
 | Cheat codes | 3 | Unlimited | Lines 38, 110 |
 | Fast-forward | 2x | 5x | Line 39. 5x is unconfirmed in screenshots. |
-| Premium Filters | Locked | Unlocked | Line 45 lists `geom-crt`, `geom-crt-border`, `anime4k`, `crt-royale`. The last two must leave the list until implemented. No Manic screenshot shows which filters are premium. |
+| Premium Filters | Locked | Unlocked | `premiumShaderIDs` lists `geom-crt` and `geom-crt-border`. `anime4k` and `crt-royale` join when implemented. No Manic screenshot shows which filters are premium. |
 | Auto save state | Not gated | Not gated | No entitlement exists yet. Adding it is a roadmap item. |
 
 **Products** (IDs unchanged): `monthly.sub` as `Monthly Membership`, `annual.sub` as `Annual Membership`, `lifetime.pass` as `Lifetime Pass`.
@@ -138,36 +138,36 @@ Rows and subtitles are [S]. Status comes from `Sources/UI/Settings/SettingsView.
 | Section | Row | Source detail | Status |
 | :--- | :--- | :--- | :--- |
 | General | `Appearance` | Shown `Dark Mode`; three unlabelled icons | built |
-| General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | stub |
-| General | `Quick Start` | `Skip preparation page`; shown off | stub |
-| General | `Auto Save States` | Shown off | stub |
-| General | `Assign Skin` | | stub |
-| General | `Cover Scraping` | | stub |
-| Advanced | `AirPlay Fullscreen` | `Enable fullscreen mirroring`; greyed off | stub |
-| Advanced | `iCloud Sync` | `iCloud Not Enabled` | stub |
-| Advanced | `Auto Full Screen` | Enters full screen when a controller connects; shown on | stub |
+| General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | hidden |
+| General | `Quick Start` | `Skip preparation page`; shown off | hidden |
+| General | `Auto Save States` | Shown off | hidden |
+| General | `Assign Skin` | | hidden |
+| General | `Cover Scraping` | | hidden |
+| Advanced | `AirPlay Fullscreen` | `Enable fullscreen mirroring`; greyed off | hidden |
+| Advanced | `iCloud Sync` | `iCloud Not Enabled` | hidden |
+| Advanced | `Auto Full Screen` | Enters full screen when a controller connects; shown on | hidden |
 | Advanced | `BIOS` | `BIOS required for some platforms` | built |
-| Advanced | `Respect Silent Mode` | Shown off | stub |
-| Advanced | `Online Play Settings` | | stub; netplay not promised |
-| Advanced | `Rumble` | Shown off | stub |
-| Advanced | `Skin Sound Effects` | Shown on | stub |
-| Advanced | `RetroAchievements` | | stub |
+| Advanced | `Respect Silent Mode` | Shown off | hidden |
+| Advanced | `Online Play Settings` | | hidden |
+| Advanced | `Rumble` | Shown off | hidden |
+| Advanced | `Skin Sound Effects` | Shown on | hidden |
+| Advanced | `RetroAchievements` | | hidden |
 | Advanced | `TriggerPro` | `Create and manage advanced custom buttons.` | built |
 | Advanced | `JIT` | Between TriggerPro and Shaders | **Deliberately dropped.** No JIT in any shipped core. |
 | Advanced | `Shaders` | | built |
 | Advanced | `Emulator Core` | | built |
 | Support | `FAQ`, `Feedback` | | built as links |
-| Support | `Join QQ Channel`, `Join Discord` | | stub; see `docs/06` section 3.3 |
-| Others | `About Us`, `Share Manic EMU` (as `Share Gaga-Emu`) | | stub |
+| Support | `Join QQ Channel`, `Join Discord` | | removed; see `docs/06` section 3.3 |
+| Others | `About Us`, `Share Manic EMU` (as `Share Gaga-Emu`) | | hidden |
 | Others | `Clear Cache` | | built |
-| Others | `Reset Tips` | `Show previously dismissed alerts and tips again` | stub |
-| Others | `Language` | Shown `English` | stub |
+| Others | `Reset Tips` | `Show previously dismissed alerts and tips again` | hidden |
+| Others | `Language` | Shown `English` | hidden |
 | Others | `Terms of Service`, `Privacy Policy` | | built as links |
-| Others | `Featured Items` | Purpose not shown | stub |
+| Others | `Featured Items` | Purpose not shown | removed |
 | More from Manic | BitBop promo, `Try Now` | Manic's own product | **Not applicable.** Not planned. |
-| None | `Rate Us` card | `Your 5-star rating means the world to us! :)` | stub; display only |
+| None | `Rate Us` card | `Your 5-star rating means the world to us! :)` | hidden |
 
-Toggle rows marked stub store a preference, but nothing outside `AppState` and `SettingsView` reads it yet.
+Rows marked hidden are not shown; each returns in the milestone noted in `docs/07`. Saved values stay in `state.json`.
 
 ---
 

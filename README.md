@@ -27,7 +27,7 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
 
 4. **Manic EMU as a Feature Reference** (no parity claim; `docs/02` tags each item by source and status):
    - Adventurer Card with nickname, play time, joined date and avatar. Play time tracking across cores and selectable avatars are planned.
-   - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, MultiDisc M3U helper, and in-memory RomPatcher (IPS/BPS/UPS, without IPS RLE records).
+   - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, MultiDisc M3U helper, and in-memory RomPatcher (IPS, including RLE records, plus BPS and UPS).
    - Input: MFi, DualShock 4, DualSense, Xbox, Joy-Con, touch skins (`.deltaskin` and flex), and TriggerPro turbo, hold and combo. Built, but there is no game session to feed yet.
    - Scope is an explicit platform list in `docs/03`. PS3 (`samba-s3`) and PS4 (`bachata-s4`) are external sister projects, never catalog rows or frame producers. PS2 (`balero-s2`) and GameCube/Wii are non-shipping research and are not promised.
 

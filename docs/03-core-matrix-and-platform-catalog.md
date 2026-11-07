@@ -2,7 +2,7 @@
 
 This document is canonical for the GagaEmu core list, licences and renderer paths. Other docs reference it and do not fork the table. `docs/04` owns interpreter design and performance tiers, `docs/06` owns the bridge API, and `docs/07` owns phases and status.
 
-**Status: planned.** The app today is a shell plus a mock core. The 12 non-mock cores in `Sources/Bridge/GagaCoreRegistry.c:279-290` are stubs, and no emulator core in this document is integrated. The tables below are design, not current state.
+**Status: planned.** The app today is a shell plus a mock core. The 11 non-mock cores in `Sources/Bridge/GagaCoreRegistry.c` are stubs, and no emulator core in this document is integrated. The tables below are design, not current state.
 
 **Sources.** Upstream state and licences were checked on 2026-11-07. Manic EMU facts are marked by source: "seen in screenshot", "App Store listing", "public repo", or "release notes". Licensing text is engineering guidance, not legal advice.
 
@@ -223,7 +223,7 @@ S3 (`samba-s3-ui`) and S4 (`Bachata-S4-Dev`) are external sister projects. They 
 
 ### C registry (current code)
 
-`Sources/Bridge/GagaCoreRegistry.c:296-312` is a compile-time table of getter functions, each returning a pointer to a `GagaCoreInterface`:
+`Sources/Bridge/GagaCoreRegistry.c` is a compile-time table of getter functions, each returning a pointer to a `GagaCoreInterface`:
 
 ```c
 typedef const GagaCoreInterface* (*CoreGetterFunc)(void);
@@ -232,9 +232,8 @@ static const CoreGetterFunc s_core_getters[] = {
     MockCore_GetInterface,
     Mgba_GetInterface,
     Gambatte_GetInterface,
-    Snes9x_GetInterface,
     Bsnes_GetInterface,
-    GenesisPlusGx_GetInterface,
+    Jgenesis_GetInterface,
     PcsxReArmed_GetInterface,
     BeetlePsx_GetInterface,
     Gpsp_GetInterface,
@@ -245,22 +244,12 @@ static const CoreGetterFunc s_core_getters[] = {
 };
 ```
 
-Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. Everything except the mock core is a stub (`:279-290`).
-
-### Known code mismatches (roadmap items)
-
-The code does not yet match this document. `docs/07` tracks the changes.
-
-1. **Two ID schemes.** Swift `CoreCatalog` uses reverse-DNS IDs such as `org.libretro.mgba` (`Sources/App/AppState.swift:74`), `org.azahar.azahar` and `org.ppsspp.ppsspp`. The C registry uses short IDs such as `mgba` (`GagaCoreRegistry.c:281`). A catalog ID therefore cannot resolve through `GagaCoreRegistry_FindByID`.
-   - **Planned single scheme:** the C registry's short lowercase `core_id` (`mgba`, `pcsx_rearmed`) is the only ID. `CoreCatalog` adopts it, and saved `coreOverride` and `defaultCores` values in `state.json` are migrated. The assertion at `Sources/App/GagaEmuApp.swift:30` changes with it.
-2. **Catalog defaults conflict with this document.** `CoreCatalog` still recommends Snes9x for SNES (`AppState.swift:87`), Genesis Plus GX for Mega Drive (`:60`) and FBNeo for Arcade (`:100`), and it lists Kronos, SwanStation and PicoDrive. Its comment at `:43` says it mirrors this document, which is no longer true.
-3. **C registry contains excluded cores.** `Snes9x_GetInterface` and `GenesisPlusGx_GetInterface` are stubs to remove, and JGenesis needs a registry entry.
-4. **`resolvedCoreID` ignores `defaultCores`.** `GameItem.resolvedCoreID` (`AppState.swift:17-19`) falls straight from `coreOverride` to `CoreCatalog.defaultCore`. The launch path (`:313`), `coreName` (`:300`) and the core sheet do honour `defaultCores`, so the bug affects only `resolvedCoreID`, whose one current use is the assertion above.
+Lookup is by `core_id` through `GagaCoreRegistry_FindByID`. Everything except the mock core is a stub. `CoreCatalog` uses the same short lowercase `core_id` (`mgba`, `pcsx_rearmed`), the only ID scheme. `StateMigration` in `Sources/App/AppState.swift` upgrades older saved values.
 
 ### Storage (current code)
 
-State persists as JSON at `Application Support/GagaEmu/state.json` (`AppState.swift:248`), through the `Snapshot` struct (`:221-240`). It does not use SQLite or Core Data.
+State persists as JSON at `Application Support/GagaEmu/state.json`, through `AppState.Snapshot`. It does not use SQLite or Core Data.
 
-- **Per game:** `GameItem.coreOverride: String?` (`:5,11`).
-- **Per platform:** `AppState.defaultCores: [String: String]`, keyed by platform ID (`:208`).
-- **Resolution order:** `coreOverride`, then `defaultCores[platformID]`, then `CoreCatalog.defaultCore(for:)` (`:313`).
+- **Per game:** `GameItem.coreOverride: String?`.
+- **Per platform:** `AppState.defaultCores: [String: String]`, keyed by platform ID.
+- **Resolution order:** `coreOverride`, then `defaultCores[platformID]`, then `CoreCatalog.defaultCore(for:)`, in `GameItem.resolvedCoreID(defaults:)`.

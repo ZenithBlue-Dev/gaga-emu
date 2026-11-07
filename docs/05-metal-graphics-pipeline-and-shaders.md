@@ -22,7 +22,7 @@ The app today is a shell plus a mock core. No core frame reaches the screen, bec
 | Core-owned layer path | stub: `attach_metal_layer` is in the bridge, no core implements it, MoltenVK is not linked | `Sources/Bridge/GagaBridge.h:92` |
 | Core-output texture path | planned | none |
 | Multi-pass chain, Bicubic and xBRZ upscalers, parameter sliders | planned: slider properties exist, no `Slider` exists in `Sources` | none |
-| `anime4k`, `crt-royale` | planned: the `anime4k` catalog row falls back to Original in `ShaderPreset.from` | `Sources/Metal/MetalRenderer.swift:27-36` |
+| `anime4k`, `crt-royale` | planned: neither is in the catalog, and a saved selection resets to Original | none |
 
 ---
 
@@ -62,7 +62,7 @@ This is the default for software-rendered cores, including libretro cores. A cor
 
 Each slot is a `.storageModeShared` `MTLBuffer` with a texture created from it by `MTLBuffer.makeTexture(descriptor:offset:bytesPerRow:)`, a method on the buffer rather than the device ([Apple documentation](https://developer.apple.com/tutorials/data/documentation/metal/mtlbuffer/maketexture(descriptor:offset:bytesperrow:).json)). The texture shares storage with the buffer, so the GPU reads what the CPU wrote without a blit. The CPU copy out of the core's own buffer still happens.
 
-Row alignment comes from the device and must not be hard-coded. `MetalTextureRing.swift:43,109` uses 256 today; that is a code fix tracked in `docs/07`.
+Row alignment comes from the device and must not be hard-coded.
 
 ```swift
 let alignment = device.minimumLinearTextureAlignment(for: pixelFormat)
@@ -75,7 +75,7 @@ let bytesPerRow = ((width * bytesPerPixel + alignment - 1) / alignment) * alignm
 | `GAGA_PIXEL_FORMAT_XRGB8888` | `.bgra8Unorm` | The X byte is undefined, so presets must not depend on sampled alpha. |
 | `GAGA_PIXEL_FORMAT_RGBA8888` | `.rgba8Unorm` | |
 
-An inflight semaphore bounds the ring at three slots, and `acquireWritableBuffer` blocks the emulation thread when all three are in flight. Each acquire must pair with exactly one completion signal. `MetalRenderer.draw` currently attaches a completion handler on every draw that has a texture, which would over-signal once the ring is wired; this is dormant today because `textureRing` is never set (`MetalRenderer.swift:94,209`). The simulator cannot use buffer-backed linear textures, so the ring falls back to `texture.replace` there.
+An inflight semaphore bounds the ring at three slots, and `acquireWritableBuffer` blocks the emulation thread when all three are in flight. Each acquire pairs with exactly one completion signal: `MetalRenderer.draw` calls `attachCompletion` on every draw with a texture, and it attaches nothing unless an acquire is waiting. The simulator cannot use buffer-backed linear textures, so the ring falls back to `texture.replace` there.
 
 ### 2.2 Host-buffer path (planned)
 
