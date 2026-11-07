@@ -605,8 +605,10 @@ final class GambatteCoreTests: XCTestCase {
     func testBenchmarkTestROMFollowsThePlatform() throws {
         XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "gbc", to: directory).pathExtension, "gbc")
         XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "gba", to: directory).pathExtension, "gba")
-        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "psp", to: directory)) {
-            XCTAssertEqual($0.localizedDescription, "No test ROM is generated for psp. Pass -GagaBenchmarkROM.")
+        XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "psp", to: directory).pathExtension, "elf")
+        // A Saturn disc boots only on a Sega BIOS, which GagaEmu never ships, so nothing is generated for it.
+        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "saturn", to: directory)) {
+            XCTAssertEqual($0.localizedDescription, "No test ROM is generated for saturn. Pass -GagaBenchmarkROM.")
         }
     }
 
