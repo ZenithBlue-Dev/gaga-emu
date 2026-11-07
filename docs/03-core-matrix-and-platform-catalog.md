@@ -719,6 +719,16 @@ Not compiled: Dynarmic, oaknut, xbyak, every `shader_jit*` file, `src/core/arm/d
 
 No keys, firmware, system archives (other than the free ones above), shared font dump or game is bundled or fetched. `ENABLE_BUILTIN_KEYBLOB` is off. Only decrypted content runs: `.3ds`, `.cci`, `.cxi`, `.app` decrypted dumps, and `.3dsx`, `.elf` and `.axf` homebrew. `.cia` is not accepted: installing a title needs the player's keys and NAND, which GagaEmu does not handle. Network, online features, camera and microphone are off: socket and name lookup calls go to refusing stubs (`AzaharSupport.cpp`).
 
+### App archive reader (LZMA SDK) and RAR
+
+Import reads `.7z` with Igor Pavlov's [LZMA SDK](https://www.7-zip.org/sdk.html) 25.01 (2025-08-03), compiled into the app itself, not a core. The C decoder files in `Sources/Archive/LZMA` are copied unmodified from the FBNeo submodule, `Cores/fbneo/upstream/src/dep/libs/lib7z` at FBNeo commit `4cdb31f1729588fa42d4aa1c3d9ce2cdaed28618`; `7zVersion.h` records the version. To move the pin, copy the same file list from a newer official SDK and update this paragraph and `Licences/notices.json`. `Sources/Archive/GagaSevenZip.c` is GagaEmu's own bridge.
+
+| Part | Licence | What it asks of a binary release |
+|---|---|---|
+| `Sources/Archive/LZMA` (`7zArcIn`, `7zDec`, `LzmaDec`, `Lzma2Dec`, `Bcj2`, `Bra`, `Bra86`, `BraIA64`, `Delta`, `7zCrc`, `7zCrcOpt`, `7zStream`, `7zBuf`, `7zAlloc`, `CpuArch` and headers) | Public domain, as each file header says | Nothing. `Licences/notices.json` lists it anyway. |
+
+PPMd, AES and the encoders are not copied. RAR is not read: unrar's licence forbids using its code to recreate the RAR compression algorithm, which conflicts with the GPL cores, so import refuses a `.rar` with "RAR archives are not supported. Extract it or repack it as .zip or .7z."
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:

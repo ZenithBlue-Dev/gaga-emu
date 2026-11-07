@@ -310,15 +310,18 @@ enum CoreCatalog {
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
         if discExtensions.contains(ext.lowercased()) { return discPlatforms }
+        if ext.lowercased() == "7z" { return ["arcade"].compactMap(platform) }
         return ext.lowercased() == "zip" ? ["arcade", "dos"].compactMap(platform) : nil
     }
 
-    /// As `unplacedPlatforms(forExtension:)`, but a .zip first offers the platforms its entries' extensions name.
+    /// As `unplacedPlatforms(forExtension:)`, but a .zip or .7z first offers the platforms its entries'
+    /// extensions name. DOSBox Pure reads zips only, so a 7z (whatever its name) never offers DOS.
     static func unplacedPlatforms(forFile url: URL) -> [PlatformInfo]? {
-        guard url.pathExtension.lowercased() == "zip" else { return unplacedPlatforms(forExtension: url.pathExtension) }
-        let named = zipEntryNames(url).compactMap { platformID(forExtension: ($0 as NSString).pathExtension.lowercased()) }
+        guard ["zip", "7z"].contains(url.pathExtension.lowercased()) else { return unplacedPlatforms(forExtension: url.pathExtension) }
+        let named = archiveEntries(url).compactMap { platformID(forExtension: ($0.name as NSString).pathExtension.lowercased()) }
         var seen = Set<String>()
-        return (named + ["arcade", "dos"]).filter { seen.insert($0).inserted }.compactMap(platform)
+        let fallback = isSevenZip(url) || url.pathExtension.lowercased() == "7z" ? ["arcade"] : ["arcade", "dos"]
+        return (named + fallback).filter { seen.insert($0).inserted }.compactMap(platform)
     }
 
     /// The extension's platform, corrected by the file's contents where one extension serves two platforms:
@@ -334,7 +337,7 @@ enum CoreCatalog {
             defer { try? handle?.close() }
             let magic = (try? handle?.read(upToCount: 8)) ?? nil
             return magic == Data("PS-X EXE".utf8) ? "ps1" : "dos"
-        case "zip":
+        case "zip", "7z":
             return zipPlatformID(url)
         case "pbp":
             return pbpPlatformID(url)
@@ -371,13 +374,15 @@ enum CoreCatalog {
     /// A .zip's platform from its central directory, nothing extracted. First a console: the zip holds one ROM
     /// for one, as `zipConsoleROM(_:)` finds. DOS: it holds an .exe, .com, .bat or
     /// DOSBox .conf. Arcade: its name is a machine in `mameMachines`, or every entry is ROM-like (no extension,
-    /// .bin, .rom, or one with a digit, as in "pacman.6e"). Otherwise nil, and import asks.
+    /// .bin, .rom, or one with a digit, as in "pacman.6e"). Otherwise nil, and import asks. A .7z (or a 7z named
+    /// .zip) follows the same rules, except DOS: DOSBox Pure reads zips only.
     static func zipPlatformID(_ url: URL) -> String? {
-        let entries = zipEntries(url)
+        let sevenZip = isSevenZip(url)
+        let entries = sevenZip ? sevenZipEntries(url) : zipEntries(url)
         if let rom = zipConsoleROM(entries) { return rom.platformID }
         let names = entries.map(\.name)
         let exts = names.map { ($0 as NSString).pathExtension.lowercased() }
-        if exts.contains(where: { ["exe", "com", "bat", "conf"].contains($0) }) { return "dos" }
+        if !sevenZip, exts.contains(where: { ["exe", "com", "bat", "conf"].contains($0) }) { return "dos" }
         if mameMachines.contains(url.deletingPathExtension().lastPathComponent.lowercased()) { return "arcade" }
         let romLike = Swift.zip(names, exts).allSatisfy { name, ext in
             !name.contains("/") && (ext.isEmpty || ext == "bin" || ext == "rom" || ext.contains(where: \.isNumber))
@@ -518,6 +523,8 @@ enum CoreCatalog {
         var compressedSize: Int
         var size: Int
         var localHeaderOffset: Int
+        /// Set for a 7z file: its index in the archive, which `extractZipEntry` decodes instead.
+        var sevenZipIndex: Int? = nil
     }
 
     /// Files a .zip may carry beside the ROM, ignored when placing it.
@@ -559,10 +566,10 @@ enum CoreCatalog {
         case unsupported, corrupt, tooLarge, unsafeName
         var errorDescription: String? {
             switch self {
-            case .unsupported: return "The zip uses encryption or a compression GagaEmu cannot read."
-            case .corrupt: return "The zip is damaged."
-            case .tooLarge: return "The file in the zip is too large."
-            case .unsafeName: return "The file in the zip has a path GagaEmu refuses, such as one that leaves its folder."
+            case .unsupported: return "The archive uses encryption or a compression GagaEmu cannot read."
+            case .corrupt: return "The archive is damaged."
+            case .tooLarge: return "The file in the archive is too large."
+            case .unsafeName: return "The file in the archive has a path GagaEmu refuses, such as one that leaves its folder."
             }
         }
     }
@@ -572,6 +579,9 @@ enum CoreCatalog {
     /// and CRC-32 before the file appears.
     @discardableResult
     static func extractZipEntry(_ entry: ZipEntry, from zip: URL, to destination: URL, limit: Int) throws -> URL {
+        if let index = entry.sevenZipIndex {
+            return try extractSevenZipEntry(entry, index: index, from: zip, to: destination, limit: limit)
+        }
         guard entry.flags & 1 == 0, entry.method == 0 || entry.method == 8 else { throw ZipError.unsupported }
         guard entry.size <= limit else { throw ZipError.tooLarge }
         let input = try FileHandle(forReadingFrom: zip)
@@ -1235,12 +1245,17 @@ final class AppState: ObservableObject {
         if let folder = DiscSet.folder(of: url, romDirectory: romDirectory) {
             return importDiscSet(folder, arrived: url, title: title, platformID: platformID)
         }
+        // unrar's licence conflicts with the GPL cores, so a RAR is refused with a way forward and stays put.
+        if platformID == nil, CoreCatalog.isRAR(url) {
+            lastImportNote = "\(url.lastPathComponent): \(CoreCatalog.rarMessage)"
+            return nil
+        }
         var url = url
-        // No console core reads a .zip, so its one ROM is stored as a plain file and the copied zip goes.
-        // Only a zip already in the ROM folder is unpacked, so a file elsewhere is never removed. A damaged or
-        // refused zip is reported and stays where it is, with no shelf entry and no platform question.
-        if platformID == nil, url.pathExtension.lowercased() == "zip", inROMFolder {
-            let entries = CoreCatalog.zipEntries(url)
+        // No console core reads a .zip or .7z, so its one ROM is stored as a plain file and the copied archive goes.
+        // Only an archive already in the ROM folder is unpacked, so a file elsewhere is never removed. A damaged or
+        // refused one is reported and stays where it is, with no shelf entry and no platform question.
+        if platformID == nil, ["zip", "7z"].contains(url.pathExtension.lowercased()), inROMFolder {
+            let entries = CoreCatalog.archiveEntries(url)
             do {
                 guard !entries.isEmpty else { throw CoreCatalog.ZipError.corrupt }
                 if let rom = try CoreCatalog.zipConsoleCheck(entries)?.get() {

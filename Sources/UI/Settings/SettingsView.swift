@@ -501,6 +501,20 @@ struct BIOSManagerView: View {
         "lynxboot.img": [512], "5200.rom": [2 << 10], "atarixl.rom": [16 << 10], "jagboot.rom": [128 << 10],
         "kernal-901227-03.bin": [8 << 10], "basic-901226-01.bin": [8 << 10], "chargen-901225-01.bin": [4 << 10],
         "kick34005.A500": [256 << 10], "kick40068.A1200": [512 << 10]
+    ].merging(snesFirmware.map { ($0.0, Set([$0.2])) }) { listed, _ in listed }
+
+    /// bsnes's coprocessor firmware: file name, chip and part, bytes. bsnes opens <chip>.program.rom and
+    /// <chip>.data.rom in the system folder for a game with that chip; Snes9x emulates the chips without them.
+    static let snesFirmware: [(String, String, Int)] = [
+        ("dsp1.program.rom", "DSP-1 program", 6 << 10), ("dsp1.data.rom", "DSP-1 data", 2 << 10),
+        ("dsp1b.program.rom", "DSP-1B program", 6 << 10), ("dsp1b.data.rom", "DSP-1B data", 2 << 10),
+        ("dsp2.program.rom", "DSP-2 program", 6 << 10), ("dsp2.data.rom", "DSP-2 data", 2 << 10),
+        ("dsp3.program.rom", "DSP-3 program", 6 << 10), ("dsp3.data.rom", "DSP-3 data", 2 << 10),
+        ("dsp4.program.rom", "DSP-4 program", 6 << 10), ("dsp4.data.rom", "DSP-4 data", 2 << 10),
+        ("st010.program.rom", "ST010 program", 48 << 10), ("st010.data.rom", "ST010 data", 4 << 10),
+        ("st011.program.rom", "ST011 program", 48 << 10), ("st011.data.rom", "ST011 data", 4 << 10),
+        ("st018.program.rom", "ST018 program", 128 << 10), ("st018.data.rom", "ST018 data", 32 << 10),
+        ("cx4.data.rom", "Cx4 data", 3 << 10)
     ]
 
     var body: some View {
@@ -512,6 +526,21 @@ struct BIOSManagerView: View {
                             VStack(alignment: .leading) {
                                 Text(name)
                                 Text(system).font(.meta).foregroundStyle(AppTheme.muted)
+                            }
+                            Spacer()
+                            Label(present(name) ? "Found" : "Missing",
+                                  systemImage: present(name) ? "checkmark.circle" : "xmark.circle")
+                                .font(.footnote).foregroundStyle(present(name) ? AppTheme.ink : AppTheme.muted)
+                        }
+                    }
+                }
+                .paperRows()
+                Section("SNES chip firmware (bsnes; Snes9x needs none)") {
+                    ForEach(Self.snesFirmware, id: \.0) { name, part, bytes in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(name)
+                                Text("\(part), \(bytes >> 10) KiB (\(bytes) bytes)").font(.meta).foregroundStyle(AppTheme.muted)
                             }
                             Spacer()
                             Label(present(name) ? "Found" : "Missing",
