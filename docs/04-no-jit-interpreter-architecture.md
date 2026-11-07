@@ -536,7 +536,7 @@ Because RWX `mmap` becomes `rw-` silently, also run each core under test with cr
 |---|---|---|---|
 | Core execution | `DispatchQueue` at `.userInteractive` with a frame timer (`Sources/Bridge/EmulatorCoreProtocol.swift:98-99`) | Built, runs the mock core | Keep the class. Decide queue against dedicated thread once a real core is measured. S3 and S4 use `pthread_set_qos_class_self_np` on their own threads |
 | Audio output | `AVAudioEngine` (`Sources/Audio/AudioEngineManager.swift:7`), scheduler queue at `.userInteractive` (`:42`) | Built | The engine's render thread belongs to the system. The app sets QoS only on its scheduler queue |
-| Frame presentation | `MTKViewDelegate` `draw(in:)` (`Sources/Metal/MetalRenderer.swift:80,183`) | Built. The renderer creates no thread or queue of its own | No separate render thread exists |
+| Frame presentation | `MTKViewDelegate` `draw(in:)` (`Sources/Metal/MetalRenderer.swift:211,344`) | Built. The renderer creates no thread or queue of its own | No separate render thread exists |
 | Wi-Fi transfer | `DispatchQueue` at `.userInitiated` (`Sources/Hub/WiFiTransferServer.swift:24`) | Built | Consider `.utility` so a transfer does not compete with a running core. Not decided |
 | Disk I/O and decompression | No dedicated queue | Planned | `.utility` |
 

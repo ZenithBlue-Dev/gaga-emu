@@ -81,7 +81,7 @@ One animation: `.easeOut(duration: 0.15)`, a fade, in `RootView` between screens
 | `PaperSheet` | `AppTheme.swift` | Header for every sheet: title, optional `meta` subtitle, Close, then a `Rule`. Sheet corner is 6pt. |
 | `Rule` | `AppTheme.swift` | The hairline |
 | `LeftRail` | `Sources/UI/RootView.swift` | 72pt wide on `surface`. Items are at least 56pt high. Selected uses `accent`, bold text, a heavier glyph and a 3pt bar. |
-| `CoverArt` | `Sources/UI/Games/CoverArt.swift` | 3:4, 6pt corners, 1pt `rule` outline, 3pt spine on the left. Without art, a serif initial and the platform code. |
+| `CoverArt` | `Sources/UI/Games/CoverArt.swift` | 3:4, 6pt corners, 1pt `rule` outline, 3pt spine on the left. Without art, a serif initial and the platform code. With Cover Art on, the cached box art fills the tile. |
 | Filter chips, search | `Sources/UI/Games/LibraryView.swift` | One compact row. The visible chip is 30pt and the search field 34pt, inside a 44pt row. |
 | Touch controls | `Sources/UI/Game/GameView.swift` | Outlined in `onLetterbox`, filled with `accentFill` while held. Hit areas are at least 44pt. |
 
@@ -95,7 +95,7 @@ The app is landscape only on iPhone and iPad, left and right (`docs/06` section 
 | Library | Continue panel on the left, chips and shelves on the right | Panel 240pt compact, else 300pt. Panel cover 84pt or 150pt wide. Shelf cover 90pt or 140pt wide, times the tile scale up to 1.8. |
 | Add | Two columns: Choose from Files and drop target, then the other sources and the legal notice | Choose from Files is 72pt high |
 | Settings | Two panes: categories, then the selected category | Only working rows appear |
-| Filter picker | List on the left, live preview on the right | |
+| Filter picker | List on the left, live preview and its controls on the right | List 240pt compact, else 320pt. Controls 190pt compact, else 240pt: Upscale chips in two columns, sliders, Reset. |
 | Game | Picture aspect fit on `letterbox`, a touch band on each side | Pause side sheet 280pt |
 
 iPhone height is about 375 to 440pt, so persistent chrome stays small and nothing sits above or below content that does not need to.

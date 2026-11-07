@@ -385,8 +385,9 @@ Tapping a cover plays, as does the Play button. The game view opens only once th
 | Play | Starts a game session | built: only the mock core can run a game until 2.9 |
 | Change Core | Opens the core picker, with an option to set the platform default (`docs/03` section 8) | built |
 | Choose Filter | Opens the filter picker for this game | built: the game session applies it |
+| Assign Skin | Chooses this game's touch layout, or Platform Default to follow Settings > Controls > Assign Skin (section 3.7) | built |
 | Manage Saves | Save state slots with time and thumbnail, Load, Delete with confirmation, and Export Save for the game's battery save, through the share sheet. Loading from here starts the game on that state. | built |
-| Edit Details | Title and favorite, plus platform, core, file size and play time as read-only metadata | built; cover art planned |
+| Edit Details | Title and favorite, plus platform, core, file size and play time as read-only metadata | built. Box art comes from the Cover Art setting, not from this sheet. |
 | Delete | Asks for confirmation, then removes the game and its play history from the library. The file stays in the ROM folder. The confirmation says that saves and save states stay on the device and return if the same file is added again. | built |
 
 Export Save covers the battery save. Save state files are not exported: they belong to one core version, and nothing in the app can import them.
@@ -416,9 +417,9 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Category | Rows | Status |
 |---|---|---|
 | Play | Total play time and session count, read-only. Quick Start opens the most recent game when the app starts, because GagaEmu has no preparation page to skip. Auto Save State saves on quit and when the app goes to the background, and offers to resume when that game next starts; it follows `canUseAutoSaveState`, so a saved value of on does not bypass the gate. Auto Full Screen removes the touch bands when a controller owns Player 1. Respect Silent Mode makes game audio obey the silent switch. | built |
-| Library | Game count, BIOS Files, default core per platform | built |
+| Library | Game count, Cover Art, BIOS Files, default core per platform. Cover Art is off by default and its note names `thumbnails.libretro.com` as the site that receives game titles (section 5). | built |
 | Graphics | Default Filter, which opens the filter picker | built |
-| Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. | built |
+| Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. Assign Skin opens a sheet with a drawing of each built-in layout and a layout per platform. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
 | About | Version, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy. Debug builds add Run Benchmark. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
@@ -431,22 +432,24 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 
 | Row | Home when it returns | Returns with |
 |---|---|---|
-| Cover Scraping | Library | 3.8 |
-| Assign Skin | Controls | 3.9 |
-| RetroAchievements | Play | 3.10 |
-| AirPlay Fullscreen | Graphics | 3.11 |
-| iCloud Sync | Storage | 3.11 |
+| RetroAchievements | Play | Blocked: needs an owner account, sign-in testing and RetroAchievements client approval (`docs/07` 3.10) |
+| AirPlay Fullscreen | Graphics | Built (`ExternalDisplay.swift`) but not checked on a second screen, so the row stays hidden (`docs/07` 3.11) |
+| iCloud Sync | Storage | Blocked: needs the iCloud capability on the App ID, an owner change (`docs/07` 3.11) |
 | About Us (licence notices) | About | 7.5 |
 | Share GagaEmu | About | 7.6 |
 | Reset Tips | About | When the app has dismissible tips |
 | Language | About | When a second localisation exists |
 | Online Play | Play | Not scheduled. Netplay is not promised or gated until built. |
 
-There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Theme and Appearance are gone, because the palette is fixed and follows the system.
+There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Theme and Appearance are gone, because the palette is fixed and follows the system. Skins are touch layouts only and carry no theme.
+
+Cover Art replaces the old Cover Scraping row. The old `coverScraping` value, which defaulted to on, is ignored, so no install starts sending titles without a new choice.
 
 ### 3.4 Filter and core pickers
 
-**Filter picker** (`FilterPickerView`): a split view with the list on the left and a large live preview on the right. Opened from a game it sets that game's filter; opened from Graphics it sets the default for new games. Premium filters show a Plus label and open Gaga Plus when locked, only while the gate is open. The planned sources in `docs/05` section 4 have no UI until they exist.
+**Filter picker** (`FilterPickerView`): a split view with the list on the left and a large live preview on the right. Opened from a game it sets that game's filter; opened from Graphics it sets the default for new games. Premium filters show a Plus label and open Gaga Plus when locked, only while the gate is open.
+
+The list has the built-in presets, a Community section whose rows name the author and licence, and an Imported section with a delete button per filter and an `Import .metal File` button (`docs/05` section 4.1). A failed import shows the reason in plain text in a "Filter Not Imported" sheet and selects Original. Beside the preview, the controls show Upscale (Nearest, Bilinear, Bicubic, Edge Smooth) for filters that take one, a slider for each parameter the filter reads, and Reset. The values are saved per filter. `.slangp` import and custom presets have no UI until they exist.
 
 **Core picker** (`CorePickerSheet`): a simple list sheet for one game, with an action that also makes the choice the platform default. A file of unknown type says no cores are available.
 
@@ -471,6 +474,10 @@ The pause menu is a compact paper side sheet over the dimmed game: Paused, the g
 **Cheats.** The sheet has a name field and a code field on the left, and this game's cheats with a switch and a delete button on the right. The Add Cheat button sits above the fields, because the landscape keyboard covers what is below them. The core decides whether a code is valid, and its reason is shown beside that button. mGBA accepts GameShark, Action Replay, CodeBreaker and VBA formats.
 
 **Pausing.** The menu, backgrounding and audio interruptions are separate reasons, and play resumes only when all have cleared. An interruption that ends without the system's resume hint leaves the menu open, so the player chooses.
+
+**Touch layouts.** `TouchSkinEngine.Layout.builtIn` has three original layouts: Standard (pad and face buttons at mid height, Select and Start below), Low Reach (pad and buttons at the bottom edge, Select and Start above them) and Two Button (A and B alone, larger and on a slant, offered for Game Boy, GBC, GBA and NES). A game's own choice wins over its platform's, which wins over Standard (`TouchSkinEngine.layoutID`).
+
+**Second screen.** `ExternalDisplay` puts the picture in a window on a connected external screen and leaves the controls on the device, while a game runs with AirPlay Fullscreen on. Without that window iOS mirrors the device as usual. The scene is configured by `AppDelegate` for the `windowExternalDisplayNonInteractive` role. The setting defaults to off and its row is hidden until the feature is checked on a real second screen.
 
 **Failures.** A load runs before the game view opens. If it fails, the Library shows an alert with the core's own message and no game view opens. A fatal core event while playing closes the game view and shows the same alert.
 
@@ -505,10 +512,10 @@ Premium is five items. Free-tier numbers are GagaEmu policy.
 | Higher fast-forward speed | 2x | 5x | Yes: `GameSession.fastForwardSpeeds` filters by `maxFastForward`, and `setFastForward` clamps to it. |
 | Unlimited Save States | 3 | Unlimited | Yes: `GameSession.saveState` checks `canAddSaveState`. The auto save slot does not count. |
 | Unlimited Cheat Codes | 3 | Unlimited | Yes: `GameSession.addCheat` checks `canAddCheat`. |
-| Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film | Geom CRT, Geom CRT Border | Yes: `canUseShader` in `FilterPickerView.swift`. |
+| Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film, the Community filters and imported filters | Geom CRT, Geom CRT Border, CRT Deluxe, Anime4K | Yes: `canUseShader` in `FilterPickerView.swift`, and `AppState.makeSession` falls back to Original without it. |
 | Auto Save State | Off | Available | Yes: `AppState.autoSaveEnabled` needs `canUseAutoSaveState`, and the Settings row becomes a locked row without it. |
 
-**Sell only what works.** `anime4k` and `crt-royale` are not premium items until implemented (milestone 3.4): neither is in `premiumShaderIDs` or `ShaderCatalog`. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
+**Sell only what works.** `premiumShaderIDs` is `geom-crt`, `geom-crt-border`, `crt-deluxe` and `anime4k`, each drawn on real core frames (`docs/05` section 3.1). `crt-royale` is GPL and is not shipped; CRT Deluxe is the original multi-pass CRT sold in its place, and a saved `crt-royale` selection resets to Original. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
 
 ### 4.4 Paywall requirements
 
@@ -539,7 +546,8 @@ The paywall stays off in submitted builds until a real core runs end to end. Whi
 | Persistence | JSON at `Application Support/GagaEmu/state.json`; no SQLite or Core Data (`AppState.swift:221-248`, `docs/03` section 8) | built |
 | Audio | `AudioEngineManager`: `AVAudioEngine` source node pulling from a ring buffer, with `LinearResampler` converting core audio to 48 kHz. | built |
 | Controllers | `ControllerManager`: MFi, DualShock 4, DualSense, Xbox, Joy-Con and keyboards | built. The session reads keyboard mapping for Player 1. |
-| Touch skins | `TouchSkinEngine`: `.deltaskin` and flex skins, CoreHaptics. One default layout for all platforms; 3.9 adds skin assignment. | built |
+| Touch skins | `TouchSkinEngine`: `.deltaskin` and flex skins, CoreHaptics. Three built-in layouts, assigned per platform or per game (section 3.7). | built |
+| Cover art | `CoverArtFetcher`: box art from [Libretro Thumbnails](https://thumbnails.libretro.com) (`Named_Boxarts`), matched by exact title, with libretro's rule that ampersand, asterisk, slash, colon, backtick, angle brackets, question mark, backslash, vertical bar and double quote become an underscore (`LibretroThumbnails.fileName`). Only while Cover Art is on, which is off by default; the setting is checked before each request. HTTPS only, ephemeral session with no cookies, 10 s request and 30 s resource timeouts, one request at a time. A response over 5 MiB, not PNG or JPEG, or over 4096 px a side is dropped. The image is decoded and re-encoded at 600 px into `Caches/Covers`, and a failure keeps the placeholder. OpenVGDB and SteamGridDB are not used. The game title leaves the device, so `PrivacyInfo.xcprivacy` declares it (Other Data Types, App Functionality, not linked, no tracking). Box art is third-party artwork and is never used in marketing (`docs/BRAND.md`). | built |
 | TriggerPro | `TriggerProManager`: turbo, hold and combo, on player 1 | built |
 | Game Center | Entitlement present, GameKit linked. `GameCenter.authenticate` signs in the local player in the background, with no failure UI. No leaderboards or achievements. | built |
 

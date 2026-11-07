@@ -62,18 +62,18 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G]. Status: built, a system click on each touch press.
 - **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode. Status: built, not yet tested on a device.
 - **TriggerPro** [S]: subtitle `Create and manage advanced custom buttons.` Nothing more is shown. Turbo at 5 to 30 Hz, hold latch and combos of up to four steps are [G]. Status: built in `Sources/Input/TriggerProManager.swift`.
-- **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. The `Assign Skin` row is hidden until 3.9. A skin customizer is planned.
+- **Skins**: `Assign Skin` [S], and skins import through Files [S]. `.deltaskin` and Flex formats are [G]; compatibility with Manic's Flex skins is unverified. Loader status: built in `Sources/Input/TouchSkinEngine.swift`. `Assign Skin` is built (3.9): three original touch layouts, per platform or per game. A skin customizer is planned.
 
 ### 2.3 Shaders (Ref: `0BF2D032`)
 - **Sheet** [S]: search field (placeholder `SearchShaders`), edit button, close button, an image button on the preview card (purpose not shown), and an eye icon plus radio button on each row. Status: GagaEmu has a list and a large live preview only (`docs/06` section 3.4).
 - **Preview**: the card shows a pixel-art scene [S]. A still cannot show whether it is live. Live preview is [G]. Status: built.
-- **Tabs** [S]: `Default`, `RetroArch`, `Import`, `Custom`. Only Default's contents are shown. GagaEmu has no tabs; the sources below appear when they exist.
+- **Tabs** [S]: `Default`, `RetroArch`, `Import`, `Custom`. Only Default's contents are shown. GagaEmu has no tabs; its list has sections instead (`docs/06` section 3.4).
   1. **Default**: MSL presets [G]. Status: built.
-  2. **RetroArch**: libretro Slang presets converted ahead of time [G]; see `docs/05`. Status: planned.
-  3. **Import**: runtime `.metal` source through `makeLibrary(source:)` is allowed [G]. `.slangp` import is planned and needs a translation path. Status: planned.
-  4. **Custom**: parameter editing such as scanlines, curvature, bloom and colour temperature [G]. Status: planned.
+  2. **Community** (in place of the RetroArch tab): public-domain libretro Slang shaders converted ahead of time [G], with licences recorded in `docs/05` section 5. Status: built, three presets.
+  3. **Import**: runtime `.metal` source through `makeLibrary(source:)` [G]. Status: built. `.slangp` import needs a translation path and is deferred to after MoltenVK (`docs/07` 3.6). Status: planned.
+  4. **Custom**: parameter editing such as scanlines, curvature, bloom and colour temperature [G]. Status: built as sliders saved per filter; saved custom presets are planned.
 - **Presets** [S]: `Original`, `Cartoon`, `CRT v1`, `CRT v2`, `Geom CRT Border`, `Geom CRT`, `Film`. The screenshot cuts off at Film, so the total is not confirmed. Effect definitions are [G]; see `docs/05`.
-- **Anime4K / xBRZ and CRT-Royale** are not presets and are not sold until implemented. A saved choice of either falls back to Original.
+- **Anime4K, xBRZ and CRT-Royale**: Anime4K is built from its MIT-licensed shaders and is premium. xBRZ and CRT-Royale are GPL and do not ship; GagaEmu's own Edge Smooth upscaler and CRT Deluxe preset replace them, and a saved `crt-royale` choice falls back to Original.
 
 ### 2.4 Import Hub (Ref: `A59F001A`, `443B8BE2`)
 - **Top bar** [S]: `+`, cloud-download, `?` and `...` buttons, with tagline `Your adventure begins here!`. Their functions are not shown. Status: not specified.
@@ -94,10 +94,10 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Play History** [S]: the empty state only, with an `Import Games` button. GagaEmu's play history is the Continue panel plus a Recent filter [G]. Status: built.
 - **Library** [G]: search, platform filter and favourites. Console ordering (`Console Ordering` appears as a Theme subtitle [S]) is not planned. No populated library appears in any screenshot. Search is not visible on Manic's empty Games header.
 - **Long-press** [S for core switching only]: a caption says cores switch by long-pressing a game. Other sheet actions are [G]; see `docs/06` section 3.1.
-- **Cover Scraping** [S]: row only. Status: row hidden until 3.8. Sources are [G]: OpenVGDB and Libretro Thumbnails, with SteamGridDB under consideration. Status: planned.
+- **Cover Scraping** [S]: row only. GagaEmu's row is `Cover Art` in Settings > Library, off by default. The source is [G]: Libretro Thumbnails by exact title; OpenVGDB and SteamGridDB are not used. Status: built (3.8).
 - **Save states**: `Auto Save States` is a toggle, shown off [S]. Manual slots with thumbnails and a proposed 50-slot rolling auto-save are [G]. Status: the toggle is hidden until 2.6, and the free-tier cap exists in `StoreKitManager` but has no caller.
-- **iCloud Sync** [S]: shows `iCloud Not Enabled`. Sync across devices is [G]. Status: row hidden until 3.11.
-- **Other enhancements** [G], status planned: rewind on qualifying cores, RetroAchievements Softcore and Hardcore (the row is [S], status hidden), AirPlay mirroring (`AirPlay Fullscreen` toggle is [S], greyed off, status hidden).
+- **iCloud Sync** [S]: shows `iCloud Not Enabled`. Sync across devices is [G]. Status: blocked on the App ID's iCloud capability, row hidden (3.11).
+- **Other enhancements** [G], status planned: rewind on qualifying cores, RetroAchievements Softcore and Hardcore (the row is [S], status blocked on an owner account and approval, row hidden), AirPlay Fullscreen (the toggle is [S], greyed off; GagaEmu's version is built but unverified on a second screen, row hidden).
 
 ### 2.6 Premium & StoreKit 2 (Ref: `0596EA12`)
 `docs/06` is canonical for this spec. This section is a summary.
@@ -114,7 +114,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 **GagaEmu policy** [G]:
 1. **Emulation stays free**: every core, ROM import, saves, baseline shaders and local multi-controller play. No core or platform is ever gated.
 2. **Premium is five items**: higher fast-forward speed, unlimited save states, unlimited cheat codes, premium filters and auto save state.
-3. **Sell only what works**: `anime4k` and `crt-royale` are not premium items until implemented (`docs/07` 3.4). Premium Filters cover only cores whose frames pass through the host shader chain (`docs/06` section 4.3). Netplay is not gated or promised until built.
+3. **Sell only what works**: only filters that run on core frames are premium; `crt-royale` is not shipped and CRT Deluxe replaces it (`docs/07` 3.4). Premium Filters cover only cores whose frames pass through the host shader chain (`docs/06` section 4.3). Netplay is not gated or promised until built.
 4. **Paywall contents**: Restore Purchases, Redeem Offer, Terms and Privacy links, and trial/cancel disclosure. Prices come from `Product.displayPrice` and are never hard-coded. Lifetime owners never see subscribe prompts. Entitlement comes from StoreKit 2 `Transaction.currentEntitlements`.
 5. **Release gate**: the paywall stays off in submitted builds until a real core runs end to end. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist.
 
@@ -125,7 +125,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 | Save states | 3 | Unlimited | Lines 37, 109 |
 | Cheat codes | 3 | Unlimited | Lines 38, 110 |
 | Fast-forward | 2x | 5x | Line 39. 5x is unconfirmed in screenshots. |
-| Premium Filters | Locked | Unlocked | `premiumShaderIDs` lists `geom-crt` and `geom-crt-border`. `anime4k` and `crt-royale` join when implemented. No Manic screenshot shows which filters are premium. |
+| Premium Filters | Locked | Unlocked | `premiumShaderIDs` lists `geom-crt`, `geom-crt-border`, `crt-deluxe` and `anime4k`. No Manic screenshot shows which filters are premium. |
 | Auto save state | Not gated | Not gated | No entitlement exists yet. Adding it is a roadmap item. |
 
 **Products** (IDs unchanged): `monthly.sub`, `annual.sub` and `lifetime.pass`. GagaEmu's labels are in `docs/06` section 4.1.
@@ -139,17 +139,17 @@ Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and lay
 | General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | not planned: the palette is fixed |
 | General | `Quick Start` | `Skip preparation page`; shown off | built: GagaEmu has no preparation page, so it opens the most recent game when the app starts |
 | General | `Auto Save States` | Shown off | hidden |
-| General | `Assign Skin` | | hidden |
-| General | `Cover Scraping` | | hidden |
-| Advanced | `AirPlay Fullscreen` | `Enable fullscreen mirroring`; greyed off | hidden |
-| Advanced | `iCloud Sync` | `iCloud Not Enabled` | hidden |
+| General | `Assign Skin` | | built, in Controls |
+| General | `Cover Scraping` | | built as `Cover Art`, in Library, off by default |
+| Advanced | `AirPlay Fullscreen` | `Enable fullscreen mirroring`; greyed off | hidden: built, not verified on a second screen |
+| Advanced | `iCloud Sync` | `iCloud Not Enabled` | hidden: blocked on the App ID capability |
 | Advanced | `Auto Full Screen` | Enters full screen when a controller connects; shown on | built |
 | Advanced | `BIOS` | `BIOS required for some platforms` | built |
 | Advanced | `Respect Silent Mode` | Shown off | built |
 | Advanced | `Online Play Settings` | | hidden |
 | Advanced | `Rumble` | Shown off | built: haptic on touch presses only |
 | Advanced | `Skin Sound Effects` | Shown on | built |
-| Advanced | `RetroAchievements` | | hidden |
+| Advanced | `RetroAchievements` | | hidden: blocked on an owner account and approval |
 | Advanced | `TriggerPro` | `Create and manage advanced custom buttons.` | built |
 | Advanced | `JIT` | Between TriggerPro and Shaders | **Deliberately dropped.** No JIT in any shipped core. |
 | Advanced | `Shaders` | | built |

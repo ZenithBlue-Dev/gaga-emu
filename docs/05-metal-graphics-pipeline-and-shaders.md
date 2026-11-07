@@ -13,16 +13,20 @@ The app presents frames from the mock core through the copy path. No real core i
 | Item | Status | Where |
 |---|---|---|
 | Texture ring: three shared `MTLBuffer` slots, memcpy through `writeFrame` | built | `Sources/Metal/MetalTextureRing.swift` |
-| Single-pass renderer and seven MSL presets | built, used by the game view and the preview | `Sources/Metal/MetalRenderer.swift`, `Shaders.metal` |
+| Multi-pass renderer and nine built-in presets, checked on mGBA frames in the simulator | built | `Sources/Metal/MetalRenderer.swift`, `Shaders.metal`, `Anime4K.metal` |
 | Shader preview canvas with a procedural texture | built | `Sources/Metal/ShaderManager.swift` |
-| Filter picker, built-in presets | built | `Sources/UI/Settings/FilterPickerView.swift` |
-| RetroArch, import and custom sources | planned: no UI until they exist | section 4 |
+| Filter picker: built-in, Community and Imported sections, upscaler and sliders saved per filter | built | `Sources/UI/Settings/FilterPickerView.swift` |
+| Community presets, converted offline from public-domain files | built: three | `Sources/Metal/CommunityShaders.metal`, section 5 |
+| Import `.metal` | built | `Sources/Metal/ImportedFilter.swift`, section 4.1 |
+| Import `.slangp` and `.slang` | planned, deferred to after milestone 5.1: no tab or button until it exists | section 4 |
+| Custom presets | planned: the per-filter sliders cover the common case | section 4 |
 | Game view presenting a core frame | built, on the mock core | `Sources/UI/Game/GameView.swift` |
 | Host-buffer path | planned | none |
 | Core-owned layer path | stub: `attach_metal_layer` is in the bridge, no core implements it, MoltenVK is not linked | `Sources/Bridge/GagaBridge.h:92` |
 | Core-output texture path | planned | none |
-| Multi-pass chain, Bicubic and xBRZ upscalers, parameter sliders | planned: slider properties exist, no `Slider` exists in `Sources` | none |
-| `anime4k`, `crt-royale` | planned: neither is in the catalog, and a saved selection resets to Original | none |
+| Multi-pass chain, Nearest, Bilinear, Bicubic and Edge Smooth upscalers | built | section 3.4 |
+| `anime4k` (MIT port) and `crt-deluxe` (original) | built, premium | sections 3.1 and 5 |
+| `crt-royale`, xBRZ | not shipped: both are GPL | section 5 |
 
 ---
 
@@ -117,25 +121,29 @@ Two entries carry conditions from `docs/03`. N64 fails the no-JIT gate as config
 
 Seen in screenshot `0BF2D032`: a sheet with an edit button and a close button, a search field, the tabs Default, RetroArch, Import and Custom, a preview card with an image button, and a list where each row has a preview (eye) control and a separate selection control.
 
-Status in GagaEmu: the picker is an original split view, with the list on the left and a large preview on the right (`docs/06` section 3.4). There are no tabs, search field or eye icons.
+Status in GagaEmu: the picker is an original split view, with the list on the left and a large preview and its controls on the right (`docs/06` section 3.4). There are no tabs, search field or eye icons. The list has three sections: the built-in presets, Community, and Imported with an `Import .metal File` button.
 
 ### 3.1 Built-in presets
 
-These descriptions match `Sources/Metal/Shaders.metal`. Each preset also applies the colour temperature tint. Premium assignment is in `docs/06`.
+These descriptions match `Sources/Metal/Shaders.metal` and `Anime4K.metal`. Each preset also applies the colour temperature tint, which is exactly neutral at 0.5, and writes alpha 1. Premium assignment is in `docs/06` section 4.3. All nine, and the three in section 3.5, were selected in a running mGBA session in the simulator and drew the core's frame (milestone 3.1).
 
-| Preset ID | Label | Behaviour |
-|---|---|---|
-| `original` | Original | Samples the frame. Nearest or linear comes from `useLinearFilter`, which has no UI yet. |
-| `cartoon` | Cartoon | Sobel luminance edges darken high-contrast pixels. Colour is quantized with `floor(c * 16 + 0.5) / 16`, which yields 17 values per channel. |
-| `crt-v1` | CRT v1 | Sine-squared scanline modulation of luminance. |
-| `crt-v2` | CRT v2 | Vertical R, G, B stripe mask plus scanlines. |
-| `geom-crt-border` | Geom CRT Border | Procedural bezel around an active area of 0.12 to 0.88, with inner shadow, diagonal glare and scanlines. It uses no image asset. |
-| `geom-crt` | Geom CRT | Barrel distortion scaled by `curvature`, edge chromatic aberration, scanlines, vignette and glow. |
-| `film` | Film | Grain stepped at 24 Hz, warm colour grading, and occasional dust marks. |
+| Preset ID | Label | Passes | Behaviour |
+|---|---|---|---|
+| `original` | Original | 1 | Samples the frame through the chosen upscaler. |
+| `cartoon` | Cartoon | 1 | Sobel luminance edges darken high-contrast pixels. Colour is quantized with `floor(c * 16 + 0.5) / 16`, which yields 17 values per channel. |
+| `crt-v1` | CRT v1 | 1 | Sine-squared scanline modulation of luminance. |
+| `crt-v2` | CRT v2 | 1 | Vertical R, G, B stripe mask plus scanlines. |
+| `geom-crt-border` | Geom CRT Border | 1 | Procedural bezel around an active area of 0.12 to 0.88, with inner shadow, diagonal glare and scanlines. It uses no image asset. |
+| `geom-crt` | Geom CRT | 1 | Barrel distortion scaled by `curvature`, edge chromatic aberration, scanlines, vignette and glow. |
+| `film` | Film | 1 | Grain stepped at 24 Hz, warm colour grading, and occasional dust marks. |
+| `crt-deluxe` | CRT Deluxe | 3 | Written for GagaEmu, not derived from crt-royale. Beam pass at source size in linear light with horizontal spread; scan pass at output size with curvature and a beam whose height grows with brightness; mask pass with halation, a slot mask in screen pixels and vignette. |
+| `anime4k` | Anime4K | 6 | Port of Anime4K's `Anime4K_Upscale_CNN_x2_S`: four convolution passes at source size, a depth-to-space pass at twice the source size, then a linear scale to the screen. |
+
+Scanline counts and other "one emulated pixel" sizes come from `source_w` and `source_h`, not the texture size, because an earlier pass may have upscaled the texture.
 
 ### 3.2 Parameters
 
-`ShaderParameters` in `Shaders.metal` and `ShaderUniforms` in `MetalRenderer.swift` carry the values below, in a shared buffer of at least 256 bytes. Values can change without rebuilding a pipeline state. No slider writes them yet.
+`ShaderParameters` in `Sources/Metal/ShaderTypes.h` and `ShaderUniforms` in `MetalRenderer.swift` carry the values below, 36 bytes, passed with `setFragmentBytes` at buffer(0). Values change without rebuilding a pipeline state.
 
 ```metal
 struct ShaderParameters {
@@ -146,16 +154,47 @@ struct ShaderParameters {
     float time;            // Frame timer for dynamic animation and grain
     uint  viewport_w;      // Output viewport width in pixels
     uint  viewport_h;      // Output viewport height in pixels
+    uint  source_w;        // Core frame width, whatever size earlier passes wrote
+    uint  source_h;        // Core frame height
 };
 ```
 
+The picker shows a slider for each value the selected preset reads (`ShaderPreset.parameters`): Curvature, Scanlines, Glow and Colour. An imported filter shows all four. `ShaderParameterValues` holds the four values and the upscaler, and `AppState.shaderParameters` saves one per filter ID in `state.json`, written when a drag ends. Values are clamped to 0 to 1 when applied, and an unknown upscaler name decodes and falls back to Nearest, so an edited file cannot fail to load. Reset returns a filter to its defaults. The same values apply to every game that uses the filter.
+
 ### 3.3 Preview card
 
-`MetalPreviewCanvas` is an `MTKView` inside the picker that runs the selected preset's real MSL pipeline over a procedural texture generated in `ShaderManager.swift:108-201`. No sample image is bundled. Letting the user change the preview image is planned.
+`MetalPreviewCanvas` is an `MTKView` inside the picker that runs the selected filter's real chain over a procedural texture made by `ShaderManager.createPreviewTexture`. No sample image is bundled. Letting the user change the preview image is planned.
 
-### 3.4 Multi-pass chain (planned)
+### 3.4 Multi-pass chain
 
-`MetalRenderer.draw` runs one fragment pass. The planned chain has an upscaling pass (Nearest, Bilinear, Bicubic or xBRZ), a CRT pass, and a colour or bezel compositing pass. `anime4k` and `crt-royale` belong here and stay off the premium list until implemented.
+`MetalRenderer.chain(preset:upscaler:)` returns the passes for a preset. Each `ShaderPass` names a fragment function, an output size (a multiple of the source, the output viewport, or the drawable for the last pass), a pixel format, and its sampling. Intermediate textures are cached per chain position and remade only when their size or format changes. Every pass gets the previous pass's output at texture(0), the core frame at texture(1), a sampler at sampler(0) and the parameters at buffer(0).
+
+Presets that take an upscaler (Original, Cartoon, CRT v1, CRT v2, Geom CRT, Geom CRT Border, Film, LCD3x and imported filters) offer Nearest, Bilinear, Bicubic and Edge Smooth. Nearest and Bilinear only change the last pass's sampler. Bicubic and Edge Smooth add a first pass at output size:
+
+| Upscaler | Pass | Method |
+|---|---|---|
+| Nearest | none | Nearest-neighbour sampling. The default. |
+| Bilinear | none | Linear sampling. |
+| Bicubic | `bicubic_fragment` | Catmull-Rom, 16 taps. |
+| Edge Smooth | `edge_smooth_fragment` | GagaEmu's own edge-aware upscaler, by data-dependent triangulation (Yu, Morse and Sederberg, 2001): each cell between four texels splits along the diagonal with the smaller colour change, so interpolation follows edges. Fractions are sharpened, so flat areas keep their pixel shapes. It is not xBRZ, Scale2x or an Eagle variant. |
+
+xBRZ was the planned upscaler. Its upstream licence is GPL-3.0, so it is not shipped and Edge Smooth replaces it (section 5).
+
+CRT Deluxe, Anime4K, Lottes CRT and Sharp Bilinear fix their own sampling, so they show no upscaler choice.
+
+The GPU cost of the longer chains is not measured on a device.
+
+### 3.5 Community presets
+
+Offline conversions to MSL of shaders from [libretro/slang-shaders](https://github.com/libretro/slang-shaders), in `Sources/Metal/CommunityShaders.metal`. That repository has no overall licence and much of it is GPL, so a shader is converted only when its own file places it in the public domain or under a compatible licence. Each row shows its author and licence.
+
+| Preset ID | Label | Source file | Parameters |
+|---|---|---|---|
+| `lottes-crt` | Lottes CRT | `crt/shaders/crt-lottes.slang` | Curvature, Scanlines, Glow, Colour mapped onto the file's warp, hard scan and bloom amount |
+| `lcd3x` | LCD3x | `handheld/shaders/lcd3x.slang` | Colour |
+| `sharp-bilinear` | Sharp Bilinear | `pixel-art-scaling/shaders/sharp-bilinear.slang` | Colour |
+
+This replaces the old RetroArch tab. That name is not used as a label.
 
 ---
 
@@ -165,8 +204,39 @@ The rule against generating CPU code is separate from GPU shaders. No shipped co
 
 | Source | Mechanism | Status |
 |---|---|---|
-| Built-in presets | Bundled metallib, with `makeLibrary(source:)` as fallback (`MetalRenderer.swift:121`) | built |
-| Import, `.metal` | Runtime `makeLibrary(source:)` on a user-selected file. A compile failure shows the error and selects Original. | planned |
-| Import, `.slangp` and `.slang` | Needs a translation path from Slang to MSL, for example glslang and SPIRV-Cross. The tools and where they run are undecided. | planned |
-| RetroArch presets | Curated presets converted offline and bundled. Each preset's licence is recorded before it ships, since these are third-party works. | planned |
-| Custom presets | User-edited parameter sets over existing presets. The exact scope is undecided. | planned |
+| Built-in presets | Bundled default metallib. There is no source fallback: the renderer fails to initialise if the library is missing. | built |
+| Community presets | Converted offline and bundled in the same metallib (section 3.5). | built |
+| Import, `.metal` | Runtime `makeLibrary(source:)` on a user-selected file (section 4.1). | built |
+| Import, `.slangp` and `.slang` | Needs a translation path from Slang to MSL, such as glslang and SPIRV-Cross. It waits for MoltenVK (milestone 5.1), and no tab or button is shown until then. | planned, deferred to after 5.1 |
+| Custom presets | User-edited parameter sets over existing presets. The per-filter sliders in section 3.2 cover the common case. | planned |
+
+### 4.1 Imported `.metal` filters
+
+`ImportedFilterStore` copies a picked file into Application Support and lists it in the Imported section with a delete button. `ImportedFilter.validate` checks, in order, and every failure is a `FilterImportError` whose plain-text message the picker shows in a sheet titled "Filter Not Imported" while Original is selected:
+
+1. The extension is `.metal`, the file is not empty, and it is at most 256 KiB.
+2. It is UTF-8 text with no NUL byte.
+3. No `#include`, `#import` or `%:` line names anything except Metal's own headers.
+4. `makeLibrary(source:)` compiles it. The compiler log is shown.
+5. It has a fragment function named `gaga_fragment`, and a pipeline links with the app's vertex function. The link log is shown.
+6. Reflection shows it binds only buffer(0), at most 36 bytes, texture(0) and texture(1) as `texture2d<float>`, and sampler(0).
+
+Compilation runs off the main thread. A filter that passes runs as the last pass of the chain, after the chosen upscaler. If a command buffer that uses it ends in error, the renderer drops it, the session falls back to Original, and no crash follows. A hostile shader can still stall the GPU briefly before that happens. `Tests/Phase3Tests.swift` covers each rejection and a working filter.
+
+---
+
+## 5. Licences
+
+Recorded before shipping, as section 4 requires for third-party shaders.
+
+| Work | Upstream | Licence | Shipped |
+|---|---|---|---|
+| Anime4K `Anime4K_Upscale_CNN_x2_S.glsl` | [bloc97/Anime4K](https://github.com/bloc97/Anime4K), commit `28535a4aff3deb55707a36c2f2d05009e0cb7fb3` | MIT, "Copyright (c) 2019-2021 bloc97". The notice is kept in `Anime4K.metal` and must appear in About > Licences (`docs/07` milestone 7.5). | yes, as `anime4k` |
+| crt-lottes | libretro/slang-shaders `crt/shaders/crt-lottes.slang`, commit `3685eda59ffd2ebe1b12cc4640581dc23552ce88` | Public domain, by the file's own header (Timothy Lottes) | yes |
+| lcd3x | same repository, `handheld/shaders/lcd3x.slang` | Public domain, by the file's own header (Gigaherz) | yes |
+| sharp-bilinear | same repository, `pixel-art-scaling/shaders/sharp-bilinear.slang` | Public domain, by the file's own header (Themaister) | yes |
+| crt-royale | libretro/slang-shaders | GPL-2.0 or later, by its header | no: CRT Deluxe is an original replacement |
+| xBRZ | [xbrz on SourceForge](https://sourceforge.net/projects/xbrz/) | GPL-3.0 | no: Edge Smooth is an original replacement |
+| libretro/slang-shaders as a whole | GitHub | No repository licence; each file carries its own | only the three files above |
+
+CRT Deluxe, Edge Smooth, Bicubic and the seven original presets are GagaEmu's own code.
