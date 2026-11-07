@@ -425,7 +425,7 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 
 | Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
 |---|---|---|---|---|---|---|
-| Game Boy / GBC | Gambatte | SM83 | Not audited | No dynarec expected | 1 | Target (unmeasured) |
+| Game Boy / GBC | Gambatte | SM83 | Audited at `77f2567d`: compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. `HAVE_NETWORK` off, so no sockets (`Cores/gambatte/core.env`) | 1 | Target (unmeasured). Built, legal gate open, device benchmark pending |
 | GBA | mGBA | ARM7TDMI | Audited at 0.10.5: compiled sources have no code-generation calls, enforced by `scripts/build-core.sh` | No dynarec in this core. `Cores/mgba/flags.h` | 1 | Target (unmeasured). Device benchmark pending |
 | NES | Nestopia | 6502 family | Not audited | No dynarec expected | 1 | Target (unmeasured) |
 | SNES | bsnes | 65C816, SPC700 | Not audited | No dynarec expected | 2 | Target (unmeasured). Accuracy-first core |
@@ -483,7 +483,7 @@ Adapted from `S3/docs/ios/benchmarks/` and `S4/docs/plans/ios-nojit/benchmark.md
 
 **Running it (built, milestone 2.8a).** `BenchmarkRun` in `Sources/Debug/BenchmarkHarness.swift` is in debug builds only.
 
-1. Install a Debug build on the iPhone from Xcode: `scripts/build-core.sh`, `xcodegen generate`, open `GagaEmu.xcodeproj`, choose the phone, Run. Turn off Low Power Mode and let the phone cool.
+1. Install a Debug build on the iPhone from Xcode: `scripts/build-core.sh`, `scripts/generate-project.sh`, open `GagaEmu.xcodeproj`, choose the phone, Run. Turn off Low Power Mode and let the phone cool.
 2. Start a run with Settings > About > Run Benchmark, which plays the generated test ROM for 60 s. Or set launch arguments in the Xcode scheme: `-GagaBenchmark`, optionally `-GagaBenchmarkSeconds 60` and `-GagaBenchmarkROM <file name in the ROMs folder>`. The first 5 s are warm-up and are not measured.
 3. Wait for "Benchmark finished". Do not touch the screen. A run that backgrounds or pauses is marked `interrupted`.
 4. Fetch the record from the Files app, On My iPhone > GagaEmu > Benchmarks, or from Finder's Files tab for the phone. It is named `<core>-<device>-<UTC time>.json`.
