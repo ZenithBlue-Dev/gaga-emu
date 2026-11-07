@@ -152,8 +152,8 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(ring.width, 256)
         XCTAssertEqual(ring.height, 224)
 
-        // Metal buffer row alignment must be 256-byte aligned
-        XCTAssertEqual(ring.bytesPerRow % 256, 0)
+        // Row alignment comes from the device.
+        XCTAssertEqual(ring.bytesPerRow % device.minimumLinearTextureAlignment(for: .rgba8Unorm), 0)
         XCTAssertGreaterThanOrEqual(ring.bytesPerRow, 256 * 4)
 
         let (ptr, texture, idx) = ring.acquireWritableBuffer()
@@ -161,6 +161,27 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(texture.width, 256)
         XCTAssertEqual(texture.height, 224)
         XCTAssertTrue(idx >= 0 && idx < 3)
+    }
+
+    func testMetalTextureRingPairsEachAcquireWithOneCompletion() throws {
+        guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return }
+        let ring = MetalTextureRing(device: device, width: 16, height: 16)
+
+        // Nothing acquired: a draw must not signal.
+        XCTAssertFalse(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer())))
+
+        _ = ring.acquireWritableBuffer()
+        let first = try XCTUnwrap(queue.makeCommandBuffer())
+        XCTAssertTrue(ring.attachCompletion(to: first))
+        // A repeat draw of the same frame must not signal twice.
+        XCTAssertFalse(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer())))
+        first.commit()
+        first.waitUntilCompleted()
+
+        // The slot came back: all three acquire without blocking.
+        for _ in 0..<3 { _ = ring.acquireWritableBuffer() }
+        for _ in 0..<3 { XCTAssertTrue(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer()))) }
+        XCTAssertFalse(ring.attachCompletion(to: try XCTUnwrap(queue.makeCommandBuffer())))
     }
 
     // MARK: - Metal Renderer & Shader Manager Tests

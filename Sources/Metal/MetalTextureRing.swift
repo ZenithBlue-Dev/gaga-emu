@@ -1,8 +1,8 @@
 import Metal
 import MetalKit
 
-/// Zero-copy Apple Silicon UMA texture ring buffer.
-/// Maps shared CPU-accessible MTLBuffers directly to GPU textures without PCIe / blit copies.
+/// Three-slot ring of shared MTLBuffers, each with a texture over the same storage, so the GPU
+/// reads what the CPU wrote without a blit. `writeFrame` still copies once from the core's buffer.
 public final class MetalTextureRing {
     public let device: MTLDevice
     public let bufferCount: Int = 3
@@ -11,6 +11,7 @@ public final class MetalTextureRing {
     private var textures: [MTLTexture] = []
     private var writeIndex: Int = 0
     private var inFlightCount: Int = 0
+    private var unpairedAcquires: Int = 0
     private let inflightSemaphore: DispatchSemaphore
 
     public private(set) var width: Int
@@ -28,19 +29,7 @@ public final class MetalTextureRing {
         self.pixelFormat = pixelFormat
         self.inflightSemaphore = DispatchSemaphore(value: bufferCount)
 
-        let bytesPerPixel: Int
-        switch pixelFormat {
-        case .bgra8Unorm, .rgba8Unorm:
-            bytesPerPixel = 4
-        case .b5g6r5Unorm:
-            bytesPerPixel = 2
-        default:
-            bytesPerPixel = 4
-        }
-
-        let rawBytesPerRow = self.width * bytesPerPixel
-        // Metal requires 256-byte row alignment for buffer-backed textures
-        self.bytesPerRow = (rawBytesPerRow + 255) & ~255
+        self.bytesPerRow = Self.alignedBytesPerRow(device: device, width: self.width, pixelFormat: pixelFormat)
         self.bufferSize = self.bytesPerRow * self.height
 
         allocateBuffers()
@@ -53,6 +42,13 @@ public final class MetalTextureRing {
         }
         inFlightCount = 0
         lock.unlock()
+    }
+
+    /// The alignment comes from the device and must not be hard-coded (docs/05 section 2.1).
+    static func alignedBytesPerRow(device: MTLDevice, width: Int, pixelFormat: MTLPixelFormat) -> Int {
+        let bytesPerPixel = pixelFormat == .b5g6r5Unorm ? 2 : 4
+        let alignment = device.minimumLinearTextureAlignment(for: pixelFormat)
+        return ((width * bytesPerPixel + alignment - 1) / alignment) * alignment
     }
 
     private func allocateBuffers() {
@@ -70,7 +66,7 @@ public final class MetalTextureRing {
 
         for _ in 0..<bufferCount {
             guard let buf = device.makeBuffer(length: bufferSize, options: .storageModeShared) else {
-                fatalError("Failed to allocate zero-copy shared Metal buffer")
+                fatalError("Failed to allocate shared Metal buffer")
             }
 
             #if targetEnvironment(simulator)
@@ -80,9 +76,9 @@ public final class MetalTextureRing {
                 fatalError("Failed to allocate simulator Metal texture")
             }
             #else
-            // Real iOS Apple Silicon hardware: true zero-copy shared memory buffer-backed texture
+            // Device: the texture shares the buffer's storage.
             guard let tex = buf.makeTexture(descriptor: descriptor, offset: 0, bytesPerRow: bytesPerRow) else {
-                fatalError("Failed to allocate zero-copy shared Metal buffer")
+                fatalError("Failed to allocate buffer-backed Metal texture")
             }
             #endif
 
@@ -104,9 +100,7 @@ public final class MetalTextureRing {
         self.height = max(height, 1)
         self.pixelFormat = pixelFormat
 
-        let bytesPerPixel = (pixelFormat == .b5g6r5Unorm) ? 2 : 4
-        let rawBytesPerRow = self.width * bytesPerPixel
-        self.bytesPerRow = (rawBytesPerRow + 255) & ~255
+        self.bytesPerRow = Self.alignedBytesPerRow(device: device, width: self.width, pixelFormat: pixelFormat)
         self.bufferSize = self.bytesPerRow * self.height
 
         allocateBuffers()
@@ -120,6 +114,7 @@ public final class MetalTextureRing {
 
         lock.lock()
         inFlightCount += 1
+        unpairedAcquires += 1
         let idx = writeIndex
         writeIndex = (writeIndex + 1) % bufferCount
         let buf = buffers[idx]
@@ -150,8 +145,18 @@ public final class MetalTextureRing {
         return texture
     }
 
-    /// Called by the Metal render submitter to register completion signaling.
-    public func attachCompletion(to commandBuffer: MTLCommandBuffer) {
+    /// Called by the Metal render submitter. Each acquire pairs with exactly one completion signal,
+    /// so redrawing the same frame attaches nothing and returns false.
+    @discardableResult
+    public func attachCompletion(to commandBuffer: MTLCommandBuffer) -> Bool {
+        lock.lock()
+        guard unpairedAcquires > 0 else {
+            lock.unlock()
+            return false
+        }
+        unpairedAcquires -= 1
+        lock.unlock()
+
         commandBuffer.addCompletedHandler { [weak self] _ in
             guard let self = self else { return }
             self.lock.lock()
@@ -161,5 +166,6 @@ public final class MetalTextureRing {
             self.lock.unlock()
             self.inflightSemaphore.signal()
         }
+        return true
     }
 }

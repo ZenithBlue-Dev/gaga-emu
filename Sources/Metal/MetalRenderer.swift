@@ -205,7 +205,7 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
             return
         }
 
-        // Attach zero-copy semaphore completion handler
+        // Releases one acquired ring slot, if any is waiting. Attaches nothing on a repeat draw.
         textureRing?.attachCompletion(to: cmdBuffer)
 
         guard let pipelineState = pipelineStates[currentPreset] ?? pipelineStates[.original],
