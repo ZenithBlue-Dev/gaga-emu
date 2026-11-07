@@ -61,3 +61,6 @@
 [submodule "Cores/beetle_vb/upstream"]
 	path = Cores/beetle_vb/upstream
 	url = https://github.com/libretro/beetle-vb-libretro.git
+[submodule "Cores/beetle_ngp/upstream"]
+	path = Cores/beetle_ngp/upstream
+	url = https://github.com/libretro/beetle-ngp-libretro.git
