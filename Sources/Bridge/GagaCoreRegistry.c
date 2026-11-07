@@ -397,7 +397,9 @@ DEFINE_CORE_INTERFACE(Mame_GetInterface,          "mame",            "MAME",    
 DEFINE_CORE_INTERFACE(BeetleSaturn_GetInterface,  "beetle_saturn",   "Beetle Saturn",     GAGA_CORE_EXCLUDED, "cue|ccd|chd|toc|m3u", 59.8265, 44100)
 #endif
 
-DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
+#ifndef GAGA_HAS_BEETLE_PSX
+DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     GAGA_CORE_EXCLUDED, "exe|cue|toc|ccd|m3u|pbp|chd|bin|img|iso", 59.826, 44100)
+#endif
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
 #ifndef GAGA_HAS_JGENESIS
 DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",          GAGA_CORE_EXCLUDED, "md|smd|gen|bin|cue",  59.9227, 48000)
