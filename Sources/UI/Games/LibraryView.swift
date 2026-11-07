@@ -274,10 +274,8 @@ struct EditDetailsSheet: View {
     private var trimmed: String { title.trimmingCharacters(in: .whitespaces) }
 
     private var fileSize: String {
-        // A saved absolute path goes stale when iOS moves the app container, so also look in the ROM folder.
-        let name = URL(fileURLWithPath: game.romPath).lastPathComponent
-        let paths = [game.romPath, state.romDirectory.appendingPathComponent(name).path]
-        let bytes = paths.lazy.compactMap { try? FileManager.default.attributesOfItem(atPath: $0)[.size] as? Int64 }.first
+        let path = game.resolvedROMPath(romDirectory: state.romDirectory)
+        let bytes = path.flatMap { try? FileManager.default.attributesOfItem(atPath: $0)[.size] as? Int64 }
         return bytes.map { $0.formatted(.byteCount(style: .file)) } ?? "Unknown"
     }
 

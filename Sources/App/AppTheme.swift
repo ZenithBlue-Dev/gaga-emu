@@ -109,6 +109,9 @@ enum AppTheme {
     static let accent = Color(Palette.accent)
     static let accentFill = Color(hex: Palette.accentFill)
     static let onAccent = Color(hex: Palette.onAccent)
+    /// Around the game picture, in both appearances: a picture needs a dark surround.
+    static let letterbox = Color(hex: Palette.ink.light)
+    static let onLetterbox = Color(hex: Palette.ink.dark)
     static let corner: CGFloat = 6
 
     /// Left spine on covers. One muted hue per catalog platform; the code text is the non-colour cue.

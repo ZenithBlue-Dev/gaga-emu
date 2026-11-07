@@ -20,6 +20,7 @@ enum AppScreen: String, CaseIterable, Identifiable {
 }
 
 struct RootView: View {
+    @EnvironmentObject private var state: AppState
     @State private var screen: AppScreen = .library
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -39,6 +40,26 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: screen)
         .foregroundStyle(AppTheme.ink)
         .background(AppTheme.paper.ignoresSafeArea())
+        .overlay {
+            if state.launching {
+                ProgressView("Starting")
+                    .padding(16)
+                    .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                    .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
+            }
+        }
+        .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) { GameView(session: $0) }
+        .alert("Could not play \(state.launchFailure?.title ?? "this game")",
+               isPresented: Binding(get: { state.launchFailure != nil }, set: { if !$0 { state.launchFailure = nil } }),
+               presenting: state.launchFailure) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { failure in
+            Text(failure.message)
+        }
+        .task {
+            // Runs once, when the app starts.
+            if state.quickStart, let game = state.recentGames.first { state.launch(game) }
+        }
     }
 }
 

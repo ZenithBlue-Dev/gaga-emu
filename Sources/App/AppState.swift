@@ -18,6 +18,13 @@ struct GameItem: Identifiable, Codable, Equatable {
     func resolvedCoreID(defaults: [String: String]) -> String {
         coreOverride ?? defaults[platformID] ?? CoreCatalog.defaultCore(for: platformID)
     }
+
+    /// The saved absolute path goes stale when iOS moves the app container, so also look in the ROM folder.
+    func resolvedROMPath(romDirectory: URL) -> String? {
+        let name = URL(fileURLWithPath: romPath).lastPathComponent
+        return [romPath, romDirectory.appendingPathComponent(name).path]
+            .first(where: FileManager.default.fileExists(atPath:))
+    }
 }
 
 struct PlaySession: Identifiable, Codable, Equatable {
@@ -259,6 +266,19 @@ final class AppState: ObservableObject {
     @Published var history: [PlaySession] = []
     @Published var activeGameID: UUID?
     @Published var loadedCoreID: String = ""
+    /// Non-nil while a game is on screen.
+    @Published var session: GameSession?
+    /// A launch is preparing the core, before any game view is on screen.
+    @Published private(set) var launching = false
+    @Published var launchFailure: LaunchFailure?
+    /// Waits for the game view to finish dismissing, because an alert cannot present during that.
+    private var pendingFailure: LaunchFailure?
+
+    struct LaunchFailure: Identifiable, Equatable {
+        let id = UUID()
+        let title: String
+        let message: String
+    }
 
     @Published var nickname: String { didSet { save() } }
     @Published var joined: Date
@@ -369,7 +389,43 @@ final class AppState: ObservableObject {
         save()
     }
 
+    /// Loads the core off screen first, so a failure stays on the Library with a message.
     func launch(_ game: GameItem) {
+        guard session == nil, !launching else { return }
+        launching = true
+        Task {
+            defer { launching = false }
+            do {
+                let next = try makeSession(for: game)
+                try await next.prepare()
+                next.onStarted = { [weak self] in self?.recordStart(of: game) }
+                next.onPlayTime = { [weak self] in self?.recordPlay(gameID: game.id, seconds: $0) }
+                next.onFinish = { [weak self] message in self?.endSession(game: game, message: message) }
+                session = next
+            } catch {
+                launchFailure = LaunchFailure(title: game.title, message: error.localizedDescription)
+            }
+        }
+    }
+
+    func makeSession(for game: GameItem) throws -> GameSession {
+        let coreID = game.resolvedCoreID(defaults: defaultCores)
+        guard !coreID.isEmpty else { throw GameLaunchError.noCore }
+        guard let interface = GagaCoreRegistry_FindByID(coreID)?.pointee else {
+            throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
+        }
+        guard let romPath = game.resolvedROMPath(romDirectory: romDirectory) else {
+            throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
+        }
+        skins.hapticsEnabled = rumble
+        skins.soundEnabled = skinSoundEffects
+        let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
+        return try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,
+                               skins: skins, bindings: triggerPro.bindings, shaderID: shader,
+                               respectSilentMode: respectSilentMode)
+    }
+
+    private func recordStart(of game: GameItem) {
         activeGameID = game.id
         loadedCoreID = game.resolvedCoreID(defaults: defaultCores)
         if let index = games.firstIndex(where: { $0.id == game.id }) {
@@ -379,13 +435,24 @@ final class AppState: ObservableObject {
         save()
     }
 
-    /// Adds play time. Called when a session ends.
+    private func endSession(game: GameItem, message: String?) {
+        pendingFailure = message.map { LaunchFailure(title: game.title, message: $0) }
+        activeGameID = nil
+        session = nil
+    }
+
+    func showPendingFailure() {
+        launchFailure = pendingFailure
+        pendingFailure = nil
+    }
+
+    /// Adds play time to the game and to its newest history entry. A session calls this several times.
     func recordPlay(gameID: UUID, seconds: TimeInterval) {
         guard seconds > 0, let index = games.firstIndex(where: { $0.id == gameID }) else { return }
         games[index].playTime += seconds
         games[index].lastPlayed = Date()
-        if let session = history.firstIndex(where: { $0.gameID == gameID && $0.duration == 0 }) {
-            history[session].duration = seconds
+        if let session = history.firstIndex(where: { $0.gameID == gameID }) {
+            history[session].duration += seconds
         }
         save()
     }
