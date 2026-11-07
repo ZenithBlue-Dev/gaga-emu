@@ -247,6 +247,78 @@
       ]
     },
     {
+      "id": "beetle_pce_fast", "title": "Beetle PCE Fast", "cores": ["beetle_pce_fast"], "framework": "BeetlePceFastCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later, BSD-3-Clause, MIT, zlib and public-domain parts",
+      "source": "https://github.com/libretro/beetle-pce-fast-libretro, commit 2de1ce1",
+      "texts": [
+        { "title": "Mednafen (GPL-2.0-or-later)", "from": "Cores/beetle_pce_fast/upstream/mednafen/pce_fast/vdc.c", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_pce_fast/upstream/COPYING" },
+        { "title": "Tremor", "from": "Cores/beetle_pce_fast/upstream/mednafen/tremor/COPYING" },
+        { "title": "libchdr", "from": "Cores/beetle_pce_fast/upstream/deps/libchdr/LICENSE.txt" },
+        { "title": "Zstandard", "from": "Cores/beetle_pce_fast/upstream/deps/zstd/LICENSE" },
+        { "title": "zlib", "from": "Cores/beetle_pce_fast/upstream/deps/zlib-1.2.11/zlib.h", "comment": true },
+        { "title": "LZMA SDK and dr_flac", "text": "The LZMA SDK (deps/lzma-19.00) is in the public domain (Igor Pavlov). dr_flac (deps/libchdr/include/dr_libs) is in the public domain, or MIT No Attribution where that is not recognised (David Reid).\n" },
+        { "title": "libretro-common", "from": "Cores/beetle_pce_fast/upstream/libretro-common/file/file_path.c", "comment": true },
+        { "title": "Blip_Buffer (LGPL-2.1-or-later)", "from": "Cores/beetle_pce_fast/upstream/mednafen/sound/Blip_Buffer.c", "comment": true }
+      ]
+    },
+    {
+      "id": "beetle_supergrafx", "title": "Beetle SuperGrafx", "cores": ["beetle_supergrafx"], "framework": "BeetleSupergrafxCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later, BSD-3-Clause, MIT and public-domain parts",
+      "source": "https://github.com/libretro/beetle-supergrafx-libretro, commit 9c11dcd",
+      "texts": [
+        { "title": "Mednafen (GPL-2.0-or-later)", "from": "Cores/beetle_supergrafx/upstream/mednafen/pce_fast/vdc.cpp", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_supergrafx/upstream/COPYING" },
+        { "title": "Tremor", "from": "Cores/beetle_supergrafx/upstream/mednafen/tremor/COPYING" },
+        { "title": "libretro-common", "from": "Cores/beetle_supergrafx/upstream/libretro-common/formats/chd/rchd.c", "comment": true },
+        { "title": "rflac", "text": "rflac (libretro-common/formats/flac), RetroArch's fork of dr_flac by David Reid, is in the public domain, or MIT No Attribution where that is not recognised.\n" },
+        { "title": "Blip_Buffer (LGPL-2.1-or-later)", "from": "Cores/beetle_supergrafx/upstream/mednafen/sound/Blip_Buffer.cpp", "comment": true }
+      ]
+    },
+    {
+      "id": "beetle_vb", "title": "Beetle VB", "cores": ["beetle_vb"], "framework": "BeetleVbCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later, SoftFloat and MIT parts",
+      "source": "https://github.com/libretro/beetle-vb-libretro, commit d5ae54c",
+      "texts": [
+        { "title": "Mednafen (GPL-2.0-or-later)", "from": "Cores/beetle_vb/upstream/mednafen/vb/vip.c", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_vb/upstream/COPYING" },
+        { "title": "V810 emulator", "from": "Cores/beetle_vb/upstream/mednafen/hw_cpu/v810/v810_cpu.cpp", "comment": true },
+        { "title": "SoftFloat", "from": "Cores/beetle_vb/upstream/mednafen/hw_cpu/v810/fpu-new/softfloat.c", "lines": [1, 31] },
+        { "title": "Blip_Buffer (LGPL-2.1-or-later)", "from": "Cores/beetle_vb/upstream/mednafen/sound/Blip_Buffer.c", "comment": true },
+        { "title": "libretro-common", "from": "Cores/beetle_vb/upstream/libretro-common/compat/compat_strl.c", "comment": true }
+      ]
+    },
+    {
+      "id": "beetle_ngp", "title": "Beetle NeoPop", "cores": ["beetle_ngp"], "framework": "BeetleNgpCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later and MIT parts",
+      "source": "https://github.com/libretro/beetle-ngp-libretro, commit a50d5ac",
+      "texts": [
+        { "title": "NeoPop (GPL-2.0-or-later)", "from": "Cores/beetle_ngp/upstream/mednafen/ngp/gfx.c", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_ngp/upstream/COPYING" },
+        { "title": "Fuse Z80 core (GPL-2.0-or-later)", "from": "Cores/beetle_ngp/upstream/mednafen/hw_cpu/z80-fuse/z80.c", "comment": true },
+        { "title": "Blip_Buffer and T6W28 (LGPL-2.1-or-later)", "from": "Cores/beetle_ngp/upstream/mednafen/sound/Blip_Buffer.cpp", "comment": true },
+        { "title": "libretro-common", "from": "Cores/beetle_ngp/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
+      "id": "beetle_wswan", "title": "Beetle Cygne", "cores": ["beetle_wswan"], "framework": "BeetleWswanCore", "licence": "GPL-2.0-or-later, with LGPL-2.1-or-later and MIT parts",
+      "source": "https://github.com/libretro/beetle-wswan-libretro, commit 4b01295",
+      "texts": [
+        { "title": "Cygne (GPL-2.0-or-later)", "from": "Cores/beetle_wswan/upstream/mednafen/wswan/gfx.c", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_wswan/upstream/COPYING" },
+        { "title": "Mednafen WonderSwan RTC (GPL-2.0-or-later)", "from": "Cores/beetle_wswan/upstream/mednafen/wswan/rtc.c", "comment": true },
+        { "title": "Blip_Buffer (LGPL-2.1-or-later)", "from": "Cores/beetle_wswan/upstream/mednafen/sound/Blip_Buffer.c", "comment": true },
+        { "title": "libretro-common", "from": "Cores/beetle_wswan/upstream/libretro-common/compat/compat_strl.c", "comment": true }
+      ]
+    },
+    {
+      "id": "pokemini", "title": "PokeMini", "cores": ["pokemini"], "framework": "PokeMiniCore", "licence": "GPL-3.0-or-later, with MIT parts",
+      "source": "https://github.com/libretro/PokeMini, commit 132111b",
+      "texts": [
+        { "title": "PokeMini (GPL-3.0-or-later)", "from": "Cores/pokemini/upstream/LICENSE" },
+        { "title": "GNU General Public License 3", "from": "Cores/melonds_ds/upstream/LICENSE" },
+        { "title": "PokeMini emulator core", "from": "Cores/pokemini/upstream/source/PokeMini.c", "comment": true },
+        { "title": "FreeBIOS", "text": "Freeware Pokemon-Mini BIOS 1.3 by Team Pokeme (freebios/freebios.asm), part of PokeMini and under its licence.\n" },
+        { "title": "libretro-common", "from": "Cores/pokemini/upstream/libretro/libretro-common/compat/compat_strl.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]

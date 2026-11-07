@@ -3,11 +3,12 @@
 # .gba (GBATestROM), .gb or .gbc (GBTestROM), .nes (NESTestROM, with battery RAM), .sfc (SNESTestROM), .nds
 # (NDSTestROM), .md (MDTestROM, with battery SRAM), .exe (PS1TestEXE), .cue (PS1TestEXE.disc, which also writes the
 # .bin beside it), .gagavk (VkTestROM, for the layer-path test core), .com (DOSTestCOM), .z64 (N64TestROM, with
-# battery SRAM), .elf (PSPTestELF), or .zip (GridleeTestSet, a MAME ROM set: MAME runs it only from a file named
-# gridlee.zip).
-# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|output.elf|gridlee.zip>
+# battery SRAM), .elf (PSPTestELF), .zip (GridleeTestSet, a MAME ROM set: MAME runs it only from a file named
+# gridlee.zip), .pce or .sgx (PCETestROM, with backup RAM), .vb (VBTestROM, with cartridge RAM), .ngc (NGPTestROM),
+# .wsc (WSTestROM) or .min (PMTestROM).
+# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|output.elf|gridlee.zip|output.pce|output.sgx|output.vb|output.ngc|output.wsc|output.min>
 set -euo pipefail
-output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|output.elf|gridlee.zip>}
+output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|output.elf|gridlee.zip|output.pce|output.sgx|output.vb|output.ngc|output.wsc|output.min>}
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -32,6 +33,12 @@ case "com": try DOSTestCOM.build().write(to: url)
 case "elf": try PSPTestELF.build().write(to: url)
 case "zip": try GridleeTestSet.build().write(to: url)
 case "z64": try N64TestROM.build().write(to: url)
+case "pce": try PCETestROM.build().write(to: url)
+case "sgx": try PCETestROM.build(superGrafx: true).write(to: url)
+case "vb": try VBTestROM.build().write(to: url)
+case "ngc": try NGPTestROM.build().write(to: url)
+case "wsc": try WSTestROM.build().write(to: url)
+case "min": try PMTestROM.build().write(to: url)
 default: try GBATestROM.build().write(to: url)
 }
 SWIFT
@@ -39,7 +46,8 @@ xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAs
     "$root/Sources/Debug/GBTestROM.swift" "$root/Sources/Debug/NESTestROM.swift" "$root/Sources/Debug/SNESTestROM.swift" \
     "$root/Sources/Debug/NDSTestROM.swift" "$root/Sources/Debug/MDTestROM.swift" "$root/Sources/Debug/PS1TestEXE.swift" \
     "$root/Sources/Debug/VkTestROM.swift" "$root/Sources/Debug/DOSTestCOM.swift" "$root/Sources/Debug/GridleeTestSet.swift" \
-    "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/PSPTestELF.swift" \
-    "$root/Sources/Hub/RomPatcher.swift" -o "$work/make-rom"
+    "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/PSPTestELF.swift" "$root/Sources/Debug/PCETestROM.swift" \
+    "$root/Sources/Debug/VBTestROM.swift" "$root/Sources/Debug/NGPTestROM.swift" "$root/Sources/Debug/WSTestROM.swift" \
+    "$root/Sources/Debug/PMTestROM.swift" "$root/Sources/Hub/RomPatcher.swift" -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

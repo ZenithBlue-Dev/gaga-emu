@@ -103,10 +103,11 @@ public final class TouchSkinEngine: ObservableObject {
                     opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil)
     }
 
-    /// Game choice, then platform choice, then standard. A choice that no longer fits the platform is skipped.
+    /// Game choice, then platform choice, then the platform's own layout. A choice that no longer fits the
+    /// platform is skipped.
     static func layoutID(game: String?, platform: String?, platformID: String) -> String {
         let choices = Layout.choices(for: platformID).map(\.id)
-        return [game, platform].compactMap { $0 }.first(where: choices.contains) ?? Layout.standard.id
+        return [game, platform].compactMap { $0 }.first(where: choices.contains) ?? Layout.defaultID(for: platformID)
     }
 
     // MARK: Hit testing
@@ -300,7 +301,41 @@ public final class TouchSkinEngine: ObservableObject {
                     button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
                     button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
                 ],
-                platforms: ["gba", "gb", "gbc", "nes"])
+                platforms: ["gba", "gb", "gbc", "nes", "pce", "sgx", "ngp", "pokemini"])
+        }()
+
+        /// A second D-pad on the right, sending the RetroPad buttons the core reads it from, with A and B above.
+        private static func secondPad(up: UInt32, down: UInt32, left: UInt32, right: UInt32) -> [Button] {
+            let b = ControllerManager.Button.self
+            let x: CGFloat = 0.8025, y: CGFloat = 0.405
+            return [
+                button("pad2up", x + w, y, w, h, up, .dpup),
+                button("pad2down", x + w, y + 2 * h, w, h, down, .dpdown),
+                button("pad2left", x, y + h, w, h, left, .dpleft),
+                button("pad2right", x + 2 * w, y + h, w, h, right, .dpright),
+                button("south", 0.8, 0.19, 0.08, 0.15, b.south, .circle),
+                button("east", 0.9, 0.19, 0.08, 0.15, b.east, .circle)
+            ]
+        }
+
+        /// The Virtual Boy's right pad: L2 up, L3 down, R2 left, R3 right.
+        public static let twinPad: Layout = {
+            let b = ControllerManager.Button.self
+            return Layout(
+                id: "twin-pad", name: "Twin Pad", note: "A second pad on the right, with A and B above it.",
+                buttons: pad(topY: 0.405) + shoulders(y: 0.02) + menu(y: 0.85)
+                    + secondPad(up: b.l2, down: b.l3, left: b.r2, right: b.r3),
+                platforms: ["vb"])
+        }()
+
+        /// The WonderSwan's X pad on the left and Y pad on the right (R2 up, L2 down, L1 left, R1 right), A and
+        /// B, and Start. Select turns a vertical game upright; the console has no such key.
+        public static let xyPad: Layout = {
+            let b = ControllerManager.Button.self
+            return Layout(
+                id: "xy-pad", name: "X and Y Pads", note: "Both cursor pads, A and B. Select turns the picture.",
+                buttons: pad(topY: 0.405) + menu(y: 0.85) + secondPad(up: b.r2, down: b.l2, left: b.l1, right: b.r1),
+                platforms: ["ws"])
         }()
 
         /// DOSBox Pure opens its on-screen keyboard on L3. It sits in the space under L that every layout a
@@ -312,7 +347,14 @@ public final class TouchSkinEngine: ObservableObject {
             GameSession.typingPlatforms.contains(platformID) ? buttons + [Self.keyboard] : buttons
         }
 
-        public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton]
+        public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton, .twinPad, .xyPad]
+
+        /// The layout a platform starts on when the player has chosen none: the one shaped like its controller.
+        /// Platforms added before milestone 8.x keep Standard.
+        static let platformDefaults: [String: String] = ["pce": "two-button", "sgx": "two-button", "vb": "twin-pad", "ngp": "two-button", "ws": "xy-pad",
+                                                              "pokemini": "two-button"]
+
+        static func defaultID(for platformID: String) -> String { platformDefaults[platformID] ?? standard.id }
 
         public static func choices(for platformID: String) -> [Layout] {
             builtIn.filter { $0.platforms?.contains(platformID) ?? true }

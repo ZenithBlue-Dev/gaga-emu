@@ -1,0 +1,126 @@
+ Copyright  (C) 2010-2026 The RetroArch team
+
+ ---------------------------------------------------------------------------------------
+ The following license statement only applies to this file (rchd.c).
+ ---------------------------------------------------------------------------------------
+
+ Permission is hereby granted, free of charge,
+ to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+ and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+ Reader for MAME's CHD container. See FORMAT.md beside this file for
+ the format description this is written against; every constant here
+ traces to a measurement recorded there rather than to a reading of
+ another implementation. The one exception is the framing of an A/V
+ hunk's video bitstream, which FORMAT.md marks in place.
+
+ No file I/O happens here. The decoder describes the byte ranges it
+ needs and the caller supplies them, which is what lets one image be
+ read from a task a few kilobytes at a time, from several fetches in
+ flight, or from a plain blocking read, without the reader knowing
+ which.
+
+ ---------------------------------------------------------------------
+ STATE OF THIS FILE
+
+ Reading is complete for every image to hand. Fourteen commercial
+ images spanning all five container versions decode hunk-for-hunk
+ against an independent reader, including each image's final hunk.
+ Nothing here writes.
+
+ CONTAINER
+   Header               versions 1 to 5, including the geometry that
+                        versions 1 and 2 derive their size from rather
+                        than storing, and the unit size that nothing
+                        before version 5 records.
+   Maps                 all four forms: the packed 64-bit words of
+                        versions 1 and 2, the 16-byte entries of 3 and
+                        4 with their end-of-list cookie, and version
+                        5's flat array and Huffman-plus-RLE bitstream.
+   Metadata             the chain is walked at open and kept.
+   Tracks               CD and GD track tables, with each track padded
+                        to a four-frame boundary. A DVD image
+                        describes no tracks, so one standing for the
+                        whole image is made instead, marked
+                        synthesised.
+   Integrity            version 5's map CRC-16 and versions 3 and 4's
+                        per-hunk CRC-32 are checked.
+   ECC                  the Galois field tables a CD sector's parity
+                        needs are built once for the program, not per
+                        sector, as is the CRC-16 table the map check
+                        uses.
+
+ CODECS  (each behind its own HAVE_RCHD_*, and absent means a hunk
+          using it is refused rather than mis-read)
+   none, zlib, lzma, huff, flac, zstd -- the last through rzstd
+   rather than the reference library, so that reading a Zstandard
+   image does not cost this file its C89 conformance
+   cdzl, cdlz, cdfl, cdzs   with the CD framing, ECC rebuild and
+                            subchannel interleave
+   avhu                     audio/video, and the same decoder serves
+                            compression enum 3 of versions below 5,
+                            which is the same codec under its earlier
+                            name. FLAC audio mode verified; the two
+                            older audio modes are written but have
+                            never run.
+
+ ENTRY TYPES
+   compressed, uncompressed, mini, self-reference, parent-reference,
+   and version 5's hole-of-zeros, which is not an offset of zero.
+
+ READING
+   By byte range, by hunk including a final hunk that is partly
+   padding, and by sector, where each sector is emitted at its own
+   track's size. Parent references chain through a bound parent.
+   One decoded hunk is cached.
+
+ SUPPLYING BYTES
+   Requests are named by where they read from, so bytes can be
+   supplied out of order in principle. Borrowing avoids the copy
+   entirely for a caller that already holds the range.
+
+ ---------------------------------------------------------------------
+ NOT BUILT
+
+   Pipelined fetch      one request is outstanding at a time. The
+                        staging ring rchd_set_pipeline_depth() sizes
+                        does not exist, so a depth above one is
+                        refused rather than accepted and ignored.
+   avhu audio modes     the raw-delta and Huffman-delta modes are
+                        written but have never decoded a real stream:
+                        every hunk of the only A/V image to hand
+                        states FLAC. They are the audio the codec used
+                        before version 5 added FLAC, so an image from
+                        that era, or one converted from it, would
+                        settle both.
+   Pre-v5 A/V           compression enum 3 is accepted and decoded as
+                        avhu, on the argument that version 5 renamed
+                        the codec rather than replacing it. Untested:
+                        no image with that enum is to hand.
+   SHA-1 verification   the header's digests are parsed and exposed,
+                        never checked against the data. A caller that
+                        wants to know an image is intact has to do it.
+   Writing              nothing. No encoder, no repair, no conversion.
+   GD-ROM PAD field     a GD track carries a PAD the CD form does
+                        not. It describes the disc, not the file --
+                        placing tracks by it puts every track after
+                        the first at the wrong offset -- so it is
+                        read past. Whatever it is for, nothing here
+                        needs it. Decoding and track placement are
+                        verified on a GD image; anything that wants
+                        the disc geometry rather than the storage
+                        layout does not get it from here.
+
+ ---------------------------------------------------------------------

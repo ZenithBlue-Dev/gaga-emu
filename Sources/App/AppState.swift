@@ -113,6 +113,24 @@ enum CoreCatalog {
         .init(id: "psp", name: "PSP", manufacturer: "Sony", cores: [
             .init(id: "ppsspp", name: "PPSSPP", note: "IR interpreter", recommended: true)
         ]),
+        .init(id: "pce", name: "PC Engine", manufacturer: "NEC", cores: [
+            .init(id: "beetle_pce_fast", name: "Beetle PCE Fast", note: "HuCard and CD", recommended: true)
+        ]),
+        .init(id: "sgx", name: "SuperGrafx", manufacturer: "NEC", cores: [
+            .init(id: "beetle_supergrafx", name: "Beetle SuperGrafx", note: "Dual VDC", recommended: true)
+        ]),
+        .init(id: "vb", name: "Virtual Boy", manufacturer: "Nintendo", cores: [
+            .init(id: "beetle_vb", name: "Beetle VB", note: "Red on black", recommended: true)
+        ]),
+        .init(id: "ngp", name: "Neo Geo Pocket", manufacturer: "SNK", cores: [
+            .init(id: "beetle_ngp", name: "Beetle NeoPop", note: "Pocket and Color", recommended: true)
+        ]),
+        .init(id: "ws", name: "WonderSwan", manufacturer: "Bandai", cores: [
+            .init(id: "beetle_wswan", name: "Beetle WonderSwan", note: "Mono and Color", recommended: true)
+        ]),
+        .init(id: "pokemini", name: "Pokémon Mini", manufacturer: "Nintendo", cores: [
+            .init(id: "pokemini", name: "PokeMini", note: "Free BIOS built in", recommended: true)
+        ]),
         .init(id: "arcade", name: "Arcade", manufacturer: "Arcade", cores: [
             .init(id: "mame", name: "MAME", note: "Wide catalog", recommended: true)
         ]),
@@ -190,6 +208,13 @@ enum CoreCatalog {
         case "cso", "elf": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "smd", "sms": return "megadrive"
+        // A .ccd is a CloneCD disc, which only the PC Engine core opens. A PC Engine .cue is placed by its contents.
+        case "pce", "ccd": return "pce"
+        case "sgx": return "sgx"
+        case "vb", "vboy": return "vb"
+        case "ngp", "ngc", "ngpc", "npc": return "ngp"
+        case "ws", "wsc", "pc2": return "ws"
+        case "min": return "pokemini"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif
@@ -202,7 +227,7 @@ enum CoreCatalog {
     /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
     static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u", "ccd", "toc"]
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
-    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos", "dreamcast"].compactMap(platform) }
+    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos", "dreamcast", "pce"].compactMap(platform) }
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
@@ -274,8 +299,9 @@ enum CoreCatalog {
     /// Saturn: "SEGA SEGASATURN" opening the first sector. Dreamcast: "SEGA SEGAKATANA" opening it (IP.BIN).
     /// Mega-CD: "SEGADISCSYSTEM" or any other "SEGA" opening it. Any other ISO 9660 disc, and any .iso or
     /// .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry, a .toc through
-    /// its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it. A .chd is placed by
-    /// `chdPlatformID(_:)`.
+    /// its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it. A .cue whose first track is
+    /// audio is a PC Engine CD: those open with a warning track, and PS1, Mega-CD and DOS discs with data. A .chd
+    /// is placed by `chdPlatformID(_:)`.
     static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
         let ext = url.pathExtension.lowercased()
         if ext == "chd" { return chdPlatformID(url) }
@@ -297,6 +323,10 @@ enum CoreCatalog {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
             let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             let name: String?
+            if ext == "cue", let track = lines.first(where: { $0.uppercased().hasPrefix("TRACK ") }),
+               track.uppercased().hasSuffix(" AUDIO") {
+                return "pce"
+            }
             if ext == "cue" {
                 // FILE "name" BINARY, or FILE name BINARY when the name has no spaces.
                 name = lines.first { $0.uppercased().hasPrefix("FILE ") }.flatMap { line -> String? in

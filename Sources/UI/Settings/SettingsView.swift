@@ -455,17 +455,20 @@ struct BIOSManagerView: View {
         ("bios7.bin", "DS ARM7"), ("bios9.bin", "DS ARM9"),
         ("firmware.bin", "DS firmware"),
         ("mpr-17933.bin", "Saturn (US, EU)"), ("sega_101.bin", "Saturn (JP)"),
-        ("disksys.rom", "Famicom Disk System (Nestopia UE)")
+        ("disksys.rom", "Famicom Disk System (Nestopia UE)"),
+        ("syscard3.pce", "PC Engine CD (System Card 3)"),
+        ("bios.min", "Pokémon Mini (optional: a free BIOS is built in)")
     ]
 
     /// The byte sizes each name's core reads: PS1 and Saturn 512 KiB, DS ARM7 16 KiB, ARM9 4 KiB, DS firmware
-    /// 128, 256 or 512 KiB (melonDS), FDS 8 KiB. Import treats a file of another size under that name as a game.
+    /// 128, 256 or 512 KiB (melonDS), FDS 8 KiB, PC Engine System Card 256 KiB, Pokemon Mini 4 KiB. Import treats a file of another size under that name as a game.
     static let sizes: [String: Set<Int>] = [
         "scph5501.bin": [512 << 10], "scph5502.bin": [512 << 10],
         "bios7.bin": [16 << 10], "bios9.bin": [4 << 10],
         "firmware.bin": [128 << 10, 256 << 10, 512 << 10],
         "mpr-17933.bin": [512 << 10], "sega_101.bin": [512 << 10],
-        "disksys.rom": [8 << 10]
+        "disksys.rom": [8 << 10],
+        "syscard3.pce": [256 << 10], "bios.min": [4 << 10]
     ]
 
     var body: some View {

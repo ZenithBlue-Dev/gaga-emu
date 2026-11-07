@@ -405,6 +405,24 @@ DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",
 #ifndef GAGA_HAS_MUPEN64PLUS_NEXT
 DEFINE_CORE_INTERFACE(Mupen64PlusNext_GetInterface, "mupen64plus_next", "Mupen64Plus-Next", GAGA_CORE_EXCLUDED, "n64|v64|z64", 60.0, 44100)
 #endif
+#ifndef GAGA_HAS_BEETLE_PCE_FAST
+DEFINE_CORE_INTERFACE(BeetlePceFast_GetInterface, "beetle_pce_fast", "Beetle PCE Fast",  GAGA_CORE_EXCLUDED, "pce|cue|ccd|chd|toc|m3u", 59.82, 44100)
+#endif
+#ifndef GAGA_HAS_BEETLE_SUPERGRAFX
+DEFINE_CORE_INTERFACE(BeetleSupergrafx_GetInterface, "beetle_supergrafx", "Beetle SuperGrafx", GAGA_CORE_EXCLUDED, "pce|sgx|cue|ccd|chd|toc|m3u", 59.82, 44100)
+#endif
+#ifndef GAGA_HAS_BEETLE_VB
+DEFINE_CORE_INTERFACE(BeetleVb_GetInterface,     "beetle_vb",       "Beetle VB",         GAGA_CORE_EXCLUDED, "vb|vboy", 50.27, 44100)
+#endif
+#ifndef GAGA_HAS_BEETLE_NGP
+DEFINE_CORE_INTERFACE(BeetleNgp_GetInterface,    "beetle_ngp",      "Beetle NeoPop",     GAGA_CORE_EXCLUDED, "ngp|ngc|ngpc|npc", 60.25, 44100)
+#endif
+#ifndef GAGA_HAS_BEETLE_WSWAN
+DEFINE_CORE_INTERFACE(BeetleWswan_GetInterface,  "beetle_wswan",    "Beetle WonderSwan", GAGA_CORE_EXCLUDED, "ws|wsc|pc2", 60.38, 44100)
+#endif
+#ifndef GAGA_HAS_POKEMINI
+DEFINE_CORE_INTERFACE(PokeMini_GetInterface,     "pokemini",        "PokeMini",          GAGA_CORE_EXCLUDED, "min", 60.0, 44100)
+#endif
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
 #ifndef GAGA_HAS_FLYCAST
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast",           GAGA_CORE_EXCLUDED, "gdi|cdi|chd|cue", 59.9453, 44100)
@@ -437,6 +455,12 @@ static const CoreGetterFunc s_core_getters[] = {
     Flycast_GetInterface,
     Ppsspp_GetInterface,
     VkTest_GetInterface,
+    BeetlePceFast_GetInterface, // After PCSX-ReARMed: FindByExtension gives .cue, .chd and .m3u to the PS1 core.
+    BeetleSupergrafx_GetInterface, // After PCE Fast, which keeps .pce; this one is first for .sgx.
+    BeetleVb_GetInterface,
+    BeetleNgp_GetInterface,
+    BeetleWswan_GetInterface,
+    PokeMini_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

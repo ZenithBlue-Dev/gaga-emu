@@ -1,0 +1,16 @@
+BeetleVbCore.c
+../shared/LibretroAdapter.c
+upstream/libretro_vr.cpp
+upstream/libretro-common/compat/compat_snprintf.c
+upstream/libretro-common/compat/compat_strl.c
+upstream/libretro.cpp
+upstream/mednafen/hw_cpu/v810/fpu-new/softfloat.c
+upstream/mednafen/hw_cpu/v810/v810_cpu.cpp
+upstream/mednafen/mempatcher.cpp
+upstream/mednafen/settings.c
+upstream/mednafen/sound/Blip_Buffer.c
+upstream/mednafen/state.c
+upstream/mednafen/vb/input.c
+upstream/mednafen/vb/timer.c
+upstream/mednafen/vb/vip.c
+upstream/mednafen/vb/vsu.c

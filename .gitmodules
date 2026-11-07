@@ -76,3 +76,21 @@
 [submodule "Cores/flycast/deps/asio"]
 	path = Cores/flycast/deps/asio
 	url = https://github.com/flyinghead/asio.git
+[submodule "Cores/beetle_pce_fast/upstream"]
+	path = Cores/beetle_pce_fast/upstream
+	url = https://github.com/libretro/beetle-pce-fast-libretro.git
+[submodule "Cores/beetle_supergrafx/upstream"]
+	path = Cores/beetle_supergrafx/upstream
+	url = https://github.com/libretro/beetle-supergrafx-libretro.git
+[submodule "Cores/beetle_vb/upstream"]
+	path = Cores/beetle_vb/upstream
+	url = https://github.com/libretro/beetle-vb-libretro.git
+[submodule "Cores/beetle_ngp/upstream"]
+	path = Cores/beetle_ngp/upstream
+	url = https://github.com/libretro/beetle-ngp-libretro.git
+[submodule "Cores/beetle_wswan/upstream"]
+	path = Cores/beetle_wswan/upstream
+	url = https://github.com/libretro/beetle-wswan-libretro.git
+[submodule "Cores/pokemini/upstream"]
+	path = Cores/pokemini/upstream
+	url = https://github.com/libretro/PokeMini.git

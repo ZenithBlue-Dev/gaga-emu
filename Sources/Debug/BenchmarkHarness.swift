@@ -9,7 +9,7 @@ import os
 /// Start it from Settings > About > Run Benchmark, or with the launch argument `-GagaBenchmark`. Options:
 /// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60` and
 /// `-GagaBenchmarkROM <file name in the ROM folder>`. With no ROM it generates the homebrew test ROM for
-/// GBA, GB, GBC, NES, SNES, NDS, PS1, DOS or the Vulkan test core, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
+/// GBA, GB, GBC, NES, SNES, NDS, PS1, DOS, PC Engine or the Vulkan test core, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
 /// app shows on a device. The procedure is in docs/04 section 7.2.
 @MainActor
 final class BenchmarkRun {
@@ -129,6 +129,12 @@ final class BenchmarkRun {
         case "psp": (data, ext) = (PSPTestELF.build(), "elf")
         case "arcade": (data, name, ext) = (GridleeTestSet.build(), GridleeTestSet.machine, "zip") // MAME finds the machine by name.
         case "n64": (data, ext) = (N64TestROM.build(), "z64")
+        case "pce": data = PCETestROM.build()
+        case "sgx": data = PCETestROM.build(superGrafx: true)
+        case "vb": data = VBTestROM.build()
+        case "ngp": (data, ext) = (NGPTestROM.build(), "ngc")
+        case "ws": (data, ext) = (WSTestROM.build(), "wsc")
+        case "pokemini": (data, ext) = (PMTestROM.build(), "min")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

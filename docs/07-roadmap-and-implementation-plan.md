@@ -29,6 +29,7 @@ This document is canonical for phases and status. `docs/03` is canonical for the
 | 5 | Vulkan on MoltenVK | planned | Layer path works, and each core meets section 2 |
 | 6 | High-load cores and spikes | planned | Each core meets section 2, or its row leaves `docs/03` |
 | 7 | App Store submission qualification | planned | Checklist passes on the submitted binary |
+| 8 | Backlog cores | 8.1 to 8.6 built, legal gate open, device pending | Each core meets section 2 |
 
 Phase 7 repeats for each submission. A first submission needs only Phases 1, 2 and 7. Phases 3 to 6 can follow in later updates; whether to submit that early is an owner decision.
 
@@ -194,7 +195,22 @@ A failed spike removes the platform's row from `docs/03`.
 
 ---
 
-## 11. Platform Lookup
+## 11. Phase 8: Backlog Cores
+
+Systems from the `docs/03` section 6 Backlog, added on branch `core/group-mednafen` through the shared libretro adapter. Each is an upstream interpreter that passes the no-JIT gate on both slices, with a hand-assembled homebrew test program in `Sources/Debug` and tests in `Tests/<Core>CoreTests.swift`. The tests were checked on a macOS host harness and the app builds Debug, Release and for testing with them, but nothing has run on a device yet. All are GPL, so the legal gate (4.0) keeps them out of release builds through `GAGA_CORE_SET`.
+
+| ID | Milestone | Status | Detail |
+|---|---|---|---|
+| 8.1 | PC Engine / TurboGrafx-16 / PC Engine CD: Beetle PCE Fast | built, legal gate open, device pending | Pinned `2de1ce1c`. HuCard and CD (`.pce`, `.cue`, `.ccd`, `.chd`, `.toc`, `.m3u`). CD needs the player's `syscard3.pce` in `GagaEmu/System`, listed on BIOS Files, and is refused without it. Test card `PCETestROM`. Device steps: run `BeetlePceFastCoreTests`, play the benchmark card, check the Two Button layout. |
+| 8.2 | SuperGrafx: Beetle SuperGrafx | built, legal gate open, device pending | Pinned `9c11dcd2`. `.sgx` and PCE images. Test card `PCETestROM` with the SuperGrafx flag. Device steps as 8.1 with `BeetleSupergrafxCoreTests`. |
+| 8.3 | Virtual Boy: Beetle VB | built, legal gate open, device pending | Pinned `d5ae54c8`. `.vb`, `.vboy`. Default is one eye, red on black, 384x224; anaglyph and side-by-side 3D are core options left off. Twin Pad layout for the right pad. Test cartridge `VBTestROM`. Risk: the battery file is always 64 KB. |
+| 8.4 | Neo Geo Pocket / Color: Beetle NeoPop | built, legal gate open, device pending | Pinned `a50d5ac2`. `.ngp`, `.ngc`, `.ngpc`, `.npc`. High-level BIOS, no SNK BIOS. Saves are the cartridge flash in `<game>.flash`, written at each flush. Test cartridge `NGPTestROM`. Risks: upstream's state load always reports success (the adapter's size and ROM-hash checks guard it); the flash write is not atomic. |
+| 8.5 | WonderSwan / Color: Beetle Cygne | built, legal gate open, device pending | Pinned `4b012958`. `.ws`, `.wsc`, `.pc2`. Rotation: Select turns a vertical game upright in software (224x144 to 144x224) and the keys follow; X and Y Pads layout. Raw RAM cheats (`AAAAA:VV`). Test cartridge `WSTestROM`. |
+| 8.6 | Pokémon Mini: PokeMini | built, legal gate open, device pending | Pinned `132111b7`. `.min`. Free BIOS built in; the player's `bios.min` is optional and listed on BIOS Files. 96x64, two-shade LCD, 72 Hz games paced to 60 Hz by upstream's 60 Hz mode. EEPROM in `<game>.eep`, written at each flush through a temporary file. GPL-3.0-or-later (`docs/03` section 5). Test cartridge `PMTestROM`. Risks: upstream aborts the process on a file outside 0x2101 bytes to 2 MB, so the bridge refuses those first; a loaded state carries its own EEPROM, which the next flush writes over the save. |
+
+---
+
+## 12. Platform Lookup
 
 `docs/03` is canonical for each core's details; `docs/04` for tiers.
 
@@ -216,13 +232,19 @@ A failed spike removes the platform's row from `docs/03`.
 | 3DS | 6.3 |
 | Java ME | Out: 6.4 failed (`docs/03` section 6) |
 | Symbian | 6.6 failed; 6.7 not started |
+| PC Engine / TurboGrafx-16 / CD | 8.1 |
+| SuperGrafx | 8.2 |
+| Virtual Boy | 8.3 |
+| Neo Geo Pocket / Color | 8.4 |
+| WonderSwan / Color | 8.5 |
+| Pokémon Mini | 8.6 |
 
 ---
 
-## 12. Outside the Plan
+## 13. Outside the Plan
 
 - **Non-shipping research, not promised:** Dolphin (GameCube and Wii) and PS2 (Balero-S2). Neither is in the App Store binary. No milestone delivers them.
 - **External sister projects:** S3 (PS3) and S4 (PS4) stay in their own repositories. They are never catalog rows or frame producers. GagaEmu reuses their build patterns only.
-- **Backlog:** WonderSwan and the other systems in `docs/03` section 6 are "seen in Manic listing, not planned for v1".
+- **Backlog:** the systems left in `docs/03` section 6 are "seen in Manic listing, not planned for v1".
 - **Excluded:** the cores in `docs/03` section 6 are not scheduled.
 - **Hidden rows with no phase (1.14):** Reset Tips returns once the app has dismissible tips, and Language once a second localisation exists.
