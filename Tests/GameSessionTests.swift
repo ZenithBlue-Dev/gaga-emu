@@ -469,7 +469,8 @@ final class GameSessionTests: XCTestCase {
 
     func testDefaultLayoutStaysInTheBandsWithLargeTargets() throws {
         let band = TouchSkinEngine.controlBand
-        for button in TouchSkinEngine.defaultLayout {
+        let buttons = TouchSkinEngine.Layout.standard.buttons
+        for button in buttons {
             let inLeft = button.frame.maxX <= band
             let inRight = button.frame.minX >= 1 - band
             XCTAssertTrue(inLeft || inRight, "\(button.id) overlaps the picture")
@@ -478,7 +479,7 @@ final class GameSessionTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(button.frame.width * 750, 44, button.id)
             XCTAssertGreaterThanOrEqual(button.frame.height * 369, 44, button.id)
         }
-        XCTAssertEqual(Set(TouchSkinEngine.defaultLayout.map(\.id)).count, TouchSkinEngine.defaultLayout.count)
+        XCTAssertEqual(Set(buttons.map(\.id)).count, buttons.count)
     }
 
     func testControllerStatesKeepAllFields() {

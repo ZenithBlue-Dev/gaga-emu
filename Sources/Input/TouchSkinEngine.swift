@@ -93,8 +93,20 @@ public final class TouchSkinEngine: ObservableObject {
     }
 
     public func loadDefault() {
-        skin = Skin(id: "default", name: "Default", format: .flex, buttons: Self.defaultLayout,
+        loadBuiltIn(Layout.standard.id)
+    }
+
+    /// An unknown ID, say from a later build's state.json, gets the standard layout.
+    public func loadBuiltIn(_ id: String) {
+        let layout = Layout.builtIn.first { $0.id == id } ?? .standard
+        skin = Skin(id: layout.id, name: layout.name, format: .flex, buttons: layout.buttons,
                     opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil)
+    }
+
+    /// Game choice, then platform choice, then standard. A choice that no longer fits the platform is skipped.
+    static func layoutID(game: String?, platform: String?, platformID: String) -> String {
+        let choices = Layout.choices(for: platformID).map(\.id)
+        return [game, platform].compactMap { $0 }.first(where: choices.contains) ?? Layout.standard.id
     }
 
     // MARK: Hit testing
@@ -214,36 +226,86 @@ public final class TouchSkinEngine: ObservableObject {
         }
     }
 
-    /// Every button stays inside the left and right `controlBand`. Sizes hold 44pt on the smallest
-    /// landscape phone. Face labels follow the header's Nintendo names for each position.
-    /// shortcut: one layout for every platform, per-platform layouts come with Assign Skin (3.9).
-    static let defaultLayout: [Button] = {
-        let b = ControllerManager.Button.self
-        func button(_ id: String, _ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat,
-                    _ mask: UInt32, _ shape: Button.Shape) -> Button {
+    /// A built-in touch layout (Assign Skin, docs/06 section 3.3). Every button stays inside the left and
+    /// right `controlBand`. Sizes hold 44pt on the smallest landscape phone. Face labels follow the
+    /// header's Nintendo names for each position.
+    public struct Layout: Identifiable, Equatable {
+        public let id: String
+        public let name: String
+        public let note: String
+        public let buttons: [Button]
+        /// Nil means it suits every platform.
+        let platforms: Set<String>?
+
+        private static let w: CGFloat = 0.065, h: CGFloat = 0.13
+
+        private static func button(_ id: String, _ x: CGFloat, _ y: CGFloat, _ width: CGFloat, _ height: CGFloat,
+                                   _ mask: UInt32, _ shape: Button.Shape) -> Button {
             Button(id: id, frame: CGRect(x: x, y: y, width: width, height: height), mask: mask, asset: nil, shape: shape)
         }
-        let w: CGFloat = 0.065, h: CGFloat = 0.13
-        let padX: CGFloat = 0.0025, faceX: CGFloat = 0.8025, topY: CGFloat = 0.405
-        return [
-            button("up", padX + w, topY, w, h, b.up, .dpup),
-            button("down", padX + w, topY + 2 * h, w, h, b.down, .dpdown),
-            button("left", padX, topY + h, w, h, b.left, .dpleft),
-            button("right", padX + 2 * w, topY + h, w, h, b.right, .dpright),
-            button("upleft", padX, topY, w, h, b.up | b.left, .hidden),
-            button("upright", padX + 2 * w, topY, w, h, b.up | b.right, .hidden),
-            button("downleft", padX, topY + 2 * h, w, h, b.down | b.left, .hidden),
-            button("downright", padX + 2 * w, topY + 2 * h, w, h, b.down | b.right, .hidden),
-            button("north", faceX + w, topY, w, h, b.north, .circle),
-            button("south", faceX + w, topY + 2 * h, w, h, b.south, .circle),
-            button("west", faceX, topY + h, w, h, b.west, .circle),
-            button("east", faceX + 2 * w, topY + h, w, h, b.east, .circle),
-            button("l", 0.07, 0.02, 0.125, h, b.l1, .rect),
-            button("r", 0.805, 0.02, 0.125, h, b.r1, .rect),
-            button("select", 0.03, 0.85, 0.14, 0.12, b.select, .rect),
-            button("start", 0.83, 0.85, 0.14, 0.12, b.start, .rect)
-        ]
-    }()
+
+        private static func pad(topY: CGFloat) -> [Button] {
+            let b = ControllerManager.Button.self
+            let padX: CGFloat = 0.0025
+            return [
+                button("up", padX + w, topY, w, h, b.up, .dpup),
+                button("down", padX + w, topY + 2 * h, w, h, b.down, .dpdown),
+                button("left", padX, topY + h, w, h, b.left, .dpleft),
+                button("right", padX + 2 * w, topY + h, w, h, b.right, .dpright),
+                button("upleft", padX, topY, w, h, b.up | b.left, .hidden),
+                button("upright", padX + 2 * w, topY, w, h, b.up | b.right, .hidden),
+                button("downleft", padX, topY + 2 * h, w, h, b.down | b.left, .hidden),
+                button("downright", padX + 2 * w, topY + 2 * h, w, h, b.down | b.right, .hidden)
+            ]
+        }
+
+        private static func face(topY: CGFloat) -> [Button] {
+            let b = ControllerManager.Button.self
+            let faceX: CGFloat = 0.8025
+            return [
+                button("north", faceX + w, topY, w, h, b.north, .circle),
+                button("south", faceX + w, topY + 2 * h, w, h, b.south, .circle),
+                button("west", faceX, topY + h, w, h, b.west, .circle),
+                button("east", faceX + 2 * w, topY + h, w, h, b.east, .circle)
+            ]
+        }
+
+        private static func shoulders(y: CGFloat) -> [Button] {
+            let b = ControllerManager.Button.self
+            return [button("l", 0.07, y, 0.125, h, b.l1, .rect), button("r", 0.805, y, 0.125, h, b.r1, .rect)]
+        }
+
+        private static func menu(y: CGFloat) -> [Button] {
+            let b = ControllerManager.Button.self
+            return [button("select", 0.03, y, 0.14, 0.12, b.select, .rect), button("start", 0.83, y, 0.14, 0.12, b.start, .rect)]
+        }
+
+        public static let standard = Layout(
+            id: "standard", name: "Standard", note: "Pad and buttons at mid height, Select and Start below.",
+            buttons: pad(topY: 0.405) + face(topY: 0.405) + shoulders(y: 0.02) + menu(y: 0.85), platforms: nil)
+
+        public static let lowReach = Layout(
+            id: "low-reach", name: "Low Reach", note: "Pad and buttons at the bottom edge, Select and Start above them.",
+            buttons: pad(topY: 0.60) + face(topY: 0.60) + shoulders(y: 0.02) + menu(y: 0.42), platforms: nil)
+
+        /// For systems with two face buttons. Larger targets, set on a slant.
+        public static let twoButton: Layout = {
+            let b = ControllerManager.Button.self
+            return Layout(
+                id: "two-button", name: "Two Button", note: "A and B alone, larger and on a slant. For systems with two face buttons.",
+                buttons: pad(topY: 0.405) + shoulders(y: 0.02) + menu(y: 0.85) + [
+                    button("east", 0.895, 0.33, 0.1, 0.2, b.east, .circle),
+                    button("south", 0.805, 0.55, 0.1, 0.2, b.south, .circle)
+                ],
+                platforms: ["gba", "gb", "gbc", "nes"])
+        }()
+
+        public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton]
+
+        public static func choices(for platformID: String) -> [Layout] {
+            builtIn.filter { $0.platforms?.contains(platformID) ?? true }
+        }
+    }
 }
 
 private struct DeltaInfo: Decodable {
