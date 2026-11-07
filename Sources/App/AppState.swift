@@ -1,5 +1,6 @@
 import SwiftUI
 import Foundation
+import Compression
 
 /// One imported game. `coreOverride` wins over the platform default.
 struct GameItem: Identifiable, Codable, Equatable {
@@ -202,6 +203,7 @@ enum CoreCatalog {
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
+        // shortcut: a console zip refused for its size or name also gets only Arcade and DOS; add its platform if players hit it.
         if discExtensions.contains(ext.lowercased()) { return discPlatforms }
         return ext.lowercased() == "zip" ? ["arcade", "dos"].compactMap(platform) : nil
     }
@@ -240,11 +242,14 @@ enum CoreCatalog {
         return magic.starts(with: Data("PSISOIMG".utf8)) || magic.starts(with: Data("PSTITLEIMG".utf8)) ? "ps1" : "psp"
     }
 
-    /// A .zip's platform from its central directory, nothing extracted. DOS: it holds an .exe, .com, .bat or
+    /// A .zip's platform from its central directory, nothing extracted. First a console: the zip holds one ROM
+    /// for one, as `zipConsoleROM(_:)` finds. DOS: it holds an .exe, .com, .bat or
     /// DOSBox .conf. Arcade: its name is a machine in `mameMachines`, or every entry is ROM-like (no extension,
     /// .bin, .rom, or one with a digit, as in "pacman.6e"). Otherwise nil, and import asks.
     static func zipPlatformID(_ url: URL) -> String? {
-        let names = zipEntryNames(url)
+        let entries = zipEntries(url)
+        if let rom = zipConsoleROM(entries) { return rom.platformID }
+        let names = entries.map(\.name)
         let exts = names.map { ($0 as NSString).pathExtension.lowercased() }
         if exts.contains(where: { ["exe", "com", "bat", "conf"].contains($0) }) { return "dos" }
         if mameMachines.contains(url.deletingPathExtension().lastPathComponent.lowercased()) { return "arcade" }
@@ -350,7 +355,135 @@ enum CoreCatalog {
     }
 
     /// The file names in a ZIP's central directory, or none when the file is not a readable ZIP.
-    static func zipEntryNames(_ url: URL) -> [String] {
+    static func zipEntryNames(_ url: URL) -> [String] { zipEntries(url).map(\.name) }
+
+    /// One central directory record. Zip64 sizes read as 0xFFFFFFFF, which every ROM limit refuses.
+    struct ZipEntry: Equatable {
+        var name: String
+        var flags: Int
+        var method: Int
+        var crc: UInt32
+        var compressedSize: Int
+        var size: Int
+        var localHeaderOffset: Int
+    }
+
+    /// Files a .zip may carry beside the ROM, ignored when placing it.
+    static let zipSidecarExtensions: Set<String> = ["txt", "nfo", "diz", "htm", "html", "url", "sfv", "pdf", "jpg", "jpeg", "png"]
+
+    /// The most a console ROM in a .zip may inflate to, so a zip bomb stops there. Each is above the largest
+    /// real image for the platform; any other platform gets 2 GiB.
+    static func zipROMLimit(_ platformID: String) -> Int {
+        let mib = 1 << 20
+        let limits = ["gb": 8 * mib, "gbc": 8 * mib, "gba": 32 * mib, "nes": 8 * mib, "snes": 16 * mib,
+                      "megadrive": 16 * mib, "n64": 64 * mib, "nds": 512 * mib]
+        return limits[platformID] ?? 2048 * mib
+    }
+
+    /// The one ROM a .zip holds for a console platform (not Arcade or DOS), or nil. Folders and sidecar files
+    /// are ignored. A name with a ".." part, an absolute or drive path, or a size over the platform's limit is refused.
+    static func zipConsoleROM(_ entries: [ZipEntry]) -> (entry: ZipEntry, platformID: String)? {
+        let files = entries.filter {
+            !$0.name.hasSuffix("/") && !zipSidecarExtensions.contains(($0.name as NSString).pathExtension.lowercased())
+        }
+        guard files.count == 1, let entry = files.first else { return nil }
+        let ext = (entry.name as NSString).pathExtension.lowercased()
+        // A .pbp serves PS1 and PSP alike and is placed by its contents, which a zip hides.
+        guard ext != "pbp", let id = platformID(forExtension: ext), id != "arcade", id != "dos", platform(id) != nil
+        else { return nil }
+        let parts = entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" })
+        guard !entry.name.hasPrefix("/"), !entry.name.hasPrefix("\\"), parts.first?.hasSuffix(":") != true,
+              !parts.contains(".."), entry.size <= zipROMLimit(id) else { return nil }
+        return (entry, id)
+    }
+
+    enum ZipError: LocalizedError {
+        case unsupported, corrupt, tooLarge
+        var errorDescription: String? {
+            switch self {
+            case .unsupported: return "The zip uses encryption or a compression GagaEmu cannot read."
+            case .corrupt: return "The zip is damaged."
+            case .tooLarge: return "The file in the zip is too large."
+            }
+        }
+    }
+
+    /// Writes one stored or deflated entry to `destination`, replacing any file there. Stops past `limit` bytes,
+    /// whatever the entry claims, and checks the size and CRC-32 before the file appears.
+    static func extractZipEntry(_ entry: ZipEntry, from zip: URL, to destination: URL, limit: Int) throws {
+        guard entry.flags & 1 == 0, entry.method == 0 || entry.method == 8 else { throw ZipError.unsupported }
+        guard entry.size <= limit else { throw ZipError.tooLarge }
+        let input = try FileHandle(forReadingFrom: zip)
+        defer { try? input.close() }
+        try input.seek(toOffset: UInt64(entry.localHeaderOffset))
+        let header = [UInt8](try input.read(upToCount: 30) ?? Data())
+        guard header.count == 30, header[0..<4].elementsEqual([0x50, 0x4B, 3, 4]) else { throw ZipError.corrupt }
+        let skip = (Int(header[26]) | Int(header[27]) << 8) + (Int(header[28]) | Int(header[29]) << 8)
+        try input.seek(toOffset: UInt64(entry.localHeaderOffset + 30 + skip))
+
+        let part = destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).part")
+        guard FileManager.default.createFile(atPath: part.path, contents: nil) else { throw CocoaError(.fileWriteUnknown) }
+        defer { try? FileManager.default.removeItem(at: part) }
+        let output = try FileHandle(forWritingTo: part)
+        var written = 0
+        var crc: UInt32 = 0xFFFF_FFFF
+        func emit(_ bytes: UnsafeBufferPointer<UInt8>) throws {
+            written += bytes.count
+            guard written <= limit else { throw ZipError.tooLarge }
+            for byte in bytes { crc = RomPatcher.table[Int((crc ^ UInt32(byte)) & 0xFF)] ^ (crc >> 8) }
+            try output.write(contentsOf: bytes)
+        }
+        let chunk = 1 << 20
+        var remaining = entry.compressedSize
+        do {
+            defer { try? output.close() }
+            if entry.method == 0 {
+                while remaining > 0 {
+                    let data = try input.read(upToCount: min(remaining, chunk)) ?? Data()
+                    guard !data.isEmpty else { throw ZipError.corrupt }
+                    remaining -= data.count
+                    try data.withUnsafeBytes { try emit($0.bindMemory(to: UInt8.self)) }
+                }
+            } else {
+                // COMPRESSION_ZLIB is raw DEFLATE (RFC 1951), the zip method 8 stream.
+                let stream = UnsafeMutablePointer<compression_stream>.allocate(capacity: 1)
+                defer { stream.deallocate() }
+                guard compression_stream_init(stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK
+                else { throw ZipError.corrupt }
+                defer { compression_stream_destroy(stream) }
+                let source = UnsafeMutablePointer<UInt8>.allocate(capacity: chunk)
+                let target = UnsafeMutablePointer<UInt8>.allocate(capacity: chunk)
+                defer { source.deallocate(); target.deallocate() }
+                stream.pointee.src_size = 0
+                while true {
+                    if stream.pointee.src_size == 0, remaining > 0 {
+                        let data = try input.read(upToCount: min(remaining, chunk)) ?? Data()
+                        guard !data.isEmpty else { throw ZipError.corrupt }
+                        data.copyBytes(to: source, count: data.count)
+                        stream.pointee.src_ptr = UnsafePointer(source)
+                        stream.pointee.src_size = data.count
+                        remaining -= data.count
+                    }
+                    stream.pointee.dst_ptr = target
+                    stream.pointee.dst_size = chunk
+                    let flags = remaining == 0 ? Int32(COMPRESSION_STREAM_FINALIZE.rawValue) : 0
+                    let status = compression_stream_process(stream, flags)
+                    guard status != COMPRESSION_STATUS_ERROR else { throw ZipError.corrupt }
+                    let produced = chunk - stream.pointee.dst_size
+                    try emit(UnsafeBufferPointer(start: target, count: produced))
+                    if status == COMPRESSION_STATUS_END { break }
+                    // Input spent and nothing came out: the stream ended early.
+                    if produced == 0, stream.pointee.src_size == 0, remaining == 0 { throw ZipError.corrupt }
+                }
+            }
+        }
+        guard written == entry.size, crc ^ 0xFFFF_FFFF == entry.crc else { throw ZipError.corrupt }
+        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
+        try FileManager.default.moveItem(at: part, to: destination)
+    }
+
+    /// The records in a ZIP's central directory, or none when the file is not a readable ZIP.
+    static func zipEntries(_ url: URL) -> [ZipEntry] {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return [] }
         defer { try? handle.close() }
         guard let size = try? handle.seekToEnd(), size >= 22 else { return [] }
@@ -366,17 +499,20 @@ enum CoreCatalog {
         let directorySize = u32(bytes, end + 12), directoryOffset = u32(bytes, end + 16)
         guard directoryOffset + directorySize <= size, (try? handle.seek(toOffset: UInt64(directoryOffset))) != nil,
               let directory = try? handle.read(upToCount: directorySize) else { return [] }
-        let entries = [UInt8](directory)
-        var names: [String] = []
+        let records = [UInt8](directory)
+        var entries: [ZipEntry] = []
         var i = 0
-        while i + 46 <= entries.count, u32(entries, i) == 0x0201_4B50 {
-            let nameLength = u16(entries, i + 28)
-            let next = i + 46 + nameLength + u16(entries, i + 30) + u16(entries, i + 32)
-            guard i + 46 + nameLength <= entries.count else { break }
-            names.append(String(decoding: entries[(i + 46)..<(i + 46 + nameLength)], as: UTF8.self))
+        while i + 46 <= records.count, u32(records, i) == 0x0201_4B50 {
+            let nameLength = u16(records, i + 28)
+            let next = i + 46 + nameLength + u16(records, i + 30) + u16(records, i + 32)
+            guard i + 46 + nameLength <= records.count else { break }
+            entries.append(ZipEntry(name: String(decoding: records[(i + 46)..<(i + 46 + nameLength)], as: UTF8.self),
+                                    flags: u16(records, i + 8), method: u16(records, i + 10),
+                                    crc: UInt32(u32(records, i + 16)), compressedSize: u32(records, i + 20),
+                                    size: u32(records, i + 24), localHeaderOffset: u32(records, i + 42)))
             i = next
         }
-        return names
+        return entries
     }
 }
 
@@ -881,7 +1017,41 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func importROM(at url: URL, title: String? = nil, platformID: String? = nil) -> GameItem? {
-        let platform = platformID ?? CoreCatalog.platformID(forFile: url) ?? "unknown"
+        let inROMFolder = url.deletingLastPathComponent().standardizedFileURL == romDirectory.standardizedFileURL
+        // A BIOS file the BIOS Files screen names moves to the cores' system folder. A .rom (such as an FDS
+        // folder's disksys.rom) is never a game.
+        let fileName = url.lastPathComponent.lowercased()
+        if platformID == nil, inROMFolder, BIOSManagerView.required.contains(where: { $0.0 == fileName }) {
+            let system = GagaCoreWrapper.systemDirectory
+            try? FileManager.default.createDirectory(at: system, withIntermediateDirectories: true)
+            let dest = system.appendingPathComponent(fileName)
+            if FileManager.default.fileExists(atPath: dest.path) { try? FileManager.default.removeItem(at: dest) }
+            try? FileManager.default.moveItem(at: url, to: dest)
+            return nil
+        }
+        if platformID == nil, url.pathExtension.lowercased() == "rom" { return nil }
+        var url = url
+        // No console core reads a .zip, so its one ROM is stored as a plain file and the copied zip goes.
+        // Only a zip already in the ROM folder is unpacked, so a file elsewhere is never removed.
+        if platformID == nil, url.pathExtension.lowercased() == "zip", inROMFolder,
+           let rom = CoreCatalog.zipConsoleROM(CoreCatalog.zipEntries(url)),
+           let name = rom.entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last {
+            let dest = romDirectory.appendingPathComponent(String(name))
+            guard (try? CoreCatalog.extractZipEntry(rom.entry, from: url, to: dest, limit: CoreCatalog.zipROMLimit(rom.platformID))) != nil else {
+                // A damaged zip stays as it is, and import asks rather than hand a console core a zip.
+                return addGame(url, title: title, platform: "unknown")
+            }
+            try? FileManager.default.removeItem(at: url)
+            url = dest
+            // The same zip again replaced the file's bytes, so it must not become a second shelf entry.
+            if let existing = games.first(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == dest.lastPathComponent }) {
+                return existing
+            }
+        }
+        return addGame(url, title: title, platform: platformID ?? CoreCatalog.platformID(forFile: url) ?? "unknown")
+    }
+
+    private func addGame(_ url: URL, title: String?, platform: String) -> GameItem {
         let name = title ?? url.deletingPathExtension().lastPathComponent
         let item = GameItem(id: UUID(), title: name, platformID: platform, romPath: url.path,
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,

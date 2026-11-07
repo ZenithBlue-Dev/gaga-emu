@@ -80,7 +80,8 @@ public enum RomPatcher {
         bytes.map { String(format: "%02x", $0) }.joined()
     }
 
-    private static let table: [UInt32] = {
+    /// Also read by the zip importer, which checks CRC-32 a chunk at a time.
+    static let table: [UInt32] = {
         (0..<256).map { i -> UInt32 in
             var c = UInt32(i)
             for _ in 0..<8 { c = (c & 1) == 1 ? (0xEDB8_8320 ^ (c >> 1)) : (c >> 1) }
