@@ -7,8 +7,9 @@ import os
 /// The run record and metrics of docs/04 section 7.2, as code. Debug builds only.
 ///
 /// Start it from Settings > About > Run Benchmark, or with the launch argument `-GagaBenchmark`. Options:
-/// `-GagaBenchmarkSeconds 60` and `-GagaBenchmarkROM <file name in the ROM folder>`. With no ROM it
-/// generates the homebrew test ROM. The record lands in the app's Documents/Benchmarks, which the Files
+/// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60` and
+/// `-GagaBenchmarkROM <file name in the ROM folder>`. With no ROM it generates the homebrew test ROM for
+/// GBA, GB or GBC, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
 /// app shows on a device. The procedure is in docs/04 section 7.2.
 @MainActor
 final class BenchmarkRun {
@@ -106,10 +107,22 @@ final class BenchmarkRun {
         samples = Samples(capacity: Int((seconds + warmup + 5) * 62))
     }
 
-    static func writeTestROM(to directory: URL) throws -> URL {
+    struct NoTestROM: LocalizedError {
+        let platformID: String
+        var errorDescription: String? { "No test ROM is generated for \(platformID). Pass -GagaBenchmarkROM." }
+    }
+
+    static func writeTestROM(platformID: String, to directory: URL) throws -> URL {
+        let data: Data
+        switch platformID {
+        case "gba": data = GBATestROM.build()
+        case "gb": data = GBTestROM.build()
+        case "gbc": data = GBTestROM.build(color: true)
+        default: throw NoTestROM(platformID: platformID)
+        }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appendingPathComponent("GagaBenchmark.gba")
-        try GBATestROM.build().write(to: url)
+        let url = directory.appendingPathComponent("GagaBenchmark.\(platformID)")
+        try data.write(to: url)
         return url
     }
 
@@ -217,7 +230,8 @@ final class BenchmarkRun {
                 .trimmingCharacters(in: .whitespacesAndNewlines),
             hostConfiguration: "Debug host, Release core",
             core: .init(id: String(cString: interface.core_id), name: String(cString: interface.core_name),
-                        version: String(cString: interface.core_version), settings: "defaults, HLE BIOS, skip BIOS boot"),
+                        version: String(cString: interface.core_version),
+                        settings: String(cString: interface.core_id) == "mgba" ? "defaults, HLE BIOS, skip BIOS boot" : "defaults"),
             rom: .init(file: romURL.lastPathComponent,
                        sha256: SHA256.hash(data: romData).map { String(format: "%02x", $0) }.joined(), bytes: romData.count),
             inputScript: Self.inputScript,

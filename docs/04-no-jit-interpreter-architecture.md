@@ -484,7 +484,7 @@ Adapted from `S3/docs/ios/benchmarks/` and `S4/docs/plans/ios-nojit/benchmark.md
 **Running it (built, milestone 2.8a).** `BenchmarkRun` in `Sources/Debug/BenchmarkHarness.swift` is in debug builds only.
 
 1. Install a Debug build on the iPhone from Xcode: `scripts/build-core.sh`, `scripts/generate-project.sh`, open `GagaEmu.xcodeproj`, choose the phone, Run. Turn off Low Power Mode and let the phone cool.
-2. Start a run with Settings > About > Run Benchmark, which plays the generated test ROM for 60 s. Or set launch arguments in the Xcode scheme: `-GagaBenchmark`, optionally `-GagaBenchmarkSeconds 60` and `-GagaBenchmarkROM <file name in the ROMs folder>`. The first 5 s are warm-up and are not measured.
+2. Start a run with Settings > About > Run Benchmark, which plays the generated test ROM for 60 s. Or set launch arguments in the Xcode scheme: `-GagaBenchmark`, optionally `-GagaBenchmarkCore <core_id>` (default `mgba`; the GB, GBC and GBA cores get a generated test ROM, others need a ROM), `-GagaBenchmarkSeconds 60` and `-GagaBenchmarkROM <file name in the ROMs folder>`. The first 5 s are warm-up and are not measured.
 3. Wait for "Benchmark finished". Do not touch the screen. A run that backgrounds or pauses is marked `interrupted`.
 4. Fetch the record from the Files app, On My iPhone > GagaEmu > Benchmarks, or from Finder's Files tab for the phone. It is named `<core>-<device>-<UTC time>.json`.
 5. Repeat for three runs, discarding the first after an install (procedure above). Keep the JSON, and cite it where the core's result is recorded.

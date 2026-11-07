@@ -52,7 +52,7 @@ Run `xcodebuild test` with the same arguments for the tests. For a device build 
 
 **Test ROM.** No commercial game or Nintendo material is involved. `scripts/make-test-rom.sh <out.gba|out.gb|out.gbc>` writes a small homebrew ROM from `Sources/Debug/GBATestROM.swift` or `Sources/Debug/GBTestROM.swift`; the tests generate their own.
 
-**Benchmark.** In a Debug build, use Settings > About > Run Benchmark, or launch with `-GagaBenchmark`. The record lands in Documents/Benchmarks, which the Files app shows. `docs/04` section 7.2 has the procedure.
+**Benchmark.** In a Debug build, use Settings > About > Run Benchmark, or launch with `-GagaBenchmark` (add `-GagaBenchmarkCore gambatte` for another core). The record lands in Documents/Benchmarks, which the Files app shows. `docs/04` section 7.2 has the procedure. A Debug build launched with `-GagaImportROM <path>` adds that file to the Library as Files import does, once.
 
 ---
 

@@ -564,4 +564,71 @@ final class GambatteCoreTests: XCTestCase {
             XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "gambatte")
         }
     }
+
+    // MARK: - Debug launch arguments
+
+    /// `-GagaBenchmarkCore gambatte` with no ROM: the generated GB ROM and a record named for this core.
+    @MainActor
+    func testBenchmarkRunsOnThisCore() async throws {
+        let rom = try BenchmarkRun.writeTestROM(platformID: "gb", to: directory)
+        XCTAssertEqual(rom.pathExtension, "gb")
+        let skins = TouchSkinEngine()
+        skins.loadDefault()
+        skins.hapticsEnabled = false
+        skins.soundEnabled = false
+        let controllers = ControllerManager()
+        controllers.devices = []
+        let game = GameItem(id: UUID(), title: "Benchmark", platformID: "gb", romPath: rom.path, coverPath: nil,
+                            coreOverride: "gambatte", playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
+        let session = try GameSession(game: game, interface: interface, romPath: rom.path, audio: AudioEngineManager(),
+                                      controllers: controllers, skins: skins, bindings: [], shaderID: "original",
+                                      respectSilentMode: false)
+        try await session.prepare()
+        let run = BenchmarkRun(session: session, interface: interface, romURL: rom, seconds: 2, warmup: 0.2)
+        run.attach()
+        var written: URL?
+        run.onWritten = { written = $0 }
+        session.run()
+        await run.drive()
+
+        let url = try XCTUnwrap(written)
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertTrue(url.lastPathComponent.hasPrefix("gambatte-"))
+        let record = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        XCTAssertEqual((record["core"] as? [String: Any])?["id"] as? String, "gambatte")
+        XCTAssertEqual((record["core"] as? [String: Any])?["settings"] as? String, "defaults")
+        XCTAssertGreaterThan(try XCTUnwrap(record["frames"] as? Int), 60)
+        XCTAssertEqual(record["codeGenViolations"] as? [String], [])
+    }
+
+    @MainActor
+    func testBenchmarkTestROMFollowsThePlatform() throws {
+        XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "gbc", to: directory).pathExtension, "gbc")
+        XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "gba", to: directory).pathExtension, "gba")
+        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "nes", to: directory)) {
+            XCTAssertEqual($0.localizedDescription, "No test ROM is generated for nes. Pass -GagaBenchmarkROM.")
+        }
+    }
+
+    /// `-GagaImportROM <path>`: copied into the ROM folder, added once however often the app relaunches.
+    @MainActor
+    func testDebugImportAddsTheGameOnce() throws {
+        let state = AppState()
+        let saved = Set(state.games.map(\.id))
+        let source = directory.appendingPathComponent("debug-import-\(UUID().uuidString).gb")
+        try GBTestROM.build().write(to: source)
+        let dest = state.romDirectory.appendingPathComponent(source.lastPathComponent)
+        defer {
+            for game in state.games where !saved.contains(game.id) { state.delete(game) }
+            try? FileManager.default.removeItem(at: dest)
+        }
+        try state.importDebugROM(at: source)
+        try state.importDebugROM(at: source)
+        let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
+        XCTAssertEqual(added.count, 1)
+        XCTAssertEqual(added.first?.platformID, "gb")
+        XCTAssertEqual(added.first?.resolvedCoreID(defaults: [:]), "gambatte")
+        XCTAssertEqual(try Data(contentsOf: dest), try Data(contentsOf: source))
+        XCTAssertThrowsError(try state.importDebugROM(at: directory.appendingPathComponent("missing.gb")))
+    }
 }

@@ -495,21 +495,26 @@ final class AppState: ObservableObject {
     }
 
     #if DEBUG
-    /// Runs the benchmark on `rom`, or on the generated test ROM. It stays out of the Library and play history.
-    func runBenchmark(rom: URL? = nil, seconds: TimeInterval = BenchmarkRun.defaultSeconds) {
+    /// Runs the benchmark on `core` with `rom`, or with a generated test ROM. It stays out of the Library and
+    /// play history.
+    func runBenchmark(rom: URL? = nil, core coreID: String = "mgba", seconds: TimeInterval = BenchmarkRun.defaultSeconds) {
         guard session == nil, !launching else { return }
         launching = true
         Task {
             defer { launching = false }
             do {
-                let romURL = try rom ?? BenchmarkRun.writeTestROM(to: romDirectory)
-                let game = GameItem(id: UUID(), title: "Benchmark", platformID: "gba", romPath: romURL.path,
-                                    coverPath: nil, coreOverride: "mgba", playTime: 0, lastPlayed: nil,
+                // CoreCatalog has no row for a core this build left out, so that is "not part of this build".
+                guard let platformID = CoreCatalog.platforms.first(where: { $0.cores.contains { $0.id == coreID } })?.id,
+                      let interface = GagaCoreRegistry_FindByID(coreID)?.pointee else {
+                    throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
+                }
+                let romURL = try rom ?? BenchmarkRun.writeTestROM(platformID: platformID, to: romDirectory)
+                let game = GameItem(id: UUID(), title: "Benchmark", platformID: platformID, romPath: romURL.path,
+                                    coverPath: nil, coreOverride: coreID, playTime: 0, lastPlayed: nil,
                                     isFavorite: false, shaderID: "original")
                 let next = try makeSession(for: game)
                 next.autoSaveEnabled = { false }
                 try await next.prepare()
-                guard let interface = GagaCoreRegistry_FindByID("mgba")?.pointee else { return }
                 let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds)
                 run.attach()
                 next.onFinish = { [weak self] message in self?.endSession(game: game, message: message) }
@@ -526,7 +531,24 @@ final class AppState: ObservableObject {
         guard ProcessInfo.processInfo.arguments.contains("-GagaBenchmark") else { return }
         let seconds = defaults.double(forKey: "GagaBenchmarkSeconds")
         runBenchmark(rom: defaults.string(forKey: "GagaBenchmarkROM").map { romDirectory.appendingPathComponent($0) },
+                     core: defaults.string(forKey: "GagaBenchmarkCore") ?? "mgba",
                      seconds: seconds > 0 ? seconds : BenchmarkRun.defaultSeconds)
+    }
+
+    /// `-GagaImportROM <path>`: copies the file in as Files import does, so core work can add a game
+    /// without the UI. A file already in the Library is replaced on disk, not added twice.
+    func importROMIfRequested() {
+        guard let path = UserDefaults.standard.string(forKey: "GagaImportROM") else { return }
+        do {
+            try importDebugROM(at: URL(fileURLWithPath: path))
+        } catch {
+            launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
+        }
+    }
+
+    func importDebugROM(at url: URL) throws {
+        let dest = try ClipboardImporter.persist(.file(url), into: romDirectory)
+        addUploads([dest.lastPathComponent])
     }
     #endif
 

@@ -19,6 +19,7 @@ struct GagaEmuApp: App {
                     GameCenter.authenticate()
                     state.refreshCovers()
                     #if DEBUG
+                    state.importROMIfRequested()
                     state.runBenchmarkIfRequested()
                     #endif
                 }
