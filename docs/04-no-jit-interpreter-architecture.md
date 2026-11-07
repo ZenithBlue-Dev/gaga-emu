@@ -143,7 +143,7 @@ The class column reads: **All** = realistic for third-party cores; **Patch** = a
 
 ### 4.1 What is realistic for third-party cores
 
-mGBA, Gambatte, Nestopia, bsnes, JGenesis, PCSX-ReARMed, melonDS DS, MAME, DOSBox Pure, Mupen64Plus-Next and PPSSPP use their upstream interpreters. No CPU-core rewrite is assumed.
+mGBA, Gambatte, Nestopia, bsnes, JGenesis, PCSX-ReARMed, melonDS DS, MAME, DOSBox Pure, Mupen64Plus-Next, PPSSPP and Flycast use their upstream interpreters. No CPU-core rewrite is assumed.
 
 Realistic work, in order:
 
@@ -163,7 +163,7 @@ These are candidates where upstream speed may be the blocker. **Each would be se
 
 | Candidate | Why | Note |
 |---|---|---|
-| Flycast SH-4 (Dreamcast) | Tier 3 today. The core list already needs a maintained JIT-less fork | First candidate |
+| Flycast SH-4 (Dreamcast) | Tier 3 today. Upstream's own SH-4 interpreter, built with `TARGET_NO_REC`; no fork needed (`docs/07` 6.2) | First candidate, after the 6.2 device benchmark |
 | Beetle Saturn SH-2 | Tier 3. Two guest CPUs | Accuracy risk. Patch hot paths before any redesign |
 | Mupen64Plus-Next VR4300 and RSP | Tier 2, heavy per guest instruction | Audit the RSP path first (section 7.1) |
 | Azahar ARM11 interpreter | Tier 3 and multi-core | Large scope. Later than the others |
@@ -436,7 +436,7 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | Saturn | Beetle Saturn | Dual SH-2, 68EC000 | Not audited | Audit | 3 | Target (unmeasured) |
 | N64 | Mupen64Plus-Next | VR4300, RSP | Audited at `15bada85` | GagaEmu builds the pure interpreter R4300 and the cxd4 interpreter RSP, with `HAVE_PARALLEL_RSP` and `WITH_DYNAREC` off; the gate passes. Upstream's own `ios-arm64` build compiles a JIT RSP and fails (`docs/03` section 4) | 2 | Target (unmeasured, `docs/07` 5.2). Plausibly 3 until measured. Depends on ParaLLEl-RDP on MoltenVK as well |
 | PSP | PPSSPP | Allegrex | Upstream `master`: computed-goto threaded with `switch` fallback on other compilers (<https://raw.githubusercontent.com/hrydgard/ppsspp/master/Core/MIPS/IR/IRInterpreter.cpp>) | `CPUCore` `IR_INTERPRETER` | 2 | Target (unmeasured). Evidence: "nearly all PSP games at full speed" without JIT, developer statement (<https://www.ppsspp.org/news/live-on-app-store/>) |
-| Dreamcast | Flycast JIT-less fork | SH-4 | Fork to be named | Fork's interpreter | 3 | Target (unmeasured). Anecdote: runs poorly on iPhone 16 Pro, reported stable on M4 iPad (<https://mjtsai.com/blog/?p=48998>). Not a benchmark |
+| Dreamcast | Flycast | SH-4, ARM7, AICA DSP | Audited at `v2.7` (`5aa091fd`) | GagaEmu builds upstream with `TARGET_NO_REC`: `FEAT_SHREC`, `FEAT_AREC` and `FEAT_DSPREC` are `DYNAREC_NONE`, so all three run their interpreters. No recompiler file, no `posix_vmem.cpp` (memory mapping, `mprotect`) and no fault handler is compiled; `FlycastSupport.cpp` gives heap memory and tracks VRAM writes in software. The gate passes on both slices | 3 | Target (unmeasured, `docs/07` 6.2). Anecdote: runs poorly on iPhone 16 Pro, reported stable on M4 iPad (<https://mjtsai.com/blog/?p=48998>). Not a benchmark |
 | 3DS | Azahar | ARM11 MPCore | Not audited | `use_cpu_jit` and `use_shader_jit` default to true and must be off and compiled out (`docs/03`). Experimental | 3 | Target (unmeasured) |
 | Arcade | MAME | Per driver (the 28 machines in `Cores/mame/drivers.flt`; the test machine gridlee is a 6809) | Audited at `5f5a0774` (0.289): none of the 28 machines has a recompiling CPU, so no DRC file is compiled at all, `drcbe_c` included. `FORBIDDEN_SOURCES` refuses `drcbex64.cpp`, `drcbearm64.cpp` and `3rdparty/asmjit`, and `osdlib_retro.cpp` (executable memory) is replaced by `Cores/mame/MameOsdLib.cpp` | No DRC, no asmjit, no work-queue threads (`mame_thread_mode` disabled), no sockets, `dlopen` or `mprotect` (`Cores/mame/core.env`) | 2 | Target (unmeasured). Built, legal gate open, device benchmark pending. Load varies widely by driver, so one tier cannot describe every set |
 | Arcade | MAME | Per driver | Not audited | Recompiler paths off; audit per driver | 2 | Target (unmeasured). Load varies widely by driver, so one tier cannot describe every set |
