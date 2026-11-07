@@ -10,6 +10,7 @@
 
 #include <math.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -80,6 +81,72 @@ static void lr_vk_unlock(void) { pthread_mutex_unlock(&s_queue_lock); }
 
 static void lr_vk_set_error(char* error, size_t capacity, const char* message) {
     if (error && capacity > 0) snprintf(error, capacity, "%s", message);
+}
+
+// stdout, as the app's [gaga-import] lines: device runs 5 to 7 showed none of the stderr ones.
+static void lr_vk_log(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    vfprintf(stdout, format, args);
+    va_end(args);
+    fflush(stdout);
+}
+
+// MARK: - Checked creation
+
+// A pipeline, render pass or shader the driver refuses draws nothing, and cores rarely say so. The core's
+// lookups come through these, so each refusal is logged with its VkResult.
+static void lr_vk_check(const char* call, VkResult result) {
+    if (result != VK_SUCCESS) lr_vk_log("[gaga-vk] %s returned VkResult %d\n", call, (int)result);
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_graphics_pipelines(VkDevice device, VkPipelineCache cache, uint32_t count,
+                                                                      const VkGraphicsPipelineCreateInfo* infos,
+                                                                      const VkAllocationCallbacks* allocator, VkPipeline* pipelines) {
+    VkResult result = vkCreateGraphicsPipelines(device, cache, count, infos, allocator, pipelines);
+    lr_vk_check("vkCreateGraphicsPipelines", result);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_compute_pipelines(VkDevice device, VkPipelineCache cache, uint32_t count,
+                                                                     const VkComputePipelineCreateInfo* infos,
+                                                                     const VkAllocationCallbacks* allocator, VkPipeline* pipelines) {
+    VkResult result = vkCreateComputePipelines(device, cache, count, infos, allocator, pipelines);
+    lr_vk_check("vkCreateComputePipelines", result);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_render_pass(VkDevice device, const VkRenderPassCreateInfo* info,
+                                                               const VkAllocationCallbacks* allocator, VkRenderPass* pass) {
+    VkResult result = vkCreateRenderPass(device, info, allocator, pass);
+    lr_vk_check("vkCreateRenderPass", result);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_shader_module(VkDevice device, const VkShaderModuleCreateInfo* info,
+                                                                 const VkAllocationCallbacks* allocator, VkShaderModule* module) {
+    VkResult result = vkCreateShaderModule(device, info, allocator, module);
+    lr_vk_check("vkCreateShaderModule", result);
+    return result;
+}
+
+static PFN_vkVoidFunction lr_vk_checked(const char* name) {
+    if (strcmp(name, "vkCreateGraphicsPipelines") == 0) return (PFN_vkVoidFunction)lr_vk_create_graphics_pipelines;
+    if (strcmp(name, "vkCreateComputePipelines") == 0) return (PFN_vkVoidFunction)lr_vk_create_compute_pipelines;
+    if (strcmp(name, "vkCreateRenderPass") == 0) return (PFN_vkVoidFunction)lr_vk_create_render_pass;
+    if (strcmp(name, "vkCreateShaderModule") == 0) return (PFN_vkVoidFunction)lr_vk_create_shader_module;
+    return NULL;
+}
+
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL lr_vk_device_proc(VkDevice device, const char* name) {
+    PFN_vkVoidFunction checked = lr_vk_checked(name);
+    return checked ? checked : vkGetDeviceProcAddr(device, name);
+}
+
+static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL lr_vk_instance_proc(VkInstance instance, const char* name) {
+    if (strcmp(name, "vkGetDeviceProcAddr") == 0) return (PFN_vkVoidFunction)lr_vk_device_proc;
+    PFN_vkVoidFunction checked = lr_vk_checked(name);
+    return checked ? checked : vkGetInstanceProcAddr(instance, name);
 }
 
 // MARK: - The interface the core calls
@@ -222,7 +289,7 @@ static bool lr_vk_create_device(char* error, size_t capacity) {
         // No surface yet: the layer may attach later, and every MoltenVK queue can present.
         struct retro_vulkan_context context = { 0 };
         VkPhysicalDeviceFeatures features = { 0 };
-        if (negotiation->create_device(&context, s_vk.instance, s_vk.gpu, VK_NULL_HANDLE, vkGetInstanceProcAddr,
+        if (negotiation->create_device(&context, s_vk.instance, s_vk.gpu, VK_NULL_HANDLE, lr_vk_instance_proc,
                                        extensions, extension_count, NULL, 0, &features)) {
             s_vk.gpu = context.gpu;
             s_vk.device = context.device;
@@ -288,8 +355,8 @@ bool lr_vk_create_context(char* error, size_t capacity) {
         .instance = s_vk.instance,
         .gpu = s_vk.gpu,
         .device = s_vk.device,
-        .get_device_proc_addr = vkGetDeviceProcAddr,
-        .get_instance_proc_addr = vkGetInstanceProcAddr,
+        .get_device_proc_addr = lr_vk_device_proc,
+        .get_instance_proc_addr = lr_vk_instance_proc,
         .queue = s_vk.queue,
         .queue_index = s_vk.queue_family,
         .set_image = lr_vk_set_image,
@@ -578,9 +645,9 @@ static bool lr_vk_bind(VkMemoryRequirements needs, VkMemoryPropertyFlags flags, 
 
 // Rare, so it builds and frees what it needs each time and waits for the GPU.
 bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity, uint32_t* width, uint32_t* height) {
-    if (!inst || !width || !height || !s_vk.device) return false;
-    if (!s_vk.presented) {
-        fprintf(stderr, "[gaga-vk] read back: nothing presented (has_image %d)\n", s_vk.has_image);
+    if (!inst || !width || !height) return false;
+    if (!s_vk.device || !s_vk.presented) {
+        lr_vk_log("[gaga-vk] read back: nothing presented (device %d, has_image %d)\n", s_vk.device != VK_NULL_HANDLE, s_vk.has_image);
         return false;
     }
     LrVkImage src = s_vk.last;
@@ -649,7 +716,7 @@ bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity
     ok = true;
 
 done:
-    if (!ok) fprintf(stderr, "[gaga-vk] read back %ux%u failed at %s\n", src.width, src.height, step);
+    if (!ok) lr_vk_log("[gaga-vk] read back %ux%u failed at %s\n", src.width, src.height, step);
     if (fence) vkDestroyFence(device, fence, NULL);
     if (cmd) vkFreeCommandBuffers(device, s_vk.pool, 1, &cmd);
     if (buffer) vkDestroyBuffer(device, buffer, NULL);
