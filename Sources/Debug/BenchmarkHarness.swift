@@ -249,7 +249,17 @@ final class BenchmarkRun {
         let measured = starts.count > 1 ? Double(starts.last! - starts.first!) / 1_000_000_000 : 0
 
         let stats = session.stats
-        let romData = (try? Data(contentsOf: romURL)) ?? Data()
+        // Streamed: reading a 1.7 GB PSP ISO whole put it in the footprint this record reports (device run 6).
+        var hasher = SHA256(), romBytes = 0
+        if let handle = try? FileHandle(forReadingFrom: romURL) {
+            while autoreleasepool(invoking: {
+                guard let chunk = try? handle.read(upToCount: 1 << 20), !chunk.isEmpty else { return false }
+                hasher.update(data: chunk)
+                romBytes += chunk.count
+                return true
+            }) {}
+            try? handle.close()
+        }
         let info = Bundle.main.infoDictionary
         let divisor = Double(Swift.max(1, threadSampleCount))
         return Record(
@@ -265,7 +275,7 @@ final class BenchmarkRun {
                         version: String(cString: interface.core_version),
                         settings: String(cString: interface.core_id) == "mgba" ? "defaults, HLE BIOS, skip BIOS boot" : "defaults"),
             rom: .init(file: romURL.lastPathComponent,
-                       sha256: SHA256.hash(data: romData).map { String(format: "%02x", $0) }.joined(), bytes: romData.count),
+                       sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined(), bytes: romBytes),
             inputScript: Self.inputScript,
             interrupted: interrupted,
             warmupSeconds: warmup,
