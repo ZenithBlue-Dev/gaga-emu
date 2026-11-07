@@ -331,7 +331,7 @@ For a libretro core, steps 3 to 7 below become:
    - `CORE_VERSION`, `UPSTREAM_TAG`, and the full 40-character `UPSTREAM_COMMIT`. The build stops if the submodule is at any other commit.
    - `CORE_CFLAGS` and `CORE_CXXFLAGS`. Paths are relative to `Cores/<id>/`. `Sources/Bridge` is already on the include path, and `GAGA_CORE_VERSION` is already defined.
    - `FORBIDDEN_STRINGS`, the core's JIT runtime names from its audit. Never bare `jit` (`docs/04` section 8).
-   - `FORBIDDEN_IMPORTS`, a regex of APIs from features you disabled, such as `_socket$`.
+   - `FORBIDDEN_IMPORTS`, a regex of APIs from features you disabled, such as `_socket$`. Every core lists `_mprotect$`, so a change of page protection never slips in.
    - `FORBIDDEN_SOURCES`, optional: a regex of source paths that must not be compiled, such as a dynarec directory in the same tree. The build checks it against the source paths in the dSYM and prints `forbidden sources (<sdk>): none`. Use it when the core's own text names its dynarec, so the word cannot be in `FORBIDDEN_STRINGS`.
    - The framework's bundle identifier is `com.zenithblue.gagaemu.<id>` with `_` written as `-`, and its short version is `CORE_VERSION` with everything but digits and dots removed.
 4. **Write `Cores/<id>/<Framework>.exports`.** One line: `_<Name>_GetInterface`.
