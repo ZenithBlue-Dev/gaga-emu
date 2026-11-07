@@ -489,6 +489,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         inputLock.unlock()
 
         if let filter = playerOneFilter { currentInputs[0] = filter(currentInputs[0], frame) }
+        // A layer-path core presents itself, so it must hear which frames fast-forward drops.
+        currentInputs[0].skip_present = !presentVideo
         #if DEBUG
         let wallStart = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
         let cpuStart = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)

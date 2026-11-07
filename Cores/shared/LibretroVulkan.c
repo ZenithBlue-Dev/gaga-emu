@@ -487,8 +487,7 @@ static bool lr_vk_build_swapchain(void) {
     if (extent.height > caps.maxImageExtent.height) extent.height = caps.maxImageExtent.height;
 
     VkSwapchainKHR old = s_vk.swapchain;
-    // shortcut: FIFO presents every frame, so fast-forward runs no faster than the display refreshes. Skip
-    // presenting frames the host drops (GagaCoreWrapper.presentVideo) if a layer-path core needs more.
+    // FIFO: a present waits for a vsync. Fast-forward presents only the last frame of a tick (lr_vk_present's skip).
     VkSwapchainCreateInfoKHR info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR, .surface = s_vk.surface, .minImageCount = count,
         .imageFormat = VK_FORMAT_B8G8R8A8_UNORM, .imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, .imageExtent = extent,
@@ -559,6 +558,8 @@ static void lr_vk_record_copy(VkCommandBuffer cmd, const LrVkImage* src, VkImage
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &cleared, 0, NULL, 0, NULL);
 
     // shortcut: square pixels, as the copy path's renderer assumes. Use the core's aspect_ratio when a core needs it.
+    // shortcut: an _SRGB core image would be decoded into the UNORM swapchain and look too dark. Every layer-path
+    // core here hands over UNORM; build an _SRGB swapchain for one that does not.
     float scale = fminf((float)dst_extent.width / (float)src->width, (float)dst_extent.height / (float)src->height);
     int32_t fit_w = (int32_t)lroundf(src->width * scale), fit_h = (int32_t)lroundf(src->height * scale);
     int32_t x = ((int32_t)dst_extent.width - fit_w) / 2, y = ((int32_t)dst_extent.height - fit_h) / 2;
@@ -588,19 +589,21 @@ static void lr_vk_record_copy(VkCommandBuffer cmd, const LrVkImage* src, VkImage
 // One frame: the core's command buffers if it passed any, then the copy into the next swapchain image,
 // signalling what the core asked, then present. A frame with no layer still runs, so the core's
 // semaphores and sync index keep moving while the view is away.
-bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
+bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
     if (!s_vk.device) return false;
     // This frame's image and waits, taken at once: set_image may come from the core's own thread.
     pthread_mutex_lock(&s_image_lock);
     LrVkImage image = s_vk.image;
-    bool show = !dupe && s_vk.has_image && width > 0 && height > 0;
+    bool fresh = !dupe && s_vk.has_image && width > 0 && height > 0;
+    // FIFO blocks each present until a vsync, so fast-forward presents only the frame the host shows.
+    bool show = fresh && !skip;
     VkSemaphore image_waits[LR_VK_MAX_WAITS];
     uint32_t image_wait_count = s_vk.wait_count;
     memcpy(image_waits, s_vk.waits, sizeof(image_waits));
     s_vk.wait_count = 0;
     pthread_mutex_unlock(&s_image_lock);
     // A dupe waits on no semaphore (libretro), and one with nothing to run or signal is a no-op.
-    if (!show && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
+    if (!fresh && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
     uint32_t slot = s_vk.index;
     vkWaitForFences(s_vk.device, 1, &s_vk.fence[slot], VK_TRUE, UINT64_MAX);
 
@@ -627,7 +630,7 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     VkSemaphore waits[LR_VK_MAX_WAITS + 1];
     VkPipelineStageFlags stages[LR_VK_MAX_WAITS + 1];
     uint32_t wait_count = 0;
-    if (show && s_vk.core_cmd_count == 0) { // With set_command_buffers, libretro skips the semaphores.
+    if (fresh && s_vk.core_cmd_count == 0) { // With set_command_buffers, libretro skips the semaphores.
         for (uint32_t i = 0; i < image_wait_count; ++i) waits[wait_count++] = image_waits[i];
     }
     if (target != UINT32_MAX) waits[wait_count++] = s_vk.acquired[slot];

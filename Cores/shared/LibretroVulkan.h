@@ -40,8 +40,9 @@ bool lr_vk_create_context(char* error, size_t capacity);
 void lr_vk_destroy_context(void);
 // After retro_unload_game: the core's destroy_device, then everything this file created.
 void lr_vk_release(void);
-// From retro_video_refresh. dupe is a NULL frame. True when a new frame went to the layer path.
-bool lr_vk_present(unsigned width, unsigned height, bool dupe);
+// From retro_video_refresh. dupe is a NULL frame. skip is a frame the host drops (fast-forward): its
+// semaphores are still waited on, but nothing is presented. True when a new frame went to the layer path.
+bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip);
 // Returns with no GPU work in flight, so nothing runs after the host pauses for the background.
 void lr_vk_wait_idle(void);
 // Defined by LibretroAdapter.c: a FATAL event for the running game, such as a lost device.
