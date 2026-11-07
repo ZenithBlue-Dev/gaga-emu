@@ -66,6 +66,16 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     @Published private(set) var pauseReasons: Set<PauseReason> = []
     var menuOpen: Bool { pauseReasons.contains(.menu) }
     private(set) var targetFPS: Double = 60
+    /// Whole frames per tick. 1 is normal speed.
+    @Published private(set) var fastForward = 1
+    /// What the touch button switches to. The pause menu sets it.
+    private var fastForwardChoice = 2
+    @Published private(set) var cheats: [CheatEntry] = []
+    /// A message for the player that does not end the session.
+    @Published var notice: String?
+    let saves: SaveStore
+    /// Off unless the player chose it and may use it. The owner of the session supplies both checks.
+    var autoSaveEnabled: @MainActor () -> Bool = { false }
 
     var onStarted: (() -> Void)?
     /// Seconds actually played since the last call. Called on pause and on stop, so a kill loses little.
@@ -80,8 +90,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private let skins: TouchSkinEngine
     private let bindings: [TriggerProManager.Binding]
     private let respectSilentMode: Bool
+    private let entitlements: @MainActor () -> StoreKitManager.Entitlements
 
     private var core: GagaCoreWrapper?
+    private var hasRun = false
+    private var menuPairHeld = false
     private var displayLink: CADisplayLink?
     private var observers: [NSObjectProtocol] = []
     private var runningSince: CFTimeInterval?
@@ -96,10 +109,13 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     init(game: GameItem, interface: GagaCoreInterface, romPath: String, audio: AudioEngineManager = .shared,
          controllers: ControllerManager, skins: TouchSkinEngine, bindings: [TriggerProManager.Binding],
-         shaderID: String, respectSilentMode: Bool) throws {
+         shaderID: String, respectSilentMode: Bool, saveDirectory: URL? = nil,
+         entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .effective(.free) }) throws {
         guard let device = MTLCreateSystemDefaultDevice(), let renderer = MetalRenderer(device: device) else {
             throw GameLaunchError.metalUnavailable
         }
+        self.saves = saveDirectory.map(SaveStore.init(directory:)) ?? SaveStore(romPath: romPath)
+        self.entitlements = entitlements
         self.game = game
         self.interface = interface
         self.romPath = romPath
@@ -135,7 +151,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     func prepare() async throws {
         guard phase == .idle else { return }
         let interface = self.interface
-        let saveDirectory = GagaCoreWrapper.saveDirectory(forROM: romPath)
+        let saveDirectory = saves.directory.path
         let core = try await Task.detached(priority: .userInitiated) {
             try GagaCoreWrapper(interface: interface, saveDirectory: saveDirectory)
         }.value
@@ -153,6 +169,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             return
         }
         self.core = core
+        cheats = saves.cheats()
+        if core.supportsCheats {
+            // shortcut: a stored code this core now refuses stays listed but does nothing. It was valid when added, so this needs a core change; show it in the list if that ever happens.
+            for cheat in cheats { try? core.addCheat(id: cheat.id, code: cheat.code, enabled: cheat.enabled) }
+        }
         phase = .prepared
     }
 
@@ -226,40 +247,49 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         core.start()
         runningSince = CACurrentMediaTime()
         phase = .running
+        hasRun = true
         UIApplication.shared.isIdleTimerDisabled = true
         observeSystem()
         let link = CADisplayLink(target: self, selector: #selector(tick))
         link.add(to: .main, forMode: .common)
         displayLink = link
         onStarted?()
+        if notice != nil { pause(.menu) } // A failed resume: let the player read it before the game moves on.
     }
 
     func pause(_ reason: PauseReason) {
         guard phase == .running || phase == .paused else { return }
         pauseReasons.insert(reason)
         if reason == .menu { clearTouches() }
+        updateDisplayLink()
         guard phase == .running else { return }
         core?.pause()
         audio.pause()
-        displayLink?.isPaused = true
         flushPlayTime()
         phase = .paused
     }
 
     func resume(_ reason: PauseReason) {
         pauseReasons.remove(reason)
+        updateDisplayLink()
         guard phase == .paused, pauseReasons.isEmpty else { return }
         audio.start(respectSilentMode: respectSilentMode)
         pushInputs()
         core?.resume()
-        displayLink?.isPaused = false
         runningSince = CACurrentMediaTime()
         phase = .running
+    }
+
+    /// It keeps ticking behind the menu, so a controller can close what it opened.
+    private func updateDisplayLink() {
+        displayLink?.isPaused = pauseReasons.contains(.background) || pauseReasons.contains(.interruption)
     }
 
     /// Ends the session. Safe from any state and safe to call twice.
     func stop(message: String? = nil) {
         guard phase != .stopped else { return }
+        // A session ending on an error may be why it ended, so it must not replace a good auto save.
+        if message == nil { saveAuto() }
         phase = .stopped
         #if DEBUG
         CodeGenCheck.report("session stop, \(game.title)")
@@ -288,6 +318,98 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         onPlayTime?(CACurrentMediaTime() - start)
     }
 
+    // MARK: - Save states
+
+    var supportsSaveStates: Bool { core?.supportsSaveStates ?? false }
+
+    @discardableResult
+    func saveState() throws -> SaveSlot {
+        guard let core else { throw EmulatorCoreError.coreNotLoaded }
+        let allowed = entitlements()
+        let count = saves.manualCount
+        guard allowed.canAddSaveState(current: count) else { throw SaveStateError.limitReached(allowed.maxSaveStates) }
+        return try writeState(core, auto: false)
+    }
+
+    private func writeState(_ core: GagaCoreWrapper, auto: Bool) throws -> SaveSlot {
+        let file = SaveStateFile.encode(payload: try core.saveState(), coreID: core.coreID, stateVersion: core.stateVersion)
+        let ring = self.ring
+        return try saves.writeState(file, thumbnail: core.betweenFrames { ring.latestFramePNG() }, auto: auto)
+    }
+
+    /// Every check runs before the core is touched, and the core keeps its game on any failure.
+    func loadState(_ slot: SaveSlot) throws {
+        guard let core else { throw EmulatorCoreError.coreNotLoaded }
+        let file = try Data(contentsOf: slot.url, options: .mappedIfSafe)
+        try core.loadState(SaveStateFile.decode(file, coreID: core.coreID, stateVersion: core.stateVersion))
+    }
+
+    private func saveAuto() {
+        guard hasRun, autoSaveEnabled(), let core, core.supportsSaveStates else { return }
+        do {
+            try writeState(core, auto: true)
+        } catch {
+            // Nobody is looking at the screen on the way out, and the last auto save is still whole.
+            #if DEBUG
+            log.error("auto save failed: \(error.localizedDescription, privacy: .public)")
+            #endif
+        }
+    }
+
+    // MARK: - Fast-forward
+
+    /// Speeds this player may pick, slowest first. 1 is off.
+    var fastForwardSpeeds: [Int] { [1, 2, 3, 5].filter { Double($0) <= entitlements().maxFastForward } }
+
+    /// Clamped here, so a caller cannot run past `maxFastForward`.
+    func setFastForward(_ speed: Int) {
+        let allowed = fastForwardSpeeds.last { $0 <= speed } ?? 1
+        fastForward = allowed
+        if allowed > 1 { fastForwardChoice = allowed }
+        core?.setSpeed(allowed)
+    }
+
+    func toggleFastForward() { setFastForward(fastForward == 1 ? fastForwardChoice : 1) }
+
+    // MARK: - Cheats
+
+    var supportsCheats: Bool { core?.supportsCheats ?? false }
+    var canAddCheat: Bool { entitlements().canAddCheat(current: cheats.count) }
+
+    /// The core judges the code. Nothing is stored unless it accepts.
+    func addCheat(name: String, code: String) throws {
+        guard let core else { throw EmulatorCoreError.coreNotLoaded }
+        guard canAddCheat else {
+            let limit = entitlements().maxCheats
+            throw EmulatorCoreError.cheatRejected("You have \(limit) cheats, the most without Gaga Plus. Remove one to add another.")
+        }
+        let entry = CheatEntry(id: (cheats.map(\.id).max() ?? 0) + 1, name: name, code: code, enabled: true)
+        try core.addCheat(id: entry.id, code: code, enabled: true)
+        do {
+            try saves.saveCheats(cheats + [entry])
+        } catch {
+            core.removeCheat(id: entry.id)
+            throw error
+        }
+        cheats.append(entry)
+    }
+
+    func removeCheat(_ cheat: CheatEntry) throws {
+        let remaining = cheats.filter { $0.id != cheat.id }
+        try saves.saveCheats(remaining)
+        core?.removeCheat(id: cheat.id)
+        cheats = remaining
+    }
+
+    func setCheat(_ cheat: CheatEntry, enabled: Bool) throws {
+        var updated = cheats
+        guard let index = updated.firstIndex(where: { $0.id == cheat.id }) else { return }
+        updated[index].enabled = enabled
+        try saves.saveCheats(updated)
+        core?.setCheat(id: cheat.id, enabled: enabled)
+        cheats = updated
+    }
+
     private func observeSystem() {
         let center = NotificationCenter.default
         func observe(_ name: Notification.Name, _ handler: @escaping @MainActor (GameSession, Notification) -> Void) {
@@ -300,6 +422,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         // GPU work is not allowed in the background, so stop before it starts.
         observe(UIApplication.willResignActiveNotification) { session, _ in session.pause(.background) }
         observe(UIApplication.didBecomeActiveNotification) { session, _ in session.resume(.background) }
+        // The app can be killed from here with no further warning.
+        observe(UIApplication.didEnterBackgroundNotification) { session, _ in
+            session.core?.flushBatterySave()
+            session.saveAuto()
+        }
         observe(AVAudioSession.interruptionNotification) { session, note in session.handleInterruption(note) }
     }
 
@@ -361,7 +488,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private func pushInputs() {
         guard let core else { return }
         var states = controllers.sample()
+        menuPair(held: states.contains(where: \.openMenu))
         if controllers.touchOwnsPlayerOne { states[0].buttons |= touchMask | accessibilityMask }
+        states[0].buttons |= controllers.keyboardButtons()
         for (slot, state) in states.enumerated() {
             core.setInput(player: slot, state: GagaInputState(state))
         }
@@ -371,6 +500,13 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             log.notice("input p1 buttons=0x\(String(self.loggedButtons, radix: 16), privacy: .public)")
         }
         #endif
+    }
+
+    /// Opens the menu on the press, or closes it again, so holding the pair does not flicker.
+    func menuPair(held: Bool) {
+        defer { menuPairHeld = held }
+        guard held, !menuPairHeld, phase == .running || phase == .paused else { return }
+        if menuOpen { resume(.menu) } else { pause(.menu) }
     }
 
     /// Controllers have no change callback worth trusting per button, so read them once per display frame.

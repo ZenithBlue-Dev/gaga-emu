@@ -271,6 +271,8 @@ final class AppState: ObservableObject {
     /// A launch is preparing the core, before any game view is on screen.
     @Published private(set) var launching = false
     @Published var launchFailure: LaunchFailure?
+    /// A game waiting on the player's answer: resume its auto save, or start from the battery save.
+    @Published var resumeOffer: GameItem?
     /// Waits for the game view to finish dismissing, because an alert cannot present during that.
     private var pendingFailure: LaunchFailure?
 
@@ -407,8 +409,25 @@ final class AppState: ObservableObject {
         save()
     }
 
-    /// Loads the core off screen first, so a failure stays on the Library with a message.
+    /// A saved value from the old free toggle must not get past the gate (docs/07 2.6).
+    var autoSaveEnabled: Bool { autoSaveStates && store.canUseAutoSaveState }
+
+    /// Offers to resume first when there is an auto save to resume.
     func launch(_ game: GameItem) {
+        if autoSaveEnabled, saveStore(for: game).autoSlot != nil {
+            resumeOffer = game
+        } else {
+            start(game)
+        }
+    }
+
+    func saveStore(for game: GameItem) -> SaveStore {
+        SaveStore(romPath: game.resolvedROMPath(romDirectory: romDirectory) ?? game.romPath)
+    }
+
+    /// Loads the core off screen first, so a failure stays on the Library with a message. A state that
+    /// will not load is not a failed launch: the game still starts, and says why.
+    func start(_ game: GameItem, loading slot: SaveSlot? = nil) {
         guard session == nil, !launching else { return }
         launching = true
         Task {
@@ -416,6 +435,13 @@ final class AppState: ObservableObject {
             do {
                 let next = try makeSession(for: game)
                 try await next.prepare()
+                if let slot {
+                    do {
+                        try next.loadState(slot)
+                    } catch {
+                        next.notice = error.localizedDescription
+                    }
+                }
                 next.onStarted = { [weak self] in self?.recordStart(of: game) }
                 next.onPlayTime = { [weak self] in self?.recordPlay(gameID: game.id, seconds: $0) }
                 next.onFinish = { [weak self] message in self?.endSession(game: game, message: message) }
@@ -439,6 +465,7 @@ final class AppState: ObservableObject {
                                     coverPath: nil, coreOverride: "mgba", playTime: 0, lastPlayed: nil,
                                     isFavorite: false, shaderID: "original")
                 let next = try makeSession(for: game)
+                next.autoSaveEnabled = { false }
                 try await next.prepare()
                 guard let interface = GagaCoreRegistry_FindByID("mgba")?.pointee else { return }
                 let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds)
@@ -473,9 +500,12 @@ final class AppState: ObservableObject {
         skins.hapticsEnabled = rumble
         skins.soundEnabled = skinSoundEffects
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
-        return try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,
-                               skins: skins, bindings: triggerPro.bindings, shaderID: shader,
-                               respectSilentMode: respectSilentMode)
+        let session = try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,
+                                      skins: skins, bindings: triggerPro.bindings, shaderID: shader,
+                                      respectSilentMode: respectSilentMode,
+                                      entitlements: { [store] in store.entitlements })
+        session.autoSaveEnabled = { [weak self] in self?.autoSaveEnabled ?? false }
+        return session
     }
 
     private func recordStart(of game: GameItem) {

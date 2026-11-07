@@ -1,5 +1,6 @@
 import Metal
 import MetalKit
+import UIKit
 
 /// Three-slot ring of shared MTLBuffers, each with a texture over the same storage, so the GPU
 /// reads what the CPU wrote without a blit. `writeFrame` still copies once from the core's buffer.
@@ -188,6 +189,30 @@ public final class MetalTextureRing {
         framesWritten += 1
         lock.unlock()
         return texture
+    }
+
+    /// The newest frame as a PNG, for a save state's thumbnail. Reads shared memory, so it does no GPU
+    /// work and is safe in the background. Call only between frames.
+    public func latestFramePNG() -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard framesWritten > 0 else { return nil }
+        let slot = (writeIndex + bufferCount - 1) % bufferCount
+        let bytes = Data(bytes: buffers[slot].contents(), count: bufferSize)
+        let bitmap: CGBitmapInfo
+        switch pixelFormat {
+        case .rgba8Unorm: bitmap = [.byteOrder32Big, CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)]
+        case .bgra8Unorm: bitmap = [.byteOrder32Little, CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)]
+        case .b5g6r5Unorm: bitmap = [.byteOrder16Little, CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)]
+        default: return nil
+        }
+        let wide = pixelFormat != .b5g6r5Unorm
+        guard let provider = CGDataProvider(data: bytes as CFData),
+              let image = CGImage(width: width, height: height, bitsPerComponent: wide ? 8 : 5,
+                                  bitsPerPixel: wide ? 32 : 16, bytesPerRow: bytesPerRow,
+                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: bitmap, provider: provider,
+                                  decode: nil, shouldInterpolate: false, intent: .defaultIntent) else { return nil }
+        return UIImage(cgImage: image).pngData()
     }
 
     #if targetEnvironment(simulator)

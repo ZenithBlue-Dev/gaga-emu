@@ -59,6 +59,9 @@ public final class StoreKitManager: ObservableObject {
         public var showsSubscribePrompts: Bool { !lifetime }
         public static let free = Entitlements(premium: false)
 
+        public func canAddSaveState(current count: Int) -> Bool { count < maxSaveStates }
+        public func canAddCheat(current count: Int) -> Bool { count < maxCheats }
+
         /// What the app enforces: the purchases, or no limits at all while the gate is closed.
         static func effective(_ purchased: Entitlements, gateOpen: Bool = PaywallGate.isOpen) -> Entitlements {
             gateOpen ? purchased : Entitlements(premium: true)
@@ -133,8 +136,6 @@ public final class StoreKitManager: ObservableObject {
 
     // MARK: Gates
 
-    public func canAddSaveState(current count: Int) -> Bool { count < entitlements.maxSaveStates }
-    public func canAddCheat(current count: Int) -> Bool { count < entitlements.maxCheats }
     public var canUseAutoSaveState: Bool { entitlements.autoSaveState }
     public func canUseShader(_ id: String) -> Bool {
         entitlements.premiumShaders || !Self.premiumShaderIDs.contains(id)
