@@ -1,0 +1,1 @@
+LZMA SDK 25.01, Igor Pavlov. The 7z decoder files in Sources/Archive/LZMA (7zArcIn, 7zDec, LzmaDec, Lzma2Dec, Bcj2, Bra, Delta, 7zCrc and their headers). Each file's header says: Public domain.

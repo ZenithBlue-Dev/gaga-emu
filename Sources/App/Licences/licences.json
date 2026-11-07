@@ -1987,6 +1987,19 @@
      "file": "licence-d9877dd11360.txt"
     }
    ]
+  },
+  {
+   "id": "lzma-sdk",
+   "title": "LZMA SDK",
+   "licence": "Public domain",
+   "source": "https://www.7-zip.org/sdk.html, version 25.01 (2025-08-03), C decoder files copied unmodified from Cores/fbneo/upstream/src/dep/libs/lib7z at FBNeo commit 4cdb31f. Reads .7z archives on import.",
+   "cores": [],
+   "texts": [
+    {
+     "title": "LZMA SDK 25.01",
+     "file": "licence-2e05252f2fa6.txt"
+    }
+   ]
   }
  ]
 }
