@@ -2,7 +2,7 @@
 
 Gaga-Emu is a multi-system emulator for iOS and iPadOS, with iOS 17.0 as the minimum OS. No shipped core uses JIT, RWX memory or a dynarec. App UI, frame presentation and the host post-process chain use native Metal. 3D cores render through Vulkan on statically linked MoltenVK to `CAMetalLayer`, the same pattern as the S3 and S4 sister projects. MoltenVK counts as Metal for this project (owner decision, 2026-11-07).
 
-**Status (planned unless noted):** the app today is a shell plus a mock core. The 12 non-mock cores in `Sources/Bridge/GagaCoreRegistry.c` are stubs, so no game runs yet. Everything below about cores is design, not current behaviour. `docs/07` is canonical for phases and status.
+**Status:** `Sources/Bridge/GagaCoreRegistry.c` has 38 entries: 35 real cores, the mock core, the Debug-only `vktest` layer-path test core, and one stub (`gpsp`). Games run on a device, and the cores are merged but gated: release builds leave out every GPL core until the legal gate (`docs/07` 4.0) closes. Device results are in `docs/04` section 7.1. Sections below that describe design are marked as design. `docs/07` is canonical for phases and status.
 
 **Doc ownership:** `docs/03` core list, licences and renderers. `docs/04` interpreter design and performance tiers. `docs/06` bridge API and premium/IAP spec. `docs/07` phases and status.
 
@@ -25,7 +25,7 @@ Two separate constraints apply. They have different sources.
 
 **Scope:** an explicit platform list replaces any generation rule. In-binary v1 and v1.x platforms are exactly:
 
-Game Boy / Game Boy Color, Game Boy Advance, NES, SNES / Super Famicom, Genesis / Mega-CD, PlayStation 1, Nintendo DS, Saturn, Nintendo 64, PSP, Dreamcast, Nintendo 3DS (experimental), Arcade, DOS / Win9x, Java ME, Symbian.
+Game Boy / Game Boy Color, Game Boy Advance, NES, SNES / Super Famicom, Genesis / Mega-CD, PlayStation 1, Nintendo DS, Saturn, Nintendo 64, PSP, Dreamcast, Nintendo 3DS (experimental), Arcade, DOS / Win9x. Java ME and Symbian are not in the binary: their spikes failed (`docs/07` 6.4 and 6.6).
 
 - `docs/03` is canonical for the core behind each platform.
 - PS3 and PS4 are external sister projects by owner scope. They are never catalog rows or frame producers.
@@ -69,7 +69,7 @@ Gaga-Emu reuses interpreter patterns and the MoltenVK-on-`CAMetalLayer` pattern 
  └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The diagram shows default cores by design; all are planned or stubbed today. Tier is expected CPU load, not delivery order. `docs/03` is canonical for cores and alternates, and `docs/07` for scheduling. Java ME (J2meJS) and Symbian (EKA2L1) are excluded: J2meJS ships no corresponding source and EKA2L1 has no accepted renderer on iOS (`docs/07` 6.4 and 6.6).
+The diagram shows default cores by design; each is merged and builds (`docs/07`), gated out of release builds by the legal gate. Tier is expected CPU load, not delivery order. `docs/03` is canonical for cores and alternates, and `docs/07` for scheduling. Java ME (J2meJS) and Symbian (EKA2L1) are excluded: J2meJS ships no corresponding source and EKA2L1 has no accepted renderer on iOS (`docs/07` 6.4 and 6.6).
 
 ---
 
@@ -81,7 +81,7 @@ All rows are design. Status is in `docs/07`.
 | :--- | :--- | :--- |
 | **No JIT** | Interpreter cores only, with no RWX and no dynarec. Interpreter design is in `docs/04`. | Each core build gets a no-JIT gate: an nm/strings check as in `S3/scripts/ios/build-core.sh:45-54`, plus a check for startup code generation. Audit per core, not only at the end. |
 | **Metal Graphics** | Native Metal for UI, presentation and the post-process chain. 2D and software cores pass through the host texture ring. 3D cores use Vulkan on statically linked MoltenVK. A native Metal backend is allowed where upstream has one. | libretro cores memcpy unless a host-buffer API exists, so no zero-copy claim for them. GLES-only and desktop-GL-only renderers are not accepted. A14 required for layer-path 3D cores; 2D cores have no such floor (Apple7). Metal 4 is optional, never baseline. |
-| **Multi-Core Flexibility** | C-ABI bridge (`GagaBridge`) with several selectable cores per platform where alternates exist, for example mGBA or gpSP, PCSX-ReARMed or Beetle PSX HW. | Selected per title through a library long-press, with a per-platform default. Each core is planned as a dynamic, embedded framework that exports only the bridge (`docs/03` section 5). |
+| **Multi-Core Flexibility** | C-ABI bridge (`GagaBridge`) with several selectable cores per platform where alternates exist, for example PCSX-ReARMed, Beetle PSX HW or SwanStation. | Selected per title through a library long-press, with a per-platform default. Each core is a dynamic, embedded framework that exports only the bridge (`docs/03` section 5). |
 | **Manic EMU as Feature Reference** | Filter preview, ROM patching, multi-disc playlists, WiFi transfer and TriggerPro are features also seen in Manic's screenshots. Behaviour behind them is largely GagaEmu design. | Features only: the UI is not copied. Not 1:1 parity. Manic's `JIT` row is dropped, and many listed systems are not planned. `docs/02` tags each item by source. |
 | **Original Landscape UI** | "Paper and ink", a quiet, print-like game shelf with a left rail. Spec in `docs/06` section 3. | Landscape only on iPhone and iPad. No other app's look is recreated. |
 | **Apple Architecture** | Swift and SwiftUI for the app layer, C bridge headers, core code in its upstream languages, XcodeGen, StoreKit 2, an `AVAudioEngine` ring buffer. | UI knows nothing of core internals; it reaches them through C struct headers. |
@@ -98,7 +98,7 @@ All rows are design. Status is in `docs/07`.
 
 Evidence is 14 screenshots in `maniac-emu-reference-images/` plus the [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790) (ID `6743335790`). No screenshot shows a version number. The listing showed version 2.0.2 when checked on 2026-11-07.
 
-1. **Core selection** [S]: the Emulator Core sheet maps each platform to its current core: J2meJS for Java ME, Beetle PSX HW for PlayStation, Beetle Saturn for Sega Saturn, JGenesis for Mega-CD, Azahar for Nintendo 3DS, melonDS DS for Nintendo DS, mGBA for Game Boy Advance, Gambatte for Game Boy and Game Boy Color, bsnes for Super Famicom. A caption says cores switch by long-pressing a game. No screenshot shows an alternate core. Version notes on the listing name more cores [L].
+1. **Core selection** [S]: the Emulator Core sheet maps each platform to its current core: J2meJS for Java ME (Manic only; GagaEmu has no Java ME core, `docs/07` 6.4), Beetle PSX HW for PlayStation, Beetle Saturn for Sega Saturn, JGenesis for Mega-CD, Azahar for Nintendo 3DS, melonDS DS for Nintendo DS, mGBA for Game Boy Advance, Gambatte for Game Boy and Game Boy Color, bsnes for Super Famicom. A caption says cores switch by long-pressing a game. No screenshot shows an alternate core. Version notes on the listing name more cores [L].
 2. **Shaders** [S]: four tabs (Default, RetroArch, Import, Custom), one preview card with a per-row eye icon, and the presets Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT and Film. Only the Default tab is shown.
 3. **Import** [S]: Files, WiFi, Read Clipboard, MultiDisc Helper, RomPatcher and Drag & Drop. Files covers games, skins and game saves. M3U output and patch formats are not shown; those details are GagaEmu design [G].
 4. **Input** [S]: a Controllers panel with a `Touch Control` row and a `Player 1` picker, plus `Assign Skin`, `Skin Sound Effects` and `TriggerPro` rows. The TriggerPro subtitle says only that it creates and manages advanced custom buttons. Controller brands, skin formats and macro or turbo behaviour are not shown; they are GagaEmu design [G].
