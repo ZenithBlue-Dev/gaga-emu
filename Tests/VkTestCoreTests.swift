@@ -120,6 +120,21 @@ final class VkTestCoreTests: GagaTestCase {
         core.stop()
     }
 
+    /// Fast-forward: frames the host drops render but are not presented, so FIFO's vsync wait comes once per tick.
+    func testDroppedFastForwardFramesAreNotPresented() async throws {
+        let (core, capture) = try await loaded()
+        var dropped = GagaInputState()
+        dropped.skip_present = true
+        for _ in 0..<20 { core.step(inputs: [dropped]) }
+        XCTAssertEqual(capture.frames, 0, "no size-only frame for a dropped frame")
+        XCTAssertNil(core.readLayerPixels(), "nothing presented yet")
+        run(core, frames: 1)
+        XCTAssertEqual(capture.frames, 1)
+        try assertPicture(core)
+        XCTAssertNil(capture.fatal)
+        core.stop()
+    }
+
     func testTheDPadMovesTheTriangle() async throws {
         let (core, _) = try await loaded()
         run(core, frames: 2)
