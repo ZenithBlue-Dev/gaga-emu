@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 
 /// Paywall. Annual is preselected, matching 0596EA12. Badges reflect configured offers only.
