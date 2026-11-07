@@ -890,6 +890,42 @@
    ]
   },
   {
+   "id": "virtualjaguar",
+   "title": "Virtual Jaguar",
+   "licence": "GPL-3.0-or-later",
+   "source": "https://github.com/libretro/virtualjaguar-libretro, tag v3.11.0, commit 3469608. Atari's boot ROMs in src/bios are not built.",
+   "cores": [
+    "virtualjaguar"
+   ],
+   "framework": "VirtualJaguarCore",
+   "texts": [
+    {
+     "title": "Virtual Jaguar",
+     "file": "licence-8ceb4b9ee5ad.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "miniz",
+     "file": "licence-c6f3bb950804.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-06721414a6de.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

@@ -56,6 +56,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Atari 7800 | ProSystem | `prosystem` | None | [GPL-2.0-or-later](https://github.com/libretro/prosystem-libretro) (`License.txt`), plus zlib and MIT parts (section 5) | Software | 6502 (Sally) interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/prosystem-libretro](https://github.com/libretro/prosystem-libretro)), last push 2026-08-22, no tags. Pinned to `8a88014287c7a01cd568067e5a557d0a2b2a051f` | 1 |
 | Atari Lynx | Handy | `handy` | holani (not built) | [Zlib](https://github.com/libretro/libretro-handy) (`lynx/license.txt`), plus LGPL-2.1-or-later and MIT parts (section 5) | Software | 65C02 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-handy](https://github.com/libretro/libretro-handy)), last push 2026-04-20, no tags. Pinned to `bc55d462f0b2d6b073ea93dc552ebd73cec60fd1`. Chosen over [holani-retro](https://github.com/LLeny/holani-retro): GPL-3.0 and Rust, which `scripts/build-core.sh` does not build | 1 |
 | Atari 5200, Atari 8-bit | Atari800 | `atari800` | None | [GPL-2.0-or-later](https://github.com/libretro/libretro-atari800) (`atari800/COPYING`), plus all-permissive, Zlib and MIT parts (section 5) | Software | 6502 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-atari800](https://github.com/libretro/libretro-atari800)), last push 2026-09-01, no tags. Pinned to `4e7fbc73765c1a9670c7506616046ad1d4ccda51` | 1 |
+| Atari Jaguar | Virtual Jaguar | `virtualjaguar` | None (optional `jagboot.rom`) | [GPL-3.0-or-later](https://github.com/libretro/virtualjaguar-libretro) (`LICENSE`), plus BSD, MIT and public-domain parts (section 5) | Software | 68000, GPU and DSP interpreters. Heavy tier: a full-speed claim needs a device benchmark with real games. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro)). Pinned to tag `v3.11.0`, `34696082dbc0448caf23aa4ecb5ed40817cb8da0` | 3 |
 
 ### Renderer rules
 
@@ -426,6 +427,23 @@ Source: [github.com/libretro/libretro-atari800](https://github.com/libretro/libr
 
 No Atari ROM or game is bundled; the AltirraOS replacements are free software. Atari's own `5200.rom`, XL/XE OS (`atarixl.rom`), 400/800 OS and BASIC are the player's: upstream scans the system folder for them by checksum, under any name, and uses AltirraOS otherwise. The BIOS Files screen lists `5200.rom` and `atarixl.rom` as optional. The test programs `Sources/Debug/Atari800TestROM.swift` are GagaEmu's own hand-assembled 6502.
 
+### Virtual Jaguar licence obligations
+
+Source: [github.com/libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro), libretro's Virtual Jaguar, tag `v3.11.0`, commit `34696082dbc0448caf23aa4ecb5ed40817cb8da0`, as the unmodified submodule `Cores/virtualjaguar/upstream`. `Cores/virtualjaguar/VirtualJaguarCore.c`, `bios_stub.c`, `nonet_*.c`, `version.h` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/virtualjaguar/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `src` (68000, TOM, JERRY, blitter, Object Processor, CD, EEPROM), `libretro.c` | GPL-3.0-or-later (`LICENSE`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `deps/libchdr` (`unity.c`) | BSD-3-Clause | Keep the notice. |
+| libchdr's zstd | BSD-3-Clause (dual GPL-2.0) | Keep the notice. |
+| libchdr's miniz | MIT | Keep the notice. |
+| libchdr's LZMA SDK | Public domain | None. |
+| `libretro-common` | MIT | Reproduce the notice. |
+
+Upstream's `src/bios/jag*.c` embed Atari's boot ROMs and are never compiled: `bios_stub.c` gives zeroed arrays of the same names, and `FORBIDDEN_SOURCES` in `core.env` fails the build if any of those files reaches the binary. JagLink TCP/UDP and the GDB stub are built from their socketless branches through `nonet_*.c`, and `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym`, `mprotect` and `pthread_create`. The bridge keeps netlink, voice chat, the GDB stub, texture dump and replace, and JGD off. `stat`, `lstat`, `opendir`, `readdir` and `localtime` are imported (libretro-common and the CD path); `stat` and `lstat` are covered by the app's File Timestamp reason C617.1.
+
+No boot ROM or game is bundled. Carts start by HLE; `jagboot.rom` is the player's and optional on the BIOS Files screen (the bridge leaves the BIOS option off). The test program `Sources/Debug/JaguarTestROM.swift` is GagaEmu's own hand-assembled 68000.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -493,7 +511,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar).
 
 ---
 

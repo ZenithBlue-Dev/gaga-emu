@@ -455,7 +455,8 @@ struct BIOSManagerView: View {
         ("firmware.bin", "DS firmware"),
         ("lynxboot.img", "Lynx boot ROM (optional: Handy emulates it)"),
         ("5200.rom", "Atari 5200 BIOS (optional: AltirraOS built in)"),
-        ("atarixl.rom", "Atari XL/XE OS (optional: AltirraOS built in)")
+        ("atarixl.rom", "Atari XL/XE OS (optional: AltirraOS built in)"),
+        ("jagboot.rom", "Jaguar boot ROM (optional: Virtual Jaguar boots carts without it)")
     ]
 
     var body: some View {

@@ -134,6 +134,7 @@ final class BenchmarkRun {
         case "lynx": (data, ext) = (LynxTestROM.build(), "lnx")
         case "atari5200": (data, ext) = (Atari800TestROM.a52(), "a52")
         case "atari8bit": (data, ext) = (Atari800TestROM.xex(), "xex")
+        case "jaguar": (data, ext) = (JaguarTestROM.build(), "j64")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

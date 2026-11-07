@@ -67,3 +67,6 @@
 [submodule "Cores/atari800/upstream"]
 	path = Cores/atari800/upstream
 	url = https://github.com/libretro/libretro-atari800
+[submodule "Cores/virtualjaguar/upstream"]
+	path = Cores/virtualjaguar/upstream
+	url = https://github.com/libretro/virtualjaguar-libretro
