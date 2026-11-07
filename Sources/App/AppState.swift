@@ -305,7 +305,7 @@ enum CoreCatalog {
     /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
     static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u", "ccd", "toc"]
     /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
-    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos", "dreamcast", "pce"].compactMap(platform) }
+    static var discPlatforms: [PlatformInfo] { ["ps1", "saturn", "megacd", "dos", "pce", "dreamcast"].compactMap(platform) }
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
@@ -406,16 +406,19 @@ enum CoreCatalog {
     /// Saturn: "SEGA SEGASATURN" opening the first sector. Dreamcast: "SEGA SEGAKATANA" opening it (IP.BIN).
     /// Mega-CD: "SEGADISCSYSTEM" or any other "SEGA" opening it. Any other ISO 9660 disc, and any .iso or
     /// .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry, a .toc through
-    /// its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it. A .cue whose first track is
-    /// audio is a PC Engine CD: those open with a warning track, and PS1, Mega-CD and DOS discs with data. A .chd
+    /// its first FILE or DATAFILE, and a CloneCD .ccd through the .img beside it (a PC Engine CD when that says
+    /// nothing). A .cue whose first FILE names no console and whose first track is audio is a PC Engine CD: those
+    /// open with a warning track, and PS1, Mega-CD and DOS discs with data. A .chd
     /// is placed by `chdPlatformID(_:)`.
     static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
         let ext = url.pathExtension.lowercased()
         if ext == "chd" { return chdPlatformID(url) }
         if ext == "ccd" {
             // The .img holds raw sectors, which the ISO 9660 rule would call DOS; DOSBox Pure cannot open a .ccd.
+            // Only the PC Engine cores and Beetle Saturn open a .ccd, and a Saturn disc always names itself, so
+            // anything else, a missing .img included, is a PC Engine CD.
             let id = depth < 2 ? discPlatformID(url.deletingPathExtension().appendingPathExtension("img"), depth: 1) : nil
-            return id == "dos" ? nil : id
+            return id == nil || id == "dos" ? "pce" : id
         }
         if ext == "toc" {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
@@ -430,10 +433,6 @@ enum CoreCatalog {
             guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
             let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             let name: String?
-            if ext == "cue", let track = lines.first(where: { $0.uppercased().hasPrefix("TRACK ") }),
-               track.uppercased().hasSuffix(" AUDIO") {
-                return "pce"
-            }
             if ext == "cue" {
                 // FILE "name" BINARY, or FILE name BINARY when the name has no spaces.
                 name = lines.first { $0.uppercased().hasPrefix("FILE ") }.flatMap { line -> String? in
@@ -444,8 +443,14 @@ enum CoreCatalog {
             } else {
                 name = lines.first { !$0.isEmpty && !$0.hasPrefix("#") }
             }
-            guard let name else { return nil }
-            return discPlatformID(url.deletingLastPathComponent().appendingPathComponent(name), depth: 1)
+            let id = name.flatMap { discPlatformID(url.deletingLastPathComponent().appendingPathComponent($0), depth: 1) }
+            // The first FILE's own header wins (SEGA SEGAKATANA, SEGA SEGASATURN, PLAYSTATION). Only a disc it does
+            // not name and whose first track is audio is a PC Engine CD, which opens with a warning track.
+            if ext == "cue", id == nil || id == "dos",
+               lines.first(where: { $0.uppercased().hasPrefix("TRACK ") })?.uppercased().hasSuffix(" AUDIO") == true {
+                return "pce"
+            }
+            return id
         }
         guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }

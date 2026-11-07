@@ -654,7 +654,7 @@ final class GagaEmuTests: XCTestCase {
         _ = try platform("saturn.img", image(Array("SEGA SEGASATURN ".utf8), at: 16))
         XCTAssertEqual(try platform("saturn.ccd", Data("[CloneCD]\nVersion=3\n".utf8)), "saturn", "through the .img beside it")
         XCTAssertEqual(try platform("ps.toc", Data("CD_ROM_XA\nTRACK MODE2_RAW\nDATAFILE \"ps.bin\"\n".utf8)), "ps1", "through DATAFILE")
-        XCTAssertNil(try platform("disk.ccd", Data("[CloneCD]\n".utf8)), "an ISO .img beside a .ccd is not DOS, asks")
+        XCTAssertEqual(try platform("disk.ccd", Data("[CloneCD]\n".utf8)), "pce", "no named .img: only PC Engine and Saturn open a .ccd")
         XCTAssertEqual(try platform("sega.bin", image(Array("SEGA GENESIS    ".utf8), at: 16)), "megacd", "any other SEGA disc")
         XCTAssertEqual(try platform("pc.iso", image(Array("CD001".utf8), at: 32769)), "dos")
         XCTAssertEqual(try platform("disk.img", Data(count: 1024)), "dos")
@@ -664,6 +664,9 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertEqual(try platform("dc.iso", image(Array("SEGA SEGAKATANA ".utf8), at: 0)), "dreamcast", "IP.BIN")
         XCTAssertEqual(try platform("dc.bin", image(Array("SEGA SEGAKATANA ".utf8), at: 16)), "dreamcast", "raw sector")
         XCTAssertEqual(try platform("dc.cue", Data("FILE \"dc.bin\" BINARY\n  TRACK 01 MODE1/2352\n".utf8)), "dreamcast")
+        XCTAssertEqual(try platform("dca.cue", Data("FILE \"dc.bin\" BINARY\n  TRACK 01 AUDIO\n".utf8)), "dreamcast",
+                       "SEGA SEGAKATANA wins over an audio first track")
+        XCTAssertEqual(try platform("pcecd.cue", Data("FILE \"blank.bin\" BINARY\n  TRACK 01 AUDIO\n".utf8)), "pce")
         // A version 5 header (124 bytes) whose one metadata entry follows it.
         func chd(tag: String) -> Data {
             var bytes = [UInt8](repeating: 0, count: 124 + 16 + 8)
