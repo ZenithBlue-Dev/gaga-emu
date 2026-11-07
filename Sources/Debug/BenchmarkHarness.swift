@@ -136,6 +136,7 @@ final class BenchmarkRun {
         case "atari8bit": (data, ext) = (Atari800TestROM.xex(), "xex")
         case "jaguar": (data, ext) = (JaguarTestROM.build(), "j64")
         case "c64": (data, ext) = (C64TestROM.crt(), "crt") // Still needs the player's KERNAL files to start.
+        case "amiga": (data, ext) = (AmigaTestROM.adf(), "adf")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

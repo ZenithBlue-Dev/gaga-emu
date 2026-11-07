@@ -73,3 +73,6 @@
 [submodule "Cores/vice/upstream"]
 	path = Cores/vice/upstream
 	url = https://github.com/libretro/vice-libretro
+[submodule "Cores/puae/upstream"]
+	path = Cores/puae/upstream
+	url = https://github.com/libretro/libretro-uae

@@ -1,0 +1,1 @@
+PUAE's DMS decompressor (sources/src/archivers/dms) is xDMS by Andre Rodrigues de la Rocha, in the public domain, as each file header says.

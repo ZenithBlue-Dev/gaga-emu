@@ -246,6 +246,24 @@
       ]
     },
     {
+      "id": "puae", "title": "PUAE", "cores": ["puae"], "framework": "PuaeCore", "licence": "GPL-2.0-or-later",
+      "source": "https://github.com/libretro/libretro-uae, commit c1d1d49. WHDLoad's bundled Amiga files and the HRTmon ROM are not built.",
+      "texts": [
+        { "title": "PUAE", "from": "Cores/puae/upstream/COPYING" },
+        { "title": "AROS Kickstart replacement", "text": "PUAE's built-in Kickstart replacement (sources/src/aros.rom.c) is a build of AROS, Copyright (C) 1995-2026 The AROS Development Team, distributed under the AROS Public License, version 1.1. Source: https://github.com/aros-development-team/AROS\n" },
+        { "title": "libretro disk control", "from": "Cores/puae/upstream/libretro/libretro-dc.c", "comment": true },
+        { "title": "zlib", "from": "Cores/puae/upstream/deps/libz/zlib.h", "comment": true },
+        { "title": "libchdr", "from": "Cores/puae/upstream/deps/libchdr/LICENSE.txt" },
+        { "title": "zstd", "from": "Cores/puae/upstream/deps/zstd/LICENSE" },
+        { "title": "7-Zip decoder", "text": "The 7-Zip decoder files in deps/7zip are in the public domain, as each file header says (Igor Pavlov).\n" },
+        { "title": "SoftFloat", "from": "Cores/puae/upstream/sources/src/softfloat/softfloat.c", "lines": [27, 84] },
+        { "title": "kjmp2", "from": "Cores/puae/upstream/sources/src/archivers/mp2/kjmp2.c", "comment": true },
+        { "title": "LHa for UNIX", "text": "PUAE's LHA decompressor (sources/src/archivers/lha) is derived from LHa for UNIX, Copyright (C) 1989 Yooichi Tagawa, modified by Nobutaka Watazaki and others, after LHarc by H. Yoshizaki. The upstream tree carries no licence text for it.\n" },
+        { "title": "DMS decompressor", "text": "PUAE's DMS decompressor (sources/src/archivers/dms) is xDMS by Andre Rodrigues de la Rocha, in the public domain, as each file header says.\n" },
+        { "title": "libretro-common", "from": "Cores/puae/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]

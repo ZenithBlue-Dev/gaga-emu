@@ -1,0 +1,1 @@
+PUAE's LHA decompressor (sources/src/archivers/lha) is derived from LHa for UNIX, Copyright (C) 1989 Yooichi Tagawa, modified by Nobutaka Watazaki and others, after LHarc by H. Yoshizaki. The upstream tree carries no licence text for it.

@@ -962,6 +962,66 @@
    ]
   },
   {
+   "id": "puae",
+   "title": "PUAE",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/libretro-uae, commit c1d1d49. WHDLoad's bundled Amiga files and the HRTmon ROM are not built.",
+   "cores": [
+    "puae"
+   ],
+   "framework": "PuaeCore",
+   "texts": [
+    {
+     "title": "PUAE",
+     "file": "licence-dcc100d4161c.txt"
+    },
+    {
+     "title": "AROS Kickstart replacement",
+     "file": "licence-546cbd419844.txt"
+    },
+    {
+     "title": "libretro disk control",
+     "file": "licence-30382152b8f6.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-d0f474ed713f.txt"
+    },
+    {
+     "title": "libchdr",
+     "file": "licence-e3989a7aee74.txt"
+    },
+    {
+     "title": "zstd",
+     "file": "licence-705526649763.txt"
+    },
+    {
+     "title": "7-Zip decoder",
+     "file": "licence-e598cb06c410.txt"
+    },
+    {
+     "title": "SoftFloat",
+     "file": "licence-3d09aa82af8b.txt"
+    },
+    {
+     "title": "kjmp2",
+     "file": "licence-d10e40ce91ff.txt"
+    },
+    {
+     "title": "LHa for UNIX",
+     "file": "licence-b88abf23472e.txt"
+    },
+    {
+     "title": "DMS decompressor",
+     "file": "licence-81f31eb82ad9.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",

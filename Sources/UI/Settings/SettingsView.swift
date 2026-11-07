@@ -458,7 +458,9 @@ struct BIOSManagerView: View {
         ("atarixl.rom", "Atari XL/XE OS (optional: AltirraOS built in)"),
         ("jagboot.rom", "Jaguar boot ROM (optional: Virtual Jaguar boots carts without it)"),
         ("kernal-901227-03.bin", "C64 KERNAL"), ("basic-901226-01.bin", "C64 BASIC"),
-        ("chargen-901225-01.bin", "C64 character ROM")
+        ("chargen-901225-01.bin", "C64 character ROM"),
+        ("kick34005.A500", "Amiga Kickstart 1.3 (optional: AROS built in)"),
+        ("kick40068.A1200", "Amiga Kickstart 3.1 for A1200 hard disks (optional: AROS built in)")
     ]
 
     var body: some View {

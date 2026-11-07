@@ -33,6 +33,7 @@ const GagaCoreInterface* Handy_GetInterface(void);
 const GagaCoreInterface* Atari800_GetInterface(void);
 const GagaCoreInterface* VirtualJaguar_GetInterface(void);
 const GagaCoreInterface* Vice_GetInterface(void);
+const GagaCoreInterface* Puae_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

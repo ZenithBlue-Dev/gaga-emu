@@ -58,6 +58,7 @@ One row per platform. Licence, renderer, no-JIT status and upstream state descri
 | Atari 5200, Atari 8-bit | Atari800 | `atari800` | None | [GPL-2.0-or-later](https://github.com/libretro/libretro-atari800) (`atari800/COPYING`), plus all-permissive, Zlib and MIT parts (section 5) | Software | 6502 interpreter. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-atari800](https://github.com/libretro/libretro-atari800)), last push 2026-09-01, no tags. Pinned to `4e7fbc73765c1a9670c7506616046ad1d4ccda51` | 1 |
 | Atari Jaguar | Virtual Jaguar | `virtualjaguar` | None (optional `jagboot.rom`) | [GPL-3.0-or-later](https://github.com/libretro/virtualjaguar-libretro) (`LICENSE`), plus BSD, MIT and public-domain parts (section 5) | Software | 68000, GPU and DSP interpreters. Heavy tier: a full-speed claim needs a device benchmark with real games. Static gate passes on both slices; runtime check passes on a macOS host harness; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/virtualjaguar-libretro](https://github.com/libretro/virtualjaguar-libretro)). Pinned to tag `v3.11.0`, `34696082dbc0448caf23aa4ecb5ed40817cb8da0` | 3 |
 | Commodore 64 | VICE (x64sc) | `vice` | Player's `kernal-901227-03.bin`, `basic-901226-01.bin`, `chargen-901225-01.bin` | [GPL-2.0-or-later](https://github.com/libretro/vice-libretro) (`COPYING`), plus Zlib, MIT and public-domain parts (section 5) | Software | 6510, VIC-II and SID interpreters, cycle-exact. Static gate passes on both slices; runtime check passes on a macOS host harness with all-zero stand-in ROM files; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/vice-libretro](https://github.com/libretro/vice-libretro)), last push 2026-10-30, no tags. Pinned to `5ebe7d333ab15be57a9dde5f46c29a5bbd5f44f8` | 2 |
+| Amiga | PUAE | `puae` | None: upstream's built-in AROS Kickstart replacement. Player's `kick34005.A500` and `kick40068.A1200` optional | [GPL-2.0-or-later](https://github.com/libretro/libretro-uae) (`COPYING`), plus AROS Public License 1.1 (the AROS ROM), SoftFloat-2a, BSD, Zlib, MIT and public-domain parts (section 5) | Software | 68000 interpreter (no JIT source compiled), OCS/ECS chipset. Static gate passes on both slices; runtime check passes on a macOS host harness on AROS; device pending. Built on branch `core/group-retro`, legal gate open | Maintained by libretro ([libretro/libretro-uae](https://github.com/libretro/libretro-uae)), last commit 2026-11-04, no tags (`VERSION` 5.3.1). Pinned to `c1d1d49d5c7cdad2005e86f1cbb279d39e041efc` | 2 |
 
 ### Renderer rules
 
@@ -462,6 +463,28 @@ Upstream compiles Commodore's KERNAL, BASIC, character and drive ROMs into the c
 
 No Commodore ROM or game is bundled. The player adds `kernal-901227-03.bin`, `basic-901226-01.bin` and `chargen-901225-01.bin` on the BIOS Files screen; without them the bridge refuses the game with a message, because upstream crashes. Upstream makes `<system>/vice` and writes its defaults there once (`vicerc-dump-C64SC`). Disk images are write-protected, so the player's files are never changed. The test cartridge `Sources/Debug/C64TestROM.swift` is GagaEmu's own hand-assembled 6502; the tests' stand-in ROM files are all zeros and never run.
 
+### PUAE licence obligations
+
+Source: [github.com/libretro/libretro-uae](https://github.com/libretro/libretro-uae), libretro's port of WinUAE/E-UAE (`VERSION` 5.3.1), commit `c1d1d49d5c7cdad2005e86f1cbb279d39e041efc` (upstream has no tags), as the unmodified submodule `Cores/puae/upstream`. `Cores/puae/PuaeCore.c`, `puae_stubs.c`, `puae_fpp_native.c`, `puae_cpuboard.c`, `puae_dlopen.c`, `retrodep/WHDLoad_*.c` and `Cores/shared/LibretroAdapter.c` are GagaEmu's own files. Built on branch `core/group-retro`, kept out of release builds by `GAGA_CORE_SET`; it must not ship until the legal gate above closes.
+
+| Part (as in `Cores/puae/sources.txt`) | Licence | What it asks of a binary release |
+|---|---|---|
+| `sources/src` (68000 interpreter, chipset, floppy, hard file, CD), `libretro/`, `retrodep/`, `deps/libmpeg2` | GPL-2.0-or-later (`COPYING`, file headers) | The complete corresponding source of the whole work, with the written offer or the source alongside. This is the gate above. |
+| `sources/src/aros.rom.c` (AROS Kickstart replacement, a ROM image built from AROS) | AROS Public License 1.1 (MPL-1.1 based) | Keep the notice and say where the AROS source is ([aros-development-team/AROS](https://github.com/aros-development-team/AROS)). Gate item: confirm the APL's source and notice terms for a binary-only image. |
+| `sources/src/softfloat`, `fpp_softfloat.c` | SoftFloat-2a, BSD-3-Clause (Fabrice Bellard), GPL-2.0-or-later | Reproduce the SoftFloat and BSD notices. |
+| `sources/src/archivers/mp2` (kjmp2) | Zlib | Keep the notice. |
+| `sources/src/archivers/lha` (LHa for UNIX) | Not stated in the tree (authors named in headers) | Gate item: the LHa for UNIX licence text is not in the upstream tree; confirm its terms or drop LHA archive support. |
+| `sources/src/archivers/dms` (xDMS), `deps/7zip` | Public domain | None. |
+| `sources/src/dsp3210`, other `archivers` | GPL-2.0-or-later (no header; the whole is GPL) | As the first row. |
+| `libretro/libretro-dc.c` | MIT | Reproduce the notice. |
+| `deps/libz` | Zlib | Keep the notice. |
+| `deps/libchdr`, `deps/zstd` | BSD-3-Clause | Reproduce the notice. |
+| `libretro-common` | MIT | Reproduce the notice. |
+
+Upstream also compiles WHDLoad's Amiga-side files (`retrodep/WHDLoad_files.zip.c`, `WHDLoad_prefs.gz.c`) and the HRTmon cartridge ROM (`sources/src/hrtmon.rom.c`), whose licences are unclear. GagaEmu builds empty stand-ins instead (`Cores/puae/retrodep/`, `puae_stubs.c`), and `FORBIDDEN_SOURCES` fails the build if the upstream files reach the binary. So `.lha` WHDLoad games are not offered. Three upstream files are wrapped after the source audit: `fpp_native.c` (its x87 code is never compiled on arm64), `cpuboard.c` (it switches a map-ROM area between read-only and read-write only for the JIT cache) and `caps/uae_dlopen.c` (built with `HAVE_DLOPEN` cleared, so the capsimg plug-in for IPF images is never loaded and IPF images do not load). `retrodep/mman.c`, which reserves memory for the JIT, is not built; `puae_stubs.c` keeps its one shared variable at 0. `FORBIDDEN_IMPORTS` refuses sockets, `getaddrinfo`, `dlopen`, `dlsym` and `mprotect`; `pthread_create` and named semaphores (`sem_open`) are used by the hard-file, CD and serial threads. `stat`, `opendir`, `readdir`, `localtime`, `mkdir`, `rename` and `unlink` are imported; `stat` is covered by the app's File Timestamp reason C617.1.
+
+No Kickstart ROM or game is bundled. The core boots on AROS when no Kickstart is in the system folder; `kick34005.A500` and `kick40068.A1200` are the player's and optional on the BIOS Files screen. Floppies are write-protected and shared NVRAM is off, so the player's files are never changed; a host harness run left the system and save folders empty. The test floppy `Sources/Debug/AmigaTestROM.swift` is GagaEmu's own hand-assembled 68000 bootblock.
+
 ### No-JIT gate
 
 No JIT, no RWX and no dynarec in any shipped core. Each core build gets a gate, audited per core and not only at the end. iOS itself denies JIT; the gate catches a core that would depend on it. `docs/04` section 8 describes both parts:
@@ -529,7 +552,7 @@ Source: [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790
 - **Commodore:** C64 (`vice.x64sc`), Amiga (`puae`)
 - **Other:** WonderSwan (`mednafen.wswan`), DOOM (`prboom`), Flash (core not identified), NAOMI / Atomiswave / System SP ([release notes](https://github.com/Manic-EMU/ManicEMU/releases))
 
-**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar); Commodore 64 (VICE x64sc).
+**Taken up by group-retro** (branch `core/group-retro`, `docs/07` section 8.x; rows in section 2): Master System, Game Gear and SG-1000 (Gearsystem); Atari 2600 (Stella); Atari 7800 (ProSystem); Atari Lynx (Handy); Atari 5200 and Atari 8-bit (Atari800); Atari Jaguar (Virtual Jaguar); Commodore 64 (VICE x64sc); Amiga (PUAE).
 
 ---
 

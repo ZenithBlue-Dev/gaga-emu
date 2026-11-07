@@ -1,0 +1,1 @@
+PUAE's built-in Kickstart replacement (sources/src/aros.rom.c) is a build of AROS, Copyright (C) 1995-2026 The AROS Development Team, distributed under the AROS Public License, version 1.1. Source: https://github.com/aros-development-team/AROS
