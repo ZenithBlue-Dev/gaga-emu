@@ -9,6 +9,14 @@ struct GagaPlusView: View {
     @State private var buying = false
     @State private var showRedeem = false
 
+    /// Names the cores in this build that draw their own picture, where no filter runs (docs/05 section 2.3).
+    static func filterStatement(layerPathCores: [String]) -> String {
+        let base = "Premium Filters work only on cores that draw through the app's filter chain."
+        guard !layerPathCores.isEmpty else { return base }
+        let verb = layerPathCores.count == 1 ? "draws its" : "draw their"
+        return base + " \(layerPathCores.formatted(.list(type: .and))) \(verb) own 3D picture, so filters do not apply there."
+    }
+
     private let benefits: [(String, String)] = [
         ("Faster fast-forward", "Up to 5x instead of 2x."),
         ("More save states", "No limit instead of 3."),
@@ -32,7 +40,7 @@ struct GagaPlusView: View {
                         .accessibilityElement(children: .combine)
                         Rule()
                     }
-                    Text("Premium Filters work only on cores that draw through the app's filter chain.")
+                    Text(Self.filterStatement(layerPathCores: CoreCatalog.layerPathCoreNames))
                         .font(.footnote).foregroundStyle(AppTheme.muted)
                 }
                 .padding(16)

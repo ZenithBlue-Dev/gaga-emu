@@ -199,6 +199,11 @@ public final class MetalTextureRing {
         guard framesWritten > 0 else { return nil }
         let slot = (writeIndex + bufferCount - 1) % bufferCount
         let bytes = Data(bytes: buffers[slot].contents(), count: bufferSize)
+        return Self.png(bytes, width: width, height: height, bytesPerRow: bytesPerRow, pixelFormat: pixelFormat)
+    }
+
+    /// Also encodes a layer-path core's read-back frame, which never passes through a ring.
+    public static func png(_ bytes: Data, width: Int, height: Int, bytesPerRow: Int, pixelFormat: MTLPixelFormat) -> Data? {
         let bitmap: CGBitmapInfo
         switch pixelFormat {
         case .rgba8Unorm: bitmap = [.byteOrder32Big, CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)]

@@ -92,10 +92,24 @@ struct GameView: View {
     }
 }
 
-struct GamePicture: UIViewRepresentable {
+struct GamePicture: View {
     @ObservedObject var session: GameSession
     /// The device's own picture, where a finger can land. Not the external screen's.
     var takesTouch = false
+
+    var body: some View {
+        if session.drawsOwnPicture {
+            LayerPicture(session: session, takesTouch: takesTouch)
+        } else {
+            MetalPicture(session: session, takesTouch: takesTouch)
+        }
+    }
+}
+
+/// A 2D core's frames, drawn by the renderer through the filter chain.
+private struct MetalPicture: UIViewRepresentable {
+    @ObservedObject var session: GameSession
+    var takesTouch: Bool
 
     func makeUIView(context: Context) -> MTKView {
         let view = MTKView(frame: .zero, device: session.renderer.device)
@@ -110,6 +124,64 @@ struct GamePicture: UIViewRepresentable {
     /// No draws while paused, which also keeps GPU work out of the background.
     func updateUIView(_ view: MTKView, context: Context) {
         view.isPaused = session.phase != .running && session.phase != .prepared
+    }
+}
+
+/// A layer-path core's picture: the core presents to this view's CAMetalLayer itself, so no filter runs.
+/// The core stops stepping while paused, which keeps GPU work out of the background.
+private struct LayerPicture: UIViewRepresentable {
+    let session: GameSession
+    var takesTouch: Bool
+
+    func makeUIView(context: Context) -> MetalLayerView {
+        let view = MetalLayerView()
+        view.session = session
+        if takesTouch { session.pictureView = view }
+        return view
+    }
+
+    func updateUIView(_ view: MetalLayerView, context: Context) {}
+
+    static func dismantleUIView(_ view: MetalLayerView, coordinator: ()) { view.detach() }
+}
+
+final class MetalLayerView: UIView {
+    override class var layerClass: AnyClass { CAMetalLayer.self }
+    weak var session: GameSession?
+    private var attachedSize: CGSize = .zero
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = UIColor(AppTheme.letterbox)
+    }
+
+    required init?(coder: NSCoder) { fatalError("Not used from a storyboard") }
+
+    // A rotation between the two landscapes keeps the size, so it needs nothing here.
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        attach()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil { detach() } else { attach() }
+    }
+
+    private func attach() {
+        guard let window, let layer = layer as? CAMetalLayer else { return }
+        let scale = window.screen.scale
+        contentScaleFactor = scale
+        let pixels = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
+        guard pixels.width > 0, pixels.height > 0, pixels != attachedSize else { return }
+        attachedSize = pixels
+        session?.attachLayer(layer, width: Int(pixels.width), height: Int(pixels.height), scale: scale)
+    }
+
+    func detach() {
+        guard attachedSize != .zero, let layer = layer as? CAMetalLayer else { return }
+        attachedSize = .zero
+        session?.detachLayer(layer)
     }
 }
 
