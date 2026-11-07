@@ -477,6 +477,23 @@ Short runs, not the three of section 7.2. No MD, PS1, N64, NDS, PSP or PCE game 
 
 The N64 1% low of 20.1 fps with 6 underruns is the first game-scene sign of dropped frames; one short run, so not a verdict. The record has aggregates only: the 1% low is the mean of the 5 slowest of 599 intervals, all after the 5 s warm-up, and the slowest is 72.5 ms with core wall 72.5 ms but core CPU at most 12.7 ms, so the core thread waited off the CPU (likely the GPU, such as a pipeline compile in MoltenVK; not confirmed). One late hitch and a periodic stall cannot be told apart from this record, and its underrun count included the game's start. Records since then count underruns from the end of warm-up and list `slowFramesAtSeconds`, so the next run tells the two apart. PSP: the owner-supplied .zip imported with platform "unknown" and stayed a .zip in the ROM folder, and `-GagaBenchmarkCore ppsspp` on it wrote no record (the run was ended after 60 s); no PSP number. Mega-CD: the owner-supplied disc zip unpacked to a .cue and .bin tracks and imported as Mega-CD; no Mega-CD BIOS was installed, so `-GagaBenchmarkCore jgenesis` wrote no record. The refusal text is only an in-app alert, which this run did not capture; `JgenesisCoreTests.testAMegaCDDiscWithoutABIOSSaysWhatIsMissing` passed and covers it. Archives of 7z and zip type unpacked to the right platform on the device for NES, SNES, N64, GBA, DS and Mega-CD.
 
+**Game-scene device runs, 2026-11-08, build `7178a45` (device run 6).** Same phone and method as above, one 10 s run each. Owner-supplied games imported from an archive on the phone; none kept in the repo, names redacted in the records.
+
+| Platform | Core | Game | Archive | fps | 1% low | Core CPU ms per frame (mean, p99) | Peak footprint | Audio underruns |
+|---|---|---|---|---|---|---|---|---|
+| Game Boy | Gambatte | owner-supplied GB game | .zip | 59.73 | 56.6 | 1.36, 1.63 | 177 MB | 0 |
+| Game Boy Color (imported as the GB platform) | Gambatte | owner-supplied GBC game | .zip | 59.73 | 56.5 | 1.52, 1.81 | 177 MB | 0 |
+| GBA | mGBA | owner-supplied GBA game | .zip | 59.73 | 56.4 | 3.29, 3.73 | 181 MB | 0 |
+| NES | Nestopia UE | owner-supplied NES game | .zip | 60.10 | 56.9 | 2.96, 3.28 | 188 MB | 0 |
+| Famicom Disk System (imported as NES) | Nestopia UE | owner-supplied FDS game with `disksys.rom` | .zip | 60.10 | 56.9 | 2.71, 3.68 | 186 MB | 0 |
+| SNES | bsnes | owner-supplied SNES game | .zip | 60.10 | 56.9 | 7.21, 8.55 | 260 MB | 0 |
+| N64 | Mupen64Plus-Next | owner-supplied N64 game | .zip | 59.45 | 29.7 | 6.11, 11.32 | 561 MB | 2 |
+| DS | melonDS DS | owner-supplied DS game | .7z | 59.82 | 56.7 | 5.46, 10.43 | 308 MB | 0 |
+| PSP | PPSSPP | owner-supplied PSP game | .7z | 59.94 | 56.8 | 1.63, 2.07 | 1929 MB | 0 |
+| Mega-CD | JGenesis | owner-supplied Mega-CD game | .zip | 59.92 | 56.7 | 7.19, 8.32 | 180 MB | 0 |
+
+N64: one interval over 25 ms, ending at 9.36 s (`slowFramesAtSeconds`), so one stall in the measured 10 s, not a steady shortfall. PSP: the smallest owner file is a 7z named .zip; imported under that name it stayed a raw file and was not added, imported under a .7z name its .iso was unpacked and placed as PSP. The low PSP CPU figure with a 1.9 GB footprint suggests the run sat in a boot or menu scene, so it is not a game-load figure. Mega-CD ran on JGenesis with the three `bios_CD_*.bin` files in `GagaEmu/System`; `genesis_plus_gx` and `picodrive` produced no record for it. The FDS game produced no record until `disksys.rom` was in `System`; `-GagaImportROM` put it in `ROMs`. A PS1 .7z disc was copied to `ROMs` and not added to the Library. Short runs, not the three of section 7.2.
+
 **Backlog cores, group-retro** (`docs/07` section 8.x). Logic checked on a macOS host harness only; no device numbers yet.
 
 | Platform | Core | Guest CPU | Dispatch evidence | No-JIT configuration | Tier | Target and evidence |
