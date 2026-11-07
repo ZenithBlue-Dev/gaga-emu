@@ -64,7 +64,6 @@ struct SettingsView: View {
                     .padding(.vertical, 8)
                     linkRow("doc.text.fill", .red, "Terms of Service", SiteLinks.terms)
                     linkRow("lock.shield.fill", .purple, "Privacy Policy", SiteLinks.privacy)
-                    navRow("shippingbox.fill", .orange, "Featured Items", nil) {}
                 }
                 rateCard
             }

@@ -20,8 +20,48 @@ struct MainTabView: View {
             GlassTabBar(selection: $tab)
                 .padding(.bottom, 8)
         }
-        .sheet(isPresented: $showControllers) { ControllersModalView() }
-        .sheet(isPresented: $showHistory) { PlayHistoryView() }
+        .overlay {
+            SidePanel(edge: .leading, isPresented: $showControllers) {
+                ControllersModalView { showControllers = false }
+            }
+        }
+        .overlay {
+            SidePanel(edge: .trailing, isPresented: $showHistory) {
+                PlayHistoryView(onClose: { showHistory = false },
+                                onImport: { showHistory = false; tab = .importHub })
+            }
+        }
+    }
+}
+
+/// Slides in from one edge. The main view stays visible, dimmed, at the other edge; tapping it closes the panel.
+struct SidePanel<Content: View>: View {
+    let edge: HorizontalEdge
+    @Binding var isPresented: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: edge == .leading ? .leading : .trailing) {
+                if isPresented {
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                        .onTapGesture { isPresented = false }
+                        .accessibilityLabel("Close panel")
+                        .accessibilityAddTraits(.isButton)
+                        .transition(.opacity)
+                    content()
+                        .frame(width: min(proxy.size.width * 0.86, 420))
+                        .background(AppTheme.background.ignoresSafeArea())
+                        .accessibilityAddTraits(.isModal)
+                        .accessibilityAction(.escape) { isPresented = false }
+                        .transition(.move(edge: edge == .leading ? .leading : .trailing))
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .allowsHitTesting(isPresented)
+        .animation(.easeOut(duration: 0.25), value: isPresented)
     }
 }
 

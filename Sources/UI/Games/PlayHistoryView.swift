@@ -3,7 +3,8 @@ import SwiftUI
 /// Chronological sessions. Tap a row to resume.
 struct PlayHistoryView: View {
     @EnvironmentObject private var state: AppState
-    @Environment(\.dismiss) private var dismiss
+    let onClose: () -> Void
+    let onImport: () -> Void
 
     private var sessions: [PlaySession] {
         state.history.sorted { $0.started > $1.started }
@@ -20,7 +21,7 @@ struct PlayHistoryView: View {
                             Section(dayLabel(day)) {
                                 ForEach(grouped[day] ?? []) { session in
                                     if let game = state.games.first(where: { $0.id == session.gameID }) {
-                                        Button { state.launch(game); dismiss() } label: { row(game, session) }
+                                        Button { state.launch(game); onClose() } label: { row(game, session) }
                                     }
                                 }
                             }
@@ -34,7 +35,8 @@ struct PlayHistoryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
+                    Button { onClose() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel("Close")
                 }
             }
         }
@@ -48,7 +50,7 @@ struct PlayHistoryView: View {
                 .frame(width: 92, height: 92)
                 .background(AppTheme.cardRaised, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             Text("No Play History").font(.system(size: 20, weight: .bold)).foregroundStyle(.white)
-            Button { dismiss() } label: {
+            Button { onImport() } label: {
                 Text("Import Games")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
