@@ -156,8 +156,10 @@ struct CheatsSheet: View {
                         .accessibilityLabel("Cheat code")
                         .onChange(of: code) { failure = nil }
                     Rule()
-                    Text("GameShark, Action Replay, CodeBreaker or VBA format.")
+                    Text(session.cheatHint)
                         .font(.footnote).foregroundStyle(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("cheatHint")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .leading, spacing: 0) {
@@ -194,7 +196,13 @@ struct CheatsSheet: View {
     private func add() {
         let title = name.trimmingCharacters(in: .whitespaces)
         do {
-            try session.addCheat(name: title.isEmpty ? "Cheat \(session.cheats.count + 1)" : title, code: trimmedCode)
+            // A pasted CWCheat block holds several named cheats; each is added on its own, in order.
+            let blocks = CheatFormat.cwCheatBlocks(trimmedCode)
+            if blocks.isEmpty {
+                try session.addCheat(name: title.isEmpty ? "Cheat \(session.cheats.count + 1)" : title, code: trimmedCode)
+            } else {
+                for block in blocks { try session.addCheat(name: block.name, code: block.code, enabled: block.enabled) }
+            }
             name = ""
             code = ""
             failure = nil

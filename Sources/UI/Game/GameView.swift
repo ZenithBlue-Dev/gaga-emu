@@ -367,6 +367,11 @@ private struct PauseMenu: View {
                     rewindNote
                     if session.supportsCheats {
                         menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
+                    } else if let note = session.noCheatsNote {
+                        Text(note)
+                            .font(.footnote).foregroundStyle(AppTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("noCheatsNote")
                     }
                     if offersPlus {
                         menuRow(title: "See Gaga Plus", action: { showPlans = true })
