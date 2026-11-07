@@ -410,6 +410,9 @@ DEFINE_CORE_INTERFACE(Ppsspp_GetInterface,        "ppsspp",          "PPSSPP",  
 #ifndef GAGA_HAS_SNES9X
 DEFINE_CORE_INTERFACE(Snes9x_GetInterface,        "snes9x",          "Snes9x",            GAGA_CORE_EXCLUDED, "sfc|smc",  60.0988, 32040)
 #endif
+#ifndef GAGA_HAS_GENESIS_PLUS_GX
+DEFINE_CORE_INTERFACE(GenesisPlusGX_GetInterface, "genesis_plus_gx", "Genesis Plus GX",   GAGA_CORE_EXCLUDED, "md|gen|smd|sms|gg|sg|bin|cue|chd|iso|m3u", 59.9227, 44100)
+#endif
 
 // ============================================================================
 // REGISTRY DISPATCH TABLE
@@ -435,6 +438,7 @@ static const CoreGetterFunc s_core_getters[] = {
     Ppsspp_GetInterface,
     VkTest_GetInterface,
     Snes9x_GetInterface, // After the default core of each platform, so FindByExtension keeps the default.
+    GenesisPlusGX_GetInterface,
     DosboxPure_GetInterface, // Last: FindByExtension gives .exe, .iso and .cue to the PS1 core.
 };
 

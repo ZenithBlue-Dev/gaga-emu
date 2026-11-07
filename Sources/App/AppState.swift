@@ -69,10 +69,13 @@ enum CoreCatalog {
             .init(id: "beetle_saturn", name: "Beetle Saturn", note: "Cycle accuracy", recommended: true)
         ]),
         .init(id: "megacd", name: "Mega-CD", manufacturer: "Sega", cores: [
-            .init(id: "jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true)
+            .init(id: "jgenesis", name: "JGenesis", note: "Mega-CD accuracy", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false)
         ]),
+        // Genesis Plus GX also runs the .sms and .gg files this platform takes; JGenesis runs Mega Drive only.
         .init(id: "megadrive", name: "Mega Drive", manufacturer: "Sega", cores: [
-            .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true)
+            .init(id: "jgenesis", name: "JGenesis", note: "Default", recommended: true),
+            .init(id: "genesis_plus_gx", name: "Genesis Plus GX", note: "Sideload", recommended: false)
         ]),
         .init(id: "dreamcast", name: "Dreamcast", manufacturer: "Sega", cores: [
             .init(id: "flycast", name: "Flycast", note: "JITLess", recommended: true)
@@ -192,7 +195,7 @@ enum CoreCatalog {
         case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
-        case "md", "gen", "smd", "sms": return "megadrive"
+        case "md", "gen", "smd", "sms", "gg": return "megadrive"
         #if DEBUG
         case "gagavk": return "vktest"
         #endif

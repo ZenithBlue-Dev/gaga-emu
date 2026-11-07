@@ -27,6 +27,7 @@ const GagaCoreInterface* DosboxPure_GetInterface(void);
 const GagaCoreInterface* Mupen64PlusNext_GetInterface(void);
 // Non-commercial licences, sideload builds only (docs/03 section 5).
 const GagaCoreInterface* Snes9x_GetInterface(void);
+const GagaCoreInterface* GenesisPlusGX_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);

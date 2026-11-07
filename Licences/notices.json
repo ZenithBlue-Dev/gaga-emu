@@ -194,6 +194,15 @@
         { "title": "snes_ntsc (LGPL-2.1)", "from": "Cores/snes9x/upstream/filter/snes_ntsc-license.txt" },
         { "title": "libretro-common", "from": "Cores/snes9x/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
       ]
+    },
+    {
+      "id": "genesis_plus_gx", "title": "Genesis Plus GX", "cores": ["genesis_plus_gx"], "framework": "GenesisPlusGXCore",
+      "licence": "Genesis Plus GX licence (non-commercial), with LGPL-2.1, BSD, CC0, zlib and public-domain parts",
+      "source": "https://github.com/libretro/Genesis-Plus-GX, commit f27655b, built unmodified. Sideload builds only: its licence forbids commercial use.",
+      "texts": [
+        { "title": "Genesis Plus GX, Nuked OPN2, Tremor, minimp3, libchdr, zlib, Zstandard and LZMA", "from": "Cores/genesis_plus_gx/upstream/LICENSE.txt" },
+        { "title": "libretro-common", "from": "Cores/genesis_plus_gx/upstream/libretro/libretro-common/file/file_path.c", "comment": true }
+      ]
     }
   ]
 }

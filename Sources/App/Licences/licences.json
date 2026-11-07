@@ -816,6 +816,26 @@
      "file": "licence-d9877dd11360.txt"
     }
    ]
+  },
+  {
+   "id": "genesis_plus_gx",
+   "title": "Genesis Plus GX",
+   "licence": "Genesis Plus GX licence (non-commercial), with LGPL-2.1, BSD, CC0, zlib and public-domain parts",
+   "source": "https://github.com/libretro/Genesis-Plus-GX, commit f27655b, built unmodified. Sideload builds only: its licence forbids commercial use.",
+   "cores": [
+    "genesis_plus_gx"
+   ],
+   "framework": "GenesisPlusGXCore",
+   "texts": [
+    {
+     "title": "Genesis Plus GX, Nuked OPN2, Tremor, minimp3, libchdr, zlib, Zstandard and LZMA",
+     "file": "licence-642c16362426.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-fad6ee1dcbed.txt"
+    }
+   ]
   }
  ]
 }
