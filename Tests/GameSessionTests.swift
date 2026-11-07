@@ -184,7 +184,7 @@ final class GameSessionTests: XCTestCase {
     func testRecordPlayAddsToGameAndNewestHistoryEntry() {
         let state = AppState()
         let saved = (state.games, state.history)
-        defer { state.games = saved.0; state.history = saved.1 }
+        defer { state.games = saved.0; state.history = saved.1; state.save() } // recordPlay saved the Demo-only Library.
         let item = game()
         state.games = [item]
         state.history = [PlaySession(id: UUID(), gameID: item.id, started: Date(), duration: 0)]

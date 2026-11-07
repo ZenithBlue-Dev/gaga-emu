@@ -548,18 +548,23 @@ final class PcsxReArmedCoreTests: XCTestCase {
     }
 
     @MainActor
-    func testUploadedGamesPickThisCore() {
+    func testUploadedGamesPickThisCore() throws {
         let state = AppState()
         let saved = state.games
-        defer { state.games = saved }
-        // An .exe is a PS-EXE only by its first bytes (DosboxPureCoreTests), so it is not in this list.
-        for ext in ["cue", "bin", "chd", "iso", "pbp", "img"] {
-            let name = "upload-\(UUID().uuidString).\(ext)"
-            state.addUploads([name])
-            let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
-            XCTAssertEqual(added?.platformID, "ps1", ext)
-            XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "pcsx_rearmed", ext)
-        }
+        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
+        // An .exe is a PS-EXE only by its first bytes (DosboxPureCoreTests), and a disc image by its contents
+        // (GagaEmuTests.testDiscImagesArePlacedByContent), so only .pbp goes by name.
+        let name = "upload-\(UUID().uuidString).pbp"
+        state.addUploads([name])
+        let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
+        XCTAssertEqual(added?.platformID, "ps1")
+        XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "pcsx_rearmed")
+        let disc = PS1TestEXE.disc()
+        let bin = directory.appendingPathComponent("upload-\(UUID().uuidString).bin")
+        let cue = bin.deletingPathExtension().appendingPathExtension("cue")
+        try disc.bin.write(to: bin)
+        try Data(disc.cue(bin.lastPathComponent).utf8).write(to: cue)
+        XCTAssertEqual(state.importROM(at: cue)?.resolvedCoreID(defaults: [:]), "pcsx_rearmed")
         let playlist = state.importROM(at: URL(fileURLWithPath: "/roms/Gaga.m3u"), platformID: MultiDiscHelper.Platform.ps1.platformID)
         XCTAssertEqual(playlist?.resolvedCoreID(defaults: [:]), "pcsx_rearmed")
     }

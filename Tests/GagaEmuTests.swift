@@ -598,6 +598,73 @@ final class GagaEmuTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(contrast(Palette.onAccent, Palette.accentFill), 4.5)
     }
 
+    // MARK: - BIOS folder
+
+    func testBIOSFolderMovesIntoTheCoresSystemFolderWithoutLoss() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("bios-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: base) }
+        let old = base.appendingPathComponent("BIOS"), system = base.appendingPathComponent("System")
+        try FileManager.default.createDirectory(at: old, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: system, withIntermediateDirectories: true)
+        try Data("bios9".utf8).write(to: old.appendingPathComponent("bios9.bin"))
+        try Data("old".utf8).write(to: old.appendingPathComponent("scph5501.bin"))
+        try Data("new".utf8).write(to: system.appendingPathComponent("scph5501.bin"))
+
+        XCTAssertEqual(GagaCoreWrapper.migrateBIOSFolder(base: base), system)
+        XCTAssertEqual(try Data(contentsOf: system.appendingPathComponent("bios9.bin")), Data("bios9".utf8))
+        XCTAssertEqual(try Data(contentsOf: system.appendingPathComponent("scph5501.bin")), Data("new".utf8), "not overwritten")
+        XCTAssertEqual(try Data(contentsOf: old.appendingPathComponent("scph5501.bin")), Data("old".utf8), "kept, not lost")
+
+        try FileManager.default.removeItem(at: old.appendingPathComponent("scph5501.bin"))
+        GagaCoreWrapper.migrateBIOSFolder(base: base)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: old.path), "an empty old folder goes")
+        XCTAssertEqual(GagaCoreWrapper.systemDirectory.lastPathComponent, "System", "Settings lists the cores' folder")
+    }
+
+    // MARK: - Disc images
+
+    func testDiscImagesArePlacedByContent() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("discs-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        func platform(_ name: String, _ data: Data) throws -> String? {
+            try data.write(to: dir.appendingPathComponent(name))
+            return CoreCatalog.platformID(forFile: dir.appendingPathComponent(name))
+        }
+        func image(_ bytes: [UInt8], at offset: Int, size: Int = 40_000) -> Data {
+            var data = [UInt8](repeating: 0, count: size)
+            data.replaceSubrange(offset..<(offset + bytes.count), with: bytes)
+            return Data(data)
+        }
+        let disc = PS1TestEXE.disc()
+        XCTAssertEqual(try platform("ps.bin", disc.bin), "ps1", "SYSTEM.CNF in the root")
+        XCTAssertEqual(try platform("ps.cue", Data(disc.cue("ps.bin").utf8)), "ps1", "through the first FILE")
+        XCTAssertEqual(try platform("ps.m3u", Data("# list\nps.cue\n".utf8)), "ps1", "through the first entry")
+        XCTAssertEqual(try platform("ps.iso", image(Array("PLAYSTATION".utf8), at: 32768 + 8)), "ps1", "system ID")
+        XCTAssertEqual(try platform("cd.iso", image(Array("SEGADISCSYSTEM  ".utf8), at: 0)), "megacd")
+        XCTAssertEqual(try platform("cd.bin", image(Array("SEGADISCSYSTEM  ".utf8), at: 16)), "megacd", "raw sector")
+        XCTAssertEqual(try platform("cd.cue", Data("FILE cd.bin BINARY\n  TRACK 01 MODE1/2352\n".utf8)), "megacd")
+        XCTAssertNil(try platform("saturn.iso", image(Array("SEGA SEGASATURN ".utf8), at: 0)))
+        XCTAssertEqual(try platform("pc.iso", image(Array("CD001".utf8), at: 32769)), "dos")
+        XCTAssertEqual(try platform("disk.img", Data(count: 1024)), "dos")
+        XCTAssertEqual(try platform("pc.bin", image(Array("CD001".utf8), at: 16 * 2352 + 17)), "dos", "ISO 9660, Mode 1")
+        XCTAssertNil(try platform("blank.bin", Data(count: 1024)), "asks")
+        XCTAssertNil(try platform("game.chd", Data("MComprHD".utf8)), "compressed, asks")
+        XCTAssertNil(try platform("lost.cue", Data("FILE \"gone.bin\" BINARY\n".utf8)), "asks")
+        XCTAssertEqual(CoreCatalog.discPlatforms.map(\.id).first, "ps1")
+    }
+
+    @MainActor
+    func testImportKeepsAnExplicitPlatformAndTestEntriesLeaveTheSavedLibrary() {
+        let state = AppState()
+        let saved = state.games
+        let name = "upload-\(UUID().uuidString).iso"
+        XCTAssertEqual(state.importROM(at: URL(fileURLWithPath: "/roms/\(name)"), platformID: "megacd")?.platformID, "megacd")
+        state.games = saved
+        state.save()
+        XCTAssertFalse(AppState().games.contains { $0.romPath.hasSuffix(name) }, "restored on disk, not only in memory")
+    }
+
     // MARK: - Library filter
 
     @MainActor

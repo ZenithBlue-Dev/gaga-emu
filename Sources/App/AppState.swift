@@ -183,8 +183,8 @@ enum CoreCatalog {
         case "n64", "z64", "v64": return "n64"
         case "nds": return "nds"
         case "3ds", "cia": return "n3ds"
-        // shortcut: a DOS CD or disk image (.iso, .cue, .chd, .img, .m3u) goes to PS1 too. Look inside the image when both matter.
-        case "iso", "bin", "cue", "chd", "pbp", "img": return "ps1"
+        // Disc images serve PS1, Mega-CD and DOS alike: platformID(forFile:) looks inside, and asks when unsure.
+        case "pbp": return "ps1"
         // A PS-EXE also ends in .exe. platformID(forFile:) tells the two apart by the file's first bytes.
         // The rest are the DOSBox Pure extensions no other core takes.
         case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
@@ -198,11 +198,18 @@ enum CoreCatalog {
         }
     }
 
+    /// Extensions a disc image can have. Without a platform from `platformID(forFile:)`, import asks the player.
+    static let discExtensions: Set<String> = ["iso", "bin", "cue", "chd", "img", "m3u"]
+    /// The platforms import offers for a disc it could not place, in that order, where a core is listed.
+    static var discPlatforms: [PlatformInfo] { ["ps1", "megacd", "dos"].compactMap(platform) }
+
     /// The extension's platform, corrected by the file's contents where one extension serves two platforms:
-    /// an .exe that starts with "PS-X EXE" is a PlayStation program, and a .zip is a DOS game only when it
-    /// holds an .exe, .com or .bat.
+    /// an .exe that starts with "PS-X EXE" is a PlayStation program, a .zip is a DOS game only when it
+    /// holds an .exe, .com or .bat, and a disc image is placed by `discPlatformID(_:)`.
     static func platformID(forFile url: URL) -> String? {
-        switch url.pathExtension.lowercased() {
+        let ext = url.pathExtension.lowercased()
+        if discExtensions.contains(ext) { return discPlatformID(url) }
+        switch ext {
         case "exe":
             let handle = try? FileHandle(forReadingFrom: url)
             defer { try? handle?.close() }
@@ -214,6 +221,55 @@ enum CoreCatalog {
         default:
             return platformID(forExtension: url.pathExtension)
         }
+    }
+
+    /// A disc image's platform from its first 64 KiB, or nil when that does not say. PS1: "PLAYSTATION" as
+    /// the system ID in sector 16, or SYSTEM.CNF in the root directory. Mega-CD: "SEGADISCSYSTEM" or "SEGA"
+    /// opening the first sector (Saturn's "SEGA SEGASATURN" is left out). Any other ISO 9660 disc, and any
+    /// .iso or .img, is DOS. A .cue is read through its first FILE, an .m3u through its first entry.
+    /// shortcut: a .chd is compressed, so it always asks; read its first hunk if players import many.
+    static func discPlatformID(_ url: URL, depth: Int = 0) -> String? {
+        let ext = url.pathExtension.lowercased()
+        if ext == "cue" || ext == "m3u" {
+            guard depth < 2, let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+            let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+            let name: String?
+            if ext == "cue" {
+                // FILE "name" BINARY, or FILE name BINARY when the name has no spaces.
+                name = lines.first { $0.uppercased().hasPrefix("FILE ") }.flatMap { line -> String? in
+                    let rest = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+                    if rest.hasPrefix("\"") { return rest.dropFirst().split(separator: "\"").first.map(String.init) }
+                    return rest.split(separator: " ").first.map(String.init)
+                }
+            } else {
+                name = lines.first { !$0.isEmpty && !$0.hasPrefix("#") }
+            }
+            guard let name else { return nil }
+            return discPlatformID(url.deletingLastPathComponent().appendingPathComponent(name), depth: 1)
+        }
+        guard ext != "chd", let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        let bytes = [UInt8]((try? handle.read(upToCount: 0x10000)) ?? Data())
+        func has(_ text: String, in range: Range<Int>) -> Bool {
+            let needle = [UInt8](text.utf8), range = range.clamped(to: 0..<bytes.count)
+            guard range.count >= needle.count else { return false }
+            return (range.lowerBound...(range.upperBound - needle.count)).contains {
+                bytes[$0..<($0 + needle.count)].elementsEqual(needle)
+            }
+        }
+        // Sector 16 starts at 32768 in a 2048-byte image, and its data at 16 * 2352 + 16 (Mode 1) or + 24 (Mode 2) in a raw one.
+        let pvdStarts = [32768, 16 * 2352 + 16, 16 * 2352 + 24]
+        if pvdStarts.contains(where: { has("PLAYSTATION", in: ($0 + 8)..<($0 + 40)) }) || has("SYSTEM.CNF;1", in: 0..<bytes.count) {
+            return "ps1"
+        }
+        // A raw image's first sector has 16 bytes of sync and header before the data.
+        for start in [0, 16] where has("SEGA", in: start..<(start + 4)) {
+            return has("SEGASATURN", in: start..<(start + 16)) ? nil : "megacd"
+        }
+        if ext == "iso" || ext == "img" || pvdStarts.contains(where: { has("CD001", in: ($0 + 1)..<($0 + 6)) }) {
+            return "dos"
+        }
+        return nil
     }
 
     /// The file names in a ZIP's central directory, or none when the file is not a readable ZIP.
@@ -757,7 +813,8 @@ final class AppState: ObservableObject {
         if let caches { try? FileManager.default.removeItem(at: caches) }
     }
 
-    private func save() {
+    /// Internal, not private, so a test that swaps `games` or `history` can write the originals back.
+    func save() {
         let snapshot = Snapshot(games: games, history: history, nickname: nickname, joined: joined,
                                 avatarIndex: avatarIndex, appearance: appearance, quickStart: quickStart,
                                 autoSaveStates: autoSaveStates, coverArt: coverArt,

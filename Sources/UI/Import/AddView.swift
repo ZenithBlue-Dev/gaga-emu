@@ -10,6 +10,8 @@ struct AddView: View {
     @State private var showPatcher = false
     @State private var notice: String?
     @State private var isTargeted = false
+    /// Disc images whose contents did not name a platform, asked one at a time.
+    @State private var unplaced: [GameItem] = []
 
     private let romTypes: [UTType] = {
         var types: [UTType] = [.zip, .data, .item]
@@ -59,6 +61,26 @@ struct AddView: View {
         .sheet(isPresented: $showPatcher) { RomPatcherSheet() }
         .onDrop(of: romTypes, isTargeted: $isTargeted) { providers in
             consume(providers)
+        }
+        .confirmationDialog("Which system is \(unplaced.first?.title ?? "this disc") for?",
+                            isPresented: Binding(get: { !unplaced.isEmpty }, set: { if !$0, !unplaced.isEmpty { unplaced.removeFirst() } }),
+                            titleVisibility: .visible) {
+            ForEach(CoreCatalog.discPlatforms) { platform in
+                Button(platform.name) {
+                    if let game = unplaced.first { state.update(game.id) { $0.platformID = platform.id } }
+                }
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("GagaEmu could not tell from the disc image.")
+        }
+    }
+
+    /// Imports a copied file, and queues the platform question when a disc image did not say.
+    private func add(_ dest: URL) {
+        guard let game = state.importROM(at: dest) else { return }
+        if game.platformID == "unknown", CoreCatalog.discExtensions.contains(dest.pathExtension.lowercased()) {
+            unplaced.append(game)
         }
     }
 
@@ -132,7 +154,7 @@ struct AddView: View {
                 Task {
                     do {
                         let dest = try await ClipboardImporter.download(url, into: state.romDirectory)
-                        _ = state.importROM(at: dest)
+                        add(dest)
                         notice = "Imported \(dest.lastPathComponent)"
                     } catch {
                         notice = error.localizedDescription
@@ -140,7 +162,7 @@ struct AddView: View {
                 }
             default:
                 let dest = try ClipboardImporter.persist(item, into: state.romDirectory)
-                _ = state.importROM(at: dest)
+                add(dest)
                 notice = "Imported \(dest.lastPathComponent)"
             }
         } catch {
@@ -152,16 +174,14 @@ struct AddView: View {
         switch result {
         case .failure(let error): notice = error.localizedDescription
         case .success(let urls):
-            var count = 0
-            for url in urls {
+            // Copy every file before importing any, so a .cue finds the .bin picked with it.
+            let copied = urls.compactMap { url -> URL? in
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                if let dest = try? ClipboardImporter.persist(.file(url), into: state.romDirectory) {
-                    _ = state.importROM(at: dest)
-                    count += 1
-                }
+                return try? ClipboardImporter.persist(.file(url), into: state.romDirectory)
             }
-            notice = "Imported \(count) file\(count == 1 ? "" : "s")"
+            copied.forEach(add)
+            notice = "Imported \(copied.count) file\(copied.count == 1 ? "" : "s")"
         }
     }
 
@@ -173,7 +193,7 @@ struct AddView: View {
                 guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 Task { @MainActor in
                     if let dest = try? ClipboardImporter.persist(.file(url), into: state.romDirectory) {
-                        _ = state.importROM(at: dest)
+                        add(dest)
                         notice = "Imported \(dest.lastPathComponent)"
                     }
                 }

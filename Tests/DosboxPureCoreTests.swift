@@ -420,7 +420,8 @@ final class DosboxPureCoreTests: XCTestCase {
         for ext in ["com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf"] {
             XCTAssertEqual(CoreCatalog.platformID(forExtension: ext), "dos", ext)
         }
-        for ext in ["iso", "cue"] { XCTAssertEqual(CoreCatalog.platformID(forExtension: ext), "ps1", ext) }
+        for ext in ["iso", "cue"] { XCTAssertNil(CoreCatalog.platformID(forExtension: ext), "placed by content, \(ext)") }
+        XCTAssertEqual(try platform("dos.iso", Data(count: 4096)), "dos")
         XCTAssertEqual(CoreCatalog.zipEntryNames(directory.appendingPathComponent("game.zip")), ["README.TXT", "GAME/START.EXE"])
     }
 
@@ -428,7 +429,7 @@ final class DosboxPureCoreTests: XCTestCase {
     func testUploadedGamesPickThisCore() throws {
         let state = AppState()
         let saved = state.games
-        defer { state.games = saved }
+        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for ext in ["com", "bat", "dosz", "exe"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
             state.addUploads([name])

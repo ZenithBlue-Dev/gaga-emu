@@ -550,7 +550,7 @@ final class NestopiaCoreTests: XCTestCase {
     func testUploadedGamesPickThisCore() {
         let state = AppState()
         let saved = state.games
-        defer { state.games = saved }
+        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         let name = "upload-\(UUID().uuidString).nes"
         state.addUploads([name])
         let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }

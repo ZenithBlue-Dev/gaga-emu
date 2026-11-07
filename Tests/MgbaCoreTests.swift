@@ -105,7 +105,7 @@ final class MgbaCoreTests: XCTestCase {
     func testUploadedFilesReachTheLibraryOnce() {
         let state = AppState()
         let saved = state.games
-        defer { state.games = saved }
+        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         let name = "upload-\(UUID().uuidString).gba"
         state.addUploads([name])
         state.addUploads([name])

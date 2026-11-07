@@ -502,7 +502,7 @@ final class BsnesCoreTests: XCTestCase {
     func testUploadedGamesPickThisCore() {
         let state = AppState()
         let saved = state.games
-        defer { state.games = saved }
+        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
         for ext in ["sfc", "smc"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
             state.addUploads([name])

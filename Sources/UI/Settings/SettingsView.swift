@@ -442,11 +442,8 @@ struct TriggerProEditor: View {
 struct BIOSManagerView: View {
     @State private var files: [URL] = []
 
-    private var biosDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("GagaEmu/BIOS", isDirectory: true)
-    }
+    /// The cores' system folder, so a file listed here is the file a core opens.
+    private var biosDirectory: URL { GagaCoreWrapper.systemDirectory }
 
     private let required: [(String, String)] = [
         ("scph5501.bin", "PS1 (US)"), ("scph5502.bin", "PS1 (EU)"),

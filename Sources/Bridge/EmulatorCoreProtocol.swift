@@ -190,6 +190,30 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             .appendingPathComponent("GagaEmu")
     }
 
+    /// The folder every core gets as `system_dir`, and the one Settings > BIOS Files lists.
+    public static var systemDirectory: URL {
+        migrateBIOSFolder(base: baseDirectory)
+    }
+
+    /// Settings once listed `GagaEmu/BIOS` while cores read `GagaEmu/System`. Moves each file from the old
+    /// folder into System. A name already in System is left where it is, so nothing is overwritten or lost,
+    /// and the old folder goes only once it is empty.
+    @discardableResult
+    static func migrateBIOSFolder(base: URL) -> URL {
+        let fileManager = FileManager.default
+        let system = base.appendingPathComponent("System", isDirectory: true)
+        let old = base.appendingPathComponent("BIOS", isDirectory: true)
+        try? fileManager.createDirectory(at: system, withIntermediateDirectories: true)
+        guard let names = try? fileManager.contentsOfDirectory(atPath: old.path) else { return system }
+        for name in names where !fileManager.fileExists(atPath: system.appendingPathComponent(name).path) {
+            try? fileManager.moveItem(at: old.appendingPathComponent(name), to: system.appendingPathComponent(name))
+        }
+        if (try? fileManager.contentsOfDirectory(atPath: old.path))?.isEmpty == true {
+            try? fileManager.removeItem(at: old)
+        }
+        return system
+    }
+
     /// One folder per game, named after the ROM file rather than a Library ID, so a save survives
     /// removing a game from the Library and adding it back.
     public static func saveDirectory(forROM romPath: String) -> String {
@@ -215,7 +239,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         let fileManager = FileManager.default
         let baseDir = Self.baseDirectory
 
-        self.systemDirectory = systemDirectory ?? baseDir.appendingPathComponent("System").path
+        self.systemDirectory = systemDirectory ?? Self.systemDirectory.path
         self.saveDirectory = saveDirectory ?? baseDir.appendingPathComponent("Saves").path
 
         try? fileManager.createDirectory(atPath: self.systemDirectory, withIntermediateDirectories: true)
