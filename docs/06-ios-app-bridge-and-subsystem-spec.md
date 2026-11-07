@@ -8,7 +8,7 @@ Manic EMU is a feature reference only, tracked in `docs/02`. Nothing in this doc
 
 ## Status
 
-The app runs a full game session on mGBA, on Gambatte (the first core through the shared libretro adapter, merged from the `core/gambatte` branch, with its GPL gate still open), on Nestopia UE (through the same adapter, on branch `core/nestopia`, GPL gate open) and on the mock core. The 9 other non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build.
+The app runs a full game session on mGBA, on Gambatte (the first core through the shared libretro adapter, merged from the `core/gambatte` branch, with its GPL gate still open), on Nestopia UE, PCSX-ReARMed and bsnes (through the same adapter, merged from branches `core/nestopia`, `core/pcsx_rearmed` and `core/bsnes`, GPL gate open) and on the mock core. The 7 other non-mock registry cores are stubs: their `self_test` fails, so `GagaCoreWrapper` refuses them and the player sees that the core is not part of this build.
 
 Status terms used in this document:
 
@@ -35,8 +35,8 @@ Status comes from reading the code and running the iOS Simulator, not from a dev
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │
  ┌───────────────────────────────┴─────────────────────────────────────┐
- │ Mock core; Mgba, Gambatte, Nestopia xcframeworks (built).           │
- │ 9 weak stubs (stub).                                                │
+ │ Mock core; Mgba, Gambatte, Nestopia, PcsxReArmed and Bsnes          │
+ │ xcframeworks (built). 7 weak stubs (stub).                          │
  └───────────────────────────────┬─────────────────────────────────────┘
                                  │ video and audio callbacks
  ┌───────────────────────────────┴─────────────────────────────────────┐
@@ -285,7 +285,7 @@ Per `docs/03` section 5: each core is a dynamic, embedded xcframework that expor
 
 Frameworks are signed and shipped inside the app bundle. Code is never loaded from user paths or downloaded. Dynamic linking does not change the GPL analysis in `docs/03` section 5.
 
-Status: built for mGBA, Gambatte, Nestopia and PCSX-ReARMed. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
+Status: built for mGBA, Gambatte, Nestopia, PCSX-ReARMed and bsnes. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
 
 **Core set.** `GAGA_CORE_SET` picks which cores a build links, for example an MPL-only TestFlight build with no GPL code. `GAGA_CORE_SET="mgba" scripts/generate-project.sh` links only mGBA. Unset, it links every `Cores/*/core.env`. The script refuses an unknown ID or a missing xcframework. It writes `build/core-set.yml`, which embeds each framework, sets the `GAGA_CORE_SET` build setting and defines `GAGA_HAS_<ID>=1`. The post-build no-JIT gate fails if a framework in the set is missing from the app, or a framework outside it is embedded, which happens when a build folder from a wider set is reused. `scripts/appstore_release.sh` defaults to `GAGA_CORE_SET=mgba` until the GPL gate in `docs/07` milestone 4.0 closes. A core left out keeps its guarded stub (section 2.2) and is hidden from the catalog, and its tests skip.
 
@@ -295,17 +295,18 @@ Status: built for mGBA, Gambatte, Nestopia and PCSX-ReARMed. `scripts/build-core
 - **Instance.** libretro is a set of globals with no userdata, so a framework has one live instance. `create` returns NULL while another is alive. Callbacks with no live instance do nothing. Every call runs on the host's serial queue, and the frame and audio pointers handed on are valid only during the callback.
 - **Video and audio.** Frames are copied; XRGB8888 alpha is forced opaque. A NULL frame (a duplicate) is skipped. Audio arrives through the batch callback.
 - **Input.** Host bits map to the RetroPad, with bitmask queries and analog sticks.
-- **Battery.** `RETRO_MEMORY_SAVE_RAM` goes to `<rom stem>.sav` and `RETRO_MEMORY_RTC` to `<rom stem>.rtc` in `save_dir`, by temp file, `fsync` and `rename`. The adapter writes only changed bytes, every 300 frames, on `flush_battery_save` and on `destroy`. A crash loses at most about 5 seconds of saves. A write failure raises one FATAL; later flushes still retry. An existing file of the wrong size refuses the load, so it is never overwritten.
+- **Battery.** `RETRO_MEMORY_SAVE_RAM` goes to `<rom stem>.sav` and `RETRO_MEMORY_RTC` to `<rom stem>.rtc` in `save_dir`, by temp file, `fsync` and `rename`. The adapter writes only changed bytes, every 300 frames, on `flush_battery_save` and on `destroy`. A crash loses at most about 5 seconds of saves. A write failure raises one FATAL; later flushes still retry. An existing file of the wrong size refuses the load, so it is never overwritten. A core that writes its own battery files and returns no `RETRO_MEMORY_SAVE_RAM` (bsnes) sets `save_battery`, which the adapter calls after load, where a failure refuses the load, and at every flush, where a failure raises the same FATAL.
+- **Loading.** A `need_fullpath` core gets the path only. If it sets `is_rom`, the adapter still reads the file once for that check and for the ROM hash.
 - **States.** The adapter asks `retro_serialize_size` once right after `retro_load_game`, before any frame, because a core may fix its size on the first call: Nestopia does, and its state is 9 bytes longer in the first frames after power on, so a later first call gave states the next session refused. The adapter puts a 16-byte header in front of the core's bytes: `GLR1`, payload size and a hash of the ROM. `load_state` refuses a wrong size or another ROM, then takes its own snapshot and restores it if `retro_unserialize` fails, so the game keeps running.
-- **Cheats.** Optional. The adapter keeps the list by host ID and, on every change, resets and re-applies it, one code per index. The core's `is_cheat` refuses codes it cannot parse.
+- **Cheats.** Optional. The adapter keeps the list by host ID and, on every change, resets and re-applies it, one code per index. The core's `is_cheat` refuses codes it cannot parse. A core that cannot add a code to ones already applied sets `unapply_cheats`, called before each `retro_cheat_set` (bsnes, `Cores/bsnes/BsnesSupport.cpp`).
 
 For a libretro core, steps 3 to 7 below become:
 
 - `core.env` also adds `-I../shared` to both flag sets, and `sources.txt` lists `../shared/LibretroAdapter.c`.
-- The bridge file defines `const GagaLibretroCore gaga_libretro_core` (name, game kind, the variable table with this app's defaults, and optional `is_rom` and `is_cheat`), then the getter: `GAGA_LIBRETRO_ENTRY_POINTS` (which also sets `abi_version`) plus `GAGA_LIBRETRO_CHEATS` if cheats work, then ID, name, version, extensions, `target_fps`, `audio_sample_rate` and `state_version`.
+- The bridge file defines `const GagaLibretroCore gaga_libretro_core` (name, game kind, the variable table with this app's defaults, and optional `is_rom`, `is_cheat`, `save_battery` and `unapply_cheats`), then the getter: `GAGA_LIBRETRO_ENTRY_POINTS` (which also sets `abi_version`) plus `GAGA_LIBRETRO_CHEATS` if cheats work, then ID, name, version, extensions, `target_fps`, `audio_sample_rate` and `state_version`.
 - Put in the variable table every core option whose upstream default is wrong for this app, such as a boot ROM option. The adapter answers false for a key not in the table, which the core reads as its own default.
 - Leave out any upstream file whose licence is not the core's licence, and stub what it provided. Gambatte's `cc_resampler.c` is GPLv3 and is replaced by two empty functions (`docs/03` section 5).
-- Read the core's `retro_get_memory_*` and options before writing tests: battery saves need `RETRO_MEMORY_SAVE_RAM`, and a boot ROM option must stay off unless the core has its own free boot ROM.
+- Read the core's `retro_get_memory_*` and options before writing tests: battery saves need `RETRO_MEMORY_SAVE_RAM` or `save_battery`, and a boot ROM option must stay off unless the core has its own free boot ROM.
 - A core whose interpreter still names a few dynarec symbols: compile the dynarec out with the core's own define and define those symbols as empty in a GagaEmu file, as `Cores/pcsx_rearmed/nodrc.c` does with `DRC_DISABLE`, instead of patching upstream.
 - A disc core loads by path (`need_fullpath`). Its battery file is named after what was opened, so a `.m3u` gives every disc one memory card. The Multi-Disc Helper imports each playlist with its discs' platform, because an `.m3u` alone names none.
 

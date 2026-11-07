@@ -261,16 +261,20 @@ static bool lr_write_file(const char* path, const void* data, size_t size) {
 
 // The player learns once that progress is not reaching storage. Every later flush still tries.
 static void lr_flush(LrInstance* a) {
+    bool ok = !gaga_libretro_core.save_battery || gaga_libretro_core.save_battery();
     for (size_t i = 0; i < 2; ++i) {
         LrBattery* battery = &a->batteries[i];
         const void* memory = battery->written ? retro_get_memory_data(battery->memory_id) : NULL;
         if (!memory || memcmp(battery->written, memory, battery->size) == 0) continue;
         if (lr_write_file(battery->path, memory, battery->size)) {
             memcpy(battery->written, memory, battery->size);
-        } else if (!a->save_write_failed) {
-            a->save_write_failed = true;
-            lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_SAVE, "The save file for this game could not be written.");
+        } else {
+            ok = false;
         }
+    }
+    if (!ok && !a->save_write_failed) {
+        a->save_write_failed = true;
+        lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_SAVE, "The save file for this game could not be written.");
     }
 }
 
@@ -397,15 +401,17 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
     retro_get_system_info(&system);
     struct retro_game_info game = { .path = rom_path };
     uint8_t* bytes = NULL;
-    if (system.need_fullpath) {
+    if (system.need_fullpath && !gaga_libretro_core.is_rom) {
         // shortcut: identifies a state's ROM by file name, because hashing a disc on every load is slow. Hash a sample of the file if renamed games matter.
         a->rom_id = lr_hash((const uint8_t*)rom_path, strlen(rom_path));
     } else {
         size_t size = 0;
         bytes = lr_read_rom(a, rom_path, &size);
         if (!bytes) return false;
-        game.data = bytes;
-        game.size = size;
+        if (!system.need_fullpath) {
+            game.data = bytes;
+            game.size = size;
+        }
         a->rom_id = lr_hash(bytes, size);
     }
 
@@ -420,7 +426,8 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
 
     // Refuse to run rather than let a player lose progress to a save that never reaches disk.
     if (!lr_open_battery(a, &a->batteries[0], RETRO_MEMORY_SAVE_RAM, "sav", rom_path) ||
-        !lr_open_battery(a, &a->batteries[1], RETRO_MEMORY_RTC, "rtc", rom_path)) {
+        !lr_open_battery(a, &a->batteries[1], RETRO_MEMORY_RTC, "rtc", rom_path) ||
+        (gaga_libretro_core.save_battery && !gaga_libretro_core.save_battery())) {
         retro_unload_game();
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_SAVE, "The save file for this game could not be opened.");
         return false;
@@ -553,6 +560,7 @@ static void lr_apply_cheats(LrInstance* a) {
         char* copy = strdup(a->cheats[i].code);
         char* cursor = NULL;
         for (char* line = copy ? strtok_r(copy, "\r\n", &cursor) : NULL; line; line = strtok_r(NULL, "\r\n", &cursor)) {
+            if (gaga_libretro_core.unapply_cheats) gaga_libretro_core.unapply_cheats();
             retro_cheat_set(index++, true, line);
         }
         free(copy);

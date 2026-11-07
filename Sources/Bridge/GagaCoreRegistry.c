@@ -384,10 +384,12 @@ DEFINE_CORE_INTERFACE(Nestopia_GetInterface,      "nestopia",        "Nestopia U
 #ifndef GAGA_HAS_PCSX_REARMED
 DEFINE_CORE_INTERFACE(PcsxReArmed_GetInterface,   "pcsx_rearmed",    "PCSX-ReARMed",      GAGA_CORE_EXCLUDED, "bin|cue|img|mdf|pbp|toc|cbn|m3u|chd|iso|exe", 60.0, 44100)
 #endif
+#ifndef GAGA_HAS_BSNES
+DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             GAGA_CORE_EXCLUDED, "sfc|smc",  60.0988, 48000)
+#endif
 
 DEFINE_CORE_INTERFACE(BeetlePsx_GetInterface,     "beetle_psx",      "Beetle PSX HW",     "0.9.44", "cue|bin|chd|pbp",     60.0, 44100)
 DEFINE_CORE_INTERFACE(Gpsp_GetInterface,          "gpsp",            "gpSP",              "0.9.1",  "gba|bin",             59.7275, 44100)
-DEFINE_CORE_INTERFACE(Bsnes_GetInterface,         "bsnes",           "bsnes",             "115",    "smc|sfc",             60.0988, 32040)
 DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",          "0.0.0",  "md|smd|gen|bin|cue",  60.0, 48000)
 DEFINE_CORE_INTERFACE(MelonDS_GetInterface,       "melonds",         "melonDS DS",        "0.9.5",  "nds|dsi",             60.0, 44100)
 DEFINE_CORE_INTERFACE(Azahar_GetInterface,        "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
