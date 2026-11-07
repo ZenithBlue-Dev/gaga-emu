@@ -682,6 +682,62 @@
    ]
   },
   {
+   "id": "mupen64plus_next",
+   "title": "Mupen64Plus-Next",
+   "licence": "GPL-2.0-or-later, with CC0-1.0, MIT and zlib parts",
+   "source": "https://github.com/libretro/mupen64plus-libretro-nx, branch develop, commit 15bada8, with its paraLLEl-RDP copy at commit 65f4f4d. It links MoltenVK, listed separately.",
+   "cores": [
+    "mupen64plus_next"
+   ],
+   "framework": "Mupen64PlusNextCore",
+   "texts": [
+    {
+     "title": "Mupen64Plus (GPL-2.0-or-later)",
+     "file": "licence-230b2decd93e.txt"
+    },
+    {
+     "title": "Mupen64Plus-Core authors",
+     "file": "licence-9965cd2096de.txt"
+    },
+    {
+     "title": "GNU General Public License 2",
+     "file": "licence-8177f9751321.txt"
+    },
+    {
+     "title": "cxd4 RSP (CC0-1.0)",
+     "file": "licence-a2010f343487.txt"
+    },
+    {
+     "title": "paraLLEl-RDP",
+     "file": "licence-29e3d9c8af52.txt"
+    },
+    {
+     "title": "Granite",
+     "file": "licence-33826552efca.txt"
+    },
+    {
+     "title": "volk",
+     "file": "licence-daca47bd64f8.txt"
+    },
+    {
+     "title": "zlib",
+     "file": "licence-7f5f32d87716.txt"
+    },
+    {
+     "title": "MiniZip",
+     "file": "licence-b26a9efe0b80.txt"
+    },
+    {
+     "title": "MD5 (L. Peter Deutsch)",
+     "file": "licence-6aa2a5e833d1.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-d9877dd11360.txt"
+    }
+   ]
+  },
+  {
    "id": "vktest",
    "title": "Vulkan Test core",
    "licence": "GagaEmu",
@@ -703,7 +759,8 @@
    "licence": "Apache-2.0",
    "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
    "cores": [
-    "vktest"
+    "vktest",
+    "mupen64plus_next"
    ],
    "texts": [
     {

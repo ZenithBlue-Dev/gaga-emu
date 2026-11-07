@@ -61,8 +61,8 @@
                 <string>E174.1</string>
             </array>
         </dict>
-        <!-- VkTestCore, and every layer-path core after it, links MoltenVK, which imports mach_absolute_time
-             to time GPU work inside the app. No boot time leaves the device. -->
+        <!-- 35F9.1: MoltenVK, linked into each layer-path core (Mupen64PlusNextCore, VkTestCore), imports
+             mach_absolute_time to time GPU work and frames inside the app. No boot time leaves the device. -->
         <dict>
             <key>NSPrivacyAccessedAPIType</key>
             <string>NSPrivacyAccessedAPICategorySystemBootTime</string>

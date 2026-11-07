@@ -152,12 +152,29 @@
       ]
     },
     {
+      "id": "mupen64plus_next", "title": "Mupen64Plus-Next", "cores": ["mupen64plus_next"], "framework": "Mupen64PlusNextCore", "licence": "GPL-2.0-or-later, with CC0-1.0, MIT and zlib parts",
+      "source": "https://github.com/libretro/mupen64plus-libretro-nx, branch develop, commit 15bada8, with its paraLLEl-RDP copy at commit 65f4f4d. It links MoltenVK, listed separately.",
+      "texts": [
+        { "title": "Mupen64Plus (GPL-2.0-or-later)", "from": "Cores/mupen64plus_next/upstream/mupen64plus-core/src/main/main.c", "comment": true },
+        { "title": "Mupen64Plus-Core authors", "from": "Cores/mupen64plus_next/upstream/mupen64plus-core/LICENSES" },
+        { "title": "GNU General Public License 2", "from": "Cores/mupen64plus_next/upstream/LICENSE" },
+        { "title": "cxd4 RSP (CC0-1.0)", "from": "Cores/mupen64plus_next/upstream/mupen64plus-rsp-cxd4/COPYING" },
+        { "title": "paraLLEl-RDP", "from": "Cores/mupen64plus_next/upstream/mupen64plus-video-paraLLEl/parallel-rdp/LICENSE" },
+        { "title": "Granite", "from": "Cores/mupen64plus_next/upstream/mupen64plus-video-paraLLEl/parallel-rdp/vulkan/device.cpp", "comment": true },
+        { "title": "volk", "from": "Cores/mupen64plus_next/upstream/mupen64plus-video-paraLLEl/parallel-rdp/volk/volk.h", "lines": [1778, 1797] },
+        { "title": "zlib", "from": "Cores/mupen64plus_next/upstream/custom/dependencies/libzlib/zlib.h", "comment": true },
+        { "title": "MiniZip", "from": "Cores/mupen64plus_next/upstream/mupen64plus-core/subprojects/minizip/unzip.c", "comment": true },
+        { "title": "MD5 (L. Peter Deutsch)", "from": "Cores/mupen64plus_next/upstream/mupen64plus-core/subprojects/md5/md5.c", "comment": true },
+        { "title": "libretro-common", "from": "Cores/mupen64plus_next/upstream/libretro-common/file/file_path.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
     },
     {
-      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest"], "licence": "Apache-2.0",
+      "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next"], "licence": "Apache-2.0",
       "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Linked into every core that draws its own 3D picture.",
       "texts": [
         { "title": "MoltenVK", "from": "build/moltenvk/LICENSE" },

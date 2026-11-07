@@ -65,7 +65,7 @@ build_slice() { # core dir sdk target
         -install_name "@rpath/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK" \
         -compatibility_version 1 -current_version 1 \
         -Wl,-exported_symbols_list,"$dir/$CORE_FRAMEWORK.exports" -Wl,-dead_strip -Wl,-x \
-        -o "$binary" "${objects[@]}" ${link_extra[@]+"${link_extra[@]}"}
+        -o "$binary" "${objects[@]}" ${link_extra[@]+"${link_extra[@]}"} ${CORE_LDFLAGS:-}
     xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
 
     # A bundle ID takes letters, digits, hyphens and dots only, so "_" in a core ID becomes "-", and the short
@@ -124,7 +124,7 @@ build_core() {
     local core=$1 dir="$root/Cores/$1"
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
     # Optional, so one core's value must not reach the next.
-    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK
+    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS
     # shellcheck source=/dev/null
     source "$dir/core.env"
 
