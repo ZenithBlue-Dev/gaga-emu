@@ -26,6 +26,12 @@ struct FilterPickerView: View {
         return state.games.first { $0.id == game.id }?.shaderID ?? game.shaderID
     }
 
+    /// A layer-path core draws its own picture, so no filter runs on this game.
+    private var filtersSkipped: Bool {
+        guard let game else { return false }
+        return CoreCatalog.drawsOwnPicture((state.games.first { $0.id == game.id } ?? game).resolvedCoreID(defaults: state.defaultCores))
+    }
+
     private var selectedName: String {
         ShaderCatalog.all.first { $0.id == selected }?.name ?? imported.first { $0.id == selected }?.name ?? "Original"
     }
@@ -36,18 +42,27 @@ struct FilterPickerView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Filter").font(.screenTitle).accessibilityAddTraits(.isHeader)
                     if let game { Text(game.title).font(.meta).foregroundStyle(AppTheme.muted) }
+                    if filtersSkipped {
+                        Text("This game's core draws its own 3D picture, so filters do not apply to it.")
+                            .font(.footnote).foregroundStyle(AppTheme.muted)
+                            .padding(.top, 4)
+                            .accessibilityIdentifier("filtersSkippedNote")
+                    }
                     Rule().padding(.top, 8)
-                    ForEach(ShaderCatalog.builtIn) { shader in
-                        row(shader)
+                    Group {
+                        ForEach(ShaderCatalog.builtIn) { shader in
+                            row(shader)
+                            Rule()
+                        }
+                        sectionHeader("Community")
                         Rule()
+                        ForEach(ShaderCatalog.community) { shader in
+                            row(shader)
+                            Rule()
+                        }
+                        importedSection
                     }
-                    sectionHeader("Community")
-                    Rule()
-                    ForEach(ShaderCatalog.community) { shader in
-                        row(shader)
-                        Rule()
-                    }
-                    importedSection
+                    .disabled(filtersSkipped)
                 }
                 .padding(16)
             }

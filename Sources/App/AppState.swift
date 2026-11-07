@@ -121,7 +121,30 @@ enum CoreCatalog {
         .init(id: "symbian", name: "Symbian", manufacturer: "Vintage", cores: [
             .init(id: "eka2l1", name: "EKA2L1", note: "Interpreter", recommended: true)
         ])
+    ] + debugPlatforms
+
+    #if DEBUG
+    /// The layer-path test core (Cores/vktest), for proving the Vulkan path in the app.
+    private static let debugPlatforms: [PlatformInfo] = [
+        .init(id: "vktest", name: "Vulkan Test", manufacturer: "GagaEmu", cores: [
+            .init(id: "vktest", name: "Vulkan Test", note: "Layer path", recommended: true)
+        ])
     ]
+    #else
+    private static let debugPlatforms: [PlatformInfo] = []
+    #endif
+
+    /// A layer-path core presents its own picture, so host shaders and filters do not run on it.
+    static func drawsOwnPicture(_ coreID: String) -> Bool {
+        guard let core = GagaCoreRegistry_FindByID(coreID), !GagaCoreRegistry_IsExcluded(coreID) else { return false }
+        return core.pointee.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue != 0
+    }
+
+    /// Names of this build's layer-path cores, for the Gaga Plus filter statement.
+    static var layerPathCoreNames: [String] {
+        platforms.flatMap(\.cores).filter { drawsOwnPicture($0.id) }.map(\.name)
+            .reduce(into: []) { names, name in if !names.contains(name) { names.append(name) } }
+    }
 
     static func platform(_ id: String) -> PlatformInfo? { platforms.first { $0.id == id } }
 
@@ -165,6 +188,9 @@ enum CoreCatalog {
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "smd", "sms": return "megadrive"
+        #if DEBUG
+        case "gagavk": return "vktest"
+        #endif
         default: return nil
         }
     }
@@ -542,7 +568,8 @@ final class AppState: ObservableObject {
     func importROMIfRequested() {
         guard let path = UserDefaults.standard.string(forKey: "GagaImportROM") else { return }
         do {
-            try importDebugROM(at: URL(fileURLWithPath: path))
+            // "~" is the app's container, whose path changes with each device install.
+            try importDebugROM(at: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
         } catch {
             launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
         }

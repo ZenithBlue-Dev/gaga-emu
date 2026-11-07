@@ -199,7 +199,7 @@ public struct ShaderUniforms {
 }
 
 /// A14 (Apple7) is required for layer-path 3D cores (docs/05 section 2.3); 2D cores have no such floor.
-/// Layer-path cores gate on this when they arrive (milestone 5.1).
+/// GameSession refuses a layer-path core below it with `layerPathMessage`.
 public enum GPUFloor {
     public static let layerPathMessage = "This system's 3D renderer needs an A14 chip or newer. 2D systems still work on this device."
 

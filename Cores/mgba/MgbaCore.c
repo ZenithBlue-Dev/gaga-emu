@@ -341,8 +341,6 @@ static void mgba_cheat_remove(GagaInstance* inst, uint32_t id) {
     mCheatSetDeinit(set);
 }
 
-static bool mgba_attach_metal_layer(GagaInstance* inst, void* layer) { (void)inst; (void)layer; return false; }
-
 // Brings up the whole machine with no game, which proves the framework loaded and links correctly.
 static bool mgba_self_test(char* error, size_t error_capacity) {
     struct mCore* core = GBACoreCreate();
@@ -368,7 +366,6 @@ static const GagaCoreInterface s_interface = {
     .load_rom = mgba_load_rom,
     .reset = mgba_reset,
     .step_frame = mgba_step_frame,
-    .attach_metal_layer = mgba_attach_metal_layer,
     .set_video_callback = mgba_set_video_callback,
     .set_audio_callback = mgba_set_audio_callback,
     .state_version = MGBA_STATE_VERSION,

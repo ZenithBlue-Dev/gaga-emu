@@ -1,0 +1,57 @@
+; The test core's vertex shader: one triangle from gl_VertexIndex, moved by a push constant.
+; GLSL equivalent:
+;   layout(push_constant) uniform PC { vec2 offset; } pc;
+;   const vec2 p[3] = vec2[](vec2(0, -0.5), vec2(0.5, 0.5), vec2(-0.5, 0.5));
+;   void main() { gl_Position = vec4(p[gl_VertexIndex] + pc.offset, 0, 1); }
+; Regenerate VkTestShaders.h with Cores/vktest/shaders/make-shaders.sh after a change.
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint Vertex %main "main" %vertex_index %position
+               OpDecorate %vertex_index BuiltIn VertexIndex
+               OpDecorate %position BuiltIn Position
+               OpDecorate %PushConstants Block
+               OpMemberDecorate %PushConstants 0 Offset 0
+       %void = OpTypeVoid
+    %void_fn = OpTypeFunction %void
+      %float = OpTypeFloat 32
+       %vec2 = OpTypeVector %float 2
+       %vec4 = OpTypeVector %float 4
+        %int = OpTypeInt 32 1
+       %uint = OpTypeInt 32 0
+     %uint_3 = OpConstant %uint 3
+     %points = OpTypeArray %vec2 %uint_3
+     %in_int = OpTypePointer Input %int
+%vertex_index = OpVariable %in_int Input
+   %out_vec4 = OpTypePointer Output %vec4
+   %position = OpVariable %out_vec4 Output
+%PushConstants = OpTypeStruct %vec2
+     %pc_ptr = OpTypePointer PushConstant %PushConstants
+         %pc = OpVariable %pc_ptr PushConstant
+  %pc_vec2 = OpTypePointer PushConstant %vec2
+      %int_0 = OpConstant %int 0
+ %fn_points = OpTypePointer Function %points
+   %fn_vec2 = OpTypePointer Function %vec2
+    %float_0 = OpConstant %float 0
+    %float_1 = OpConstant %float 1
+ %float_half = OpConstant %float 0.5
+  %float_mhalf = OpConstant %float -0.5
+        %top = OpConstantComposite %vec2 %float_0 %float_mhalf
+      %right = OpConstantComposite %vec2 %float_half %float_half
+       %left = OpConstantComposite %vec2 %float_mhalf %float_half
+   %triangle = OpConstantComposite %points %top %right %left
+       %main = OpFunction %void None %void_fn
+      %entry = OpLabel
+      %table = OpVariable %fn_points Function
+               OpStore %table %triangle
+      %index = OpLoad %int %vertex_index
+   %point_at = OpAccessChain %fn_vec2 %table %index
+      %point = OpLoad %vec2 %point_at
+  %offset_at = OpAccessChain %pc_vec2 %pc %int_0
+     %offset = OpLoad %vec2 %offset_at
+      %moved = OpFAdd %vec2 %point %offset
+          %x = OpCompositeExtract %float %moved 0
+          %y = OpCompositeExtract %float %moved 1
+     %result = OpCompositeConstruct %vec4 %x %y %float_0 %float_1
+               OpStore %position %result
+               OpReturn
+               OpFunctionEnd

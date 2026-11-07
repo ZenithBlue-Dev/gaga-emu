@@ -22,7 +22,7 @@ The app presents frames from the mock core through the copy path. No real core i
 | Custom presets | planned: the per-filter sliders cover the common case | section 4 |
 | Game view presenting a core frame | built, on the mock core | `Sources/UI/Game/GameView.swift` |
 | Host-buffer path | planned | none |
-| Core-owned layer path | stub: `attach_metal_layer` is in the bridge, no core implements it, MoltenVK is not linked | `Sources/Bridge/GagaBridge.h:92` |
+| Core-owned layer path | built: MoltenVK v1.4.2 linked into each layer-path core, the libretro Vulkan context, proved by the Vulkan test core | `Cores/shared/LibretroVulkan.c`, `Cores/vktest`, section 2.3 |
 | Core-output texture path | planned | none |
 | Multi-pass chain, Nearest, Bilinear, Bicubic and Edge Smooth upscalers | built | section 3.4 |
 | `anime4k` (MIT port) and `crt-deluxe` (original) | built, premium | sections 3.1 and 5 |
@@ -42,7 +42,7 @@ The app presents frames from the mock core through the copy path. No real core i
 
 A14 required for layer-path 3D cores; 2D cores have no such floor. A14 (Apple7) is the lowest family with Metal 3 ([Metal Feature Set Tables](https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf)). Metal 4 is optional and never baseline with iOS 17.0 as the minimum.
 
-The app does not refuse older devices. iOS 17.0 also runs on A12 and A13, `Info.plist` requires only `arm64` and `metal`, and no code in `Sources` uses a Metal 3 API, so 2D cores run on any Metal device. `GPUFloor.supportsLayerPathCores` (`device.supportsFamily(.apple7)`, in `Sources/Metal/MetalRenderer.swift`) is the check future layer-path cores gate on, with `GPUFloor.layerPathMessage` as the user-facing text (milestone 5.1).
+The app does not refuse older devices. iOS 17.0 also runs on A12 and A13, `Info.plist` requires only `arm64` and `metal`, and no code in `Sources` uses a Metal 3 API, so 2D cores run on any Metal device. `GPUFloor.supportsLayerPathCores` (`device.supportsFamily(.apple7)`, in `Sources/Metal/MetalRenderer.swift`) is the check layer-path cores gate on: `GameSession` refuses one below Apple7 with `GPUFloor.layerPathMessage` as the user-facing text (milestone 5.1).
 
 ---
 
@@ -93,9 +93,18 @@ libretro cores stay on the copy path unless a specific core is shown to use this
 
 ### 2.3 Core-owned layer path
 
-The host hands the core a `CAMetalLayer` through `attach_metal_layer`, and the core presents directly. The host shader chain does not run. S3 and S4 use this pattern (`SambaBridge.h:53-54`, `BachataBridge.h:271-274`), and both pass pixel size and support detach; GagaEmu's bridge needs the same additions (`docs/06`, section 2.4).
+The host hands the core a `CAMetalLayer` through `attach_metal_layer`, with the drawable size in pixels and the scale, and the core presents directly. The host shader chain does not run. S3 and S4 use this pattern (`SambaBridge.h:53-54`, `BachataBridge.h:271-274`). `GAGA_CORE_CAP_METAL_LAYER` marks such a core (`docs/06` section 2.4).
 
-libretro Vulkan cores differ, because under libretro the frontend owns the Vulkan context (`RETRO_HW_CONTEXT_VULKAN`, [libretro_vulkan.h](https://raw.githubusercontent.com/libretro/libretro-common/master/include/libretro_vulkan.h)). A GagaEmu libretro adapter must create the instance and device on MoltenVK, accept the core's image, and present it to the layer. Seen from the bridge, the adapter is what owns the layer. This adapter does not exist yet.
+**Host.** `GamePicture` puts a `MetalLayerView` (a `UIView` backed by `CAMetalLayer`, ink background) in place of the `MTKView`. It attaches on every pixel-size change and detaches when it leaves its window. A turn between landscape left and landscape right keeps the size, so it changes nothing. `GameSession` keeps the layer until the core exists, and detaches only the layer attached last. Pause waits for the GPU to go idle, which keeps GPU work out of the background. A layer-path core sends a size-only frame per present, so the ring stays empty: save-state thumbnails come from `read_layer_pixels`. Touch pointer mapping uses the renderer's content size, so it does not work on the layer path yet.
+
+**libretro Vulkan.** Under libretro the frontend owns the Vulkan context (`RETRO_HW_CONTEXT_VULKAN`, [libretro_vulkan.h](https://raw.githubusercontent.com/libretro/libretro-common/master/include/libretro_vulkan.h)). `Cores/shared/LibretroVulkan.c` is that frontend, compiled into a core's framework with `GAGA_LIBRETRO_VULKAN` and kept apart from the software adapter:
+
+- **Context.** It accepts `SET_HW_RENDER` for Vulkan only and answers `GET_PREFERRED_HW_RENDER`, `SET_HW_RENDER_CONTEXT_NEGOTIATION_INTERFACE` (version 1: `get_application_info`, `create_device`, `destroy_device`; version 2's `create_device2` is not used), `GET_HW_RENDER_INTERFACE` (`RETRO_HW_RENDER_INTERFACE_VULKAN_VERSION` 5) and `SET_HW_SHARED_CONTEXT`. The instance enables `VK_KHR_surface`, `VK_EXT_metal_surface` and `VK_KHR_get_physical_device_properties2`. MoltenVK is linked directly, with no Vulkan loader, so no portability enumeration is needed; the device adds `VK_KHR_swapchain` and, where offered, `VK_KHR_portability_subset`. With a negotiation interface the core makes the device; without one the adapter makes a device with one graphics and compute queue and no optional features. The context is made after `retro_load_game` and before the first frame, then `context_reset` runs. Teardown runs `context_destroy`, `retro_unload_game`, the core's `destroy_device`, then the device and instance.
+- **Frame.** The core calls `set_image` (an image with `TRANSFER_SRC` usage), optionally `set_command_buffers`, and `video_refresh(RETRO_HW_FRAME_BUFFER_VALID, ...)`. The adapter waits for the frame slot, acquires a swapchain image, clears it to the ink letterbox, blits the core image aspect-fit with linear filtering, and presents. FIFO, `B8G8R8A8_UNORM`, two frames in flight. It waits on the core's semaphores, signals its `signal_semaphore`, and honours queue-family ownership transfer. The queue lock is a mutex. With no layer attached, frames still render and their semaphores still clear, but nothing is shown. A failed submit raises FATAL "The 3D renderer stopped working."
+- **Swapchain.** On iOS, MoltenVK sets the layer's `drawableSize`, `maximumDrawableCount` and `framebufferOnly` from the swapchain, and does not dispatch to the main thread when given a `CAMetalLayer`, so the core's queue can build it. A size change rebuilds it with `oldSwapchain`. Out of date on acquire rebuilds and retries once.
+- **Shortcuts.** Square pixels, as on the copy path. The blit copies UNORM to a UNORM swapchain, so an sRGB core image is shown without conversion. Fast-forward runs no faster than the display, because FIFO presents every frame.
+
+**MoltenVK.** v1.4.2, built from source by `scripts/build-moltenvk.sh` into a static `MoltenVK.xcframework` with the iOS device and Simulator slices. MoltenVK's `fetchDependencies` pins its dependencies to the commits the tag records (`docs/03` section 5 has the pins and licences). Nothing built is committed. It translates SPIR-V to MSL with SPIRV-Cross and compiles an `MTLLibrary` at run time. That is GPU code: no CPU code is generated, and the no-JIT gate passes on both slices.
 
 ### 2.4 Core-output texture path (planned)
 
@@ -105,7 +114,7 @@ This path is an optional improvement. v1 ships without it, and section 2.5 is th
 
 ### 2.5 Which cores skip host shaders
 
-`docs/03` owns each core's renderer; this table states the consequence. A core on the layer path skips host shaders, and the Shaders row is disabled for its games with the reason shown. The Premium Filters entitlement does not cover those cores until the output-texture path exists (`docs/06` section 4.3).
+`docs/03` owns each core's renderer; this table states the consequence. A core on the layer path skips host shaders. The filter picker disables its rows for such a game and says why, and the Gaga Plus line names this build's layer-path cores. The Premium Filters entitlement does not cover those cores until the output-texture path exists (`docs/06` section 4.3).
 
 | Path | Host shaders | Cores |
 |---|---|---|

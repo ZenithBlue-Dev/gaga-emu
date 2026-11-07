@@ -9,6 +9,7 @@ enum GameLaunchError: LocalizedError {
     case coreNotBuilt(String)
     case romMissing(String)
     case metalUnavailable
+    case gpuBelowFloor
 
     var errorDescription: String? {
         switch self {
@@ -16,6 +17,7 @@ enum GameLaunchError: LocalizedError {
         case .coreNotBuilt(let name): return "\(name) is not part of this build yet."
         case .romMissing(let file): return "The game file \(file) is missing. Try adding the game again."
         case .metalUnavailable: return "This device could not start the video renderer."
+        case .gpuBelowFloor: return GPUFloor.layerPathMessage
         }
     }
 }
@@ -103,6 +105,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private var pointer: (x: Int16, y: Int16)?
     /// The view the device's own picture is drawn in. Not the external screen's: fingers are not there.
     weak var pictureView: UIView?
+    /// A layer-path core presents to a CAMetalLayer itself (docs/05 section 2.3). The renderer, the ring
+    /// and host shaders are unused.
+    let drawsOwnPicture: Bool
+    /// The layer the core presents to, with its drawable size. Kept until the core exists.
+    private var layerTarget: (layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat)?
 
     #if DEBUG
     private let log = Logger(subsystem: "com.zenithblue.gagaemu", category: "session")
@@ -117,6 +124,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard let device = MTLCreateSystemDefaultDevice(), let renderer = MetalRenderer(device: device) else {
             throw GameLaunchError.metalUnavailable
         }
+        drawsOwnPicture = interface.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue != 0
+        guard !drawsOwnPicture || GPUFloor.supportsLayerPathCores(device) else { throw GameLaunchError.gpuBelowFloor }
         self.saves = saveDirectory.map(SaveStore.init(directory:)) ?? SaveStore(romPath: romPath)
         self.entitlements = entitlements
         self.game = game
@@ -172,6 +181,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             return
         }
         self.core = core
+        if let target = layerTarget { attachLayer(target.layer, width: target.width, height: target.height, scale: target.scale) }
         cheats = saves.cheats()
         if core.supportsCheats {
             // shortcut: a stored code this core now refuses stays listed but does nothing. It was valid when added, so this needs a core change; show it in the list if that ever happens.
@@ -315,6 +325,24 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         finish?(message)
     }
 
+    // MARK: - Layer path
+
+    /// Call on every drawable size change, such as a rotation from landscape left to landscape right.
+    func attachLayer(_ layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat) {
+        guard drawsOwnPicture, width > 0, height > 0 else { return }
+        layerTarget = (layer, width, height, scale)
+        if let core, !core.attachMetalLayer(layer, width: width, height: height, scale: scale) {
+            stop(message: "The 3D renderer could not start on this screen.")
+        }
+    }
+
+    /// Only the layer attached last, so a picture moving to the external screen is not cut off by the old one.
+    func detachLayer(_ layer: CAMetalLayer) {
+        guard layerTarget?.layer === layer else { return }
+        layerTarget = nil
+        core?.detachMetalLayer()
+    }
+
     private func flushPlayTime() {
         guard let start = runningSince else { return }
         runningSince = nil
@@ -336,8 +364,17 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     private func writeState(_ core: GagaCoreWrapper, auto: Bool) throws -> SaveSlot {
         let file = SaveStateFile.encode(payload: try core.saveState(), coreID: core.coreID, stateVersion: core.stateVersion)
-        let ring = self.ring
-        return try saves.writeState(file, thumbnail: core.betweenFrames { ring.latestFramePNG() }, auto: auto)
+        return try saves.writeState(file, thumbnail: thumbnail(core), auto: auto)
+    }
+
+    private func thumbnail(_ core: GagaCoreWrapper) -> Data? {
+        guard drawsOwnPicture else {
+            let ring = self.ring
+            return core.betweenFrames { ring.latestFramePNG() }
+        }
+        guard let frame = core.readLayerPixels() else { return nil }
+        return MetalTextureRing.png(frame.pixels, width: frame.width, height: frame.height,
+                                    bytesPerRow: frame.width * 4, pixelFormat: .bgra8Unorm)
     }
 
     /// Every check runs before the core is touched, and the core keeps its game on any failure.

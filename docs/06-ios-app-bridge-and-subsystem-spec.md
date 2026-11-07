@@ -66,7 +66,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 3u
+#define GAGA_BRIDGE_ABI_VERSION 4u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -117,7 +117,7 @@ typedef enum {
 
 // Video frame descriptor emitted to Metal
 typedef struct {
-    const void* pixel_data;   // Valid for 2D software cores; NULL for 3D hardware cores
+    const void* pixel_data;   // NULL from a layer-path core, which sends the size of each frame it presents
     uint32_t    width;
     uint32_t    height;
     size_t      pitch;
@@ -138,6 +138,11 @@ typedef enum {
     GAGA_EVENT_FATAL   = 2, // The host ends the session and shows the message.
 } GagaEventSeverity;
 
+// Bits 0 and 2 are kept for the host-buffer and output-texture paths (docs/06 section 2.4).
+typedef enum {
+    GAGA_CORE_CAP_METAL_LAYER = 1u << 1, // Presents to an attached CAMetalLayer. Host shaders do not run.
+} GagaCoreCapability;
+
 // Threading contract. The host makes every instance call on one serial queue, never concurrently.
 // Video, audio and event callbacks must fire on that queue, inside a host call to the core. A core
 // with worker threads marshals to step_frame. Descriptor pointers and event messages are valid only
@@ -153,6 +158,7 @@ typedef struct GagaCoreInterface {
     const char* supported_extensions; // e.g. "gba|bin|zip"
     double      target_fps;           // e.g. 59.7275 (GBA), 60.0, 50.0 (PAL)
     uint32_t    native_sample_rate;   // Core master audio rate
+    uint32_t    capabilities;         // GagaCoreCapability bits
 
     // Instance lifecycle
     GagaInstance* (*create)(const char* system_dir, const char* save_dir);
@@ -165,8 +171,15 @@ typedef struct GagaCoreInterface {
     // Execution slice (supports up to 4 local controller inputs)
     void (*step_frame)(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
 
-    // Layer attachment for 3D cores (Beetle PSX HW, PPSSPP, Azahar). No core implements it yet.
-    bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer);
+    // Layer path, for a core with GAGA_CORE_CAP_METAL_LAYER. The host attaches its CAMetalLayer with the
+    // drawable size in pixels, and again whenever that size changes. Frames stepped while no layer is
+    // attached render but are not shown. Detach returns with no GPU work using the layer.
+    bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer,
+                               uint32_t width_px, uint32_t height_px, float content_scale);
+    void (*detach_metal_layer)(GagaInstance* inst);
+    // Copies the frame last presented, at the size the core rendered it, as BGRA8 rows of width * 4
+    // bytes, and sets width and height. False if there is none or capacity is short. For thumbnails and tests.
+    bool (*read_layer_pixels)(GagaInstance* inst, void* pixels, size_t capacity, uint32_t* width, uint32_t* height);
 
     // Audio & Video callbacks
     void (*set_video_callback)(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor* frame, void* userdata), void* userdata);
@@ -238,14 +251,14 @@ Fast-forward runs whole frames: at N times speed, each timer tick steps the core
 
 **Built** (2.5 and 2.10, listed in section 2.1): `GAGA_BRIDGE_ABI_VERSION` with `abi_version`, `self_test`, `pause`, `resume`, `set_event_callback` and `GagaEventSeverity`. A fatal event during `load_rom` supplies the message the player sees. A fatal event while playing ends the session and shows its message on the Library. ABI 2 replaced the file-path save state calls and `apply_cheat`, which no core used, with `state_version`, `state_size`, `save_state`, `load_state`, `flush_battery_save`, `cheat_add`, `cheat_remove` and `cheat_set_enabled`.
 
+**Built in ABI 4** (milestone 5.1, listed in section 2.1): `GagaCoreCapability` with `GAGA_CORE_CAP_METAL_LAYER`, `capabilities`, the size-aware `attach_metal_layer`, `detach_metal_layer` and `read_layer_pixels`. A layer-path core sends a size-only frame descriptor (`pixel_data` NULL) for each frame it presents. `read_layer_pixels` serves save-state thumbnails and tests. `GameSession` attaches its `CAMetalLayer` from the game view on every drawable size change and detaches only the layer attached last, so a picture moving to the external screen keeps going. The libretro side is `Cores/shared/LibretroVulkan.c` (`docs/05` section 2.3).
+
 **Planned.** These arrive with the frame paths that need them. Each changes `GagaCoreInterface`, so each bumps the ABI version.
 
 ```c
-typedef enum {
-    GAGA_CORE_CAP_HOST_BUFFER    = 1u << 0, // accepts set_host_framebuffer
-    GAGA_CORE_CAP_METAL_LAYER    = 1u << 1, // presents to an attached layer; host shaders skipped
-    GAGA_CORE_CAP_OUTPUT_TEXTURE = 1u << 2, // hands back an MTLTexture
-} GagaCoreCapability;
+// GagaCoreCapability bits 0 and 2.
+GAGA_CORE_CAP_HOST_BUFFER    = 1u << 0, // accepts set_host_framebuffer
+GAGA_CORE_CAP_OUTPUT_TEXTURE = 1u << 2, // hands back an MTLTexture
 
 typedef struct {
     void*           base;          // MTLBuffer.contents() of the current ring slot
@@ -254,14 +267,6 @@ typedef struct {
     uint32_t        height;
     GagaPixelFormat format;
 } GagaHostFramebuffer;
-
-// Added to GagaCoreInterface.
-uint32_t capabilities; // GagaCoreCapability bits
-
-// Replaces the current attach_metal_layer. Called again when the drawable size changes.
-bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer,
-                           uint32_t width_px, uint32_t height_px, float content_scale);
-void (*detach_metal_layer)(GagaInstance* inst);
 
 // Host-buffer path (docs/05 section 2.2). Called before each step_frame with the slot to fill.
 bool (*set_host_framebuffer)(GagaInstance* inst, const GagaHostFramebuffer* buffer);
@@ -290,13 +295,13 @@ Per `docs/03` section 5: each core is a dynamic, embedded xcframework that expor
 
 Frameworks are signed and shipped inside the app bundle. Code is never loaded from user paths or downloaded. Dynamic linking does not change the GPL analysis in `docs/03` section 5.
 
-Status: built for mGBA, Gambatte, Nestopia, PCSX-ReARMed, bsnes, melonDS DS and JGenesis. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
+Status: built for mGBA, Gambatte, Nestopia, PCSX-ReARMed, bsnes, melonDS DS and JGenesis, and the Vulkan test core `vktest`, which is listed in Debug builds only and is not in the release core set. `scripts/build-core.sh <id>` writes `build/cores/<Framework>.xcframework`, arm64 only, for simulator and device. There is no separate core project as in S3, because `xcodebuild -create-xcframework` from a script is simpler when the core has no Xcode targets of its own. Build outputs are not committed, so `scripts/build-core.sh` must run before `scripts/generate-project.sh` and a build (README).
 
 **Core set.** `GAGA_CORE_SET` picks which cores a build links, for example an MPL-only TestFlight build with no GPL code. `GAGA_CORE_SET="mgba" scripts/generate-project.sh` links only mGBA. Unset, it links every `Cores/*/core.env`. The script refuses an unknown ID or a missing xcframework. It writes `build/core-set.yml`, which embeds each framework, sets the `GAGA_CORE_SET` build setting and defines `GAGA_HAS_<ID>=1`. The post-build no-JIT gate fails if a framework in the set is missing from the app, or a framework outside it is embedded, which happens when a build folder from a wider set is reused. `scripts/appstore_release.sh` defaults to `GAGA_CORE_SET=mgba` until the GPL gate in `docs/07` milestone 4.0 closes. A core left out keeps its guarded stub (section 2.2) and is hidden from the catalog, and its tests skip.
 
 **Libretro cores.** `Cores/shared/LibretroAdapter.c` hosts one statically linked libretro core behind `GagaCoreInterface`. Each libretro core's framework compiles the adapter with its own copy of the core, so `retro_*` symbols never meet. Its bridge file is a table and a getter; `Cores/gambatte/GambatteCore.c` is the pattern. What the adapter does:
 
-- **Environment.** It answers the system and save directories (the `system_dir` and `save_dir` given to `create`), the pixel format (XRGB8888 or RGB565 only), `GET_VARIABLE` from the core's table, `SET_VARIABLES` (accepted and ignored, because melonDS DS reads no option until it succeeds), `INPUT_BITMASKS`, `CAN_DUPE`, `LOG` (dropped), `SET_SYSTEM_AV_INFO` and `SHUTDOWN` (a FATAL event). Every other call, including hardware rendering, frontend extras, cores that load content themselves and options UI, returns false. A core that needs a hardware context does not fit this adapter.
+- **Environment.** It answers the system and save directories (the `system_dir` and `save_dir` given to `create`), the pixel format (XRGB8888 or RGB565 only), `GET_VARIABLE` from the core's table, `SET_VARIABLES` (accepted and ignored, because melonDS DS reads no option until it succeeds), `INPUT_BITMASKS`, `CAN_DUPE`, `LOG` (dropped), `SET_SYSTEM_AV_INFO` and `SHUTDOWN` (a FATAL event). Every other call, including frontend extras, cores that load content themselves and options UI, returns false. Hardware rendering is refused too, unless the core's build adds `Cores/shared/LibretroVulkan.c` (the layer-path step below).
 - **Instance.** libretro is a set of globals with no userdata, so a framework has one live instance. `create` returns NULL while another is alive. Callbacks with no live instance do nothing. Every call runs on the host's serial queue, and the frame and audio pointers handed on are valid only during the callback.
 - **Video and audio.** Frames are copied; XRGB8888 alpha is forced opaque. A NULL frame (a duplicate) is skipped. Audio arrives through the batch callback.
 - **Input.** Host bits map to the RetroPad, with bitmask queries and analog sticks. `RETRO_DEVICE_POINTER` on port 0 answers `pointer_x`, `pointer_y` and `pointer_down` from `GagaInputState`. `GameSession` maps the first finger on the picture to that scale over the frame's fitted viewport, and sends no touch from the letterbox.
@@ -314,6 +319,7 @@ For a libretro core, steps 3 to 7 below become:
 - Put in the variable table every core option whose upstream default is wrong for this app, such as a boot ROM option. The adapter answers false for a key not in the table, which the core reads as its own default.
 - Leave out any upstream file whose licence is not the core's licence, and stub what it provided. Gambatte's `cc_resampler.c` is GPLv3 and is replaced by two empty functions (`docs/03` section 5).
 - Read the core's `retro_get_memory_*` and options before writing tests: battery saves need `RETRO_MEMORY_SAVE_RAM` or `save_battery`, and a boot ROM option must stay off unless the core has its own free boot ROM.
+- A layer-path core (Vulkan, `docs/05` section 2.3): set `CORE_USES_MOLTENVK=1` in `core.env`, which makes `build-core.sh` run `scripts/build-moltenvk.sh` and link `libMoltenVK.a` with clang++ and Metal, QuartzCore, IOSurface, UIKit and CoreGraphics. Add `-DGAGA_LIBRETRO_VULKAN -I../../build/moltenvk/include` to both flag sets, list `../shared/LibretroVulkan.c` after the adapter in `sources.txt`, and add `GAGA_LIBRETRO_VULKAN_LAYER` to the getter. `Cores/vktest` is the pattern. compiler-rt's `@available` support imports `_dlsym` for CoreFoundation lookups, so leave `_dlsym` out of `FORBIDDEN_IMPORTS`; keep `_dlopen`.
 - A core whose interpreter still names a few dynarec symbols: compile the dynarec out with the core's own define and define those symbols as empty in a GagaEmu file, as `Cores/pcsx_rearmed/nodrc.c` does with `DRC_DISABLE`, instead of patching upstream.
 - A disc core loads by path (`need_fullpath`). Its battery file is named after what was opened, so a `.m3u` gives every disc one memory card. The Multi-Disc Helper imports each playlist with its discs' platform, because an `.m3u` alone names none.
 

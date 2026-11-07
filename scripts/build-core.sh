@@ -25,8 +25,16 @@ build_slice() { # core dir sdk target
     local core=$1 dir=$2 sdk=$3 target=$4
     local out="$root/build/cores/$core/$sdk"
     local framework="$out/$CORE_FRAMEWORK.framework" binary="$out/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK"
-    local sysroot source link_driver=clang objects=()
+    local sysroot source link_driver=clang objects=() link_extra=()
     sysroot=$(xcrun --sdk "$sdk" --show-sdk-path)
+    # A layer-path core links MoltenVK statically, so the framework carries its own Vulkan driver.
+    if [ "${CORE_USES_MOLTENVK:-}" = 1 ]; then
+        local slice=ios-arm64
+        [ "$sdk" = iphonesimulator ] && slice=ios-arm64_x86_64-simulator
+        link_driver=clang++
+        link_extra=("$root/build/moltenvk/MoltenVK.xcframework/$slice/libMoltenVK.a" -framework Foundation
+            -framework Metal -framework QuartzCore -framework IOSurface -framework UIKit -framework CoreGraphics)
+    fi
     rm -rf "$out"
     mkdir -p "$framework"
 
@@ -57,7 +65,7 @@ build_slice() { # core dir sdk target
         -install_name "@rpath/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK" \
         -compatibility_version 1 -current_version 1 \
         -Wl,-exported_symbols_list,"$dir/$CORE_FRAMEWORK.exports" -Wl,-dead_strip -Wl,-x \
-        -o "$binary" "${objects[@]}"
+        -o "$binary" "${objects[@]}" ${link_extra[@]+"${link_extra[@]}"}
     xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
 
     # A bundle ID takes letters, digits, hyphens and dots only, so "_" in a core ID becomes "-", and the short
@@ -115,20 +123,25 @@ PLIST
 build_core() {
     local core=$1 dir="$root/Cores/$1"
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
-    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB # Optional, so one core's value must not reach the next.
+    # Optional, so one core's value must not reach the next.
+    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK
     # shellcheck source=/dev/null
     source "$dir/core.env"
 
-    if [ ! -e "$dir/upstream/.git" ]; then
-        echo "Missing source. Run: git submodule update --init Cores/$core/upstream" >&2
-        exit 1
-    fi
     local commit hits
-    commit=$(git -C "$dir/upstream" rev-parse HEAD)
-    if [ "$commit" != "$UPSTREAM_COMMIT" ]; then
-        echo "Cores/$core/upstream is at $commit, but core.env pins $UPSTREAM_COMMIT" >&2
-        exit 1
+    # An empty UPSTREAM_COMMIT is a core written in this repository, such as the vktest debug core.
+    if [ -n "$UPSTREAM_COMMIT" ]; then
+        if [ ! -e "$dir/upstream/.git" ]; then
+            echo "Missing source. Run: git submodule update --init Cores/$core/upstream" >&2
+            exit 1
+        fi
+        commit=$(git -C "$dir/upstream" rev-parse HEAD)
+        if [ "$commit" != "$UPSTREAM_COMMIT" ]; then
+            echo "Cores/$core/upstream is at $commit, but core.env pins $UPSTREAM_COMMIT" >&2
+            exit 1
+        fi
     fi
+    [ "${CORE_USES_MOLTENVK:-}" != 1 ] || "$root/scripts/build-moltenvk.sh"
     # Dependencies a core vendors in Cores/<id>/deps are pinned by the commit this repository records.
     if hits=$(git -C "$root" submodule status -- "Cores/$core" | grep -v '^ '); then
         echo "Cores/$core has submodules missing or not at the recorded commit. Run: git submodule update --init Cores/$core" >&2
