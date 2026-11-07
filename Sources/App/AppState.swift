@@ -1194,16 +1194,35 @@ final class AppState: ObservableObject {
         objectWillChange.send()
     }
 
-    /// A disc set's folder goes with its game, unless another entry still points into it. Saves stay.
+    /// The disc set folder deleting `game` removes: nil for a flat game, or while another entry still points into it.
+    func folderDeleted(with game: GameItem) -> URL? {
+        guard let path = game.resolvedROMPath(romDirectory: romDirectory),
+              let folder = DiscSet.folder(of: URL(fileURLWithPath: path), romDirectory: romDirectory),
+              !games.contains(where: { $0.id != game.id && $0.resolvedROMPath(romDirectory: romDirectory).map { URL(fileURLWithPath: $0).deletingLastPathComponent() } == folder })
+        else { return nil }
+        return folder
+    }
+
+    /// Library games whose .m3u (a Multi-Disc Helper playlist in the ROM folder) names a file in `folder`.
+    func playlists(into folder: URL) -> [GameItem] {
+        games.filter { game in
+            guard let path = game.resolvedROMPath(romDirectory: romDirectory), path.lowercased().hasSuffix(".m3u"),
+                  DiscSet.folder(of: URL(fileURLWithPath: path), romDirectory: romDirectory) == nil
+            else { return false }
+            return DiscSet.playlistEntries(of: URL(fileURLWithPath: path))
+                .contains { $0.contains("/") && $0.split(separator: "/").first?.lowercased() == folder.lastPathComponent.lowercased() }
+        }
+    }
+
+    /// A disc set's folder goes with its game, unless another entry still points into it. Saves stay. A folder
+    /// a playlist game plays from is never deleted: the Library asks for that game to go first.
     func delete(_ game: GameItem) {
+        let folder = folderDeleted(with: game)
+        if let folder, !playlists(into: folder).isEmpty { return }
         games.removeAll { $0.id == game.id }
         history.removeAll { $0.gameID == game.id }
         save()
-        guard let path = game.resolvedROMPath(romDirectory: romDirectory),
-              let folder = DiscSet.folder(of: URL(fileURLWithPath: path), romDirectory: romDirectory),
-              !games.contains(where: { $0.resolvedROMPath(romDirectory: romDirectory).map { URL(fileURLWithPath: $0).deletingLastPathComponent() } == folder })
-        else { return }
-        try? FileManager.default.removeItem(at: folder)
+        if let folder { try? FileManager.default.removeItem(at: folder) }
     }
 
     func clearCache() {

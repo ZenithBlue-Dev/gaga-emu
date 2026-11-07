@@ -99,6 +99,24 @@ final class DiscSetTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
     }
 
+    /// A Multi-Disc Helper playlist in ROMs plays from the folder, so the folder and its game stay until it goes.
+    func testAPlaylistIntoTheFolderBlocksItsDelete() throws {
+        try upload("\(stem).cue", cue("\(stem).bin"))
+        let game = try XCTUnwrap(try upload("\(stem).bin", Data("x".utf8)))
+        let dir = URL(fileURLWithPath: game.romPath).deletingLastPathComponent()
+        XCTAssertEqual(state.folderDeleted(with: game), dir)
+        let m3u = state.romDirectory.appendingPathComponent("\(stem)-set.m3u")
+        try Data("\(dir.lastPathComponent)/\(stem).cue\n".utf8).write(to: m3u)
+        let playlist = try XCTUnwrap(state.importROM(at: m3u, platformID: "ps1"))
+        XCTAssertEqual(state.playlists(into: dir).map(\.id), [playlist.id])
+        state.delete(game)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: dir.path))
+        XCTAssertTrue(state.games.contains { $0.id == game.id })
+        state.delete(playlist)
+        state.delete(game)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.path))
+    }
+
     func testAnOldFlatEntryStillLoads() throws {
         let sheet = state.romDirectory.appendingPathComponent("\(stem).cue")
         try cue("\(stem).bin").write(to: sheet)

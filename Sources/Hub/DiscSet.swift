@@ -53,6 +53,14 @@ enum DiscSet {
         return names.filter { !$0.isEmpty && WiFiTransferServer.sanitize($0) == $0 && seen.insert($0.lowercased()).inserted }
     }
 
+    /// An .m3u's entries as written, folders kept ("Disc/Disc.cue" from the Multi-Disc Helper).
+    static func playlistEntries(of playlist: URL) -> [String] {
+        guard let data = try? Data(contentsOf: playlist), data.count <= 1 << 20 else { return [] }
+        let text = String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
+        return text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && !$0.hasPrefix("#") }
+    }
+
     private static func files(in folder: URL) -> [String] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
         return names.filter { name in

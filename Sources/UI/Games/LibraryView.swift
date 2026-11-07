@@ -7,19 +7,19 @@ struct LibraryView: View {
     var onAdd: () -> Void
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
-    @State private var pendingDelete: GameItem?
     @State private var pendingLoad: (GameItem, SaveSlot)?
     /// Tiles widen with Dynamic Type so titles do not break mid-word.
     @ScaledMetric(relativeTo: .footnote) private var tileScale: CGFloat = 1
 
     private enum GameSheet: Identifiable {
-        case core(GameItem), saves(GameItem), edit(GameItem), skin(GameItem)
+        case core(GameItem), saves(GameItem), edit(GameItem), skin(GameItem), delete(GameItem)
         var id: String {
             switch self {
             case .core(let game): return "core\(game.id)"
             case .saves(let game): return "saves\(game.id)"
             case .edit(let game): return "edit\(game.id)"
             case .skin(let game): return "skin\(game.id)"
+            case .delete(let game): return "delete\(game.id)"
             }
         }
     }
@@ -49,17 +49,10 @@ struct LibraryView: View {
                 ManageSavesSheet(title: game.title, store: state.saveStore(for: game)) { pendingLoad = (game, $0) }
             case .edit(let game): EditDetailsSheet(game: game)
             case .skin(let game): GameSkinSheet(game: game)
+            case .delete(let game): DeleteGameSheet(game: game)
             }
         }
         .fullScreenCover(item: $filterGame) { FilterPickerView(game: $0) }
-        .confirmationDialog("Delete \(pendingDelete?.title ?? "game")?",
-                            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-                            titleVisibility: .visible, presenting: pendingDelete) { game in
-            Button("Delete", role: .destructive) { state.delete(game) }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("This removes the game and its play history from your library. Its saves and save states stay on this device, and return if you add the same file again.")
-        }
     }
 
     /// A game view cannot present until the sheet has gone.
@@ -265,7 +258,51 @@ struct LibraryView: View {
         Button { sheet = .skin(game) } label: { Label("Assign Skin", systemImage: "gamecontroller") }
         Button { sheet = .saves(game) } label: { Label("Manage Saves", systemImage: "tray.full") }
         Button { sheet = .edit(game) } label: { Label("Edit Details", systemImage: "pencil") }
-        Button(role: .destructive) { pendingDelete = game } label: { Label("Delete", systemImage: "trash") }
+        Button(role: .destructive) { sheet = .delete(game) } label: { Label("Delete", systemImage: "trash") }
+    }
+}
+
+/// Says what Delete removes from the device before it does: a disc set's folder and its files, or only the
+/// Library entry. Saves always stay. A folder a playlist game plays from is not deleted until that game goes.
+struct DeleteGameSheet: View {
+    @EnvironmentObject private var state: AppState
+    @Environment(\.dismiss) private var dismiss
+    let game: GameItem
+
+    var body: some View {
+        let folder = state.folderDeleted(with: game)
+        let playlists = folder.map(state.playlists(into:)) ?? []
+        PaperSheet(title: "Delete \(game.title)?") {
+            VStack(alignment: .leading, spacing: 12) {
+                if let folder {
+                    let count = ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).filter { !$0.hasPrefix(".") }.count
+                    Text("This deletes the folder \u{201C}\(folder.lastPathComponent)\u{201D} and its \(count) \(count == 1 ? "file" : "files") from this device, and removes the game and its play history from your library.")
+                } else {
+                    Text("This removes the game and its play history from your library. The game file stays in the ROMs folder.")
+                }
+                Text("Its saves and save states stay on this device, and return if you add the same game again.")
+                    .foregroundStyle(AppTheme.muted)
+                if !playlists.isEmpty {
+                    Rule()
+                    Label {
+                        Text("The playlist \(playlists.map { "\u{201C}\($0.title)\u{201D}" }.formatted()) plays discs from this folder. Delete that game first, so its playlist does not lose a disc.")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle").foregroundStyle(AppTheme.accent)
+                    }
+                }
+                HStack(spacing: 12) {
+                    Button("Cancel") { dismiss() }.buttonStyle(QuietButtonStyle())
+                    Button(folder == nil ? "Remove from Library" : "Delete Folder") {
+                        state.delete(game)
+                        dismiss()
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(!playlists.isEmpty)
+                }
+                .padding(.top, 8)
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 
