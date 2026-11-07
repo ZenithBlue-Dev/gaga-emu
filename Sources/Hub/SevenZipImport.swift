@@ -43,43 +43,61 @@ extension CoreCatalog {
     /// The most a 7z block behind a filter (BCJ and the like) may unpack to, as the SDK holds it whole.
     static let sevenZipMemoryLimit = 64 << 20
 
-    /// As `extractZipEntry`, for a 7z file: streamed to a .part file, stopped past `limit`, CRC-checked by the
-    /// decoder, then placed (or matched to an identical file) by `ClipboardImporter.place`.
-    static func extractSevenZipEntry(_ entry: ZipEntry, index: Int, from archiveURL: URL, to destination: URL,
-                                     limit: Int) throws -> URL {
-        guard entry.size <= limit else { throw ZipError.tooLarge }
+    /// As `extractZipEntry`, for 7z files: each streamed to a .part file beside its destination, stopped past
+    /// `limit`, CRC-checked by the decoder, then placed (or matched to an identical file) by
+    /// `ClipboardImporter.place`. Each solid block is decoded once for all the files it holds. Stops with
+    /// `CancellationError` once `progress` is cancelled, which also counts the bytes written.
+    @discardableResult
+    static func extractSevenZipEntries(_ wanted: [(entry: ZipEntry, destination: URL)], from archiveURL: URL,
+                                       limit: Int, progress: Progress? = nil) throws -> [URL] {
+        let indices = try wanted.map { item -> UInt32 in
+            guard let index = item.entry.sevenZipIndex else { throw ZipError.corrupt }
+            guard item.entry.size <= limit else { throw ZipError.tooLarge }
+            return UInt32(index)
+        }
         guard let archive = gaga_7z_open(archiveURL.path) else { throw ZipError.corrupt }
         defer { gaga_7z_close(archive) }
-        let part = destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).part")
-        guard FileManager.default.createFile(atPath: part.path, contents: nil) else { throw CocoaError(.fileWriteUnknown) }
-        defer { try? FileManager.default.removeItem(at: part) }
+        let parts = wanted.map { $0.destination.deletingLastPathComponent().appendingPathComponent(".\(UUID().uuidString).part") }
+        defer { for part in parts { try? FileManager.default.removeItem(at: part) } }
 
         final class Sink {
-            let output: FileHandle, limit: Int
-            var written = 0, error: Error?
-            init(_ output: FileHandle, _ limit: Int) { self.output = output; self.limit = limit }
+            var outputs: [UInt32: (handle: FileHandle, written: Int)] = [:]
+            let limit: Int, progress: Progress?
+            var error: Error?
+            init(_ limit: Int, _ progress: Progress?) { self.limit = limit; self.progress = progress }
         }
-        let sink = Sink(try FileHandle(forWritingTo: part), limit)
+        let sink = Sink(limit, progress)
+        defer { for output in sink.outputs.values { try? output.handle.close() } }
+        for (index, part) in zip(indices, parts) {
+            guard FileManager.default.createFile(atPath: part.path, contents: nil) else { throw CocoaError(.fileWriteUnknown) }
+            sink.outputs[index] = (try FileHandle(forWritingTo: part), 0)
+        }
         let status = withExtendedLifetime(sink) {
-            gaga_7z_extract(archive, UInt32(index), UInt64(sevenZipMemoryLimit), { context, bytes, count in
+            gaga_7z_extract(archive, indices, UInt32(indices.count), UInt64(sevenZipMemoryLimit), { context, index, bytes, count in
                 let sink = Unmanaged<Sink>.fromOpaque(context!).takeUnretainedValue()
-                sink.written += count
-                guard sink.written <= sink.limit else { sink.error = ZipError.tooLarge; return 1 }
-                do { try sink.output.write(contentsOf: UnsafeBufferPointer(start: bytes, count: count)) } catch {
+                guard sink.progress?.isCancelled != true else { sink.error = CancellationError(); return 1 }
+                guard let output = sink.outputs[index] else { return 0 }
+                let written = output.written + count
+                sink.outputs[index]?.written = written
+                guard written <= sink.limit else { sink.error = ZipError.tooLarge; return 1 }
+                do { try output.handle.write(contentsOf: UnsafeBufferPointer(start: bytes, count: count)) } catch {
                     sink.error = error
                     return 1
                 }
+                sink.progress?.completedUnitCount += Int64(count)
                 return 0
             }, Unmanaged.passUnretained(sink).toOpaque())
         }
-        try? sink.output.close()
         switch Int(status) {
         case Int(GAGA_7Z_OK): break
         case Int(GAGA_7Z_STOPPED): throw sink.error ?? ZipError.corrupt
         case Int(GAGA_7Z_UNSUPPORTED), Int(GAGA_7Z_NO_MEMORY): throw ZipError.unsupported
         default: throw ZipError.corrupt
         }
-        guard sink.written == entry.size else { throw ZipError.corrupt }
-        return try ClipboardImporter.place(part, named: destination.lastPathComponent, in: destination.deletingLastPathComponent())
+        guard zip(wanted, indices).allSatisfy({ $0.entry.size == sink.outputs[$1]?.written }) else { throw ZipError.corrupt }
+        for index in indices { try sink.outputs.removeValue(forKey: index)?.handle.close() }
+        return try zip(wanted, parts).map { item, part in
+            try ClipboardImporter.place(part, named: item.destination.lastPathComponent, in: item.destination.deletingLastPathComponent())
+        }
     }
 }

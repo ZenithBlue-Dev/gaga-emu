@@ -31,6 +31,7 @@ struct AddView: View {
                     }
                     .buttonStyle(PrimaryButtonStyle())
                     dropTarget
+                    ImportProgressRows()
                     if let notice { Text(notice).font(.footnote).foregroundStyle(AppTheme.muted) }
                 }
                 .padding(16)
@@ -79,8 +80,8 @@ struct AddView: View {
     /// Imports a copied file, and queues the platform question when a disc image or .zip did not say.
     /// Returns why import stored no game or kept an older file, for the notice.
     @discardableResult
-    private func add(_ dest: URL) -> String? {
-        let (game, note) = state.importArrived(dest)
+    private func add(_ dest: URL) async -> String? {
+        let (game, note) = await state.importArrived(dest)
         if let game, game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath)) != nil {
             unplaced.append(game)
         }
@@ -157,14 +158,14 @@ struct AddView: View {
                 Task {
                     do {
                         let dest = try await ClipboardImporter.download(url, into: state.romDirectory)
-                        notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
+                        notice = await add(dest) ?? "Imported \(dest.lastPathComponent)"
                     } catch {
                         notice = error.localizedDescription
                     }
                 }
             default:
                 let dest = try ClipboardImporter.persist(item, into: state.romDirectory)
-                notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
+                Task { notice = await add(dest) ?? "Imported \(dest.lastPathComponent)" }
             }
         } catch {
             notice = error.localizedDescription
@@ -175,14 +176,21 @@ struct AddView: View {
         switch result {
         case .failure(let error): notice = error.localizedDescription
         case .success(let urls):
-            // Copy every file before importing any, so a .cue finds the .bin picked with it.
-            let copied = urls.compactMap { url -> URL? in
-                let scoped = url.startAccessingSecurityScopedResource()
-                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                return try? ClipboardImporter.persist(.file(url), into: state.romDirectory)
+            let romDirectory = state.romDirectory
+            Task {
+                // Copy every file before importing any, so a .cue finds the .bin picked with it. Off the main
+                // thread: a copy can be gigabytes.
+                let copied = await Task.detached {
+                    urls.compactMap { url -> URL? in
+                        let scoped = url.startAccessingSecurityScopedResource()
+                        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                        return try? ClipboardImporter.persist(.file(url), into: romDirectory)
+                    }
+                }.value
+                var notes: [String] = []
+                for dest in copied { if let note = await add(dest) { notes.append(note) } }
+                notice = (["Imported \(copied.count) file\(copied.count == 1 ? "" : "s")"] + notes).joined(separator: "\n")
             }
-            let notes = copied.compactMap(add)
-            notice = (["Imported \(copied.count) file\(copied.count == 1 ? "" : "s")"] + notes).joined(separator: "\n")
         }
     }
 
@@ -194,8 +202,9 @@ struct AddView: View {
                 guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 Task { @MainActor in
                     do {
-                        let dest = try ClipboardImporter.persist(.file(url), into: state.romDirectory)
-                        notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
+                        let romDirectory = state.romDirectory
+                        let dest = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
+                        notice = await add(dest) ?? "Imported \(dest.lastPathComponent)"
                     } catch {
                         notice = error.localizedDescription
                     }
@@ -203,6 +212,34 @@ struct AddView: View {
             }
         }
         return accepted
+    }
+}
+
+/// One row per archive unpacking: its name, how far it has got, and Cancel. Polled, as `Progress` is
+/// written off the main thread.
+struct ImportProgressRows: View {
+    @EnvironmentObject private var state: AppState
+
+    var body: some View {
+        if !state.importJobs.isEmpty {
+            TimelineView(.periodic(from: .now, by: 0.25)) { _ in
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(state.importJobs) { job in
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Unpacking \(job.name)").font(.footnote).lineLimit(1).truncationMode(.middle)
+                                ProgressView(value: job.progress.fractionCompleted).tint(AppTheme.accent)
+                            }
+                            Button("Cancel") { state.cancelImport(job) }
+                                .font(.footnote)
+                                .frame(minHeight: 44)
+                                .accessibilityLabel("Cancel unpacking \(job.name)")
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+        }
     }
 }
 

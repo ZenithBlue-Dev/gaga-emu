@@ -1,5 +1,6 @@
 #include "GagaSevenZip.h"
 
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,10 +117,38 @@ static Byte lzma2_prop(Byte prop, UInt64 size) {
     return prop;
 }
 
-/// Streams one single-coder block (copy, LZMA or LZMA2), passing on bytes [skip, skip + size).
+static atomic_uint_fast64_t block_decodes;
+
+uint64_t gaga_7z_block_decodes(void) { return atomic_load(&block_decodes); }
+
+/// The wanted entries of one block, with where the block starts in the archive's unpacked stream.
+typedef struct {
+    const CSzArEx *db;
+    const uint32_t *files;
+    uint32_t count;
+    UInt64 base;
+    UInt32 *crcs;
+    gaga_7z_sink sink;
+    void *context;
+} Route;
+
+/// Hands each wanted entry its part of the block's bytes [pos, pos + n).
+static int route(const Route *r, UInt64 pos, const Byte *bytes, size_t n) {
+    for (uint32_t i = 0; i < r->count; i++) {
+        UInt32 file = r->files[i];
+        UInt64 start = r->db->UnpackPositions[file] - r->base, end = start + SzArEx_GetFileSize(r->db, file);
+        UInt64 from = pos > start ? pos : start, to = pos + n < end ? pos + n : end;
+        if (from >= to) continue;
+        r->crcs[i] = CrcUpdate(r->crcs[i], bytes + (from - pos), (size_t)(to - from));
+        if (r->sink(r->context, file, bytes + (from - pos), (size_t)(to - from))) return GAGA_7Z_STOPPED;
+    }
+    return GAGA_7Z_OK;
+}
+
+/// Streams one single-coder block (copy, LZMA or LZMA2) once, up to byte `want`, routing it to the wanted entries.
 static int stream_block(GagaSevenZip *archive, const CSzCoderInfo *coder, const Byte *props, UInt64 packPos,
-                        UInt64 packSize, UInt64 unpackSize, UInt64 skip, UInt64 size, UInt32 *crc,
-                        gaga_7z_sink sink, void *context) {
+                        UInt64 packSize, UInt64 unpackSize, UInt64 want, const Route *r) {
+    atomic_fetch_add(&block_decodes, 1);
     CLzmaDec lzma;
     CLzma2Dec lzma2;
     LzmaDec_CONSTRUCT(&lzma)
@@ -147,7 +176,7 @@ static int stream_block(GagaSevenZip *archive, const CSzCoderInfo *coder, const 
     FILE *file = archive->stream.file;
     if (fseeko(file, (off_t)packPos, SEEK_SET) != 0) { result = GAGA_7Z_CORRUPT; goto done; }
 
-    UInt64 packLeft = packSize, produced = 0, want = skip + size;
+    UInt64 packLeft = packSize, produced = 0;
     size_t inPos = 0, inLen = 0;
     while (produced < want) {
         if (inPos == inLen && packLeft > 0) {
@@ -174,11 +203,7 @@ static int stream_block(GagaSevenZip *archive, const CSzCoderInfo *coder, const 
         inPos += consumed;
         // Nothing in and nothing out with input left, or with no input left at all: the stream ended early.
         if (outLen == 0 && consumed == 0 && (inPos < inLen || packLeft == 0)) { result = GAGA_7Z_CORRUPT; goto done; }
-        UInt64 from = produced < skip ? skip - produced : 0;
-        if (from < outLen) {
-            *crc = CrcUpdate(*crc, chunk + from, outLen - from);
-            if (sink(context, chunk + from, outLen - (size_t)from)) { result = GAGA_7Z_STOPPED; goto done; }
-        }
+        if ((result = route(r, produced, chunk, outLen)) != GAGA_7Z_OK) goto done;
         produced += outLen;
     }
 done:
@@ -189,56 +214,85 @@ done:
     return result;
 }
 
-int gaga_7z_extract(GagaSevenZip *archive, uint32_t index, uint64_t memory_limit, gaga_7z_sink sink, void *context) {
+/// Decodes block `folderIndex` once for its wanted entries `files` (all in that block), then checks their CRC-32s.
+static int extract_block(GagaSevenZip *archive, UInt32 folderIndex, const uint32_t *files, uint32_t count,
+                         uint64_t memory_limit, gaga_7z_sink sink, void *context) {
     const CSzArEx *db = &archive->db;
-    if (index >= db->NumFiles || SzArEx_IsDir(db, index)) return GAGA_7Z_CORRUPT;
-    UInt64 size = SzArEx_GetFileSize(db, index);
-    UInt32 crc = CRC_INIT_VAL;
-    UInt32 folderIndex = db->FileToFolder[index];
-    int result = GAGA_7Z_OK;
-    if (folderIndex == (UInt32)-1) {
-        if (size != 0) return GAGA_7Z_CORRUPT;
-    } else {
-        const CSzAr *ar = &db->db;
-        CSzFolder folder;
-        CSzData sd;
-        const Byte *data = ar->CodersData + ar->FoCodersOffsets[folderIndex];
-        sd.Data = data;
-        sd.Size = ar->FoCodersOffsets[folderIndex + 1] - ar->FoCodersOffsets[folderIndex];
-        if (SzGetNextFolderItem(&folder, &sd) != SZ_OK) return GAGA_7Z_CORRUPT;
-        UInt64 unpackSize = SzAr_GetFolderUnpackSize(ar, folderIndex);
-        UInt64 skip = db->UnpackPositions[index] - db->UnpackPositions[db->FolderToFile[folderIndex]];
-        if (skip + size > unpackSize) return GAGA_7Z_CORRUPT;
-        const CSzCoderInfo *coder = &folder.Coders[0];
-        if (folder.NumCoders == 1 && folder.NumPackStreams == 1 &&
-            (coder->MethodID == METHOD_COPY || coder->MethodID == METHOD_LZMA || coder->MethodID == METHOD_LZMA2)) {
-            UInt32 pack = ar->FoStartPackStreamIndex[folderIndex];
-            result = stream_block(archive, coder, data + coder->PropsOffset, db->dataPos + ar->PackPositions[pack],
-                                  ar->PackPositions[pack + 1] - ar->PackPositions[pack], unpackSize, skip, size,
-                                  &crc, sink, context);
-            if (result != GAGA_7Z_OK) return result;
-        } else {
-            // shortcut: a filter chain decodes its whole block in memory, so it stops at memory_limit; stream BCJ too if real dumps need it.
-            if (unpackSize > memory_limit) return GAGA_7Z_UNSUPPORTED;
-            UInt32 block = (UInt32)-1;
-            Byte *buffer = NULL;
-            size_t bufferSize = 0, offset = 0, processed = 0;
-            SRes res = SzArEx_Extract(db, &archive->look.vt, index, &block, &buffer, &bufferSize, &offset, &processed,
-                                      &allocator, &allocator);
-            if (res == SZ_OK && processed != size) res = SZ_ERROR_DATA;
-            if (res == SZ_OK) {
-                crc = CrcUpdate(crc, buffer + offset, processed);
-                // SzArEx_Extract already checked the CRC; a slice of 1 MiB at a time keeps the sink's contract.
-                for (size_t at = 0; at < processed && result == GAGA_7Z_OK; at += CHUNK) {
-                    size_t n = processed - at < CHUNK ? processed - at : CHUNK;
-                    if (sink(context, buffer + offset + at, n)) result = GAGA_7Z_STOPPED;
-                }
-            }
-            ISzAlloc_Free(&allocator, buffer);
-            if (res != SZ_OK) return status(res);
-            if (result != GAGA_7Z_OK) return result;
-        }
+    const CSzAr *ar = &db->db;
+    CSzFolder folder;
+    CSzData sd;
+    const Byte *data = ar->CodersData + ar->FoCodersOffsets[folderIndex];
+    sd.Data = data;
+    sd.Size = ar->FoCodersOffsets[folderIndex + 1] - ar->FoCodersOffsets[folderIndex];
+    if (SzGetNextFolderItem(&folder, &sd) != SZ_OK) return GAGA_7Z_CORRUPT;
+    UInt64 unpackSize = SzAr_GetFolderUnpackSize(ar, folderIndex);
+    UInt64 base = db->UnpackPositions[db->FolderToFile[folderIndex]], want = 0;
+    for (uint32_t i = 0; i < count; i++) {
+        UInt64 end = db->UnpackPositions[files[i]] - base + SzArEx_GetFileSize(db, files[i]);
+        if (end > want) want = end;
     }
-    if (SzBitWithVals_Check(&db->CRCs, index) && CRC_GET_DIGEST(crc) != db->CRCs.Vals[index]) return GAGA_7Z_CORRUPT;
-    return GAGA_7Z_OK;
+    if (want > unpackSize) return GAGA_7Z_CORRUPT;
+    UInt32 *crcs = malloc(sizeof(UInt32) * count);
+    if (!crcs) return GAGA_7Z_NO_MEMORY;
+    for (uint32_t i = 0; i < count; i++) crcs[i] = CRC_INIT_VAL;
+    Route r = { db, files, count, base, crcs, sink, context };
+    int result = GAGA_7Z_OK;
+    const CSzCoderInfo *coder = &folder.Coders[0];
+    if (folder.NumCoders == 1 && folder.NumPackStreams == 1 &&
+        (coder->MethodID == METHOD_COPY || coder->MethodID == METHOD_LZMA || coder->MethodID == METHOD_LZMA2)) {
+        UInt32 pack = ar->FoStartPackStreamIndex[folderIndex];
+        result = stream_block(archive, coder, data + coder->PropsOffset, db->dataPos + ar->PackPositions[pack],
+                              ar->PackPositions[pack + 1] - ar->PackPositions[pack], unpackSize, want, &r);
+    } else if (unpackSize > memory_limit) {
+        // shortcut: a filter chain decodes its whole block in memory, so it stops at memory_limit; stream BCJ too if real dumps need it.
+        result = GAGA_7Z_UNSUPPORTED;
+    } else {
+        // The SDK keeps the block it decoded in `buffer` while `block` names it, so the block decodes once.
+        UInt32 block = (UInt32)-1;
+        Byte *buffer = NULL;
+        size_t bufferSize = 0;
+        for (uint32_t i = 0; i < count && result == GAGA_7Z_OK; i++) {
+            size_t offset = 0, processed = 0;
+            if (block != folderIndex) atomic_fetch_add(&block_decodes, 1);
+            SRes res = SzArEx_Extract(db, &archive->look.vt, files[i], &block, &buffer, &bufferSize, &offset, &processed,
+                                      &allocator, &allocator);
+            if (res == SZ_OK && processed != SzArEx_GetFileSize(db, files[i])) res = SZ_ERROR_DATA;
+            if (res != SZ_OK) { result = status(res); break; }
+            // A slice of 1 MiB at a time keeps the sink's contract.
+            UInt64 at0 = db->UnpackPositions[files[i]] - base;
+            for (size_t at = 0; at < processed && result == GAGA_7Z_OK; at += CHUNK) {
+                size_t n = processed - at < CHUNK ? processed - at : CHUNK;
+                result = route(&r, at0 + at, buffer + offset + at, n);
+            }
+        }
+        ISzAlloc_Free(&allocator, buffer);
+    }
+    for (uint32_t i = 0; i < count && result == GAGA_7Z_OK; i++)
+        if (SzBitWithVals_Check(&db->CRCs, files[i]) && CRC_GET_DIGEST(crcs[i]) != db->CRCs.Vals[files[i]]) result = GAGA_7Z_CORRUPT;
+    free(crcs);
+    return result;
+}
+
+int gaga_7z_extract(GagaSevenZip *archive, const uint32_t *indices, uint32_t count, uint64_t memory_limit,
+                    gaga_7z_sink sink, void *context) {
+    const CSzArEx *db = &archive->db;
+    for (uint32_t i = 0; i < count; i++) {
+        if (indices[i] >= db->NumFiles || SzArEx_IsDir(db, indices[i])) return GAGA_7Z_CORRUPT;
+        // An entry in no block holds no bytes.
+        if (db->FileToFolder[indices[i]] == (UInt32)-1 && SzArEx_GetFileSize(db, indices[i]) != 0) return GAGA_7Z_CORRUPT;
+    }
+    uint32_t *group = malloc(sizeof(uint32_t) * (count ? count : 1));
+    char *taken = calloc(count ? count : 1, 1);
+    int result = group && taken ? GAGA_7Z_OK : GAGA_7Z_NO_MEMORY;
+    for (uint32_t i = 0; i < count && result == GAGA_7Z_OK; i++) {
+        UInt32 folderIndex = db->FileToFolder[indices[i]];
+        if (taken[i] || folderIndex == (UInt32)-1) continue;
+        uint32_t n = 0;
+        for (uint32_t j = i; j < count; j++)
+            if (!taken[j] && db->FileToFolder[indices[j]] == folderIndex) { taken[j] = 1; group[n++] = indices[j]; }
+        result = extract_block(archive, folderIndex, group, n, memory_limit, sink, context);
+    }
+    free(group);
+    free(taken);
+    return result;
 }

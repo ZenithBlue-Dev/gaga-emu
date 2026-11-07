@@ -28,12 +28,17 @@ uint64_t gaga_7z_size(const GagaSevenZip *archive, uint32_t index);
 /// 1 and the CRC-32 when the archive records one, else 0.
 int gaga_7z_crc(const GagaSevenZip *archive, uint32_t index, uint32_t *crc);
 
-/// Nonzero stops the extraction with GAGA_7Z_STOPPED.
-typedef int (*gaga_7z_sink)(void *context, const uint8_t *bytes, size_t count);
+/// Bytes of the entry at `index`, in order. Nonzero stops the extraction with GAGA_7Z_STOPPED.
+typedef int (*gaga_7z_sink)(void *context, uint32_t index, const uint8_t *bytes, size_t count);
 
-/// Decodes one entry into `sink` and checks its CRC-32. Copy, LZMA and LZMA2 stream in 1 MiB chunks, skipping
-/// earlier files in a solid block. Any other chain (BCJ, BCJ2, Delta and other filters) is decoded by the SDK
-/// in memory, only when its block unpacks to at most `memory_limit` bytes; past that it is unsupported.
-int gaga_7z_extract(GagaSevenZip *archive, uint32_t index, uint64_t memory_limit, gaga_7z_sink sink, void *context);
+/// Decodes the `count` entries at `indices` into `sink` and checks each CRC-32. Each solid block is decoded once,
+/// however many of the entries it holds. Copy, LZMA and LZMA2 stream in 1 MiB chunks, skipping files nobody
+/// asked for. Any other chain (BCJ, BCJ2, Delta and other filters) is decoded by the SDK in memory, only when
+/// its block unpacks to at most `memory_limit` bytes; past that it is unsupported.
+int gaga_7z_extract(GagaSevenZip *archive, const uint32_t *indices, uint32_t count, uint64_t memory_limit,
+                    gaga_7z_sink sink, void *context);
+
+/// Solid blocks decoded since launch, so a test can count them.
+uint64_t gaga_7z_block_decodes(void);
 
 #endif

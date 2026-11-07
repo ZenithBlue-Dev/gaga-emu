@@ -35,6 +35,7 @@ struct LibraryView: View {
                     continuePanel.frame(width: compact ? 240 : 300)
                     Rule().ignoresSafeArea(edges: .vertical)
                     VStack(spacing: 0) {
+                        ImportProgressRows().padding(.horizontal, 16)
                         filterRow
                         Rule()
                         shelvesList

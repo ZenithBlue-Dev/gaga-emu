@@ -591,11 +591,13 @@ enum CoreCatalog {
 
     /// Writes one stored or deflated entry to `destination`, or under a new name when a different file has that
     /// name, and returns where it went. Stops past `limit` bytes, whatever the entry claims, and checks the size
-    /// and CRC-32 before the file appears.
+    /// and CRC-32 before the file appears. Stops with `CancellationError` once `progress` is cancelled, which also
+    /// counts the bytes written.
     @discardableResult
-    static func extractZipEntry(_ entry: ZipEntry, from zip: URL, to destination: URL, limit: Int) throws -> URL {
-        if let index = entry.sevenZipIndex {
-            return try extractSevenZipEntry(entry, index: index, from: zip, to: destination, limit: limit)
+    static func extractZipEntry(_ entry: ZipEntry, from zip: URL, to destination: URL, limit: Int,
+                                progress: Progress? = nil) throws -> URL {
+        if entry.sevenZipIndex != nil {
+            return try extractSevenZipEntries([(entry, destination)], from: zip, limit: limit, progress: progress)[0]
         }
         guard entry.flags & 1 == 0, entry.method == 0 || entry.method == 8 else { throw ZipError.unsupported }
         guard entry.size <= limit else { throw ZipError.tooLarge }
@@ -614,6 +616,8 @@ enum CoreCatalog {
         var written = 0
         var crc: UInt32 = 0xFFFF_FFFF
         func emit(_ bytes: UnsafeBufferPointer<UInt8>) throws {
+            if progress?.isCancelled == true { throw CancellationError() }
+            progress?.completedUnitCount += Int64(bytes.count)
             written += bytes.count
             guard written <= limit else { throw ZipError.tooLarge }
             for byte in bytes { crc = RomPatcher.table[Int((crc ^ UInt32(byte)) & 0xFF)] ^ (crc >> 8) }
@@ -669,28 +673,65 @@ enum CoreCatalog {
 
     /// Unpacks a zip that holds one disc set (a descriptor and the files it names, at most 2 GiB each) into a new
     /// set folder, and returns it. Nil, with nothing left behind, when the zip is not exactly one complete set.
-    static func extractZipDiscSet(_ entries: [ZipEntry], from zip: URL, into romDirectory: URL) throws -> URL? {
+    /// The set is built in a hidden staging folder and renamed into place whole, so a set folder is never partial;
+    /// a 7z's solid block is decoded once for every file in it.
+    static func extractZipDiscSet(_ entries: [ZipEntry], from zip: URL, into romDirectory: URL,
+                                  progress: Progress? = nil) throws -> URL? {
         let files = entries.filter { !$0.name.hasSuffix("/") && !zipSidecarExtensions.contains(($0.name as NSString).pathExtension.lowercased()) }
         let names = files.map { WiFiTransferServer.sanitize(String($0.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last ?? "")) }
         guard files.count >= 2, let sheet = names.first(where: DiscSet.isDescriptor), !names.contains(""),
               Set(names.map { $0.lowercased() }).count == names.count else { return nil }
         guard files.allSatisfy({ !$0.name.hasPrefix("/") && !$0.name.hasPrefix("\\") && !$0.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).contains("..") })
         else { throw ZipError.unsafeName }
-        let folder = try DiscSet.newFolder(for: sheet, in: romDirectory)
-        do {
-            for (entry, name) in Swift.zip(files, names) {
-                try extractZipEntry(entry, from: zip, to: folder.appendingPathComponent(name), limit: zipROMLimit("disc"))
+        let fileManager = FileManager.default
+        let staging = romDirectory.appendingPathComponent("\(stagingPrefix)\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: staging) }
+        progress?.totalUnitCount = Int64(files.reduce(0) { $0 + $1.size })
+        let wanted = Swift.zip(files, names.map { staging.appendingPathComponent($0) }).map { (entry: $0, destination: $1) }
+        if files.allSatisfy({ $0.sevenZipIndex != nil }) {
+            try extractSevenZipEntries(wanted, from: zip, limit: zipROMLimit("disc"), progress: progress)
+        } else {
+            for item in wanted {
+                try extractZipEntry(item.entry, from: zip, to: item.destination, limit: zipROMLimit("disc"), progress: progress)
             }
-        } catch {
-            try? FileManager.default.removeItem(at: folder)
-            throw error
         }
-        guard DiscSet.primary(in: folder) != nil, DiscSet.missing(in: folder).isEmpty,
-              Set(DiscSet.wanted(in: folder).map { $0.lowercased() }) == Set(names.map { $0.lowercased() }) else {
-            try? FileManager.default.removeItem(at: folder)
+        guard DiscSet.primary(in: staging) != nil, DiscSet.missing(in: staging).isEmpty,
+              Set(DiscSet.wanted(in: staging).map { $0.lowercased() }) == Set(names.map { $0.lowercased() }) else {
             return nil
         }
+        // newFolder claims a free name; the staged set then takes that name in one rename.
+        let folder = try DiscSet.newFolder(for: sheet, in: romDirectory)
+        try fileManager.removeItem(at: folder)
+        try fileManager.moveItem(at: staging, to: folder)
         return folder
+    }
+
+    /// The hidden folder in the ROM folder a disc set is built in before it moves into place.
+    static let stagingPrefix = ".import-"
+
+    /// What an archive import made: its one console ROM, its one disc set, or nothing, so the archive itself is
+    /// the game (an arcade set or a DOS zip).
+    enum Unpacked: Equatable {
+        case rom(URL), discSet(URL), kept
+    }
+
+    /// The archive part of an import, run off the main thread. Writes only .part files and a staging folder
+    /// until a finished file or set moves into place, and never touches the archive itself.
+    static func unpackArchive(_ url: URL, into romDirectory: URL, progress: Progress) throws -> Unpacked {
+        let entries = archiveEntries(url)
+        guard !entries.isEmpty else { throw ZipError.corrupt }
+        if let rom = try zipConsoleCheck(entries)?.get() {
+            let name = WiFiTransferServer.sanitize(String(rom.entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last ?? ""))
+            guard !name.isEmpty else { throw ZipError.unsafeName }
+            progress.totalUnitCount = Int64(rom.entry.size)
+            return .rom(try extractZipEntry(rom.entry, from: url, to: romDirectory.appendingPathComponent(name),
+                                            limit: zipROMLimit(rom.platformID), progress: progress))
+        }
+        if let folder = try extractZipDiscSet(entries, from: url, into: romDirectory, progress: progress) {
+            return .discSet(folder)
+        }
+        return .kept
     }
 
     /// The records in a ZIP's central directory, or none when the file is not a readable ZIP.
@@ -972,10 +1013,14 @@ final class AppState: ObservableObject {
         var defaultCores: [String: String]
     }
 
+    /// Test only: the folder that holds the Library (state.json), ROMs, System and the rest, in place of the app's
+    /// own. `GagaTestCase` sets a new one for every test, so no test reads or writes the device's Library.
+    nonisolated(unsafe) static var rootOverride: URL?
+
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
-        let root = base.appendingPathComponent("GagaEmu", isDirectory: true)
+        let root = Self.rootOverride ?? base.appendingPathComponent("GagaEmu", isDirectory: true)
         try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         romDirectory = root.appendingPathComponent("ROMs", isDirectory: true)
         storeURL = root.appendingPathComponent("state.json")
@@ -1005,31 +1050,121 @@ final class AppState: ObservableObject {
         shaderID = snapshot?.shaderID ?? "original"
         defaultCores = snapshot?.defaultCores ?? [:]
         skins.loadDefault()
+        if Self.rootOverride != nil { systemDirectory = root.appendingPathComponent("System", isDirectory: true) }
         if migrated != nil { save() }
         wifi.onUploaded = { [weak self] names in
-            MainActor.assumeIsolated { self?.addUploads(names) }
+            Task { @MainActor in await self?.addUploads(names) }
         }
     }
 
     /// A file uploaded again with the same bytes keeps its name, so it must not become a second shelf entry.
     /// A name is a path under the ROM folder, as "Game/Game.cue" for a disc set.
-    func addUploads(_ names: [String]) {
-        for name in names { importArrived(romDirectory.appendingPathComponent(name)) }
+    func addUploads(_ names: [String]) async {
+        for name in names { await importArrived(romDirectory.appendingPathComponent(name)) }
     }
 
     /// Every import ends here: Files, drop, clipboard, download, WiFi Transfer and the Debug launch arguments.
     /// `url` is a file already placed in the ROM folder (`ClipboardImporter.persist` or `download`, or the WiFi
     /// server). A file a game already uses is that game, not a second entry. The note says why no game was
-    /// stored or an older file was kept, as `lastImportNote`.
+    /// stored or an older file was kept, as `lastImportNote`. A .zip or .7z unpacks off the main thread, as an
+    /// `importJobs` row.
     @discardableResult
-    func importArrived(_ url: URL) -> (game: GameItem?, note: String?) {
+    func importArrived(_ url: URL) async -> (game: GameItem?, note: String?) {
         let name = ClipboardImporter.relativePath(url, in: romDirectory)
         if let existing = games.first(where: { ClipboardImporter.relativePath(URL(fileURLWithPath: $0.romPath), in: romDirectory) == name
                                                || (!name.contains("/") && URL(fileURLWithPath: $0.romPath).lastPathComponent == name) }) {
             return (existing, nil)
         }
+        if ["zip", "7z"].contains(url.pathExtension.lowercased()), isInROMFolder(url), biosName(url) == nil,
+           DiscSet.folder(of: url, romDirectory: romDirectory) == nil, !CoreCatalog.isRAR(url) {
+            return await unpackArrived(url)
+        }
         let game = importROM(at: url)
         return (game, lastImportNote)
+    }
+
+    /// An archive unpacking off the main thread, shown with its progress and a Cancel button.
+    struct ImportJob: Identifiable {
+        let id = UUID()
+        let name: String
+        let progress: Progress
+    }
+
+    @Published private(set) var importJobs: [ImportJob] = []
+
+    /// The archive stays in the ROM folder and nothing half written is left.
+    func cancelImport(_ job: ImportJob) { job.progress.cancel() }
+
+    /// One empty file per archive whose unpacking began and has not ended, named as the archive in the ROM folder.
+    var pendingImportDirectory: URL {
+        romDirectory.deletingLastPathComponent().appendingPathComponent("PendingImports", isDirectory: true)
+    }
+
+    /// The copied archive goes only once its game is saved in the Library. A refused or cancelled one stays.
+    private func unpackArrived(_ url: URL) async -> (game: GameItem?, note: String?) {
+        let fileManager = FileManager.default
+        let marker = pendingImportDirectory.appendingPathComponent(url.lastPathComponent)
+        try? fileManager.createDirectory(at: pendingImportDirectory, withIntermediateDirectories: true)
+        fileManager.createFile(atPath: marker.path, contents: nil)
+        let job = ImportJob(name: url.lastPathComponent, progress: Progress(totalUnitCount: 0))
+        importJobs.append(job)
+        defer { importJobs.removeAll { $0.id == job.id } }
+        let romDirectory = romDirectory, progress = job.progress
+        let result = await Task.detached(priority: .userInitiated) {
+            Result { try CoreCatalog.unpackArchive(url, into: romDirectory, progress: progress) }
+        }.value
+        lastImportNote = nil
+        let game: GameItem?
+        switch result {
+        case .failure(let error):
+            try? fileManager.removeItem(at: marker)
+            lastImportNote = "\(url.lastPathComponent): " + (error is CancellationError ? "Import cancelled." : error.localizedDescription)
+            return (nil, lastImportNote)
+        case .success(.kept):
+            game = addGame(url, title: nil, platform: CoreCatalog.platformID(forFile: url) ?? "unknown")
+        case .success(.rom(let placed)):
+            game = addGame(placed, title: nil, platform: CoreCatalog.platformID(forFile: placed) ?? "unknown")
+        case .success(.discSet(let folder)):
+            game = importDiscSet(folder, arrived: folder, title: nil, platformID: nil)
+        }
+        if game != nil, (try? result.get()) != .kept { try? fileManager.removeItem(at: url) }
+        try? fileManager.removeItem(at: marker)
+        return (game, lastImportNote)
+    }
+
+    /// At launch: drops what a quit mid-import left half written (.part files and staging folders), then runs
+    /// each import a marker names again. Its archive is still in the ROM folder, as it goes only after the game is
+    /// saved; a finished file already in place is matched, not written twice.
+    func finishInterruptedImports() async {
+        let fileManager = FileManager.default
+        let folders = [romDirectory] + DiscSet.folders(in: romDirectory)
+        for folder in folders {
+            for name in (try? fileManager.contentsOfDirectory(atPath: folder.path)) ?? []
+            where name.hasPrefix(".") && (name.hasSuffix(".part") || name.hasPrefix(CoreCatalog.stagingPrefix)) {
+                try? fileManager.removeItem(at: folder.appendingPathComponent(name))
+            }
+        }
+        for name in (try? fileManager.contentsOfDirectory(atPath: pendingImportDirectory.path)) ?? [] {
+            let archive = romDirectory.appendingPathComponent(name)
+            if fileManager.fileExists(atPath: archive.path) {
+                await importArrived(archive)
+            }
+            try? fileManager.removeItem(at: pendingImportDirectory.appendingPathComponent(name))
+        }
+    }
+
+    private func isInROMFolder(_ url: URL) -> Bool {
+        url.deletingLastPathComponent().standardizedFileURL == romDirectory.standardizedFileURL
+    }
+
+    /// The System name of a BIOS file the BIOS Files screen names, at a size its core reads; nil otherwise.
+    /// Matched in any letter case, as the exact name the core opens (bios_CD_U.bin, kick34005.A500).
+    private func biosName(_ url: URL) -> String? {
+        let fileName = BIOSManagerView.canonicalName(url.lastPathComponent) ?? url.lastPathComponent.lowercased()
+        // Not url.resourceValues: a URL caches them, so a file rewritten at the same URL kept its old size.
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int,
+              BIOSManagerView.sizes[fileName]?.contains(size) == true else { return nil }
+        return fileName
     }
 
     var totalPlayTime: TimeInterval { games.reduce(0) { $0 + $1.playTime } }
@@ -1147,13 +1282,13 @@ final class AppState: ObservableObject {
     /// `-GagaImportROM <path>`: copies the file in as Files import does, so core work can add a game
     /// without the UI. A file already in the Library is replaced on disk, not added twice. A relative path is
     /// in Documents, where `devicectl device copy to` puts a file without knowing the container's path.
-    func importROMIfRequested() {
+    func importROMIfRequested() async {
         guard let path = UserDefaults.standard.string(forKey: "GagaImportROM") else { return }
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         do {
             // "~" is the app's container, whose path changes with each device install; a relative path is under Documents.
             let expanded = (path as NSString).expandingTildeInPath
-            try importDebugROM(at: expanded.hasPrefix("/") ? URL(fileURLWithPath: expanded) : documents.appendingPathComponent(expanded))
+            try await importDebugROM(at: expanded.hasPrefix("/") ? URL(fileURLWithPath: expanded) : documents.appendingPathComponent(expanded))
         } catch {
             launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
         }
@@ -1161,9 +1296,14 @@ final class AppState: ObservableObject {
 
     /// As Files import: copied in, then `importArrived`. A note is shown as an Import failure, and the game is
     /// filtered onto the screen, since the Library builds only the shelves in view and a walk looks for it there.
+    /// Logs `[gaga-import] done <name> -> <platform>` (or `-> none`) when it ends, for device runners.
     @discardableResult
-    func importDebugROM(at url: URL) throws -> GameItem? {
-        let (game, note) = importArrived(try ClipboardImporter.persist(.file(url), into: romDirectory))
+    func importDebugROM(at url: URL) async throws -> GameItem? {
+        let romDirectory = romDirectory
+        // Off the main thread: the copy can be gigabytes.
+        let copied = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
+        let (game, note) = await importArrived(copied)
+        print("[gaga-import] done \(url.lastPathComponent) -> \(game?.platformID ?? "none")")
         if let note { launchFailure = LaunchFailure(title: "Import", message: note) }
         if let game {
             platformFilter = game.platformID
@@ -1174,14 +1314,14 @@ final class AppState: ObservableObject {
 
     /// `-GagaImportTestROM <core-id>`: adds that core's generated test ROM (the benchmark's) to the Library,
     /// set to play on that core, so a device walk (UITests) has a game with a touch layout and no file to copy.
-    func importTestROMIfRequested() {
+    func importTestROMIfRequested() async {
         guard let coreID = UserDefaults.standard.string(forKey: "GagaImportTestROM") else { return }
         do {
             guard let platformID = CoreCatalog.platforms.first(where: { $0.cores.contains { $0.id == coreID } })?.id else {
                 throw GameLaunchError.coreNotBuilt(CoreCatalog.coreName(coreID))
             }
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("GagaTestROM", isDirectory: true)
-            if let game = try importDebugROM(at: BenchmarkRun.writeTestROM(platformID: platformID, to: folder)) {
+            if let game = try await importDebugROM(at: BenchmarkRun.writeTestROM(platformID: platformID, to: folder)) {
                 update(game.id) { $0.coreOverride = coreID }
             }
         } catch {
@@ -1290,15 +1430,10 @@ final class AppState: ObservableObject {
     @discardableResult
     func importROM(at url: URL, title: String? = nil, platformID: String? = nil) -> GameItem? {
         lastImportNote = nil
-        let inROMFolder = url.deletingLastPathComponent().standardizedFileURL == romDirectory.standardizedFileURL
         // A BIOS file the BIOS Files screen names, at a size its core reads, moves to the cores' system folder.
         // Another size under that name (a game called firmware.bin) is placed as a game. A different file already
         // in System is never replaced. A .rom (such as an FDS folder's disksys.rom) is never a game.
-        // Matched in any letter case, placed under the exact name the core opens (bios_CD_U.bin, kick34005.A500).
-        let fileName = BIOSManagerView.canonicalName(url.lastPathComponent) ?? url.lastPathComponent.lowercased()
-        // Not url.resourceValues: a URL caches them, so a file rewritten at the same URL kept its old size.
-        let size = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? Int
-        if platformID == nil, inROMFolder, let size, BIOSManagerView.sizes[fileName]?.contains(size) == true {
+        if platformID == nil, isInROMFolder(url), let fileName = biosName(url) {
             try? FileManager.default.createDirectory(at: systemDirectory, withIntermediateDirectories: true)
             let dest = systemDirectory.appendingPathComponent(fileName)
             // A copy at a size no core reads (an emptied file: device run 6's disksys.rom) is damaged, not kept.
@@ -1324,30 +1459,9 @@ final class AppState: ObservableObject {
             lastImportNote = "\(url.lastPathComponent): \(CoreCatalog.rarMessage)"
             return nil
         }
-        var url = url
-        // No console core reads a .zip or .7z, so its one ROM is stored as a plain file and the copied archive goes.
-        // Only an archive already in the ROM folder is unpacked, so a file elsewhere is never removed. A damaged or
-        // refused one is reported and stays where it is, with no shelf entry and no platform question.
-        if platformID == nil, ["zip", "7z"].contains(url.pathExtension.lowercased()), inROMFolder {
-            let entries = CoreCatalog.archiveEntries(url)
-            do {
-                guard !entries.isEmpty else { throw CoreCatalog.ZipError.corrupt }
-                if let rom = try CoreCatalog.zipConsoleCheck(entries)?.get() {
-                    let name = WiFiTransferServer.sanitize(String(rom.entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last ?? ""))
-                    guard !name.isEmpty else { throw CoreCatalog.ZipError.unsafeName }
-                    let placed = try CoreCatalog.extractZipEntry(rom.entry, from: url, to: romDirectory.appendingPathComponent(name),
-                                                                 limit: CoreCatalog.zipROMLimit(rom.platformID))
-                    try? FileManager.default.removeItem(at: url)
-                    url = placed
-                } else if let folder = try CoreCatalog.extractZipDiscSet(entries, from: url, into: romDirectory) {
-                    try? FileManager.default.removeItem(at: url)
-                    return importDiscSet(folder, arrived: folder, title: title, platformID: nil)
-                }
-            } catch {
-                lastImportNote = "\(url.lastPathComponent): \(error.localizedDescription)"
-                return nil
-            }
-        }
+        // No console core reads a .zip or .7z, so `importArrived` unpacks one in the ROM folder off the main thread
+        // (`unpackArrived`). One reaching here is kept as it is. A damaged or refused one is reported there and
+        // stays where it is, with no shelf entry and no platform question.
         return addGame(url, title: title, platform: platformID ?? CoreCatalog.platformID(forFile: url) ?? "unknown")
     }
 

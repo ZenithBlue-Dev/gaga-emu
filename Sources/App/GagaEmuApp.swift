@@ -18,9 +18,10 @@ struct GagaEmuApp: App {
                 .task {
                     GameCenter.authenticate()
                     state.refreshCovers()
+                    await state.finishInterruptedImports()
                     #if DEBUG
-                    state.importROMIfRequested()
-                    state.importTestROMIfRequested()
+                    await state.importROMIfRequested()
+                    await state.importTestROMIfRequested()
                     state.runBenchmarkIfRequested()
                     #endif
                 }
