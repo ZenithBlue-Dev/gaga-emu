@@ -18,7 +18,7 @@ No screenshot shows a version number. The [App Store listing](https://apps.apple
 
 | Status | Meaning |
 | :--- | :--- |
-| **built** | Code exists in `Sources/`. Nothing has run against a real core, because the app today is a shell plus a mock core. |
+| **built** | Code exists in `Sources/`. Real cores run in game sessions (`docs/07`); a row marked "device pending" has not been checked on a device. |
 | **stub** | A UI row, setting or registry entry exists with no working behaviour behind it. |
 | **planned** | Not in the code yet. |
 
@@ -58,7 +58,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
 - **Player slots**: only `Player 1` is seen [S]. Players 1 to 4 and touch fallback are [G]. Status: built in `Sources/Input/ControllerManager.swift`.
 - **Hardware controllers** [G]: `GameController.framework` for DualShock 4, DualSense, Xbox, Joy-Con and MFi pads. Brands are not shown in any screenshot.
 - **Keyboard input** [G]: Bluetooth keyboard and Mac input for DOSBox Pure. Status: built. EKA2L1 and J2meJS are excluded: their spikes failed (`docs/07` 6.4 and 6.6). Other cores read it as pad buttons through `ControllerManager.KeyMap`; DOSBox Pure gets every key (bridge ABI 5 `GagaInputState.keys`, `docs/06` section 2.5).
-- **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: the row is built as a haptic on each touch press. Core vibration events need a bridge addition and are not planned yet.
+- **Rumble** [S]: subtitle `The device vibrates during certain events`. Mapping core vibration events to CoreHaptics is [G]. Status: built, device pending. The row plays a haptic on each touch press, and a game's own rumble through `GAGA_EVENT_RUMBLE` (bridge ABI 5) on CoreHaptics, on a controller's motors or on the device for player 1 on touch, scaled by Rumble Strength (`docs/06` sections 2.4 and 3.7).
 - **Skin Sound Effects** [S]: toggle, shown on. The sound design is [G]. Status: built, a system click on each touch press.
 - **Respect Silent Mode** [S]: subtitle says audio plays only when not in silent mode. Status: built, not yet tested on a device.
 - **TriggerPro** [S]: subtitle `Create and manage advanced custom buttons.` Nothing more is shown. Turbo at 5 to 30 Hz, hold latch and combos of up to four steps are [G]. Status: built in `Sources/Input/TriggerProManager.swift`.
@@ -148,7 +148,7 @@ Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and lay
 | Advanced | `BIOS` | `BIOS required for some platforms` | built |
 | Advanced | `Respect Silent Mode` | Shown off | built |
 | Advanced | `Online Play Settings` | | hidden |
-| Advanced | `Rumble` | Shown off | built: haptic on touch presses only |
+| Advanced | `Rumble` | Shown off | built, device pending: haptic on touch presses, and a game's rumble on controllers and the device |
 | Advanced | `Skin Sound Effects` | Shown on | built |
 | Advanced | `RetroAchievements` | | hidden: blocked on an owner account and approval |
 | Advanced | `TriggerPro` | `Create and manage advanced custom buttons.` | built |
@@ -176,7 +176,7 @@ Rows marked hidden are not shown; each returns in the milestone and settings cat
 
 | Platform label | Current core |
 | :--- | :--- |
-| `Java ME` | `J2meJS` |
+| `Java ME` | `J2meJS` (Manic only; not in GagaEmu, the spike failed, `docs/07` 6.4) |
 | `PlayStation` | `Beetle PSX HW` |
 | `Sega Saturn` | `Beetle Saturn` |
 | `Mega-CD` | `JGenesis` |
@@ -187,7 +187,7 @@ Rows marked hidden are not shown; each returns in the milestone and settings cat
 | `Game Boy` | `Gambatte` |
 | `Super Famicom` | `bsnes` |
 
-These are Manic's values, not GagaEmu's defaults. `docs/03` is canonical for GagaEmu's core list, licences and renderers.
+These are Manic's values, not GagaEmu's defaults. GagaEmu has no Java ME or Symbian platform. `docs/03` is canonical for GagaEmu's core list, licences and renderers.
 
 **Seen in Manic listing, not planned for v1** [L]: Virtual Boy, Pokémon Mini, Famicom Disk System, Master System, Game Gear, SG-1000, 32X, PC Engine, TurboGrafx-16, TurboGrafx-CD, SuperGrafx, Neo Geo Pocket, Neo Geo Pocket Color, Atari 2600, Atari 5200, Atari 7800, Atari Jaguar, Atari Lynx, Commodore 64, Amiga, DOOM, WonderSwan, Flash.
 
