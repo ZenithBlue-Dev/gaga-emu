@@ -46,6 +46,10 @@ typedef struct {
     // Optional. A message for the player when this game cannot start, such as a BIOS the player has not added,
     // or NULL. Called with the system folder before the core sees the game.
     const char* (*refuse_load)(const char* system_dir, const char* rom_path);
+    // Optional. Called once retro_load_game succeeds, before the save checks. PPSSPP waits for its boot thread,
+    // so the first frames run the game and an unload never meets a half-built machine. Beetle Saturn drops a
+    // save failure the last game left behind.
+    void (*finish_load)(void);
 } GagaLibretroCore;
 
 extern const GagaLibretroCore gaga_libretro_core;

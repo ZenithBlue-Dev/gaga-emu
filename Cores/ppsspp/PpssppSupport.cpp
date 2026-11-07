@@ -3,9 +3,13 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <chrono>
+#include <thread>
+
 #include "Common/Arm64Emitter.h"
 #include "Common/GPU/OpenGL/GLFeatures.h"
 #include "Common/VR/PPSSPPVR.h"
+#include "Core/System.h"
 #include "GPU/Common/VertexDecoderCommon.h"
 #include "GPU/Software/RasterizerRegCache.h"
 
@@ -66,6 +70,13 @@ std::string CodeBlock::DescribeCodePtr(const u8 *ptr) {
 }
 void CodeBlock::Clear() { descriptions_.clear(); }
 }  // namespace Rasterizer
+
+// retro_load_game starts PPSSPP's ExecLoader thread and returns. Unloading before it finishes shuts the kernel
+// down under it (a null idle thread in __KernelStartIdleThreads), and frames run before it finishes show
+// nothing. The first retro_run joins the finished thread and brings the GPU up on the context.
+extern "C" void gaga_ppsspp_finish_load(void) {
+	while (PollBootState() == BootState::Booting) std::this_thread::sleep_for(std::chrono::milliseconds(2));
+}
 
 // OpenGL is not compiled (flags.h). The shader generators read these only for GLSL output, which Vulkan
 // never asks for.

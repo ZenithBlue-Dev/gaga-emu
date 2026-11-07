@@ -524,6 +524,7 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_ROM, message);
         return false;
     }
+    if (gaga_libretro_core.finish_load) gaga_libretro_core.finish_load();
 
     // Refuse to run rather than let a player lose progress to a save that never reaches disk.
     if (!lr_open_battery(a, &a->batteries[0], RETRO_MEMORY_SAVE_RAM, "sav", rom_path) ||

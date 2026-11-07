@@ -15,10 +15,13 @@ static const GagaLibretroVariable s_variables[] = {
     { NULL, NULL },
 };
 
+void gaga_ppsspp_finish_load(void); // PpssppSupport.cpp
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "PPSSPP",
     .game_kind = "a PSP game",
     .variables = s_variables,
+    .finish_load = gaga_ppsspp_finish_load,
 };
 
 const GagaCoreInterface* Ppsspp_GetInterface(void) {
