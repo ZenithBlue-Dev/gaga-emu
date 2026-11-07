@@ -230,6 +230,16 @@
       ]
     },
     {
+      "id": "pokemini", "title": "PokeMini", "cores": ["pokemini"], "framework": "PokeMiniCore", "licence": "GPL-3.0-or-later, with MIT parts",
+      "source": "https://github.com/libretro/PokeMini, commit 132111b",
+      "texts": [
+        { "title": "PokeMini (GPL-3.0-or-later)", "from": "Cores/pokemini/upstream/LICENSE" },
+        { "title": "PokeMini emulator core", "from": "Cores/pokemini/upstream/source/PokeMini.c", "comment": true },
+        { "title": "FreeBIOS", "text": "Freeware Pokemon-Mini BIOS 1.3 by Team Pokeme (freebios/freebios.asm), part of PokeMini and under its licence.\n" },
+        { "title": "libretro-common", "from": "Cores/pokemini/upstream/libretro/libretro-common/compat/compat_strl.c", "comment": true }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
