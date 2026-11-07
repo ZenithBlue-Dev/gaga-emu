@@ -14,11 +14,14 @@ min_ios=17.0
 if [ "${1:-}" = --compile-one ]; then
     source=$2 object="$COMPILE_OUT/obj/$2.o" tool=clang flags=$CORE_CFLAGS
     case "$source" in *.cpp | *.cc) tool=clang++ flags=$CORE_CXXFLAGS ;; esac
+    # Words after the path on a sources.txt line are flags for that file only, searched before the core's own
+    # (Cores/ppsspp, whose upstream builds each library with its own includes and defines).
+    shift 2
     mkdir -p "$(dirname "$object")"
     # shellcheck disable=SC2086 # the flag strings are word lists.
     exec xcrun --sdk "$COMPILE_SDK" "$tool" -target "$COMPILE_TARGET" -isysroot "$COMPILE_SYSROOT" -g \
         -I"$root/Sources/Bridge" -DGAGA_CORE_VERSION="\"$COMPILE_VERSION\"" \
-        $flags -c "$source" -o "$object"
+        "$@" $flags -c "$source" -o "$object"
 fi
 
 build_slice() { # core dir sdk target
@@ -42,10 +45,10 @@ build_slice() { # core dir sdk target
         cd "$dir"
         export COMPILE_OUT="$out" COMPILE_SDK="$sdk" COMPILE_TARGET="$target" COMPILE_SYSROOT="$sysroot" \
             COMPILE_VERSION="$CORE_VERSION ${UPSTREAM_COMMIT:0:8}" CORE_CFLAGS CORE_CXXFLAGS
-        xargs -n 1 -P "$(sysctl -n hw.ncpu)" "$root/scripts/build-core.sh" --compile-one <sources.txt
+        xargs -L 1 -P "$(sysctl -n hw.ncpu)" "$root/scripts/build-core.sh" --compile-one <sources.txt
     )
 
-    while IFS= read -r source; do
+    while read -r source _; do
         objects+=("$out/obj/$source.o")
         case "$source" in *.cpp | *.cc) link_driver=clang++ ;; esac
     done <"$dir/sources.txt"
@@ -65,7 +68,7 @@ build_slice() { # core dir sdk target
         -install_name "@rpath/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK" \
         -compatibility_version 1 -current_version 1 \
         -Wl,-exported_symbols_list,"$dir/$CORE_FRAMEWORK.exports" -Wl,-dead_strip -Wl,-x \
-        -o "$binary" "${objects[@]}" ${link_extra[@]+"${link_extra[@]}"}
+        -o "$binary" "${objects[@]}" ${link_extra[@]+"${link_extra[@]}"} ${CORE_LDFLAGS:-}
     xcrun dsymutil "$binary" -o "$out/$CORE_FRAMEWORK.framework.dSYM"
 
     # A bundle ID takes letters, digits, hyphens and dots only, so "_" in a core ID becomes "-", and the short
@@ -124,7 +127,8 @@ build_core() {
     local core=$1 dir="$root/Cores/$1"
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
     # Optional, so one core's value must not reach the next.
-    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK
+    unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS
+    unset CORE_UPSTREAM_SUBMODULES
     # shellcheck source=/dev/null
     source "$dir/core.env"
 
@@ -148,9 +152,17 @@ build_core() {
         echo "$hits" >&2
         exit 1
     fi
+    # Optional: upstream's own submodules that the core compiles, pinned by the commits upstream records.
+    # shellcheck disable=SC2086 # a list of paths.
+    if [ -n "${CORE_UPSTREAM_SUBMODULES:-}" ] &&
+        hits=$(git -C "$dir/upstream" submodule status -- $CORE_UPSTREAM_SUBMODULES | grep -v '^ '); then
+        echo "Cores/$core/upstream has submodules missing or not at upstream's commit. Run: git -C Cores/$core/upstream submodule update --init $CORE_UPSTREAM_SUBMODULES" >&2
+        echo "$hits" >&2
+        exit 1
+    fi
 
     # Source audit, docs/04 section 8. A hit needs a read and a per-core decision, not a silent build.
-    if hits=$(cd "$dir" && xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit' <sources.txt); then
+    if hits=$(cd "$dir" && cut -d ' ' -f 1 sources.txt | xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit'); then
         echo "Source audit found code-generation calls in Cores/$core:" >&2
         echo "$hits" >&2
         exit 1
