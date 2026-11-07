@@ -57,8 +57,8 @@ Gaga-Emu reuses interpreter patterns and the MoltenVK-on-`CAMetalLayer` pattern 
  │ • Gambatte              │ • bsnes / JGenesis      │ • Beetle Saturn         │
  │ • mGBA                  │ • melonDS DS            │ • Flycast JIT-less fork │
  │ • Nestopia              │ • Mupen64Plus-Next      │ • Azahar (experimental) │
- │ • PCSX-ReARMed          │ • PPSSPP / MAME         │ • EKA2L1                │
- │                         │ • DOSBox Pure / J2meJS  │                         │
+ │ • PCSX-ReARMed          │ • PPSSPP / MAME         │                         │
+ │                         │ • DOSBox Pure           │                         │
  └─────────────────────────┴────────────┬────────────┴─────────────────────────┘
                                         │ Core frames
  ┌──────────────────────────────────────┴──────────────────────────────────────┐
@@ -69,7 +69,7 @@ Gaga-Emu reuses interpreter patterns and the MoltenVK-on-`CAMetalLayer` pattern 
  └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The diagram shows default cores by design; all are planned or stubbed today. Tier is expected CPU load, not delivery order. `docs/03` is canonical for cores and alternates, and `docs/07` for scheduling. J2meJS (no-JIT and JS runtime path) and EKA2L1 (dyncom interpreter) are unverified and need a spike.
+The diagram shows default cores by design; all are planned or stubbed today. Tier is expected CPU load, not delivery order. `docs/03` is canonical for cores and alternates, and `docs/07` for scheduling. Java ME (J2meJS) and Symbian (EKA2L1) are excluded: J2meJS ships no corresponding source and EKA2L1 has no accepted renderer on iOS (`docs/07` 6.4 and 6.6).
 
 ---
 
