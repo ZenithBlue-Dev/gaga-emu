@@ -297,11 +297,21 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         lock.unlock()
     }
 
-    /// The last frame's size, for placing a finger on the picture.
+    /// A layer-path core's last presented frame size, from its size-only frame descriptor.
+    private var presentedSize: CGSize?
+
+    public func setPresentedSize(width: Int, height: Int) {
+        lock.lock()
+        presentedSize = CGSize(width: width, height: height)
+        lock.unlock()
+    }
+
+    /// The last frame's size, for placing a finger on the picture. A layer-path core fits its frame in the
+    /// layer the same way (`LibretroVulkan.c`, `lr_vk_record_copy`), so its presented size serves too.
     public var contentSize: CGSize? {
         lock.lock()
         defer { lock.unlock() }
-        return customTexture.map { CGSize(width: $0.width, height: $0.height) }
+        return customTexture.map { CGSize(width: $0.width, height: $0.height) } ?? presentedSize
     }
 
     /// Sliders and the upscaler. Saved values pass through a clamp, because state.json is a file.

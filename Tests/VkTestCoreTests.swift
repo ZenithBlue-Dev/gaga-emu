@@ -138,6 +138,32 @@ final class VkTestCoreTests: XCTestCase {
         }
     }
 
+    /// A finger on a layer-path picture reaches the core: the session takes the frame size from the core's
+    /// size-only frames, as it takes the texture's on the copy path.
+    func testASessionPlacesAFingerOnTheLayerPicture() async throws {
+        let game = GameItem(id: UUID(), title: "Triangle", platformID: "vktest", romPath: romPath, coverPath: nil,
+                            coreOverride: "vktest", playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
+        let controllers = ControllerManager()
+        controllers.devices = []
+        let skins = TouchSkinEngine()
+        skins.loadDefault()
+        let session = try GameSession(game: game, interface: interface, romPath: romPath, audio: AudioEngineManager(),
+                                      controllers: controllers, skins: skins, bindings: [], shaderID: "original",
+                                      respectSilentMode: false, saveDirectory: directory)
+        XCTAssertTrue(session.drawsOwnPicture)
+        try await session.prepare()
+        session.attachLayer(layer, width: 800, height: 600, scale: 2)
+        session.run()
+        let deadline = Date().addingTimeInterval(5)
+        while session.renderer.contentSize == nil, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        let content = try XCTUnwrap(session.renderer.contentSize, "no size-only frame reached the session")
+        XCTAssertEqual(content, CGSize(width: VkTestROM.width, height: VkTestROM.height))
+        let middle = try XCTUnwrap(GameSession.libretroPointer(CGPoint(x: 200, y: 150), bounds: layer.bounds.size, content: content))
+        XCTAssertEqual(middle.x, 0)
+        XCTAssertEqual(middle.y, 0)
+        session.stop()
+    }
+
     func testAudioIsATone() async throws {
         let (core, capture) = try await loaded()
         run(core, frames: 30)

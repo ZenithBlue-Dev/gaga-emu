@@ -194,7 +194,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         // Queue only. Stops a bad core from raising the same error every frame.
         var reportedBadFrame = false
         core.onVideoFrame = { [ring, renderer, weak self] frame in
-            guard let pixels = frame.pixelData else { return }
+            guard let pixels = frame.pixelData else {
+                // A layer-path core's size-only frame. Its size places a finger on the picture.
+                if frame.width > 0, frame.height > 0 { renderer.setPresentedSize(width: frame.width, height: frame.height) }
+                return
+            }
             guard let format = MetalTextureRing.metalFormat(for: frame.pixelFormat),
                   (1...8192).contains(frame.width), (1...8192).contains(frame.height),
                   frame.pitch >= frame.width * MetalTextureRing.bytesPerPixel(format) else {
