@@ -183,6 +183,17 @@
       ]
     },
     {
+      "id": "beetle_supergrafx", "title": "Beetle SuperGrafx", "cores": ["beetle_supergrafx"], "framework": "BeetleSupergrafxCore", "licence": "GPL-2.0-or-later, with BSD-3-Clause, MIT and public-domain parts",
+      "source": "https://github.com/libretro/beetle-supergrafx-libretro, commit 9c11dcd",
+      "texts": [
+        { "title": "Mednafen (GPL-2.0-or-later)", "from": "Cores/beetle_supergrafx/upstream/mednafen/pce_fast/vdc.cpp", "comment": true },
+        { "title": "GNU General Public License 2", "from": "Cores/beetle_supergrafx/upstream/COPYING" },
+        { "title": "Tremor", "from": "Cores/beetle_supergrafx/upstream/mednafen/tremor/COPYING" },
+        { "title": "libretro-common", "from": "Cores/beetle_supergrafx/upstream/libretro-common/formats/chd/rchd.c", "comment": true },
+        { "title": "rflac", "text": "rflac (libretro-common/formats/flac), RetroArch's fork of dr_flac by David Reid, is in the public domain, or MIT No Attribution where that is not recognised.\n" }
+      ]
+    },
+    {
       "id": "vktest", "title": "Vulkan Test core", "cores": ["vktest"], "framework": "VkTestCore", "licence": "GagaEmu",
       "source": "GagaEmu's own test core (Cores/vktest). It links MoltenVK, listed separately.",
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
