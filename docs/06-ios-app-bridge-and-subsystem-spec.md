@@ -139,7 +139,17 @@ typedef enum {
     GAGA_EVENT_INFO    = 0,
     GAGA_EVENT_WARNING = 1,
     GAGA_EVENT_FATAL   = 2, // The host ends the session and shows the message.
+    GAGA_EVENT_RUMBLE  = 3, // Not a message: one motor's new strength, sent when it changes. message is NULL.
 } GagaEventSeverity;
+
+// A GAGA_EVENT_RUMBLE code: player port in bits 17-18, motor in bit 16, strength (0 off, 0xFFFF full) in bits 0-15.
+// The motors are libretro's: strong is the low-frequency one, weak the high-frequency one.
+typedef enum {
+    GAGA_RUMBLE_STRONG = 0,
+    GAGA_RUMBLE_WEAK   = 1,
+} GagaRumbleMotor;
+#define GAGA_RUMBLE_CODE(port, motor, strength) \
+    ((int32_t)((((uint32_t)(port) & 3u) << 17) | (((uint32_t)(motor) & 1u) << 16) | ((uint32_t)(strength) & 0xFFFFu)))
 
 // Bits 0 and 2 are kept for the host-buffer and output-texture paths (docs/06 section 2.4).
 typedef enum {
@@ -213,7 +223,8 @@ typedef struct GagaCoreInterface {
     void (*pause)(GagaInstance* inst);
     void (*resume)(GagaInstance* inst);
 
-    // Errors and events. A FATAL event during load_rom supplies the message the player sees.
+    // Errors and events. A FATAL event during load_rom supplies the message the player sees. A core that
+    // drives rumble sends RUMBLE events from step_frame.
     void (*set_event_callback)(GagaInstance* inst,
         void (*cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata), void* userdata);
 } GagaCoreInterface;
@@ -255,6 +266,8 @@ Fast-forward runs whole frames: at N times speed, each timer tick steps the core
 **Built** (2.5 and 2.10, listed in section 2.1): `GAGA_BRIDGE_ABI_VERSION` with `abi_version`, `self_test`, `pause`, `resume`, `set_event_callback` and `GagaEventSeverity`. A fatal event during `load_rom` supplies the message the player sees. A fatal event while playing ends the session and shows its message on the Library. ABI 2 replaced the file-path save state calls and `apply_cheat`, which no core used, with `state_version`, `state_size`, `save_state`, `load_state`, `flush_battery_save`, `cheat_add`, `cheat_remove` and `cheat_set_enabled`.
 
 **Built in ABI 5** (milestones 5.1 and 4.8, listed in section 2.1). Branches `core/moltenvk` and `core/dosbox_pure` each made a different ABI 4; the merge combines both as ABI 5, so a core built on either branch is refused, not mistaken for the merged layout. From milestone 5.1: `GagaCoreCapability` with `GAGA_CORE_CAP_METAL_LAYER`, `capabilities`, the size-aware `attach_metal_layer`, `detach_metal_layer` and `read_layer_pixels`. A layer-path core sends a size-only frame descriptor (`pixel_data` NULL) for each frame it presents. `read_layer_pixels` serves save-state thumbnails and tests. `GameSession` attaches its `CAMetalLayer` from the game view on every drawable size change and detaches only the layer attached last, so a picture moving to the external screen keeps going. The libretro side is `Cores/shared/LibretroVulkan.c` (`docs/05` section 2.3). From milestone 4.8: `GagaInputState.keys`, the hardware keyboard (section 2.5).
+
+**Rumble, still ABI 5.** `GAGA_EVENT_RUMBLE` is a new event value, not a new member or struct, so the layout and the version stay. A RUMBLE event has a NULL message and a code from `GAGA_RUMBLE_CODE`: port, motor (`GAGA_RUMBLE_STRONG` or `GAGA_RUMBLE_WEAK`) and strength, sent from `step_frame` when a motor changes. A host from before rumble ignores it, as it ignores any event that is not FATAL. The libretro adapter answers `RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE`; `set_rumble_state` only stores the strength, from any core thread, and `step_frame` sends the changes after `retro_run`. mGBA sends its cartridge motor (Drill Dozer) on both motors, as the share of motor writes that turned it on in the frame. On the host, `RumbleManager` plays the latest strengths at most 30 times a second on CoreHaptics: a controller's `GCController.haptics`, with the left handle as the strong motor and the right as the weak where a pad has both, or the device for player 1 on touch when the Rumble setting is on. Rumble Strength scales it. `GameSession` stops every motor on pause, which covers the background, and on stop, and plays the last strengths again on resume.
 
 **Planned.** These arrive with the frame paths that need them. Each changes `GagaCoreInterface`, so each bumps the ABI version.
 
@@ -495,7 +508,7 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Play | Total play time and session count, read-only. Quick Start opens the most recent game when the app starts, because GagaEmu has no preparation page to skip. Auto Save State saves on quit and when the app goes to the background, and offers to resume when that game next starts; it follows `canUseAutoSaveState`, so a saved value of on does not bypass the gate. Auto Full Screen removes the touch bands when a controller owns Player 1. Respect Silent Mode makes game audio obey the silent switch. | built |
 | Library | Game count, Cover Art, BIOS Files (it lists `Application Support/GagaEmu/System`, the `system_dir` every core gets, after moving files from the old `GagaEmu/BIOS` without overwriting), default core per platform. Cover Art is off by default and its note names `thumbnails.libretro.com` as the site that receives game titles (section 5). | built |
 | Graphics | Default Filter, which opens the filter picker | built |
-| Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, because the bridge has no rumble event yet. Skin Sound Effects is a click on each touch press. Assign Skin opens a sheet with a drawing of each built-in layout and a layout per platform. | built |
+| Controls | Touch Control, connected controllers with their player slot, TriggerPro. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a haptic on each touch press, and a game's rumble on the device while player 1 is on touch. Rumble Strength scales a game's rumble on controllers and the device; Off stops it everywhere. Skin Sound Effects is a click on each touch press. Assign Skin opens a sheet with a drawing of each built-in layout and a layout per platform. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
 | Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
 | About | Version, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy, Licences. Debug builds add Run Benchmark. Licences (`LicencesView`) is a two-pane paper sheet: components on the left, the chosen one's source and full licence texts on the right. It reads `licences.json`, which `scripts/generate-licences.py` writes with the texts into `Sources/App/Licences` from the committed list `Licences/notices.json`, and shows a component only when a core that brings it in is linked (`GAGA_CORE_SET`); Anime4K and the community filters are in every build. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
