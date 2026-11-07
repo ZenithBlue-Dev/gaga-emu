@@ -1,0 +1,1 @@
+r7z_lzma.c is derived from the public-domain LZMA SDK by Igor Pavlov.

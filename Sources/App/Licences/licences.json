@@ -135,6 +135,38 @@
    ]
   },
   {
+   "id": "beetle_saturn",
+   "title": "Beetle Saturn",
+   "licence": "GPL-2.0-or-later",
+   "source": "https://github.com/libretro/beetle-saturn-libretro, commit 30f4c12 (Mednafen SS, v1.32.1)",
+   "cores": [
+    "beetle_saturn"
+   ],
+   "framework": "BeetleSaturnCore",
+   "texts": [
+    {
+     "title": "Beetle Saturn and Mednafen",
+     "file": "licence-a6996dcf0c33.txt"
+    },
+    {
+     "title": "Tremor (Xiph.org)",
+     "file": "licence-d2ab57583364.txt"
+    },
+    {
+     "title": "rflac (from dr_flac)",
+     "file": "licence-1e3d12bc24ca.txt"
+    },
+    {
+     "title": "LZMA SDK",
+     "file": "licence-7d117e1dcc53.txt"
+    },
+    {
+     "title": "libretro-common",
+     "file": "licence-f38c560d46af.txt"
+    }
+   ]
+  },
+  {
    "id": "bsnes",
    "title": "bsnes",
    "licence": "GPL-3.0-or-later",
