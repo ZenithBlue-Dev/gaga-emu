@@ -4,10 +4,10 @@
 # (NDSTestROM), .md (MDTestROM, with battery SRAM), .exe (PS1TestEXE), .cue (PS1TestEXE.disc, which also writes the
 # .bin beside it), .gagavk (VkTestROM, for the layer-path test core), .com (DOSTestCOM), .z64 (N64TestROM, with
 # battery SRAM), .zip (GridleeTestSet, a MAME ROM set: MAME runs it only from a file named gridlee.zip), or .pce
-# or .sgx (PCETestROM, with backup RAM).
-# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.pce|output.sgx>
+# or .sgx (PCETestROM, with backup RAM), or .vb (VBTestROM, with cartridge RAM).
+# Usage: scripts/make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.pce|output.sgx|output.vb>
 set -euo pipefail
-output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.pce|output.sgx>}
+output=${1:?usage: make-test-rom.sh <output.gba|output.gb|output.gbc|output.nes|output.sfc|output.nds|output.md|output.exe|output.cue|output.gagavk|output.com|output.z64|gridlee.zip|output.pce|output.sgx|output.vb>}
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -33,6 +33,7 @@ case "zip": try GridleeTestSet.build().write(to: url)
 case "z64": try N64TestROM.build().write(to: url)
 case "pce": try PCETestROM.build().write(to: url)
 case "sgx": try PCETestROM.build(superGrafx: true).write(to: url)
+case "vb": try VBTestROM.build().write(to: url)
 default: try GBATestROM.build().write(to: url)
 }
 SWIFT
@@ -40,7 +41,7 @@ xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAs
     "$root/Sources/Debug/GBTestROM.swift" "$root/Sources/Debug/NESTestROM.swift" "$root/Sources/Debug/SNESTestROM.swift" \
     "$root/Sources/Debug/NDSTestROM.swift" "$root/Sources/Debug/MDTestROM.swift" "$root/Sources/Debug/PS1TestEXE.swift" \
     "$root/Sources/Debug/VkTestROM.swift" "$root/Sources/Debug/DOSTestCOM.swift" "$root/Sources/Debug/GridleeTestSet.swift" \
-    "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/PCETestROM.swift" "$root/Sources/Hub/RomPatcher.swift" \
+    "$root/Sources/Debug/N64TestROM.swift" "$root/Sources/Debug/PCETestROM.swift" "$root/Sources/Debug/VBTestROM.swift" "$root/Sources/Hub/RomPatcher.swift" \
     -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

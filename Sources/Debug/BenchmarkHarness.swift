@@ -130,6 +130,7 @@ final class BenchmarkRun {
         case "n64": (data, ext) = (N64TestROM.build(), "z64")
         case "pce": data = PCETestROM.build()
         case "sgx": data = PCETestROM.build(superGrafx: true)
+        case "vb": data = VBTestROM.build()
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
