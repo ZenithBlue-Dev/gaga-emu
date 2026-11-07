@@ -65,7 +65,7 @@ struct AddView: View {
         .confirmationDialog("Which system is \(unplaced.first?.title ?? "this disc") for?",
                             isPresented: Binding(get: { !unplaced.isEmpty }, set: { if !$0, !unplaced.isEmpty { unplaced.removeFirst() } }),
                             titleVisibility: .visible) {
-            ForEach(unplaced.first.flatMap { CoreCatalog.unplacedPlatforms(forExtension: URL(fileURLWithPath: $0.romPath).pathExtension) } ?? []) { platform in
+            ForEach(unplaced.first.flatMap { CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: $0.romPath)) } ?? []) { platform in
                 Button(platform.name) {
                     if let game = unplaced.first { state.update(game.id) { $0.platformID = platform.id } }
                 }
@@ -77,11 +77,14 @@ struct AddView: View {
     }
 
     /// Imports a copied file, and queues the platform question when a disc image or .zip did not say.
-    private func add(_ dest: URL) {
-        guard let game = state.importROM(at: dest) else { return }
-        if game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forExtension: dest.pathExtension) != nil {
+    /// Returns why import stored no game or kept an older file, for the notice.
+    @discardableResult
+    private func add(_ dest: URL) -> String? {
+        let game = state.importROM(at: dest)
+        if let game, game.platformID == "unknown", CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath)) != nil {
             unplaced.append(game)
         }
+        return state.lastImportNote
     }
 
     private var dropTarget: some View {
@@ -154,16 +157,14 @@ struct AddView: View {
                 Task {
                     do {
                         let dest = try await ClipboardImporter.download(url, into: state.romDirectory)
-                        add(dest)
-                        notice = "Imported \(dest.lastPathComponent)"
+                        notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
                     } catch {
                         notice = error.localizedDescription
                     }
                 }
             default:
                 let dest = try ClipboardImporter.persist(item, into: state.romDirectory)
-                add(dest)
-                notice = "Imported \(dest.lastPathComponent)"
+                notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
             }
         } catch {
             notice = error.localizedDescription
@@ -180,8 +181,8 @@ struct AddView: View {
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 return try? ClipboardImporter.persist(.file(url), into: state.romDirectory)
             }
-            copied.forEach(add)
-            notice = "Imported \(copied.count) file\(copied.count == 1 ? "" : "s")"
+            let notes = copied.compactMap(add)
+            notice = (["Imported \(copied.count) file\(copied.count == 1 ? "" : "s")"] + notes).joined(separator: "\n")
         }
     }
 
@@ -193,8 +194,7 @@ struct AddView: View {
                 guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 Task { @MainActor in
                     if let dest = try? ClipboardImporter.persist(.file(url), into: state.romDirectory) {
-                        add(dest)
-                        notice = "Imported \(dest.lastPathComponent)"
+                        notice = add(dest) ?? "Imported \(dest.lastPathComponent)"
                     }
                 }
             }
@@ -302,9 +302,11 @@ struct RomPatcherSheet: View {
             if scopedROM { rom.stopAccessingSecurityScopedResource() }
             if scopedPatch { patch.stopAccessingSecurityScopedResource() }
         }
-        let dest = state.romDirectory.appendingPathComponent("patched-\(rom.lastPathComponent)")
         do {
-            let sums = try RomPatcher.apply(patch: patch, toSource: rom, writingTo: dest)
+            let part = try ClipboardImporter.partFile(in: state.romDirectory)
+            defer { try? FileManager.default.removeItem(at: part) }
+            let sums = try RomPatcher.apply(patch: patch, toSource: rom, writingTo: part)
+            let dest = try ClipboardImporter.place(part, named: "patched-\(rom.lastPathComponent)", in: state.romDirectory)
             _ = state.importROM(at: dest, title: "\(rom.deletingPathExtension().lastPathComponent) (patched)")
             result = "Saved. CRC32 \(String(format: "%08X", sums.crc32)) · MD5 \(sums.md5)"
         } catch {

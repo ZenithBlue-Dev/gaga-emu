@@ -203,9 +203,16 @@ enum CoreCatalog {
 
     /// The platforms import offers for a file it could not place, or nil when it does not ask for that extension.
     static func unplacedPlatforms(forExtension ext: String) -> [PlatformInfo]? {
-        // shortcut: a console zip refused for its size or name also gets only Arcade and DOS; add its platform if players hit it.
         if discExtensions.contains(ext.lowercased()) { return discPlatforms }
         return ext.lowercased() == "zip" ? ["arcade", "dos"].compactMap(platform) : nil
+    }
+
+    /// As `unplacedPlatforms(forExtension:)`, but a .zip first offers the platforms its entries' extensions name.
+    static func unplacedPlatforms(forFile url: URL) -> [PlatformInfo]? {
+        guard url.pathExtension.lowercased() == "zip" else { return unplacedPlatforms(forExtension: url.pathExtension) }
+        let named = zipEntryNames(url).compactMap { platformID(forExtension: ($0 as NSString).pathExtension.lowercased()) }
+        var seen = Set<String>()
+        return (named + ["arcade", "dos"]).filter { seen.insert($0).inserted }.compactMap(platform)
     }
 
     /// The extension's platform, corrected by the file's contents where one extension serves two platforms:
@@ -383,6 +390,11 @@ enum CoreCatalog {
     /// The one ROM a .zip holds for a console platform (not Arcade or DOS), or nil. Folders and sidecar files
     /// are ignored. A name with a ".." part, an absolute or drive path, or a size over the platform's limit is refused.
     static func zipConsoleROM(_ entries: [ZipEntry]) -> (entry: ZipEntry, platformID: String)? {
+        try? zipConsoleCheck(entries)?.get()
+    }
+
+    /// As `zipConsoleROM(_:)`, but a refused ROM is a failure that says why, and nil means no one console ROM.
+    static func zipConsoleCheck(_ entries: [ZipEntry]) -> Result<(entry: ZipEntry, platformID: String), ZipError>? {
         let files = entries.filter {
             !$0.name.hasSuffix("/") && !zipSidecarExtensions.contains(($0.name as NSString).pathExtension.lowercased())
         }
@@ -393,24 +405,28 @@ enum CoreCatalog {
         else { return nil }
         let parts = entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" })
         guard !entry.name.hasPrefix("/"), !entry.name.hasPrefix("\\"), parts.first?.hasSuffix(":") != true,
-              !parts.contains(".."), entry.size <= zipROMLimit(id) else { return nil }
-        return (entry, id)
+              !parts.contains("..") else { return .failure(.unsafeName) }
+        guard entry.size <= zipROMLimit(id) else { return .failure(.tooLarge) }
+        return .success((entry, id))
     }
 
     enum ZipError: LocalizedError {
-        case unsupported, corrupt, tooLarge
+        case unsupported, corrupt, tooLarge, unsafeName
         var errorDescription: String? {
             switch self {
             case .unsupported: return "The zip uses encryption or a compression GagaEmu cannot read."
             case .corrupt: return "The zip is damaged."
             case .tooLarge: return "The file in the zip is too large."
+            case .unsafeName: return "The file in the zip has a path GagaEmu refuses, such as one that leaves its folder."
             }
         }
     }
 
-    /// Writes one stored or deflated entry to `destination`, replacing any file there. Stops past `limit` bytes,
-    /// whatever the entry claims, and checks the size and CRC-32 before the file appears.
-    static func extractZipEntry(_ entry: ZipEntry, from zip: URL, to destination: URL, limit: Int) throws {
+    /// Writes one stored or deflated entry to `destination`, or under a new name when a different file has that
+    /// name, and returns where it went. Stops past `limit` bytes, whatever the entry claims, and checks the size
+    /// and CRC-32 before the file appears.
+    @discardableResult
+    static func extractZipEntry(_ entry: ZipEntry, from zip: URL, to destination: URL, limit: Int) throws -> URL {
         guard entry.flags & 1 == 0, entry.method == 0 || entry.method == 8 else { throw ZipError.unsupported }
         guard entry.size <= limit else { throw ZipError.tooLarge }
         let input = try FileHandle(forReadingFrom: zip)
@@ -478,8 +494,7 @@ enum CoreCatalog {
             }
         }
         guard written == entry.size, crc ^ 0xFFFF_FFFF == entry.crc else { throw ZipError.corrupt }
-        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
-        try FileManager.default.moveItem(at: part, to: destination)
+        return try ClipboardImporter.place(part, named: destination.lastPathComponent, in: destination.deletingLastPathComponent())
     }
 
     /// The records in a ZIP's central directory, or none when the file is not a readable ZIP.
@@ -765,7 +780,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// A file uploaded again replaces its bytes on disk, so it must not become a second shelf entry.
+    /// A file uploaded again with the same bytes keeps its name, so it must not become a second shelf entry.
     func addUploads(_ names: [String]) {
         for name in names where !games.contains(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }) {
             importROM(at: romDirectory.appendingPathComponent(name))
@@ -1015,43 +1030,64 @@ final class AppState: ObservableObject {
         save()
     }
 
+    /// Why the last `importROM(at:)` stored no game or kept an older file, for the import screen; nil otherwise.
+    private(set) var lastImportNote: String?
+
+    /// The cores' system folder BIOS files move to. A test points it at a temporary folder.
+    lazy var systemDirectory: URL = GagaCoreWrapper.systemDirectory
+
     @discardableResult
     func importROM(at url: URL, title: String? = nil, platformID: String? = nil) -> GameItem? {
+        lastImportNote = nil
         let inROMFolder = url.deletingLastPathComponent().standardizedFileURL == romDirectory.standardizedFileURL
-        // A BIOS file the BIOS Files screen names moves to the cores' system folder. A .rom (such as an FDS
-        // folder's disksys.rom) is never a game.
+        // A BIOS file the BIOS Files screen names, at a size its core reads, moves to the cores' system folder.
+        // Another size under that name (a game called firmware.bin) is placed as a game. A different file already
+        // in System is never replaced. A .rom (such as an FDS folder's disksys.rom) is never a game.
         let fileName = url.lastPathComponent.lowercased()
-        if platformID == nil, inROMFolder, BIOSManagerView.required.contains(where: { $0.0 == fileName }) {
-            let system = GagaCoreWrapper.systemDirectory
-            try? FileManager.default.createDirectory(at: system, withIntermediateDirectories: true)
-            let dest = system.appendingPathComponent(fileName)
-            if FileManager.default.fileExists(atPath: dest.path) { try? FileManager.default.removeItem(at: dest) }
-            try? FileManager.default.moveItem(at: url, to: dest)
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+        if platformID == nil, inROMFolder, let size, BIOSManagerView.sizes[fileName]?.contains(size) == true {
+            try? FileManager.default.createDirectory(at: systemDirectory, withIntermediateDirectories: true)
+            let dest = systemDirectory.appendingPathComponent(fileName)
+            if !FileManager.default.fileExists(atPath: dest.path) {
+                try? FileManager.default.moveItem(at: url, to: dest)
+            } else if ClipboardImporter.sameContents(url, dest) {
+                try? FileManager.default.removeItem(at: url)
+            } else {
+                lastImportNote = "\(url.lastPathComponent) differs from the \(fileName) already in System, so that one was kept. The new file stays in ROMs."
+            }
             return nil
         }
         if platformID == nil, url.pathExtension.lowercased() == "rom" { return nil }
         var url = url
         // No console core reads a .zip, so its one ROM is stored as a plain file and the copied zip goes.
-        // Only a zip already in the ROM folder is unpacked, so a file elsewhere is never removed.
-        if platformID == nil, url.pathExtension.lowercased() == "zip", inROMFolder,
-           let rom = CoreCatalog.zipConsoleROM(CoreCatalog.zipEntries(url)),
-           let name = rom.entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last {
-            let dest = romDirectory.appendingPathComponent(String(name))
-            guard (try? CoreCatalog.extractZipEntry(rom.entry, from: url, to: dest, limit: CoreCatalog.zipROMLimit(rom.platformID))) != nil else {
-                // A damaged zip stays as it is, and import asks rather than hand a console core a zip.
-                return addGame(url, title: title, platform: "unknown")
-            }
-            try? FileManager.default.removeItem(at: url)
-            url = dest
-            // The same zip again replaced the file's bytes, so it must not become a second shelf entry.
-            if let existing = games.first(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == dest.lastPathComponent }) {
-                return existing
+        // Only a zip already in the ROM folder is unpacked, so a file elsewhere is never removed. A damaged or
+        // refused zip is reported and stays where it is, with no shelf entry and no platform question.
+        if platformID == nil, url.pathExtension.lowercased() == "zip", inROMFolder {
+            let entries = CoreCatalog.zipEntries(url)
+            do {
+                guard !entries.isEmpty else { throw CoreCatalog.ZipError.corrupt }
+                if let rom = try CoreCatalog.zipConsoleCheck(entries)?.get() {
+                    let name = WiFiTransferServer.sanitize(String(rom.entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last ?? ""))
+                    guard !name.isEmpty else { throw CoreCatalog.ZipError.unsafeName }
+                    let placed = try CoreCatalog.extractZipEntry(rom.entry, from: url, to: romDirectory.appendingPathComponent(name),
+                                                                 limit: CoreCatalog.zipROMLimit(rom.platformID))
+                    try? FileManager.default.removeItem(at: url)
+                    url = placed
+                }
+            } catch {
+                lastImportNote = "\(url.lastPathComponent): \(error.localizedDescription)"
+                return nil
             }
         }
         return addGame(url, title: title, platform: platformID ?? CoreCatalog.platformID(forFile: url) ?? "unknown")
     }
 
     private func addGame(_ url: URL, title: String?, platform: String) -> GameItem {
+        // Import reuses a file with the same contents, so the same file in the ROM folder is the same game.
+        if url.deletingLastPathComponent().standardizedFileURL == romDirectory.standardizedFileURL,
+           let existing = games.first(where: { URL(fileURLWithPath: $0.romPath).lastPathComponent == url.lastPathComponent }) {
+            return existing
+        }
         let name = title ?? url.deletingPathExtension().lastPathComponent
         let item = GameItem(id: UUID(), title: name, platformID: platform, romPath: url.path,
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,

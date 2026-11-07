@@ -132,6 +132,116 @@ final class ZipImportTests: XCTestCase {
         XCTAssertEqual(state.games.count, saved.count + 1)
     }
 
+    /// Restores the saved library and removes every ROM-folder file a test made.
+    @MainActor
+    private func cleanUp(_ state: AppState, _ saved: [GameItem], stem: String) {
+        state.games = saved
+        state.save()
+        for name in (try? FileManager.default.contentsOfDirectory(atPath: state.romDirectory.path)) ?? [] where name.hasPrefix(stem) {
+            try? FileManager.default.removeItem(at: state.romDirectory.appendingPathComponent(name))
+        }
+    }
+
+    @MainActor
+    func testTheSameROMNameNeverReplacesADifferentROM() throws {
+        let state = AppState()
+        let saved = state.games
+        let stem = "same-\(UUID().uuidString)"
+        defer { cleanUp(state, saved, stem: stem) }
+        try FileManager.default.createDirectory(at: state.romDirectory, withIntermediateDirectories: true)
+        let first = GBATestROM.build()
+        var second = first
+        second[second.count - 1] ^= 0xFF
+        func importZip(_ zipName: String, _ data: Data) throws -> GameItem? {
+            let zip = state.romDirectory.appendingPathComponent("\(stem)-\(zipName).zip")
+            try Self.deflatedZip([("\(stem).gba", data, nil)]).write(to: zip)
+            return state.importROM(at: zip)
+        }
+        let game = try XCTUnwrap(try importZip("a", first))
+        let other = try XCTUnwrap(try importZip("b", second), "another zip, same ROM name, other bytes")
+        XCTAssertNotEqual(other.id, game.id)
+        XCTAssertEqual(URL(fileURLWithPath: other.romPath).lastPathComponent, "\(stem) 2.gba")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: game.romPath)), first, "the first ROM is untouched")
+        XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: other.romPath)), second)
+        XCTAssertEqual(try importZip("c", first)?.id, game.id, "the same bytes again are the same game")
+        XCTAssertEqual(state.games.count, saved.count + 2)
+
+        // A plain file goes through the same placement.
+        let blob = { (data: Data) in try ClipboardImporter.persist(.blob(filename: "\(stem).nes", data: data), into: state.romDirectory) }
+        let nes = try blob(Data("one".utf8))
+        XCTAssertEqual(try blob(Data("one".utf8)), nes)
+        XCTAssertEqual(try blob(Data("two".utf8)).lastPathComponent, "\(stem) 2.nes")
+        XCTAssertEqual(try Data(contentsOf: nes), Data("one".utf8))
+    }
+
+    @MainActor
+    func testABIOSNameNeverReplacesADifferentSystemFile() throws {
+        let state = AppState()
+        let saved = state.games
+        state.systemDirectory = dir.appendingPathComponent("System")
+        let rom = state.romDirectory.appendingPathComponent("firmware.bin")
+        try XCTSkipIf(FileManager.default.fileExists(atPath: rom.path), "a real firmware.bin is in ROMs")
+        defer {
+            state.games = saved
+            state.save()
+            try? FileManager.default.removeItem(at: rom)
+        }
+        try FileManager.default.createDirectory(at: state.systemDirectory, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: state.romDirectory, withIntermediateDirectories: true)
+        let system = state.systemDirectory.appendingPathComponent("firmware.bin")
+        let kept = Data(repeating: 1, count: 256 << 10)
+        try kept.write(to: system)
+
+        try kept.write(to: rom)
+        XCTAssertNil(state.importROM(at: rom))
+        XCTAssertNil(state.lastImportNote, "identical: nothing to say")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: rom.path))
+
+        try Data(repeating: 2, count: 256 << 10).write(to: rom)
+        XCTAssertNil(state.importROM(at: rom))
+        XCTAssertNotNil(state.lastImportNote, "the player hears the System copy was kept")
+        XCTAssertEqual(try Data(contentsOf: system), kept)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: rom.path), "the new file is not lost")
+
+        // A game that happens to have a BIOS name, at a size no core reads as that BIOS.
+        try Data(repeating: 3, count: 1 << 20).write(to: rom)
+        XCTAssertNotNil(state.importROM(at: rom))
+        XCTAssertEqual(try Data(contentsOf: system), kept)
+        XCTAssertEqual(Set(BIOSManagerView.sizes.keys), Set(BIOSManagerView.required.map(\.0)), "every BIOS has its sizes")
+    }
+
+    @MainActor
+    func testARefusedOrDamagedZipSaysWhyAndAnUnclearOneOffersItsPlatforms() throws {
+        let state = AppState()
+        let saved = state.games
+        let stem = "refused-\(UUID().uuidString)"
+        defer { cleanUp(state, saved, stem: stem) }
+        try FileManager.default.createDirectory(at: state.romDirectory, withIntermediateDirectories: true)
+        let gba = GBATestROM.build()
+        var garbled = try Self.deflatedZip([("game.gba", gba, nil)])
+        garbled[30 + 8 + 4] ^= 0xFF // Inside the deflated data, after the 30-byte header and "game.gba".
+        let cases: [(String, Data, CoreCatalog.ZipError)] = [
+            ("broken", Data("PK".utf8), .corrupt),
+            ("garbled", garbled, .corrupt),
+            ("up", try Self.deflatedZip([("../evil.gba", gba, nil)]), .unsafeName),
+            ("big", try Self.deflatedZip([("big.gba", gba, 64 << 20)]), .tooLarge)
+        ]
+        for (name, data, error) in cases {
+            let zip = state.romDirectory.appendingPathComponent("\(stem)-\(name).zip")
+            try data.write(to: zip)
+            XCTAssertNil(state.importROM(at: zip), name)
+            XCTAssertEqual(state.lastImportNote?.hasSuffix(try XCTUnwrap(error.errorDescription)), true, name)
+            XCTAssertTrue(FileManager.default.fileExists(atPath: zip.path), "\(name) stays where it is")
+        }
+        XCTAssertEqual(state.games.count, saved.count, "no shelf entry, so no platform question")
+
+        let unclear = state.romDirectory.appendingPathComponent("\(stem)-two.zip")
+        try Self.deflatedZip([("a.gba", gba, nil), ("b.nes", NESTestROM.build(), nil), ("c.gba", gba, nil)]).write(to: unclear)
+        let game = try XCTUnwrap(state.importROM(at: unclear))
+        XCTAssertEqual(game.platformID, "unknown")
+        XCTAssertEqual(CoreCatalog.unplacedPlatforms(forFile: URL(fileURLWithPath: game.romPath))?.map(\.id), ["gba", "nes", "arcade", "dos"])
+    }
+
     @MainActor
     func testAROMFileIsNeverAGame() throws {
         let state = AppState()

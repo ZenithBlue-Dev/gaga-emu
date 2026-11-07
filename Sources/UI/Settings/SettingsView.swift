@@ -458,6 +458,16 @@ struct BIOSManagerView: View {
         ("disksys.rom", "Famicom Disk System (Nestopia UE)")
     ]
 
+    /// The byte sizes each name's core reads: PS1 and Saturn 512 KiB, DS ARM7 16 KiB, ARM9 4 KiB, DS firmware
+    /// 128, 256 or 512 KiB (melonDS), FDS 8 KiB. Import treats a file of another size under that name as a game.
+    static let sizes: [String: Set<Int>] = [
+        "scph5501.bin": [512 << 10], "scph5502.bin": [512 << 10],
+        "bios7.bin": [16 << 10], "bios9.bin": [4 << 10],
+        "firmware.bin": [128 << 10, 256 << 10, 512 << 10],
+        "mpr-17933.bin": [512 << 10], "sega_101.bin": [512 << 10],
+        "disksys.rom": [8 << 10]
+    ]
+
     var body: some View {
         PaperSheet(title: "BIOS Files", scrolls: false) {
             List {
