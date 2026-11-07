@@ -22,16 +22,21 @@ struct GameView: View {
                     .accessibilityLabel("\(session.game.title), game picture")
                     .accessibilityAddTraits(.isImage)
                 if touchVisible { TouchControls(session: session, skins: skins) }
-                pauseButton
+                HStack(spacing: 0) {
+                    pauseButton
+                    Spacer(minLength: 0)
+                    fastForwardButton
+                }
             }
         }
         .overlay {
             if session.menuOpen {
-                PauseMenu(title: session.game.title,
-                          resume: { session.resume(.menu) },
-                          quit: { session.stop() })
+                PauseMenu(session: session)
                     .transition(.opacity)
             }
+        }
+        .alert(session.notice ?? "", isPresented: Binding(get: { session.notice != nil }, set: { if !$0 { session.notice = nil } })) {
+            Button("OK", role: .cancel) {}
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: session.menuOpen)
         .background(AppTheme.letterbox.ignoresSafeArea())
@@ -51,6 +56,26 @@ struct GameView: View {
         }
         .opacity(0.8)
         .accessibilityLabel("Pause game")
+    }
+
+    /// Text replaces the glyph while it runs, so colour is not the only cue.
+    private var fastForwardButton: some View {
+        let on = session.fastForward > 1
+        return Button { session.toggleFastForward() } label: {
+            Group {
+                if on {
+                    Text("\(session.fastForward)x").font(.meta.weight(.bold)).foregroundStyle(AppTheme.onAccent)
+                } else {
+                    Image(systemName: "forward.fill").foregroundStyle(AppTheme.onLetterbox)
+                }
+            }
+            .frame(width: 44, height: 44)
+            .background(on ? AppTheme.accentFill : Color.clear, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+            .contentShape(Rectangle())
+        }
+        .opacity(on ? 1 : 0.8)
+        .accessibilityLabel("Fast forward")
+        .accessibilityValue(on ? "\(session.fastForward) times speed" : "Off")
     }
 }
 
@@ -188,9 +213,17 @@ final class TouchInputView: UIView {
 
 /// Compact side sheet. Entries for later milestones appear here only once they work.
 private struct PauseMenu: View {
-    let title: String
-    let resume: () -> Void
-    let quit: () -> Void
+    @ObservedObject var session: GameSession
+    @EnvironmentObject private var store: StoreKitManager
+    @State private var showSaves = false
+    @State private var showCheats = false
+    @State private var showPlans = false
+    @State private var saved: Date?
+
+    private func resume() { session.resume(.menu) }
+
+    /// Only an open paywall gate can reach this, and never for someone who owns the app outright.
+    private var offersPlus: Bool { PaywallGate.isOpen && !store.entitlements.premium && store.entitlements.showsSubscribePrompts }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -202,10 +235,22 @@ private struct PauseMenu: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                    Text(title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(3)
+                    Text(session.game.title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(3)
                     Rule().padding(.vertical, 4)
                     Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
-                    Button("Quit to Library", action: quit)
+                    if session.supportsSaveStates {
+                        menuRow(title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" }, action: saveState)
+                        menuRow(title: "Load State", action: { showSaves = true })
+                    }
+                    fastForward
+                    if session.supportsCheats {
+                        menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
+                    }
+                    if offersPlus {
+                        menuRow(title: "See Gaga Plus", action: { showPlans = true })
+                    }
+                    Rule().padding(.vertical, 4)
+                    Button("Quit to Library", action: { session.stop() })
                         .buttonStyle(QuietButtonStyle())
                         .frame(maxWidth: .infinity)
                 }
@@ -218,5 +263,61 @@ private struct PauseMenu: View {
             .accessibilityAction(.escape, resume)
         }
         .ignoresSafeArea(edges: .vertical)
+        .sheet(isPresented: $showSaves) {
+            ManageSavesSheet(title: session.game.title, store: session.saves) { slot in
+                try session.loadState(slot)
+                session.resume(.menu)
+            }
+        }
+        .sheet(isPresented: $showCheats) { CheatsSheet(session: session) }
+        .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+    }
+
+    private func saveState() {
+        do {
+            saved = try session.saveState().date
+        } catch {
+            session.notice = error.localizedDescription
+        }
+    }
+
+    private func menuRow(title: String, value: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer(minLength: 8)
+                if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted) }
+            }
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var fastForward: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Fast Forward").accessibilityAddTraits(.isHeader)
+            HStack(spacing: 6) {
+                ForEach(session.fastForwardSpeeds, id: \.self) { speed in
+                    let selected = session.fastForward == speed
+                    let label = speed == 1 ? "Off" : "\(speed)x"
+                    Button { session.setFastForward(speed) } label: {
+                        Text(label)
+                            .font(.footnote.weight(selected ? .bold : .regular))
+                            .foregroundStyle(selected ? AppTheme.onAccent : AppTheme.ink)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(selected ? AppTheme.accentFill : Color.clear, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(selected ? Color.clear : AppTheme.rule, lineWidth: 1))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(speed == 1 ? "Normal speed" : "\(speed) times speed")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

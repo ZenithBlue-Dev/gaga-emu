@@ -153,6 +153,8 @@ private struct PaneNote: View {
 
 private struct PlayPane: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var store: StoreKitManager
+    @State private var showPlans = false
 
     var body: some View {
         ValueRow(title: "Total play time", value: CoreCatalog.playTime(state.totalPlayTime))
@@ -160,6 +162,14 @@ private struct PlayPane: View {
         ValueRow(title: "Sessions", value: "\(state.history.count)")
         Rule()
         ToggleRow(title: "Quick Start", note: "Opens your most recent game when the app starts.", isOn: $state.quickStart)
+        Rule()
+        // Reaching the second branch needs an open paywall gate, because a closed one lifts the limit.
+        if store.canUseAutoSaveState {
+            ToggleRow(title: "Auto Save State", note: "Saves when you quit or leave the app, and offers to resume when you next play.", isOn: $state.autoSaveStates)
+        } else {
+            ActionRow(title: "Auto Save State", value: "Plus", symbol: "lock") { showPlans = true }
+                .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+        }
         Rule()
         ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen)
         Rule()
@@ -231,7 +241,12 @@ private struct ControlsPane: View {
         Rule()
         ForEach(controllers.devices) { device in
             HStack {
-                Text(device.name)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(device.name)
+                    if !device.hasSentInput {
+                        Text("Touch stays on until this sends input in a game.").font(.footnote).foregroundStyle(AppTheme.muted)
+                    }
+                }
                 Spacer(minLength: 12)
                 Menu(device.slot.map { "Player \($0 + 1)" } ?? "Unassigned") {
                     ForEach(0..<ControllerManager.slotCount, id: \.self) { index in

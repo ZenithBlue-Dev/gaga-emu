@@ -56,6 +56,15 @@ struct RootView: View {
         } message: { failure in
             Text(failure.message)
         }
+        .alert("Resume \(state.resumeOffer?.title ?? "game")?",
+               isPresented: Binding(get: { state.resumeOffer != nil }, set: { if !$0 { state.resumeOffer = nil } }),
+               presenting: state.resumeOffer) { game in
+            Button("Resume") { state.start(game, loading: state.saveStore(for: game).autoSlot) }
+            Button("Start Over") { state.start(game) }
+            Button("Cancel", role: .cancel) {}
+        } message: { _ in
+            Text("Resume continues from your auto save. Start Over uses the game's own save, and replaces the auto save when you next leave the game.")
+        }
         .task {
             // Runs once, when the app starts.
             if state.quickStart, let game = state.recentGames.first { state.launch(game) }

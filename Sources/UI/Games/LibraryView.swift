@@ -8,6 +8,7 @@ struct LibraryView: View {
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
     @State private var pendingDelete: GameItem?
+    @State private var pendingLoad: (GameItem, SaveSlot)?
     /// Tiles widen with Dynamic Type so titles do not break mid-word.
     @ScaledMetric(relativeTo: .footnote) private var tileScale: CGFloat = 1
 
@@ -40,10 +41,11 @@ struct LibraryView: View {
                 }
             }
         }
-        .sheet(item: $sheet) { sheet in
+        .sheet(item: $sheet, onDismiss: startPendingLoad) { sheet in
             switch sheet {
             case .core(let game): CorePickerSheet(game: game)
-            case .saves(let game): ManageSavesSheet(game: game)
+            case .saves(let game):
+                ManageSavesSheet(title: game.title, store: state.saveStore(for: game)) { pendingLoad = (game, $0) }
             case .edit(let game): EditDetailsSheet(game: game)
             }
         }
@@ -54,8 +56,15 @@ struct LibraryView: View {
             Button("Delete", role: .destructive) { state.delete(game) }
             Button("Cancel", role: .cancel) {}
         } message: { _ in
-            Text("This removes the game and its play history from your library.")
+            Text("This removes the game and its play history from your library. Its saves and save states stay on this device, and return if you add the same file again.")
         }
+    }
+
+    /// A game view cannot present until the sheet has gone.
+    private func startPendingLoad() {
+        guard let (game, slot) = pendingLoad else { return }
+        pendingLoad = nil
+        state.start(game, loading: slot)
     }
 
     private var empty: some View {
@@ -307,18 +316,6 @@ struct EditDetailsSheet: View {
                 .disabled(trimmed.isEmpty)
                 .padding(.top, 16)
             }
-        }
-    }
-}
-
-/// Saves arrive with milestone 2.6; this states that plainly instead of offering empty controls.
-struct ManageSavesSheet: View {
-    let game: GameItem
-
-    var body: some View {
-        PaperSheet(title: "Manage Saves", subtitle: game.title) {
-            Text("No saves yet. Saving becomes available once games can run.")
-                .foregroundStyle(AppTheme.muted)
         }
     }
 }
