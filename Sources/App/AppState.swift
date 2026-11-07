@@ -182,7 +182,9 @@ enum CoreCatalog {
         case "sfc", "smc": return "snes"
         case "n64", "z64", "v64": return "n64"
         case "nds": return "nds"
-        case "3ds", "cia": return "n3ds"
+        // Azahar's loaders: NCSD (.3ds, .cci), NCCH (.cxi, .app), 3DSX homebrew, and ARM ELF (.axf; an .elf is
+        // placed by platformID(forFile:)). A .cia must be installed to a console's NAND first, so it is not offered.
+        case "3ds", "cci", "cxi", "app", "3dsx", "axf": return "n3ds"
         // Disc images serve PS1, PSP, Mega-CD and DOS alike: platformID(forFile:) looks inside, and asks when unsure.
         // An EBOOT.PBP holds a PSP program or a PS1 disc: platformID(forFile:) looks inside.
         case "pbp": return "ps1"
@@ -228,9 +230,21 @@ enum CoreCatalog {
             return zipPlatformID(url)
         case "pbp":
             return pbpPlatformID(url)
+        case "elf":
+            return elfPlatformID(url)
         default:
             return platformID(forExtension: url.pathExtension)
         }
+    }
+
+    /// An .elf's platform from its e_machine field (bytes 18 and 19, little endian): ARM (40) is 3DS homebrew,
+    /// anything else stays PSP (MIPS), as before.
+    static func elfPlatformID(_ url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return "psp" }
+        defer { try? handle.close() }
+        let header = [UInt8]((try? handle.read(upToCount: 20)) ?? Data())
+        guard header.count == 20, header[0..<4].elementsEqual([0x7F, 0x45, 0x4C, 0x46]) else { return "psp" }
+        return header[18] == 40 && header[19] == 0 ? "n3ds" : "psp"
     }
 
     /// A .pbp's platform: "psp" unless its DATA.PSAR is a PS1 disc (PSISOIMG or PSTITLEIMG) or it is not a PBP

@@ -27,7 +27,7 @@ public struct ClipboardImporter: Sendable {
 
     public static let romExtensions: Set<String> = [
         "zip", "7z", "rar", "bin", "iso", "chd", "pbp", "cso", "cue", "ccd", "toc", "m3u", "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf",
-        "gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "v64", "nds", "3ds", "cia",
+        "gba", "gbc", "gb", "nes", "sfc", "smc", "n64", "z64", "v64", "nds", "3ds", "3dsx", "cci", "cxi", "app", "axf",
         "md", "gen", "sms", "gg", "cdi", "gdi", "pce", "a26", "a78", "lnx", "ws", "wsc", "ngp", "ngc",
         "ips", "ups", "bps", "sav", "srm"
     ]

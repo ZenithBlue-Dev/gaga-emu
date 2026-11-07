@@ -405,7 +405,9 @@ DEFINE_CORE_INTERFACE(Jgenesis_GetInterface,      "jgenesis",        "JGenesis",
 #ifndef GAGA_HAS_MUPEN64PLUS_NEXT
 DEFINE_CORE_INTERFACE(Mupen64PlusNext_GetInterface, "mupen64plus_next", "Mupen64Plus-Next", GAGA_CORE_EXCLUDED, "n64|v64|z64", 60.0, 44100)
 #endif
-DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar 3DS",        "1.0.0",  "3ds|cia|cxi",         60.0, 48000)
+#ifndef GAGA_HAS_AZAHAR
+DEFINE_CORE_INTERFACE(Azahar_GetInterface,       "azahar",          "Azahar",            GAGA_CORE_EXCLUDED, "3ds|3dsx|cci|cxi|app|elf|axf", 60.0, 32728)
+#endif
 #ifndef GAGA_HAS_FLYCAST
 DEFINE_CORE_INTERFACE(Flycast_GetInterface,       "flycast",         "Flycast",           GAGA_CORE_EXCLUDED, "gdi|cdi|chd|cue", 59.9453, 44100)
 #endif
