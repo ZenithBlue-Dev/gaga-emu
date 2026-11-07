@@ -1,8 +1,9 @@
 import Foundation
 import Network
 
-/// LAN HTTP upload server. Off until the user toggles it. A fresh 4-digit PIN
-/// gates every session. Uploads land straight in the ROM directory.
+/// LAN HTTP upload server. Off until the user toggles it. A fresh 4-digit PIN gates every
+/// session, sent only as a header, with guesses limited by `PINAttemptLimiter`. Uploads land
+/// straight in the ROM directory. Traffic is plain HTTP, so the PIN and files are unencrypted.
 ///
 /// `NSLocalNetworkUsageDescription` must be set in Info.plist or iOS will
 /// silently refuse the listener (Guideline 1.4 / 5.1.1).
@@ -21,6 +22,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
 
     private var listener: NWListener?
     private var pin: String = ""
+    private var limiter = PINAttemptLimiter()
     private let queue = DispatchQueue(label: "com.zenithblue.gagaemu.wifi", qos: .userInitiated)
     private let lock = NSLock()
 
@@ -34,6 +36,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
     public func start() {
         guard listener == nil else { return }
         pin = String(format: "%04d", Int.random(in: 0...9999))
+        limiter = PINAttemptLimiter()
 
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
@@ -126,10 +129,20 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
             return
         }
 
-        // PIN is required for anything that writes.
-        let supplied = headers["x-gaga-pin"] ?? Self.queryValue(target, key: "pin") ?? ""
-        guard Self.constantTimeEqual(supplied, pin), !pin.isEmpty else {
+        // PIN is required for anything that writes. Header only: a query string lands in browser history.
+        switch limiter.check(supplied: headers["x-gaga-pin"] ?? "", pin: pin) {
+        case .allow:
+            break
+        case .reject:
             respond(connection, status: 401, body: "bad pin")
+            return
+        case .locked:
+            respond(connection, status: 429, body: "too many wrong PINs, try again in a minute")
+            return
+        case .exhausted:
+            respond(connection, status: 429, body: "too many wrong PINs, transfer stopped")
+            stop()
+            publish(.failed("Too many wrong PINs, so transfer stopped. Turn it on again for a new PIN."))
             return
         }
 
@@ -181,7 +194,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
 
     private func respond(_ connection: NWConnection, status: Int, contentType: String = "text/plain; charset=utf-8", body: String) {
         let payload = Data(body.utf8)
-        let reason = [200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 413: "Payload Too Large", 431: "Headers Too Large"][status] ?? "Error"
+        let reason = [200: "OK", 400: "Bad Request", 401: "Unauthorized", 404: "Not Found", 413: "Payload Too Large", 429: "Too Many Requests", 431: "Headers Too Large"][status] ?? "Error"
         var head = "HTTP/1.1 \(status) \(reason)\r\n"
         head += "Content-Type: \(contentType)\r\n"
         head += "Content-Length: \(payload.count)\r\n"
@@ -289,15 +302,6 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
         return diff == 0
     }
 
-    private static func queryValue(_ target: String, key: String) -> String? {
-        guard let q = target.split(separator: "?", maxSplits: 1).dropFirst().first else { return nil }
-        for pair in q.split(separator: "&") {
-            let kv = pair.split(separator: "=", maxSplits: 1)
-            if kv.first == Substring(key) { return kv.count > 1 ? String(kv[1]).removingPercentEncoding : "" }
-        }
-        return nil
-    }
-
     static func lanAddress() -> String? {
         var address: String?
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
@@ -329,7 +333,7 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
     #log{white-space:pre-wrap;color:#9aa;font-size:13px}
     </style>
     <main>
-    <h1>GAGA-EMU</h1><p>Drop ROMs, saves, or BIOS files.</p>
+    <h1>GAGA-EMU</h1><p>Drop ROMs, saves, or BIOS files. This local connection is not encrypted.</p>
     <p><input id=pin inputmode=numeric maxlength=4 placeholder=PIN> <button id=go>Upload</button></p>
     <div id=drop>Drop files here or tap to choose<input id=file type=file multiple hidden></div>
     <p id=log></p>
@@ -351,6 +355,35 @@ public final class WiFiTransferServer: ObservableObject, @unchecked Sendable {
     }
     </script>
     """
+}
+
+/// Bounds PIN guessing for one server session, since a 4-digit PIN has only 10,000 values.
+/// Every 5th wrong PIN locks the server for a minute. The 15th ends the session, for 15 guesses in all.
+/// A correct PIN does not clear the count, so uploads cannot refresh an attacker's budget.
+struct PINAttemptLimiter {
+    enum Decision: Equatable { case allow, reject, locked, exhausted }
+
+    static let failuresPerLockout = 5
+    static let lockoutSeconds: TimeInterval = 60
+    static let maxFailures = 15
+
+    private var failures = 0
+    private var lockedUntil = Date.distantPast
+
+    /// A request with no PIN, such as a browser's favicon fetch, is not a guess and is not counted.
+    mutating func check(supplied: String, pin: String, now: Date = Date()) -> Decision {
+        if failures >= Self.maxFailures { return .exhausted }
+        if now < lockedUntil { return .locked }
+        guard !supplied.isEmpty, !pin.isEmpty else { return .reject }
+        if WiFiTransferServer.constantTimeEqual(supplied, pin) { return .allow }
+        failures += 1
+        if failures >= Self.maxFailures { return .exhausted }
+        if failures % Self.failuresPerLockout == 0 {
+            lockedUntil = now.addingTimeInterval(Self.lockoutSeconds)
+            return .locked
+        }
+        return .reject
+    }
 }
 
 #if DEBUG

@@ -382,6 +382,95 @@ final class GagaEmuTests: XCTestCase {
         }
     }
 
+    // MARK: - WiFi Transfer Tests
+
+    func testPINLimiterLocksThenExhausts() {
+        var limiter = PINAttemptLimiter()
+        var now = Date(timeIntervalSince1970: 1000)
+        let pin = "1234"
+
+        XCTAssertEqual(limiter.check(supplied: pin, pin: pin, now: now), .allow)
+        for _ in 0..<4 { XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .reject) }
+        XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .locked)
+
+        // During the lockout even the right PIN is refused, and a guess costs nothing.
+        XCTAssertEqual(limiter.check(supplied: pin, pin: pin, now: now), .locked)
+        now += PINAttemptLimiter.lockoutSeconds - 1
+        XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .locked)
+
+        // Lockout over. A correct PIN works and does not refund earlier failures.
+        now += 1
+        XCTAssertEqual(limiter.check(supplied: pin, pin: pin, now: now), .allow)
+        for _ in 0..<4 { XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .reject) }
+        XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .locked)
+
+        now += PINAttemptLimiter.lockoutSeconds
+        for _ in 0..<4 { XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .reject) }
+        XCTAssertEqual(limiter.check(supplied: "0000", pin: pin, now: now), .exhausted)
+
+        // Exhausted is final, whatever the clock or the PIN.
+        now += 86_400
+        XCTAssertEqual(limiter.check(supplied: pin, pin: pin, now: now), .exhausted)
+    }
+
+    func testPINLimiterIgnoresRequestsWithoutAPIN() {
+        var limiter = PINAttemptLimiter()
+        for _ in 0..<100 { XCTAssertEqual(limiter.check(supplied: "", pin: "1234"), .reject) }
+        XCTAssertEqual(limiter.check(supplied: "1234", pin: "1234"), .allow)
+        // A stopped server has an empty PIN, which nothing may match.
+        XCTAssertEqual(limiter.check(supplied: "1234", pin: ""), .reject)
+    }
+
+    /// Runs the real listener on loopback.
+    @MainActor
+    func testWiFiServerTakesPINOnlyFromTheHeaderAndLocksOut() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("gaga-wifi-\(UUID().uuidString)")
+        let server = WiFiTransferServer(romDirectory: dir, port: 18473)
+        server.start()
+        defer {
+            server.stop()
+            try? FileManager.default.removeItem(at: dir)
+        }
+
+        var pin = ""
+        for _ in 0..<100 where pin.isEmpty {
+            if case .running(_, _, let running) = server.state { pin = running } else {
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+        }
+        XCTAssertFalse(pin.isEmpty, "Listener did not start")
+
+        let boundary = "gagaBoundary"
+        let body = Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"game.gba\"\r\n\r\nROMDATA\r\n--\(boundary)--\r\n".utf8)
+        func post(path: String, header: String?) async throws -> Int {
+            var request = URLRequest(url: URL(string: "http://127.0.0.1:18473\(path)")!)
+            request.httpMethod = "POST"
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+            if let header { request.setValue(header, forHTTPHeaderField: "X-Gaga-Pin") }
+            let (_, response) = try await URLSession(configuration: .ephemeral).upload(for: request, from: body)
+            return (response as? HTTPURLResponse)?.statusCode ?? -1
+        }
+        let saved = dir.appendingPathComponent("game.gba")
+
+        let inQuery = try await post(path: "/upload?pin=\(pin)", header: nil)
+        XCTAssertEqual(inQuery, 401)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: saved.path))
+
+        let inHeader = try await post(path: "/upload", header: pin)
+        XCTAssertEqual(inHeader, 200)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: saved.path))
+
+        let wrong = pin == "0000" ? "1111" : "0000"
+        for _ in 0..<4 {
+            let status = try await post(path: "/upload", header: wrong)
+            XCTAssertEqual(status, 401)
+        }
+        let locked = try await post(path: "/upload", header: wrong)
+        XCTAssertEqual(locked, 429)
+        let rightButLocked = try await post(path: "/upload", header: pin)
+        XCTAssertEqual(rightButLocked, 429)
+    }
+
     // MARK: - MultiDiscHelper Tests
 
     func testMultiDiscHelperParsingAndPlaylist() throws {

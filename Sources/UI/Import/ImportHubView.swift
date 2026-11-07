@@ -163,8 +163,8 @@ struct ImportHubView: View {
 
     private var wifiDetail: String {
         switch state.wifi.state {
-        case .stopped: return "Transfer files via browser on same network"
-        case .running(let host, let port, let pin): return "http://\(host):\(port)\nPIN \(pin)"
+        case .stopped: return "Off by default. Transfers files by browser on your network over unencrypted local HTTP."
+        case .running(let host, let port, let pin): return "http://\(host):\(port)\nPIN \(pin)\nUnencrypted local HTTP. Turn off when done."
         case .failed(let message): return message
         }
     }
