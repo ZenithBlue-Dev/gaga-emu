@@ -489,6 +489,11 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
     (void)rom_size;
     LrInstance* a = (LrInstance*)inst;
     if (!a || !rom_path || a->loaded) return false;
+    const char* refusal = gaga_libretro_core.refuse_load ? gaga_libretro_core.refuse_load(a->system_dir, rom_path) : NULL;
+    if (refusal) {
+        lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_ROM, refusal);
+        return false;
+    }
 
     struct retro_system_info system = { 0 };
     retro_get_system_info(&system);
