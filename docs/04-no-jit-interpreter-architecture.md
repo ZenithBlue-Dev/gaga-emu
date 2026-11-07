@@ -451,6 +451,19 @@ This document sets no CPU device floor, because no benchmark supports one. GPU s
 | Arcade (alternate, sideload only) | FinalBurn Neo | Per driver | Audited at `4cdb31f1`: upstream's `ios-arm64` list has every CPU as an interpreter; no Cyclone (ARM32 asm) and no MIPS3 x64 recompiler. `FORBIDDEN_SOURCES` refuses `mips3_x64`, `xbyak` and `cyclone.s` | `thready.h` worker kept on one thread by `no_thread.h`. No `sem_open`, `pthread_create`, `mprotect` or `dlopen` imports (`Cores/fbneo/core.env`) | 2 | Target (unmeasured). macOS harness only on Gridlee. Load varies by driver |
 | PS1 (alternate) | SwanStation | R3000A | Audited at `631f0fb3`: every recompiler and fastmem path is under `WITH_RECOMPILER`, which this build never defines. `jit_code_buffer.cpp` and `page_fault_handler.cpp` are not compiled, enforced by `FORBIDDEN_SOURCES` | Cached interpreter, software renderer, fastmem off, GPU and CD threads off. `no_exec.h` stubs `dlopen`, `shm_open` and execute-permission `mprotect` (`Cores/swanstation/core.env`) | 2 | Target (unmeasured). macOS harness only, on OpenBIOS's shell; device benchmark pending |
 
+**Game-scene device runs, 2026-11-07, build `bb35a4a`.** the owner's iPhone (iPhone 17, iPhone18,3, iOS 27.2), one 10 s run after 5 s warm-up each, Debug host with Release core, thermal nominal throughout, 0 audio underruns, no generated code. Owner-supplied games, not kept in the repo:
+
+| Platform | Core | Game | fps | 1% low | Core CPU ms per frame (mean, p99) | Peak footprint |
+|---|---|---|---|---|---|---|
+| Game Boy | Gambatte | owner-supplied GB game | 59.73 | 56.4 | 1.34, 1.54 | 168 MB |
+| Game Boy Color | Gambatte | owner-supplied GBC game | 59.73 | 56.5 | 1.46, 1.77 | 169 MB |
+| GBA | mGBA | owner-supplied GBA game | 59.73 | 56.4 | 3.27, 3.85 | 172 MB |
+| NES | Nestopia UE | owner-supplied NES game | 60.10 | 56.9 | 3.28, 3.61 | 178 MB |
+| Famicom Disk System | Nestopia UE | owner-supplied FDS game with `disksys.rom` | 60.10 | 57.2 | 2.64, 3.62 | 177 MB |
+| SNES | bsnes | owner-supplied SNES game | 60.10 | 57.1 | 7.26, 8.55 | 250 MB |
+
+Short runs, not the three of section 7.2. No MD, PS1, N64, NDS, PSP or PCE game was available on the owner's drive.
+
 **Research, not shipping and not promised.**
 
 - **Dolphin (GameCube, Wii).** Gekko is based on the PowerPC 750CXe. Upstream reports about 30 fps (50% speed) for Mario Kart Wii on an iPhone 16 Pro Max without JIT, on default settings (<https://oatmealdome.me/?p=1695>). This is a data point about Dolphin, not a GagaEmu target.
