@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 4u
+#define GAGA_BRIDGE_ABI_VERSION 5u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -50,6 +50,9 @@ typedef struct {
     int16_t  pointer_x;
     int16_t  pointer_y;
     bool     pointer_down;
+    // Keys held on a hardware keyboard, by USB HID usage (page 7, as GCKeyCode): usage u is bit (u & 7) of
+    // keys[u >> 3]. Player 1 only, and only for a core that types (DOS); others get it zeroed.
+    uint8_t  keys[32];
 } GagaInputState;
 
 // Pixel formats emitted by core

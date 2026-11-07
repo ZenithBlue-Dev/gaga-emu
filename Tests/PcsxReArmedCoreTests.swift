@@ -552,7 +552,8 @@ final class PcsxReArmedCoreTests: XCTestCase {
         let state = AppState()
         let saved = state.games
         defer { state.games = saved }
-        for ext in ["exe", "cue", "bin", "chd", "iso", "pbp", "img"] {
+        // An .exe is a PS-EXE only by its first bytes (DosboxPureCoreTests), so it is not in this list.
+        for ext in ["cue", "bin", "chd", "iso", "pbp", "img"] {
             let name = "upload-\(UUID().uuidString).\(ext)"
             state.addUploads([name])
             let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }

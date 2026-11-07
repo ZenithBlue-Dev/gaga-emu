@@ -183,8 +183,11 @@ enum CoreCatalog {
         case "n64", "z64", "v64": return "n64"
         case "nds": return "nds"
         case "3ds", "cia": return "n3ds"
-        // shortcut: every .exe is a PS-EXE. Check the "PS-X EXE" magic when a DOS core (milestone 4.8) arrives.
-        case "iso", "bin", "cue", "chd", "pbp", "img", "exe": return "ps1"
+        // shortcut: a DOS CD or disk image (.iso, .cue, .chd, .img, .m3u) goes to PS1 too. Look inside the image when both matter.
+        case "iso", "bin", "cue", "chd", "pbp", "img": return "ps1"
+        // A PS-EXE also ends in .exe. platformID(forFile:) tells the two apart by the file's first bytes.
+        // The rest are the DOSBox Pure extensions no other core takes.
+        case "exe", "com", "bat", "dosz", "ins", "ima", "vhd", "jrc", "m3u8", "conf": return "dos"
         case "cso": return "psp"
         case "gdi", "cdi": return "dreamcast"
         case "md", "gen", "smd", "sms": return "megadrive"
@@ -193,6 +196,54 @@ enum CoreCatalog {
         #endif
         default: return nil
         }
+    }
+
+    /// The extension's platform, corrected by the file's contents where one extension serves two platforms:
+    /// an .exe that starts with "PS-X EXE" is a PlayStation program, and a .zip is a DOS game only when it
+    /// holds an .exe, .com or .bat.
+    static func platformID(forFile url: URL) -> String? {
+        switch url.pathExtension.lowercased() {
+        case "exe":
+            let handle = try? FileHandle(forReadingFrom: url)
+            defer { try? handle?.close() }
+            let magic = (try? handle?.read(upToCount: 8)) ?? nil
+            return magic == Data("PS-X EXE".utf8) ? "ps1" : "dos"
+        case "zip":
+            return zipEntryNames(url).contains { ["exe", "com", "bat"].contains(($0 as NSString).pathExtension.lowercased()) }
+                ? "dos" : nil
+        default:
+            return platformID(forExtension: url.pathExtension)
+        }
+    }
+
+    /// The file names in a ZIP's central directory, or none when the file is not a readable ZIP.
+    static func zipEntryNames(_ url: URL) -> [String] {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return [] }
+        defer { try? handle.close() }
+        guard let size = try? handle.seekToEnd(), size >= 22 else { return [] }
+        // The end record is the last 22 bytes plus a comment of up to 65535 bytes.
+        let tailStart = size - min(size, 22 + 65535)
+        guard (try? handle.seek(toOffset: tailStart)) != nil, let tail = try? handle.readToEnd() else { return [] }
+        let bytes = [UInt8](tail)
+        func u16(_ b: [UInt8], _ i: Int) -> Int { Int(b[i]) | Int(b[i + 1]) << 8 }
+        func u32(_ b: [UInt8], _ i: Int) -> Int { u16(b, i) | u16(b, i + 2) << 16 }
+        guard let end = stride(from: bytes.count - 22, through: 0, by: -1).first(where: {
+            bytes[$0] == 0x50 && bytes[$0 + 1] == 0x4B && bytes[$0 + 2] == 5 && bytes[$0 + 3] == 6
+        }) else { return [] }
+        let directorySize = u32(bytes, end + 12), directoryOffset = u32(bytes, end + 16)
+        guard directoryOffset + directorySize <= size, (try? handle.seek(toOffset: UInt64(directoryOffset))) != nil,
+              let directory = try? handle.read(upToCount: directorySize) else { return [] }
+        let entries = [UInt8](directory)
+        var names: [String] = []
+        var i = 0
+        while i + 46 <= entries.count, u32(entries, i) == 0x0201_4B50 {
+            let nameLength = u16(entries, i + 28)
+            let next = i + 46 + nameLength + u16(entries, i + 30) + u16(entries, i + 32)
+            guard i + 46 + nameLength <= entries.count else { break }
+            names.append(String(decoding: entries[(i + 46)..<(i + 46 + nameLength)], as: UTF8.self))
+            i = next
+        }
+        return names
     }
 }
 
@@ -564,12 +615,15 @@ final class AppState: ObservableObject {
     }
 
     /// `-GagaImportROM <path>`: copies the file in as Files import does, so core work can add a game
-    /// without the UI. A file already in the Library is replaced on disk, not added twice.
+    /// without the UI. A file already in the Library is replaced on disk, not added twice. A relative path is
+    /// in Documents, where `devicectl device copy to` puts a file without knowing the container's path.
     func importROMIfRequested() {
         guard let path = UserDefaults.standard.string(forKey: "GagaImportROM") else { return }
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         do {
-            // "~" is the app's container, whose path changes with each device install.
-            try importDebugROM(at: URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+            // "~" is the app's container, whose path changes with each device install; a relative path is under Documents.
+            let expanded = (path as NSString).expandingTildeInPath
+            try importDebugROM(at: expanded.hasPrefix("/") ? URL(fileURLWithPath: expanded) : documents.appendingPathComponent(expanded))
         } catch {
             launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
         }
@@ -673,8 +727,7 @@ final class AppState: ObservableObject {
 
     @discardableResult
     func importROM(at url: URL, title: String? = nil, platformID: String? = nil) -> GameItem? {
-        let ext = url.pathExtension.lowercased()
-        let platform = platformID ?? CoreCatalog.platformID(forExtension: ext) ?? "unknown"
+        let platform = platformID ?? CoreCatalog.platformID(forFile: url) ?? "unknown"
         let name = title ?? url.deletingPathExtension().lastPathComponent
         let item = GameItem(id: UUID(), title: name, platformID: platform, romPath: url.path,
                             coverPath: nil, coreOverride: nil, playTime: 0, lastPlayed: nil,

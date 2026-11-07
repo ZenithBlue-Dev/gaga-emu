@@ -9,7 +9,7 @@ final class GagaEmuTests: XCTestCase {
 
     func testCoreRegistryCountAndLookup() {
         let count = GagaCoreRegistry_GetCount()
-        XCTAssertEqual(count, 14, "Mock, the real cores, the stubs and the Vulkan test core")
+        XCTAssertEqual(count, 15, "Mock, the real cores, the stubs and the Vulkan test core")
 
         // Validate mock core
         let mock = GagaCoreRegistry_FindByID("mock")
@@ -35,6 +35,7 @@ final class GagaEmuTests: XCTestCase {
         // Validate tier 3 cores
         XCTAssertNotNil(GagaCoreRegistry_FindByID("azahar"))
         XCTAssertNotNil(GagaCoreRegistry_FindByID("ppsspp"))
+        XCTAssertNotNil(GagaCoreRegistry_FindByID("dosbox_pure"))
     }
 
     func testCoreRegistryFindByExtension() {

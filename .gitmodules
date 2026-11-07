@@ -43,3 +43,6 @@
 [submodule "Cores/jgenesis/upstream"]
 	path = Cores/jgenesis/upstream
 	url = https://github.com/jsgroth/jgenesis
+[submodule "Cores/dosbox_pure/upstream"]
+	path = Cores/dosbox_pure/upstream
+	url = https://codeberg.org/schelling/dosbox-pure.git
