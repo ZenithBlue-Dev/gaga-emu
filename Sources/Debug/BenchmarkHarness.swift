@@ -151,6 +151,7 @@ final class BenchmarkRun {
         case "c64": (data, ext) = (C64TestROM.crt(), "crt") // Still needs the player's KERNAL files to start.
         case "amiga": (data, ext) = (AmigaTestROM.adf(), "adf")
         case "doom": (data, ext) = (DoomTestWAD.wad(), "wad")
+        case "n3ds": (data, ext) = (N3DSTestProgram.build(), "3dsx")
         default: throw NoTestROM(platformID: platformID)
         }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

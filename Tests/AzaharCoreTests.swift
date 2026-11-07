@@ -5,7 +5,7 @@ import XCTest
 
 /// Azahar through the real bridge (milestone 6.3): the dyncom ARM11 interpreter, the shader interpreter, and
 /// Azahar's Vulkan renderer on MoltenVK presenting to a CAMetalLayer. Device pending: built, not yet run on a
-/// device (docs/07 6.3). No homebrew 3DS program is generated yet, so the tests that need a running game skip.
+/// device (docs/07 6.3). The running-game test boots N3DSTestProgram, a self-made .3dsx.
 @MainActor
 final class AzaharCoreTests: GagaTestCase {
     private var directory: URL!
@@ -88,15 +88,54 @@ final class AzaharCoreTests: GagaTestCase {
         XCTAssertEqual(CodeGenCheck.violations(), [])
     }
 
-    func testBenchmarkHasNo3DSTestFileYet() {
-        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "n3ds", to: directory))
+    func testBenchmarkWritesThe3DSTestProgram() throws {
+        let url = try BenchmarkRun.writeTestROM(platformID: "n3ds", to: directory)
+        XCTAssertEqual(url.pathExtension, "3dsx")
+        XCTAssertEqual(CoreCatalog.platformID(forFile: url), "n3ds")
+        XCTAssertEqual(try Data(contentsOf: url).prefix(4), Data("3DSX".utf8))
     }
 
-    func testBootsAGameAndDrawsBothScreens() throws {
-        throw XCTSkip("no free 3DS test program yet (docs/07 6.3)")
+    /// Device pending: N3DSTestProgram fills each default framebuffer with its own colour. Side by side, the top
+    /// screen is the left 400 of every 720 columns and the bottom screen the right 320.
+    func testBootsTheTestProgramAndDrawsBothScreens() async throws {
+        final class Capture {
+            var frames = 0
+            var fatal: String?
+        }
+        let core = try makeCore()
+        let capture = Capture()
+        core.onVideoFrame = { _ in capture.frames += 1 }
+        core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
+        try await core.loadROM(path: try write(N3DSTestProgram.build(), name: "test.3dsx"))
+        for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
+        XCTAssertNil(capture.fatal)
+        XCTAssertGreaterThan(capture.frames, 0, "no frame presented")
+        let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented")
+        XCTAssertEqual(frame.width * 240, frame.height * 720, "side by side, \(frame.width)x\(frame.height)")
+        func pixel(_ column: Int) -> [UInt8] {
+            let i = ((frame.height / 2) * frame.width + column * frame.width / 720) * 4
+            return Array(frame.pixels[i..<i + 4])
+        }
+        func near(_ got: [UInt8], _ want: [UInt8]) -> Bool { zip(got, want).allSatisfy { abs(Int($0) - Int($1)) <= 8 } }
+        XCTAssertTrue(near(pixel(200), N3DSTestProgram.topBGRA), "top screen: \(pixel(200))")
+        XCTAssertTrue(near(pixel(560), N3DSTestProgram.bottomBGRA), "bottom screen: \(pixel(560))")
+        core.stop()
+    }
+
+    /// A finger on the middle of the bottom screen reaches Azahar as that screen's middle. Azahar scales the
+    /// libretro pointer over the whole frame and keeps it if it lands on the bottom screen (mouse_tracker.cpp).
+    func testAFingerOnTheBottomScreenMapsToItsTouchPoint() throws {
+        let content = CGSize(width: 720, height: 240) // Side by side: top 400x240, bottom 320x240 at x 400.
+        let bounds = CGSize(width: 1600, height: 480) // Wider than 3:1, so the picture is letterboxed left and right.
+        let pointer = try XCTUnwrap(GameSession.libretroPointer(CGPoint(x: 80 + 560 * 2, y: 240), bounds: bounds, content: content))
+        let x = Int(Float(Int(pointer.x) + 0x7fff) / Float(0x7fff * 2) * 720)
+        let y = Int(Float(Int(pointer.y) + 0x7fff) / Float(0x7fff * 2) * 240)
+        XCTAssertEqual(x - 400, 160, accuracy: 1)
+        XCTAssertEqual(y, 120, accuracy: 1)
+        XCTAssertNil(GameSession.libretroPointer(CGPoint(x: 40, y: 240), bounds: bounds, content: content), "letterbox")
     }
 
     func testTouchInputAudioSaveAndStateRoundTrip() throws {
-        throw XCTSkip("no free 3DS test program yet (docs/07 6.3)")
+        throw XCTSkip("the 3DS test program reads no input and plays no sound yet (docs/07 6.3)")
     }
 }
