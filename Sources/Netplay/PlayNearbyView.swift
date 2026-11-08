@@ -104,9 +104,9 @@ struct PlayNearbySheet: View {
             } else {
                 para("Two phones near each other play this game together, each with its own controls. Both players need the same game file. It works on the same Wi-Fi, or directly between phones with no Wi-Fi.")
                 Button("Host", action: net.host).buttonStyle(PrimaryButtonStyle())
-                    .accessibilityHint("This phone is player 1 and waits for the other phone.")
+                    .accessibilityHint("This phone's players come first, from player 1, and it waits for the other phone.")
                 Button("Join", action: net.join).buttonStyle(QuietButtonStyle())
-                    .accessibilityHint("This phone is player 2 and looks for a phone that is hosting.")
+                    .accessibilityHint("This phone's players follow the host's, and it looks for a phone that is hosting.")
             }
         case .checking:
             ProgressView("Checking this game")
@@ -149,8 +149,11 @@ struct PlayNearbySheet: View {
             cancel
         case .connected(let peer):
             para("Playing with \(peer). Pausing on one phone pauses both. Fast-forward and rewind are off while you play together.")
-            status("You are", net.isHost ? "Player 1" : "Player 2")
-            status("Players", "2")
+            if let ports = net.ports {
+                let first = net.isHost ? 1 : ports.host + 1, count = net.isHost ? ports.host : ports.joiner
+                status(count == 1 ? "You are" : "This phone", count == 1 ? "Player \(first)" : "Players \(first) to \(first + count - 1)")
+                status("Players", "\(ports.host + ports.joiner)")
+            }
             status("Ping", net.pingMs.map { "\($0) ms" } ?? "Measuring")
             status("Input delay", "\(net.delayFrames) frames")
             Button("Leave", action: net.leave).buttonStyle(QuietButtonStyle())

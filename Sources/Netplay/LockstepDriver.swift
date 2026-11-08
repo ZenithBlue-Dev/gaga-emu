@@ -10,8 +10,9 @@ protocol LockstepCore: AnyObject {
 extension GagaCoreWrapper: LockstepCore {}
 
 /// Delay-based lockstep, as libretro netplay without rollback. Both phones run the same core from the same
-/// state. Each tick a phone schedules its player's input `delay` frames ahead, sends it, and runs frame `f`
-/// only once both players' inputs for `f` are known, so both phones feed the core the same inputs.
+/// state. Each tick a phone schedules its local players' inputs `delay` frames ahead, sends them, and runs frame
+/// `f` only once both phones' inputs for `f` are known, so both phones feed the core the same inputs. The host's
+/// players take the first ports and the joiner's the next (`NetplayPorts`).
 ///
 /// Inputs are keyed by absolute frame, so each phone may change its own delay at any time without the two
 /// disagreeing: a larger delay fills the gap with the current input, a smaller one sends nothing until play
@@ -29,6 +30,7 @@ final class LockstepDriver {
     static let resendAfter = 15
 
     let isHost: Bool
+    let ports: NetplayPorts
     private let lock = NSLock()
     private weak var core: LockstepCore?
     private let send: (NetplayMessage) -> Void
@@ -36,8 +38,8 @@ final class LockstepDriver {
     private var frame = 0
     private var nextLocalFrame = 0
     private var delay = 3
-    private var local: [Int: NetInput] = [:]
-    private var remote: [Int: NetInput] = [:]
+    private var local: [Int: [NetInput]] = [:]
+    private var remote: [Int: [NetInput]] = [:]
     private var held = 0
     private var hashedFrame = -1
     private var ownHashes: [Int: UInt64] = [:]
@@ -51,8 +53,10 @@ final class LockstepDriver {
     /// A resync state that would not load.
     var onFailure: ((String) -> Void)?
 
-    init(isHost: Bool, core: LockstepCore, send: @escaping (NetplayMessage) -> Void) {
+    init(isHost: Bool, ports: NetplayPorts = NetplayPorts(host: 1, joiner: 1), core: LockstepCore,
+         send: @escaping (NetplayMessage) -> Void) {
         self.isHost = isHost
+        self.ports = ports
         self.core = core
         self.send = send
     }
@@ -62,8 +66,9 @@ final class LockstepDriver {
         return (frame, delay, desyncs)
     }
 
-    /// Core queue. The inputs for the next frame by port (host is port 1, joiner port 2), or nil to hold it.
-    func tick(local input: GagaInputState) -> [GagaInputState]? {
+    /// Core queue. Gets this phone's ports, its local players first, after turbo and macros. Returns the inputs for
+    /// the next frame on all four ports, or nil to hold it.
+    func tick(local inputs: [GagaInputState]) -> [GagaInputState]? {
         lock.lock(); defer { lock.unlock() }
         if let pending = pendingState {
             pendingState = nil
@@ -92,18 +97,19 @@ final class LockstepDriver {
                 send(.checksum(frame: UInt32(frame), hash: hash))
             }
         }
-        schedule(NetInput(input))
+        let count = isHost ? ports.host : ports.joiner
+        schedule((inputs.map(NetInput.init) + Array(repeating: NetInput(), count: count)).prefix(count).map { $0 })
         guard let mine = local[frame], let theirs = remote[frame] else {
             held += 1
             if held % Self.resendAfter == 0 { sendInputs(from: frame) }
             return nil
         }
         held = 0
-        let ports = isHost ? [mine, theirs] : [theirs, mine]
-        onFrame?(frame, ports)
+        let all = isHost ? mine + theirs : theirs + mine
+        onFrame?(frame, all)
         frame += 1
         if frame % 60 == 0 { prune() }
-        return ports.map(\.gaga) + [GagaInputState(), GagaInputState()]
+        return (all.map(\.gaga) + Array(repeating: GagaInputState(), count: NetplayPorts.count)).prefix(NetplayPorts.count).map { $0 }
     }
 
     /// Network queue. Inputs, checks and resync states; other messages belong to `NetplaySession`.
@@ -111,6 +117,8 @@ final class LockstepDriver {
         lock.lock(); defer { lock.unlock() }
         switch message {
         case .inputs(let first, let states):
+            // The other phone's players, as both phones agreed at hello; any other count is not theirs to send.
+            guard states.allSatisfy({ $0.count == (isHost ? ports.joiner : ports.host) }) else { return }
             for (offset, state) in states.enumerated() {
                 let f = Int(first) + offset
                 // A window around now bounds memory, whatever the other phone sends.
@@ -142,7 +150,7 @@ final class LockstepDriver {
     }
 
     // Under lock.
-    private func schedule(_ input: NetInput) {
+    private func schedule(_ input: [NetInput]) {
         guard nextLocalFrame <= frame + delay else { return }
         while nextLocalFrame <= frame + delay {
             local[nextLocalFrame] = input

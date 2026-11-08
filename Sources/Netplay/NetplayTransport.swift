@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Network
 
@@ -14,17 +15,28 @@ enum NetplayTransport {
     }
 }
 
-/// One connection to the other phone, framed. Messages and the close arrive on `queue`.
+/// One connection to the other phone, framed, and sealed once the pairing keys are known (`NetplayKeys`). Before
+/// that only hello, reveal, reject and bye are taken. Messages and the close arrive on `queue`.
 final class NetplayLink {
     let queue: DispatchQueue
+    let isHost: Bool
     private let connection: NWConnection
     private let ownStateSize: Int
+    private let privateKey = Curve25519.KeyAgreement.PrivateKey()
     // Queue only.
     private var framer = NetplayFramer()
     private var maxState = 0
     private var closed = false
+    private var peerHello = false
+    private var peerCommitment: Data?
+    private var opener: NetplayCipher?
+    // Under sendLock, so the nonce counter follows the order sends reach the connection.
+    private let sendLock = NSLock()
+    private var sealer: NetplayCipher?
+    // Under heardLock.
     private let heardLock = NSLock()
     private var heard = Date()
+    private var pairing: String?
 
     var onReady: (() -> Void)?
     var onMessage: ((NetplayMessage) -> Void)?
@@ -32,10 +44,24 @@ final class NetplayLink {
     var onClose: ((String?) -> Void)?
 
     /// `ownStateSize` caps every state the other phone sends.
-    init(_ connection: NWConnection, ownStateSize: Int, queue: DispatchQueue) {
+    init(_ connection: NWConnection, ownStateSize: Int, isHost: Bool, queue: DispatchQueue) {
         self.connection = connection
         self.ownStateSize = ownStateSize
+        self.isHost = isHost
         self.queue = queue
+    }
+
+    /// What this phone's hello carries: the host's public key, or the joiner's commitment to its own.
+    var helloKey: Data {
+        let key = privateKey.publicKey.rawRepresentation
+        return isHost ? key : NetplayKeys.commitment(key)
+    }
+
+    /// The six-digit code, once the keys are known: before the host's reveal message or the joiner's hello
+    /// message reaches `onMessage`.
+    var code: String? {
+        heardLock.lock(); defer { heardLock.unlock() }
+        return pairing
     }
 
     var lastHeard: Date {
@@ -58,7 +84,13 @@ final class NetplayLink {
     }
 
     func send(_ message: NetplayMessage) {
-        connection.send(content: message.encoded(), completion: .contentProcessed { _ in })
+        sendLock.lock(); defer { sendLock.unlock() }
+        var body = message.body()
+        if sealer != nil {
+            guard let sealed = try? sealer?.seal(body) else { return }
+            body = sealed
+        }
+        connection.send(content: NetplayMessage.framed(body), completion: .contentProcessed { _ in })
     }
 
     /// Sends anything queued, then closes. Holds itself until then.
@@ -87,16 +119,44 @@ final class NetplayLink {
 
     private func handle(_ data: Data) throws {
         framer.append(data)
-        while !closed, let body = try framer.next() {
+        while !closed, var body = try framer.next() {
+            if opener != nil { body = try opener!.open(body) } // A bad tag throws, and the link closes.
             let message = try NetplayMessage.decode(body, maxState: maxState)
-            if case .hello = message {
+            switch message {
+            case .hello(let theirs):
+                guard !peerHello, opener == nil else { throw NetplayWireError.malformed }
+                peerHello = true
                 // States may arrive from now on, up to this phone's own state size.
                 maxState = ownStateSize
-                framer.limit = max(NetplayWire.handshakeLimit, ownStateSize + 16)
+                framer.limit = max(NetplayWire.handshakeLimit, ownStateSize + 64)
+                if theirs.version == NetplayWire.version { // Another version is refused by the session, unsealed.
+                    if isHost {
+                        peerCommitment = theirs.key
+                    } else {
+                        send(.reveal(privateKey.publicKey.rawRepresentation))
+                        try pair(theirs.key)
+                    }
+                }
+            case .reveal(let key):
+                guard isHost, opener == nil, let commitment = peerCommitment, NetplayKeys.commitment(key) == commitment else {
+                    throw NetplayWireError.malformed
+                }
+                try pair(key)
+            case .reject, .bye: break
+            default:
+                guard opener != nil else { throw NetplayWireError.malformed }
             }
             heardLock.lock(); heard = Date(); heardLock.unlock()
             onMessage?(message)
         }
+    }
+
+    // Queue only. From here on every message both ways is sealed.
+    private func pair(_ peerKey: Data) throws {
+        let keys = try NetplayKeys(own: privateKey, peer: peerKey, isHost: isHost)
+        opener = NetplayCipher(key: keys.receive)
+        sendLock.lock(); sealer = NetplayCipher(key: keys.send); sendLock.unlock()
+        heardLock.lock(); pairing = keys.code; heardLock.unlock()
     }
 
     // Queue only.

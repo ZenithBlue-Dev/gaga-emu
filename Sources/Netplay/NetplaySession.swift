@@ -5,8 +5,9 @@ import Network
 import UIKit
 
 /// One Play Nearby pairing for one running game: find a phone, check both have the same game file and core,
-/// confirm a short code on both, start both from the host's state, then keep them in lockstep
-/// (`LockstepDriver`). The host is player 1 and the joiner player 2. If the link drops, each phone goes on alone.
+/// confirm a six-digit code on both (`NetplayKeys`), start both from the host's state, then keep them in lockstep
+/// (`LockstepDriver`). The host's players take the first ports and the joiner's the next (`NetplayPorts`). If the
+/// link drops, each phone goes on alone.
 ///
 /// Main actor. Lockstep messages go from the network queue straight to the driver; the rest come here.
 @MainActor
@@ -43,6 +44,7 @@ final class NetplaySession: ObservableObject {
     @Published private(set) var pingMs: Int?
     @Published private(set) var delayFrames = 3
     @Published private(set) var isHost = false
+    @Published private(set) var ports: NetplayPorts?
 
     let game: GameSession
     private let romPath: String
@@ -119,13 +121,14 @@ final class NetplaySession: ObservableObject {
         }
         if let reason = CoreCatalog.playNearbyRefusal(stateSize: size, saveNanos: nanos.sorted()[1]) { return end(reason) }
         let path = romPath
-        guard let hash = await Task.detached(priority: .userInitiated, operation: { Self.fileHash(path) }).value else {
+        guard let hash = await Task.detached(priority: .userInitiated, operation: { NetplayContentHash.of(path) }).value else {
             return end("GagaEmu could not read this game file.")
         }
         guard phase == .checking else { return } // Left while hashing.
         hello = NetplayHello(nonce: UInt64.random(in: 1...UInt64.max), coreID: core.coreID, coreVersion: core.version,
                              stateVersion: core.stateVersion, stateSize: UInt32(size), contentHash: hash,
-                             name: UIDevice.current.name)
+                             players: UInt8(min(game.netplayLocalPlayers, NetplayPorts.count)),
+                             maxPlayers: UInt8(min(max(game.maxPlayers, 1), NetplayPorts.count)), name: UIDevice.current.name)
         host ? advertise() : browse()
     }
 
@@ -174,7 +177,9 @@ final class NetplaySession: ObservableObject {
         browser = nil
         phase = .connecting
         let link = open(NWConnection(to: peer.endpoint, using: NetplayTransport.parameters()))
-        link.onReady = { link.send(.hello(hello)) }
+        var mine = hello
+        mine.key = link.helloKey
+        link.onReady = { link.send(.hello(mine)) }
         link.start()
     }
 
@@ -186,7 +191,7 @@ final class NetplaySession: ObservableObject {
 
     @discardableResult
     private func open(_ connection: NWConnection) -> NetplayLink {
-        let link = NetplayLink(connection, ownStateSize: Int(hello?.stateSize ?? 0), queue: queue)
+        let link = NetplayLink(connection, ownStateSize: Int(hello?.stateSize ?? 0), isHost: isHost, queue: queue)
         let slot = self.slot
         link.onMessage = { [weak self, weak link] message in
             switch message {
@@ -208,6 +213,7 @@ final class NetplaySession: ObservableObject {
     private func handle(_ message: NetplayMessage) {
         switch message {
         case .hello(let theirs): received(theirs)
+        case .reveal: revealed()
         case .accept: break // The host's state follows.
         case .reject(let reason): end(reason.message)
         case .start(let frame, let state): started(frame: frame, state: state)
@@ -231,29 +237,31 @@ final class NetplaySession: ObservableObject {
             return
         }
         peerHello = theirs
-        let code = Self.pairingCode(host: isHost ? hello.nonce : theirs.nonce, joiner: isHost ? theirs.nonce : hello.nonce)
         if isHost {
-            link?.send(.hello(hello))
-            phase = .confirm(peer: theirs.name, code: code)
+            // The code shows once the joiner reveals the key it committed to.
+            guard let link else { return }
+            var mine = hello
+            mine.key = link.helloKey
+            link.send(.hello(mine))
         } else {
+            // The link worked out the keys before passing the host's hello on.
+            guard let code = link?.code else { return end("Could not pair with that phone.") }
             phase = .waiting(peer: theirs.name, code: code)
         }
     }
 
-    static func refusal(ours: NetplayHello, theirs: NetplayHello) -> NetplayRefusal? {
+    /// Host: the joiner revealed its key, so both phones now show the same code.
+    private func revealed() {
+        guard isHost, phase == .hosting, let peerHello, let code = link?.code else { return }
+        phase = .confirm(peer: peerHello.name, code: code)
+    }
+
+    nonisolated static func refusal(ours: NetplayHello, theirs: NetplayHello) -> NetplayRefusal? {
         if theirs.version != ours.version { return .version }
         if theirs.coreID != ours.coreID || theirs.coreVersion != ours.coreVersion || theirs.stateVersion != ours.stateVersion { return .core }
         if theirs.contentHash != ours.contentHash { return .game }
+        if NetplayPorts.assign(host: ours, joiner: theirs) == nil { return .unavailable }
         return nil
-    }
-
-    /// Four digits both phones work out from both nonces, so each player sees they reached the right phone.
-    static func pairingCode(host: UInt64, joiner: UInt64) -> String {
-        var bytes = Data()
-        withUnsafeBytes(of: host.bigEndian) { bytes.append(contentsOf: $0) }
-        withUnsafeBytes(of: joiner.bigEndian) { bytes.append(contentsOf: $0) }
-        let value = SHA256.hash(data: bytes).prefix(4).reduce(UInt32(0)) { $0 << 8 | UInt32($1) }
-        return String(format: "%04u", value % 10000)
     }
 
     /// Host, after the player checked the code.
@@ -293,8 +301,10 @@ final class NetplaySession: ObservableObject {
     private func connected(peer: String, core: GagaCoreWrapper) {
         listener?.cancel()
         listener = nil
-        guard let link else { return }
-        let driver = LockstepDriver(isHost: isHost, core: core) { link.send($0) }
+        guard let link, let hello, let peerHello,
+              let ports = NetplayPorts.assign(host: isHost ? hello : peerHello, joiner: isHost ? peerHello : hello) else { return }
+        self.ports = ports
+        let driver = LockstepDriver(isHost: isHost, ports: ports, core: core) { link.send($0) }
         driver.onFailure = { [weak self] reason in
             Task { @MainActor in self?.end("The two games could not be brought back together. \(reason)") }
         }
@@ -371,7 +381,7 @@ final class NetplaySession: ObservableObject {
         link = nil
         switch phase {
         case .connected: end(Self.lostMessage, notify: false)
-        case .confirm, .waiting, .connecting:
+        case .confirm, .waiting, .connecting, .hosting:
             if isHost {
                 peerHello = nil
                 phase = .hosting
@@ -398,21 +408,7 @@ final class NetplaySession: ObservableObject {
         peerHello = nil
         peers = []
         pingMs = nil
+        ports = nil
         phase = message.map { .ended($0) } ?? .idle
-    }
-
-    // MARK: - Helpers
-
-    /// SHA-256 of the file, read in 1 MB pieces. Nil if it cannot be read.
-    nonisolated static func fileHash(_ path: String) -> Data? {
-        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? handle.close() }
-        var hasher = SHA256()
-        while true {
-            guard let chunk = try? handle.read(upToCount: 1 << 20) else { return nil }
-            if chunk.isEmpty { break }
-            hasher.update(data: chunk)
-        }
-        return Data(hasher.finalize())
     }
 }

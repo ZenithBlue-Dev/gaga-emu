@@ -483,6 +483,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     var supportsSaveStates: Bool { core?.supportsSaveStates ?? false }
     /// Play Nearby's hook (`Sources/Netplay`): the running core, for its lockstep and state checks.
     var netplayCore: GagaCoreWrapper? { core }
+    /// Players on this phone for Play Nearby: up to the highest controller slot taken, at least 1 (touch).
+    var netplayLocalPlayers: Int { min(max((controllers.devices.compactMap(\.slot).max() ?? 0) + 1, 1), max(maxPlayers, 1)) }
 
     @discardableResult
     func saveState() throws -> SaveSlot {

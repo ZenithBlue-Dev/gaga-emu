@@ -125,10 +125,11 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public var onEvent: ((Event) -> Void)?
     /// Last chance to change player 1's input for this frame (TriggerPro). Gets the frame number.
     public var playerOneFilter: ((GagaInputState, Int) -> GagaInputState)?
-    /// Play Nearby (`Sources/Netplay`). Queue only: set it inside `betweenFrames`. Gets player 1's input for the
-    /// next frame and returns every port's input for it, or nil to hold the frame until the other phone's
-    /// input arrives. While set, each tick runs one frame: no fast-forward, no rewind.
-    var lockstep: ((GagaInputState) -> [GagaInputState]?)?
+    /// Play Nearby (`Sources/Netplay`). Queue only: set it inside `betweenFrames`. Gets this phone's input on every
+    /// port for the next frame, player 1's after `playerOneFilter` (TriggerPro, turbo, macros), and returns every
+    /// port's input for it, or nil to hold the frame until the other phone's input arrives. While set, each tick
+    /// runs one frame: no fast-forward, no rewind.
+    var lockstep: (([GagaInputState]) -> [GagaInputState]?)?
     #if DEBUG
     /// Benchmark timing for each timed frame: start time, wall time and this thread's CPU time, in ns.
     public var onFrameTimed: ((UInt64, UInt64, UInt64) -> Void)?
@@ -494,7 +495,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
 
         if let filter = playerOneFilter { currentInputs[0] = filter(currentInputs[0], frame) }
         if let lockstep {
-            guard let all = lockstep(currentInputs[0]) else { return } // Held: the other phone's input is not here yet.
+            guard let all = lockstep(currentInputs) else { return } // Held: the other phone's input is not here yet.
             currentInputs = Array((all + currentInputs).prefix(4))
         } else if record {
             recordRewind(inst)
