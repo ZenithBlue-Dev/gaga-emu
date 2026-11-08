@@ -15,6 +15,10 @@ static const GagaLibretroVariable s_variables[] = {
     { "ppsspp_enable_wlan", "disabled" },
     { "ppsspp_enable_upnp", "disabled" },
     { "ppsspp_cheats", "enabled" }, // Upstream reads cheats only from <memory stick>/PSP/Cheats/<disc ID>.ini.
+    // Upstream's libretro default, which an unlisted key loses (g_Config's is off). Off, a game that stops flipping
+    // (a loading screen, a cutscene start) kept retro_run going for up to 10 vblanks, sleeping between them in
+    // DoFrameIdleTiming: 167 ms frames, half of them asleep (device run 19). On, each vblank ends retro_run.
+    { "ppsspp_frame_duplication", "enabled" },
     { NULL, NULL },
 };
 
