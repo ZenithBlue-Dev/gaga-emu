@@ -1,0 +1,177 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "landscape-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.13500000000000001,
+        "y" : 0.31040000000000001
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.13500000000000001,
+        "y" : 0.56489999999999996
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.076300000000000007,
+        "y" : 0.43769999999999998
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.19370000000000001,
+        "y" : 0.43769999999999998
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.076300000000000007,
+        "y" : 0.31040000000000001
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.19370000000000001,
+        "y" : 0.31040000000000001
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.076300000000000007,
+        "y" : 0.56489999999999996
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.19370000000000001,
+        "y" : 0.56489999999999996
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.13739999999999999,
+        "width" : 0.063399999999999998,
+        "x" : 0.73829999999999996,
+        "y" : 0.47070000000000001
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.13739999999999999,
+        "width" : 0.063399999999999998,
+        "x" : 0.80400000000000005,
+        "y" : 0.43259999999999998
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.13739999999999999,
+        "width" : 0.063399999999999998,
+        "x" : 0.86970000000000003,
+        "y" : 0.39439999999999997
+      },
+      "id" : "r",
+      "input" : "r",
+      "mask" : 512,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 393,
+    "width" : 852
+  },
+  "fill" : "#86B5D8",
+  "landscape" : true,
+  "name" : "Mini Keychain",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.61319999999999997,
+    "width" : 0.42020000000000002,
+    "x" : 0.28989999999999999,
+    "y" : 0.1807
+  },
+  "platform" : "pokemini",
+  "pressed" : "landscape-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.59799999999999998,
+      "width" : 0.41310000000000002,
+      "x" : 0.29339999999999999,
+      "y" : 0.1883
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "landscape-shell-ocean.pdf",
+      "fill" : "#2F6C9C",
+      "name" : "Ocean"
+    },
+    {
+      "background" : "landscape-shell-coral.pdf",
+      "fill" : "#D9735F",
+      "name" : "Coral"
+    }
+  ]
+}

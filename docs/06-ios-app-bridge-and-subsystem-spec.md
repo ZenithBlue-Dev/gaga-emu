@@ -551,7 +551,7 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 | Language | About | Built, shown automatically when a second localisation exists. English only today (checked 2026-11-08). |
 | Online Play | Play | Not scheduled. Netplay is not promised or gated until built. |
 
-There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Theme and Appearance are gone, because the palette is fixed and follows the system. Skins are touch layouts only and carry no theme.
+There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Theme and Appearance are gone, because the palette is fixed and follows the system. Skins are touch layouts only and carry no theme. Device skins (section 3.8) are drawn but not loaded yet.
 
 Cover Art replaces the old Cover Scraping row. The old `coverScraping` value, which defaulted to on, is ignored, so no install starts sending titles without a new choice.
 
@@ -614,6 +614,51 @@ GagaEmu never fetches or ships a cheat file or database.
 **Second screen.** `ExternalDisplay` puts the picture in a window on a connected external screen and leaves the controls on the device, while a game runs with AirPlay Fullscreen on. Without that window iOS mirrors the device as usual. The scene is configured by `AppDelegate` for the `windowExternalDisplayNonInteractive` role. The setting defaults to off and its row is hidden until the feature is checked on a real second screen.
 
 **Failures.** A load runs before the game view opens. If it fails, the Library shows an alert with the core's own message and no game view opens. A fatal core event while playing closes the game view and shows the same alert.
+
+### 3.8 Device skins
+
+Status: art and skin data built; the engine does not load them yet.
+
+A device skin is an optional touch skin that draws the whole phone screen as a console shell: the picture sits in a bezel and the touch buttons are drawn as that system's buttons. `scripts/make_device_skins.swift` draws every one from shapes and gradients, so the art is reproducible and resolution independent. Run it with `swift scripts/make_device_skins.swift`; `--no-preview` skips the PNGs in `build/skin-previews/`.
+
+The art is original. It evokes each system's era through body shape, colour, button layout and materials. It uses no photo, trace, logo, wordmark, model name or text copied from a device, and nothing from the Manic EMU reference images. Skin names are generic, such as Pocket Classic, Handheld Color and Home Console 16-bit. Button glyphs are letters, numbers, generic captions (Start, Select, Mode, Pause) and plain neutral shapes. Text is drawn as glyph outlines, so no PDF embeds a font.
+
+**Files.** One folder per `CoreCatalog` platform ID (except `vktest`) in `Resources/Skins/Device/<platform>/`. FDS uses `nes`, and MAME and FBNeo use `arcade`. For each of `portrait` and `landscape`:
+
+| File | Content |
+|---|---|
+| `<o>.json` | Skin data below |
+| `<o>-shell.pdf` | Body, bezel, decoration and every button at rest. The screen rects are black. |
+| `<o>-shell-<variant>.pdf` | The same shell in another colourway (two per platform from Charcoal, Light Grey, Grape, Sunflower, Ocean, Mint and Coral). Buttons keep their colours. |
+| `<o>-pressed.pdf` | Every button drawn pressed on a clear page |
+
+**Canvas.** Portrait is 393 x 852 pt and landscape 852 x 393 pt, the full screen of a 6.1-inch phone. The art bleeds to every edge. Buttons stay out of the Dynamic Island and home indicator: portrait between y 59 and 818, landscape between x 44 and 808. Every button is at least 49 pt, so it stays at least 44 pt down to 0.9 scale. Portrait homes, arcade and computers draw a screen surround over a controller, control panel or keyboard. Landscape is always one wide handheld body, with the pad, stick, Start and Select on the left and the face buttons on the right.
+
+**JSON.** It is the flex skin format (`TouchSkinEngine.decodeFlex`) plus device fields; the flex decoder ignores the extra keys and reads it as it is. All frames are normalised to the canvas.
+
+| Key | Meaning |
+|---|---|
+| `name`, `landscape`, `opacity`, `buttons` | As in a flex skin. Each button has `id`, `input`, `frame`, `shape` and, when active, `mask` (`ControllerManager.Button`). D-pads carry the hidden diagonals. |
+| `theme` | `"device"` |
+| `platform` | `CoreCatalog` platform ID |
+| `canvas` | Design size in points |
+| `background`, `pressed` | Shell and pressed PDF names in the same folder |
+| `variants` | `name`, `background` and `fill` for each colourway |
+| `fill` | Colour at the canvas edge, for a screen whose shape differs from the canvas |
+| `screens` | One rect per game screen, at the core's aspect. Two for DS and 3DS, top screen first. |
+| `pictureArea` | The glass around the screens, which Zoom and Stretch may use |
+| `analog` | `lstick` frames: art only until the engine has an analog stick |
+
+Buttons with no `mask` are drawn but inactive, and the flex decoder drops them. These are the C buttons of the 64-bit pad (`input` `rstick-up`, `rstick-down`, `rstick-left` and `rstick-right`). Button mappings follow the libretro RetroPad defaults per core: the six-button pads send A=Y, B=B, C=A, X=L, Y=X and Z=R; the arcade panel sends Y X L over B A R; Virtual Boy and WonderSwan second pads use the masks of `Layout.twinPad` and `Layout.xyPad`. Platforms that type (`GameSession.typingPlatforms`) have a Keys button on L3. Before shipping a skin, check its mapping on a device with the core.
+
+**What the engine must support** (after the controls rewrite merges):
+
+1. Load `theme: "device"` skins for the platform and orientation, and offer them per platform and game in Assign Skin. Load the chosen variant's `background` in place of the default.
+2. Draw in this order: the shell PDF scaled to fit the screen, centred on `fill`; the picture inside each `screens` rect, using that skin's Screen choice inside `pictureArea`; then, for each held button, the pressed PDF clipped to that button's frame. A hidden diagonal shows the pressed frames of the two directions in its mask.
+3. Turn the normalised frames into touches with the same fit transform. Skip the controlBand check (`problems(in:)`), which applies to landscape side-band layouts only. Portrait skins need the game view to allow portrait.
+4. Keep the VoiceOver labels from `label(for:)`, and use the skin's 44 pt check against the fitted canvas.
+5. Later: a moving cap over each `analog` frame, and a right-stick mask for the `rstick-*` inputs.
+6. Add `Resources/Skins/Device` to the app target in `project.yml` as a folder reference.
 
 ---
 

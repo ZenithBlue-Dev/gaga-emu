@@ -1,0 +1,177 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "landscape-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.084500000000000006,
+        "x" : 0.1221,
+        "y" : 0.84219999999999995
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.13500000000000001,
+        "y" : 0.2366
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.13500000000000001,
+        "y" : 0.49109999999999998
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.076300000000000007,
+        "y" : 0.3639
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.19370000000000001,
+        "y" : 0.3639
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.076300000000000007,
+        "y" : 0.2366
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.19370000000000001,
+        "y" : 0.2366
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.076300000000000007,
+        "y" : 0.49109999999999998
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.058700000000000002,
+        "x" : 0.19370000000000001,
+        "y" : 0.49109999999999998
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.1628,
+        "width" : 0.0751,
+        "x" : 0.75349999999999995,
+        "y" : 0.41980000000000001
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.1628,
+        "width" : 0.0751,
+        "x" : 0.8427,
+        "y" : 0.41980000000000001
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 393,
+    "width" : 852
+  },
+  "fill" : "#8FA6C8",
+  "landscape" : true,
+  "name" : "Pocket Clicky Stick",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.86509999999999998,
+    "width" : 0.42020000000000002,
+    "x" : 0.28989999999999999,
+    "y" : 0.056000000000000001
+  },
+  "platform" : "ngp",
+  "pressed" : "landscape-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.84989999999999999,
+      "width" : 0.41310000000000002,
+      "x" : 0.29339999999999999,
+      "y" : 0.063600000000000004
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "landscape-shell-charcoal.pdf",
+      "fill" : "#2F3034",
+      "name" : "Charcoal"
+    },
+    {
+      "background" : "landscape-shell-light-grey.pdf",
+      "fill" : "#C6C7CB",
+      "name" : "Light Grey"
+    }
+  ]
+}

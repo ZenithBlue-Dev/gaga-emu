@@ -1,0 +1,189 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.30790000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "select",
+      "input" : "select",
+      "mask" : 8192,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.51149999999999995,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.19850000000000001,
+        "y" : 0.57389999999999997
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.19850000000000001,
+        "y" : 0.69599999999999995
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.066199999999999995,
+        "y" : 0.63500000000000001
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.33079999999999998,
+        "y" : 0.63500000000000001
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.066199999999999995,
+        "y" : 0.57389999999999997
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.33079999999999998,
+        "y" : 0.57389999999999997
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.066199999999999995,
+        "y" : 0.69599999999999995
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.33079999999999998,
+        "y" : 0.69599999999999995
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.084500000000000006,
+        "width" : 0.1832,
+        "x" : 0.55220000000000002,
+        "y" : 0.64080000000000004
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.75570000000000004,
+        "y" : 0.60560000000000003
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#0B0B0E",
+  "landscape" : false,
+  "name" : "Keypad Stick",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.30399999999999999,
+    "width" : 0.87280000000000002,
+    "x" : 0.063600000000000004,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "atari5200",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.2969,
+      "width" : 0.85750000000000004,
+      "x" : 0.071199999999999999,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-light-grey.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Light Grey"
+    },
+    {
+      "background" : "portrait-shell-grape.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Grape"
+    }
+  ]
+}

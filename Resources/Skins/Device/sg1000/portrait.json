@@ -1,0 +1,177 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.40970000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.57750000000000001
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.69479999999999997
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.63619999999999999
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.63619999999999999
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.57750000000000001
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.57750000000000001
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.69479999999999997
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.69479999999999997
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.55730000000000002,
+        "y" : 0.62790000000000001
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.75060000000000004,
+        "y" : 0.62790000000000001
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#0B0B0E",
+  "landscape" : false,
+  "name" : "Early Home Pad",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.30399999999999999,
+    "width" : 0.87280000000000002,
+    "x" : 0.063600000000000004,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "sg1000",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.2969,
+      "width" : 0.85750000000000004,
+      "x" : 0.071199999999999999,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-grape.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Grape"
+    },
+    {
+      "background" : "portrait-shell-sunflower.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Sunflower"
+    }
+  ]
+}
