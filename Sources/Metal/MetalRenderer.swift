@@ -168,32 +168,6 @@ public struct ShaderParameterValues: Codable, Equatable {
     public init() {}
 
     public var resolvedUpscaler: Upscaler { Upscaler(rawValue: upscaler) ?? .nearest }
-
-    // Sliders go to JSON as the Double of their shortest decimal and come back through Double: the device's
-    // Float JSON round trip read 0.2 back as 0.19999999, while Float(Double) rounds a 1-ulp Double error away.
-    private enum CodingKeys: String, CodingKey { case curvature, scanlineWeight, phosphorGlow, colorTemp, upscaler, slang }
-
-    private static func exact(_ value: Float) -> Double { Double(String(describing: value)) ?? Double(value) }
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        curvature = Float(try c.decode(Double.self, forKey: .curvature))
-        scanlineWeight = Float(try c.decode(Double.self, forKey: .scanlineWeight))
-        phosphorGlow = Float(try c.decode(Double.self, forKey: .phosphorGlow))
-        colorTemp = Float(try c.decode(Double.self, forKey: .colorTemp))
-        upscaler = try c.decode(String.self, forKey: .upscaler)
-        slang = try c.decodeIfPresent([String: Double].self, forKey: .slang)?.mapValues { Float($0) }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(Self.exact(curvature), forKey: .curvature)
-        try c.encode(Self.exact(scanlineWeight), forKey: .scanlineWeight)
-        try c.encode(Self.exact(phosphorGlow), forKey: .phosphorGlow)
-        try c.encode(Self.exact(colorTemp), forKey: .colorTemp)
-        try c.encode(upscaler, forKey: .upscaler)
-        try c.encodeIfPresent(slang?.mapValues(Self.exact), forKey: .slang)
-    }
 }
 
 public struct ShaderUniforms {
