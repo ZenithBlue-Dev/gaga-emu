@@ -147,6 +147,9 @@ struct PadBinding: Codable, Equatable, Identifiable, Sendable {
     var id = UUID()
     var inputs: [PadInput]
     var action: ControlAction
+
+    /// Equal by what it does. `id` only tells the editor's rows apart, and each fresh default gets new ones.
+    static func == (lhs: PadBinding, rhs: PadBinding) -> Bool { lhs.inputs == rhs.inputs && lhs.action == rhs.action }
 }
 
 /// A controller's mapping for one platform, or one game, and one controller type.
