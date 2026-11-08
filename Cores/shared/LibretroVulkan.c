@@ -60,6 +60,10 @@ typedef struct {
 
     bool presented; // last holds the frame read_layer_pixels copies.
     LrVkImage last;
+    // last's image: each shown frame is copied here as well, since a core may draw into its own image again.
+    VkImage shot;
+    VkDeviceMemory shot_memory;
+    VkExtent2D shot_extent;
 
     void* layer;
     uint32_t layer_width, layer_height; // Asked for before the device existed, or for a rebuild.
@@ -380,6 +384,7 @@ static bool lr_vk_create_sync(void) {
 }
 
 static bool lr_vk_build_swapchain(void);
+static void lr_vk_destroy_shot(void);
 
 bool lr_vk_create_context(char* error, size_t capacity) {
     if (!lr_vk_create_instance(error, capacity) || !lr_vk_create_device(error, capacity)) return false;
@@ -452,6 +457,7 @@ void lr_vk_release(void) {
         lr_vk_wait_idle();
         if (s_vk.core_made_device && s_vk.negotiation && s_vk.negotiation->destroy_device) s_vk.negotiation->destroy_device();
         lr_vk_destroy_surface();
+        lr_vk_destroy_shot();
         for (int i = 0; i < LR_VK_FRAMES; ++i) {
             vkDestroyFence(s_vk.device, s_vk.fence[i], NULL);
             vkDestroySemaphore(s_vk.device, s_vk.acquired[i], NULL);
@@ -585,6 +591,45 @@ static void lr_vk_record_copy(VkCommandBuffer cmd, const LrVkImage* src, VkImage
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, NULL, 0, NULL, 2, out);
 }
 
+// MARK: - Snapshot
+
+// PPSSPP renders on its own thread, a frame or two behind, into two images it reuses, with nothing to stop it
+// drawing into the one read back, as after the benchmark paused: an all-black PNG (device run 9). So
+// read_layer_pixels reads a copy of the last shown frame that only the present writes.
+static bool lr_vk_bind(VkMemoryRequirements needs, VkMemoryPropertyFlags flags, VkDeviceMemory* memory);
+
+static void lr_vk_destroy_shot(void) {
+    if (s_vk.shot) vkDestroyImage(s_vk.device, s_vk.shot, NULL);
+    if (s_vk.shot_memory) vkFreeMemory(s_vk.device, s_vk.shot_memory, NULL);
+    s_vk.shot = VK_NULL_HANDLE;
+    s_vk.shot_memory = VK_NULL_HANDLE;
+    s_vk.presented = false;
+}
+
+// A new size waits for the GPU first: the last present may still be copying into the old image.
+static bool lr_vk_ensure_shot(uint32_t width, uint32_t height) {
+    if (s_vk.shot && s_vk.shot_extent.width == width && s_vk.shot_extent.height == height) return true;
+    lr_vk_wait_idle();
+    lr_vk_destroy_shot();
+    VkImageCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
+                               .format = VK_FORMAT_B8G8R8A8_UNORM, .extent = { width, height, 1 }, .mipLevels = 1,
+                               .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
+                               .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT };
+    VkMemoryRequirements needs;
+    if (vkCreateImage(s_vk.device, &info, NULL, &s_vk.shot) != VK_SUCCESS) {
+        s_vk.shot = VK_NULL_HANDLE;
+        return false;
+    }
+    vkGetImageMemoryRequirements(s_vk.device, s_vk.shot, &needs);
+    if (!lr_vk_bind(needs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &s_vk.shot_memory) ||
+        vkBindImageMemory(s_vk.device, s_vk.shot, s_vk.shot_memory, 0) != VK_SUCCESS) {
+        lr_vk_destroy_shot();
+        return false;
+    }
+    s_vk.shot_extent = (VkExtent2D){ width, height };
+    return true;
+}
+
 // One frame: the core's command buffers if it passed any, then the copy into the next swapchain image,
 // signalling what the core asked, then present. A frame with no layer still runs, so the core's
 // semaphores and sync index keep moving while the view is away.
@@ -601,6 +646,10 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     pthread_mutex_unlock(&s_image_lock);
     // A dupe waits on no semaphore (libretro), and one with nothing to run or signal is a no-op.
     if (!show && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
+    bool shot = show && lr_vk_ensure_shot(width, height);
+    LrVkImage shot_image = { .image = s_vk.shot, .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .format = VK_FORMAT_B8G8R8A8_UNORM,
+                             .range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }, .queue_family = VK_QUEUE_FAMILY_IGNORED,
+                             .width = width, .height = height };
     uint32_t slot = s_vk.index;
     vkWaitForFences(s_vk.device, 1, &s_vk.fence[slot], VK_TRUE, UINT64_MAX);
 
@@ -620,7 +669,13 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
     if (show) {
         image.width = width;
         image.height = height;
-        if (target != UINT32_MAX) lr_vk_record_copy(cmd, &image, s_vk.images[target], s_vk.extent, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        // The core's image is read once, into the shot, and the screen is drawn from that.
+        const LrVkImage* source = &image;
+        if (shot) {
+            lr_vk_record_copy(cmd, &image, s_vk.shot, s_vk.shot_extent, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            source = &shot_image;
+        }
+        if (target != UINT32_MAX) lr_vk_record_copy(cmd, source, s_vk.images[target], s_vk.extent, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
     vkEndCommandBuffer(cmd);
 
@@ -664,11 +719,12 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe) {
         lr_vk_lock();
         vkQueueSubmit(s_vk.queue, 1, &empty, s_vk.fence[slot]);
         lr_vk_unlock();
+        lr_vk_log("[gaga-vk] present: vkQueueSubmit returned VkResult %d\n", (int)submitted);
         gaga_lr_report_fatal("The 3D renderer stopped working.");
         return false;
     }
-    if (show) {
-        s_vk.last = image;
+    if (shot) {
+        s_vk.last = shot_image;
         s_vk.presented = true;
     }
     return show;
