@@ -25,7 +25,7 @@ Multi-system emulator for iOS and iPadOS, designed for App Store distribution wi
    - Selected per game through a library long-press, with a per-platform default.
    - Compile-time core registry. Packaging is one dynamic, embedded framework per core, exporting only the bridge. Code is never loaded from user paths or downloaded.
 
-4. **Original Landscape UI** (`docs/06` section 3): "Paper and ink", a quiet game shelf with a left rail, in landscape only on iPhone and iPad.
+4. **Original Landscape UI** (`docs/06` section 3): "Paper and ink", a quiet game shelf with a left rail, upright or in landscape on iPhone and iPad.
 
 5. **Manic EMU as a Feature Reference** (no parity claim and no copied UI; `docs/02` tags each item by source and status):
    - Import tools: Files and iCloud, WiFi browser upload (PIN-protected, off by default), tap-only Read Clipboard, Multi-Disc M3U helper, and an in-memory ROM patcher (IPS, including RLE records, plus BPS and UPS).

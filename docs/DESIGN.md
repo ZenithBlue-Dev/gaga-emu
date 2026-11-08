@@ -83,11 +83,11 @@ One animation: `.easeOut(duration: 0.15)`, a fade, in `RootView` between screens
 | `LeftRail` | `Sources/UI/RootView.swift` | 72pt wide on `surface`. Items are at least 56pt high. Selected uses `accent`, bold text, a heavier glyph and a 3pt bar. |
 | `CoverArt` | `Sources/UI/Games/CoverArt.swift` | 3:4, 6pt corners, 1pt `rule` outline, 3pt spine on the left. Without art, a serif initial and the platform code. With Cover Art on, the cached box art fills the tile. |
 | Filter chips, search | `Sources/UI/Games/LibraryView.swift` | One compact row. The visible chip is 30pt and the search field 34pt, inside a 44pt row. |
-| Touch controls | `Sources/UI/Game/GameView.swift` | Outlined in `onLetterbox`, filled with `accentFill` while held. Hit areas are at least 44pt. |
+| Touch controls | `Sources/UI/Game/GameView.swift` | Outlined in `onLetterbox`, filled with `accentFill` while held. Hit areas are at least 44pt. A toggle that is on (Fast Forward, Mute, Turbo toggle, a running macro) stays filled and adds "On" to its label, so colour is not the only cue. A stick is a ring with a knob that follows the finger. |
 
-## Landscape layouts
+## Landscape and upright layouts
 
-The app is landscape only on iPhone and iPad, left and right (`docs/06` section 3). `compact` below means a compact vertical size class.
+The app runs upright and in landscape (`docs/06` section 3): iPhone upright, landscape left and right; iPad in all four orientations. A game can lock its orientation (Auto, Upright or Landscape) from its Controls sheet. `compact` below means a compact vertical size class, a landscape phone. "Upright" means a phone held upright: compact width, regular height.
 
 | Screen | Layout | Sizes |
 |---|---|---|
@@ -98,11 +98,25 @@ The app is landscape only on iPhone and iPad, left and right (`docs/06` section 
 | Filter picker | List on the left, live preview and its controls on the right | List 240pt compact, else 320pt. Controls 190pt compact, else 240pt: Upscale chips in two columns, sliders, Reset. |
 | Game | Picture aspect fit on `letterbox`, a touch band on each side | Pause side sheet 280pt |
 
-iPhone height is about 375 to 440pt, so persistent chrome stays small and nothing sits above or below content that does not need to.
+Upright on a phone:
+
+| Screen | Layout |
+|---|---|
+| Root | Content, rule, then the rail as a bar along the bottom |
+| Library | Continue panel above the chips and shelves, at most 200pt high |
+| Add | The two columns stack |
+| Settings | Categories scroll sideways along the top, the selected category fills the width below |
+| Assign Skin | Layout drawings scroll sideways |
+| Game | Picture in the top half, sized by the scaling mode. Touch controls in the lower half. Two-screen systems start Stacked. Screen settings are kept per orientation. |
+| Layout editor | The canvas takes the edited orientation's shape; the panel sits where the picture goes |
+
+Turning the device mid-game re-lays the view only. The core keeps running, and the picture views resize their drawables.
+
+iPhone height in landscape is about 375 to 440pt, so persistent chrome stays small and nothing sits above or below content that does not need to.
 
 ## Safe areas
 
-Backgrounds extend under the notch, Dynamic Island and home indicator. Content stays inside the safe area on whichever side the hardware sits, because landscape left and right put it on opposite sides. Check both. The game view hides the status bar and home indicator.
+Backgrounds extend under the notch, Dynamic Island and home indicator. Content stays inside the safe area on whichever side the hardware sits, because landscape left and right put it on opposite sides. Check both, and upright. The game view hides the status bar and home indicator.
 
 ## Accessibility
 

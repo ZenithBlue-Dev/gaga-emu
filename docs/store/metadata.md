@@ -27,11 +27,11 @@ Replaces `All-in-One Classic Console Emu`, which read like Manic EMU's "all-in-o
 
 ## Promotional text
 
-Play homebrew and the backups you own, in landscape, with touch controls or a game controller. GagaEmu comes with no games, ROMs or BIOS.
+Play homebrew and the backups you own, upright or in landscape, with touch controls or a game controller. GagaEmu comes with no games, ROMs or BIOS.
 
 ## Description
 
-GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, on iPhone and iPad, in landscape.
+GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, on iPhone and iPad, upright or in landscape.
 
 You provide every game and every BIOS file yourself, and they must be legally obtained. GagaEmu does not include any games, ROMs or BIOS, and it does not sell, link to or help you obtain them.
 
@@ -73,7 +73,7 @@ GagaEmu is an independent project. It is not affiliated with, endorsed by or spo
 | Save states, fast forward, rewind status | `Sources/UI/Game/GameView.swift`, `Sources/Session/GameSession.swift` |
 | Filters Original to CRT | `Shader.builtIn` in `Sources/App/AppState.swift` (free ones only) |
 | Skins | `Sources/UI/Settings/AssignSkinView.swift`, `SkinEditorView.swift` |
-| Landscape on iPhone and iPad | `Sources/App/Info.plist` |
+| Upright and landscape on iPhone and iPad | `Sources/App/Info.plist` |
 
 ## Keywords
 
