@@ -114,7 +114,10 @@ final class DeviceSkinTests: GagaTestCase {
         let tall = TouchSkinEngine.DeviceArt.fitted(CGSize(width: 393, height: 852), in: CGSize(width: 393, height: 1000))
         XCTAssertEqual(tall.minY, 74, accuracy: 0.001)
         let top = CGRect(x: 0.3, y: 0.1, width: 0.4, height: 0.3), bottom = CGRect(x: 0.35, y: 0.5, width: 0.3, height: 0.3)
-        XCTAssertEqual(TouchSkinEngine.DeviceArt.pictureRect([top, bottom]), CGRect(x: 0.3, y: 0.1, width: 0.4, height: 0.7))
+        // The union's width and height are differences of decimals, which binary floating point cannot hold exactly.
+        let picture = TouchSkinEngine.DeviceArt.pictureRect([top, bottom])
+        XCTAssertEqual(picture.minX, 0.3, accuracy: 1e-9); XCTAssertEqual(picture.minY, 0.1, accuracy: 1e-9)
+        XCTAssertEqual(picture.width, 0.4, accuracy: 1e-9); XCTAssertEqual(picture.height, 0.7, accuracy: 1e-9)
         XCTAssertNil(TouchSkinEngine.DeviceArt.screenPlaces([top]))
         let places = TouchSkinEngine.DeviceArt.screenPlaces([top, bottom])!
         XCTAssertEqual(places[0].minX, 0, accuracy: 1e-9); XCTAssertEqual(places[0].width, 1, accuracy: 1e-9)
