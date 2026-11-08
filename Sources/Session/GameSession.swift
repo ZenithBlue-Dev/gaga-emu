@@ -837,8 +837,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard !benchmarkScripted else { return false }
         #endif
         let wait = startHeld && !menuHold.fired ? seconds() : 0
-        if menuHold.update(held: startHeld, seconds: wait, now: now), phase == .running { pause(.menu) }
-        return menuHold.fired
+        let fire = menuHold.update(held: startHeld, seconds: wait, now: now)
+        let withheld = menuHold.fired // Read before pause: it clears touches and pushes inputs, which samples again.
+        if fire, phase == .running { pause(.menu) }
+        return withheld
     }
 
     /// Opens the menu on the press, or closes it again, so holding the pair does not flicker.
