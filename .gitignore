@@ -39,3 +39,6 @@ fastlane/test_output
 
 # XcodeGen output: regenerate with `xcodegen generate` (scripts/appstore_release.sh does)
 GagaEmu.xcodeproj/
+
+# Manic walk screenshots
+maniac-emu-reference-images/walk/
