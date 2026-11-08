@@ -8,7 +8,7 @@ This document is canonical for interpreter design and performance tiers. `docs/0
 |---|---|
 | App shell and mock core (`Sources/Bridge/GagaCoreRegistry.c:200-220`) | Built. It is the only core that runs today. |
 | 12 non-mock registry cores (`Sources/Bridge/GagaCoreRegistry.c:256`) | Stub. No guest code from any real system has run in GagaEmu. |
-| Per-core no-JIT gate (section 8) | Planned. No gate script is in this repository yet. |
+| Per-core no-JIT gate (section 8) | Built (`scripts/nojit-gate.sh`, `scripts/test-release-gate.sh`). |
 | Interpreter design (section 6) | Design only. No GagaEmu interpreter exists. |
 | All performance tiers (section 7) | Target (unmeasured). GagaEmu has no benchmark yet. |
 
@@ -613,15 +613,22 @@ The record holds device, OS, build and core commit, core settings, ROM file and 
 
 **JIT denial is OS enforcement.** iOS applies W^X and offers no public JIT entitlement to App Store apps, so a mapping that asks for write and execute comes back without execute on a device. The gate does not enforce that and could not. It catches a core that would depend on code generation, at build time, before it fails on a phone.
 
-**Static check.** `scripts/nojit-gate.sh` has three modes:
+**Static check.** `scripts/nojit-gate.sh` has these modes (`scripts/test-release-gate.sh` proves the refusals on fixtures):
 
 ```bash
-scripts/nojit-gate.sh <binary or object> [forbidden-strings-regex]   # one core binary
-scripts/nojit-gate.sh --entitlements <plist>                         # refuses JIT entitlement keys
+scripts/nojit-gate.sh <binary or object> [strings] [imports] [allowed]  # one core binary
+scripts/nojit-gate.sh --entitlements <plist>                         # refuses JIT entitlement keys and get-task-allow
 scripts/nojit-gate.sh --app <App.app> <entitlements plist>           # everything in a built app
+scripts/nojit-gate.sh --release-set "<ids>"                          # no sideload, vktest or non-commercial core
+scripts/nojit-gate.sh --archive-set "<ids>"                          # release set, inside GAGA_RELEASE_SET (mgba)
+scripts/nojit-gate.sh --release-app <App.app>                        # no vktest or non-commercial framework
+scripts/nojit-gate.sh --release-ipa <App.ipa>                        # unzips: signed entitlements, cores, imports
+scripts/nojit-gate.sh --sideload-app <App.app>                       # no StoreKit
 ```
 
-`scripts/build-core.sh` runs the first on each slice, with `FORBIDDEN_STRINGS` from `Cores/<id>/core.env`. The app's post-build step runs `--app`, which fails the build if a core in `Cores/` is not embedded, the entitlements ask for `allow-jit`, `allow-unsigned-executable-memory`, `disable-executable-page-protection` or `dynamic-codesigning`, or any binary in the app fails the check. A binary it cannot read fails too. The symbol list is S3's: `_pthread_jit_write_protect_np`, `_sys_icache_invalidate`, `___clear_cache`, `_mach_vm_protect`, `_vm_protect`.
+`scripts/build-core.sh` runs the first on each slice, with `FORBIDDEN_STRINGS` and `FORBIDDEN_IMPORTS` from `Cores/<id>/core.env`. The app's post-build step runs `--app`, which fails the build if a core in `Cores/` is not embedded, the entitlements ask for `allow-jit`, `allow-unsigned-executable-memory`, `disable-executable-page-protection`, `dynamic-codesigning` or `get-task-allow`, or any binary in the app fails the check. It applies each embedded core's `FORBIDDEN_IMPORTS` too, so a stale framework cannot skip them. A binary it cannot read fails too. The global symbol list is S3's plus the audit's: `_pthread_jit_write_protect_np`, `_pthread_jit_write_with_callback_np`, `_sys_icache_invalidate`, `_sys_dcache_flush`, `___clear_cache`, `_mach_vm_protect`, `_vm_protect`, `_mach_vm_remap`, `_vm_remap`. A core may list a reviewed exception in `ALLOWED_IMPORTS` in its `core.env` (PPSSPP's read-write `_vm_remap`).
+
+A Release archive (`ACTION=install`, `CONFIGURATION=Release`, any way it is started, Organizer included) also runs `--archive-set` and `--release-app` in that step, so `vktest`, a non-commercial core or any core outside `GAGA_RELEASE_SET` fails it. The signed entitlements (`codesign -d --entitlements :-`) cannot be read at that step, because CodeSign runs after it. `scripts/appstore_release.sh` runs `--release-ipa` on the exported IPA, where `get-task-allow` must be gone.
 
 Limits of the static check:
 
