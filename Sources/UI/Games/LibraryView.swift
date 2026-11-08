@@ -47,7 +47,7 @@ struct LibraryView: View {
             } else {
                 AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
                     if upright {
-                        continuePanel.frame(maxHeight: 200)
+                        uprightContinue
                         Rule()
                     } else {
                         continuePanel.frame(width: metrics.panel)
@@ -136,6 +136,29 @@ struct LibraryView: View {
                 .padding(.horizontal, 16).padding(.vertical, 8)
                 .background(AppTheme.paper)
             }
+        }
+    }
+
+    /// Upright the panel is a row, cover beside title and Play: stacked, Play hid the title in the height it gets.
+    @ViewBuilder private var uprightContinue: some View {
+        if let game = continueGame {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Continue").font(.screenTitle).accessibilityAddTraits(.isHeader)
+                HStack(alignment: .top, spacing: 12) {
+                    CoverArt(game: game, width: 84).contextMenu { menu(game) }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(game.title).font(.gameTitle).lineLimit(2)
+                        Text(continueMeta(game)).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2)
+                        Button { state.launch(game) } label: { Label("Play", systemImage: "play.fill") }
+                            .buttonStyle(PrimaryButtonStyle())
+                            .accessibilityLabel("Play \(game.title)")
+                    }
+                }
+            }
+            .padding(.horizontal, 16).padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1) // Above this the row would take the shelves' height.
         }
     }
 
