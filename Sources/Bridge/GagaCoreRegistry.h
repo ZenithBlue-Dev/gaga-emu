@@ -51,6 +51,9 @@ const GagaCoreInterface* Prboom_GetInterface(void);
 
 // Fully operational Mock Core for testing, preview, and verification
 const GagaCoreInterface* MockCore_GetInterface(void);
+// The last step_frame the mock core ran, for tests: its player_count and one port's buttons.
+uint32_t MockCore_LastPlayerCount(void);
+uint32_t MockCore_LastButtons(uint32_t port);
 
 // Core Registry lookup APIs
 size_t GagaCoreRegistry_GetCount(void);

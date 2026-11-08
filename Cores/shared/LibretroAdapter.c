@@ -21,7 +21,8 @@
 
 enum { LR_EVENT_BAD_ROM = 1, LR_EVENT_BAD_SAVE = 2, LR_EVENT_CORE_STOPPED = 3, LR_EVENT_BAD_VIDEO = 4 };
 
-#define LR_MAX_PLAYERS 4
+#define LR_MAX_PLAYERS 5 // Four ports, and a fifth through a multiplayer adapter (Super Multitap, PC Engine).
+#define LR_RUMBLE_PORTS 4 // GAGA_RUMBLE_CODE carries two bits of port.
 #define LR_FLUSH_INTERVAL_FRAMES 300    // About 5 seconds. Bounds what a crash can lose: the core's RAM is not a file.
 #define LR_MAX_ROM_BYTES (1024u * 1024u * 1024u) // A core that takes bigger files sets need_fullpath.
 #define LR_STATE_MAGIC "GLR1"
@@ -72,8 +73,10 @@ typedef struct {
     LrBattery batteries[2];
     LrCheat* cheats;
     size_t cheat_count;
-    _Atomic uint16_t rumble[LR_MAX_PLAYERS][2]; // Per port and motor, as the core last set it, from any of its threads.
-    uint16_t rumble_sent[LR_MAX_PLAYERS][2];    // As the host last heard it.
+    _Atomic uint16_t rumble[LR_RUMBLE_PORTS][2]; // Per port and motor, as the core last set it, from any of its threads.
+    uint16_t rumble_sent[LR_RUMBLE_PORTS][2];    // As the host last heard it.
+    bool multitap_in;      // gaga_libretro_core.multitap is plugged in.
+    bool variables_dirty;  // Options changed since the core last asked (GET_VARIABLE_UPDATE).
 } LrInstance;
 
 // The instance libretro's callbacks reach. Set before the core can call back and cleared before the
@@ -141,19 +144,29 @@ static void lr_log(enum retro_log_level level, const char* format, ...) {
 // Stored only: step_frame sends the change on the host's queue, so a core may call this from any thread.
 static bool lr_set_rumble(unsigned port, enum retro_rumble_effect effect, uint16_t strength) {
     LrInstance* a = lr_current();
-    if (!a || port >= LR_MAX_PLAYERS || (unsigned)effect > RETRO_RUMBLE_WEAK) return false;
+    if (!a || port >= LR_RUMBLE_PORTS || (unsigned)effect > RETRO_RUMBLE_WEAK) return false;
     atomic_store_explicit(&a->rumble[port][effect], strength, memory_order_relaxed);
     return true;
 }
 
 static void lr_send_rumble(LrInstance* a) {
-    for (unsigned port = 0; port < LR_MAX_PLAYERS; ++port) {
+    for (unsigned port = 0; port < LR_RUMBLE_PORTS; ++port) {
         for (unsigned motor = 0; motor < 2; ++motor) {
             uint16_t strength = atomic_load_explicit(&a->rumble[port][motor], memory_order_relaxed);
             if (strength == a->rumble_sent[port][motor]) continue;
             a->rumble_sent[port][motor] = strength;
             lr_emit(a, GAGA_EVENT_RUMBLE, GAGA_RUMBLE_CODE(port, motor, strength), NULL);
         }
+    }
+}
+
+// Plugs the multiplayer adapter's port devices in, or back to what the console has alone.
+static void lr_multitap_devices(const GagaLibretroMultitap* tap, bool in) {
+    if (!tap) return;
+    const GagaLibretroPortDevice* devices = in ? tap->in : tap->out;
+    unsigned count = in ? tap->in_count : tap->out_count;
+    for (unsigned i = 0; i < count && i < GAGA_LIBRETRO_MULTITAP_DEVICES; ++i) {
+        retro_set_controller_port_device(devices[i].port, devices[i].device);
     }
 }
 
@@ -176,6 +189,13 @@ static bool lr_environment(unsigned command, void* data) {
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
         struct retro_variable* variable = data;
         variable->value = NULL;
+        const GagaLibretroMultitap* tap = gaga_libretro_core.multitap;
+        for (const GagaLibretroVariable* v = a->multitap_in && tap ? tap->variables : NULL; v && v->key; ++v) {
+            if (strcmp(v->key, variable->key) == 0) {
+                variable->value = v->value;
+                return true;
+            }
+        }
         for (const GagaLibretroVariable* v = gaga_libretro_core.variables; v && v->key; ++v) {
             if (strcmp(v->key, variable->key) == 0) {
                 variable->value = v->value;
@@ -187,7 +207,8 @@ static bool lr_environment(unsigned command, void* data) {
     case RETRO_ENVIRONMENT_SET_VARIABLES:
         return true; // Values come from the table above, but melonDS DS reads none until this succeeds.
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
-        *(bool*)data = false;
+        *(bool*)data = a->variables_dirty;
+        a->variables_dirty = false;
         return true;
     case RETRO_ENVIRONMENT_GET_CAN_DUPE:
         *(bool*)data = true; // A NULL frame leaves the last one on screen.
@@ -621,6 +642,7 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
         return false;
     }
 
+    lr_multitap_devices(gaga_libretro_core.multitap, false);
     // Nestopia fixes its state size on the first call, and its state is longer in the first frames after
     // power on. Asking before any frame runs gives every session of a game the same size.
     (void)retro_serialize_size();
@@ -659,6 +681,13 @@ void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint
     if (!a || !a->loaded) return;
     memset(a->inputs, 0, sizeof(a->inputs));
     if (inputs) memcpy(a->inputs, inputs, sizeof(GagaInputState) * (player_count < LR_MAX_PLAYERS ? player_count : LR_MAX_PLAYERS));
+    const GagaLibretroMultitap* tap = gaga_libretro_core.multitap;
+    bool want = tap && player_count > tap->base_players;
+    if (want != a->multitap_in) {
+        a->multitap_in = want;
+        a->variables_dirty = true;
+        lr_multitap_devices(tap, want);
+    }
     lr_send_keys(a);
     retro_run();
     lr_send_rumble(a);

@@ -99,6 +99,13 @@ static void mock_reset(GagaInstance* inst) {
     m->audio_phase = 0.0;
 }
 
+#define MOCK_PORTS 8
+static _Atomic uint32_t s_mock_last_player_count;
+static _Atomic uint32_t s_mock_last_buttons[MOCK_PORTS];
+
+uint32_t MockCore_LastPlayerCount(void) { return s_mock_last_player_count; }
+uint32_t MockCore_LastButtons(uint32_t port) { return port < MOCK_PORTS ? s_mock_last_buttons[port] : 0; }
+
 static void mock_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count) {
     MockCoreInstance* m = (MockCoreInstance*)inst;
     if (!m) return;
@@ -112,6 +119,11 @@ static void mock_step_frame(GagaInstance* inst, const GagaInputState inputs[4], 
     uint32_t buttons = 0;
     if (inputs && player_count > 0) {
         buttons = inputs[0].buttons;
+    }
+    s_mock_last_player_count = player_count;
+    for (uint32_t port = 0; port < MOCK_PORTS; ++port) {
+        // The host passes max(player_count, 4) states.
+        s_mock_last_buttons[port] = inputs && port < (player_count > 4 ? player_count : 4) ? inputs[port].buttons : 0;
     }
 
     // Start cycles the pixel format and Select toggles the frame size, on the press only.

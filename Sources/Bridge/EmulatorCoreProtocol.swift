@@ -123,20 +123,26 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public var onVideoFrame: ((VideoFrame) -> Void)?
     public var onAudioPacket: ((AudioPacket) -> Void)?
     public var onEvent: ((Event) -> Void)?
-    /// Last chance to change player 1's input for this frame (TriggerPro). Gets the frame number.
-    public var playerOneFilter: ((GagaInputState, Int) -> GagaInputState)?
+    /// Last chance to change one local port's input for this frame (TriggerPro, turbo, macros). Gets the port, the
+    /// state and the frame number.
+    public var portFilter: ((Int, GagaInputState, Int) -> GagaInputState)?
     /// Play Nearby (`Sources/Netplay`). Queue only: set it inside `betweenFrames`. Gets this phone's input on every
-    /// port for the next frame, player 1's after `playerOneFilter` (TriggerPro, turbo, macros), and returns every
-    /// port's input for it, or nil to hold the frame until the other phone's input arrives. While set, each tick
-    /// runs one frame: no fast-forward, no rewind.
+    /// port for the next frame, after `portFilter`, so turbo and macros reach only this phone's ports, and returns
+    /// every port's input for it, or nil to hold the frame until the other phone's input arrives. While set, each
+    /// tick runs one frame: no fast-forward, no rewind.
     var lockstep: (([GagaInputState]) -> [GagaInputState]?)?
+    /// Ports in use while `lockstep` is set, the same on both phones, so a multiplayer adapter goes in on both.
+    /// Queue only, like `lockstep`.
+    var lockstepPlayerCount = 2
     #if DEBUG
     /// Benchmark timing for each timed frame: start time, wall time and this thread's CPU time, in ns.
     public var onFrameTimed: ((UInt64, UInt64, UInt64) -> Void)?
     #endif
 
     private let inputLock = NSLock()
-    private var playerInputs: [GagaInputState] = Array(repeating: GagaInputState(), count: 4)
+    private var playerInputs: [GagaInputState] = Array(repeating: GagaInputState(), count: ControllerManager.slotCount)
+    /// Ports in use, the step's player_count: a core with a multiplayer adapter plugs it in past its own ports.
+    private var playerCount = 2 // Guarded by inputLock. No adapter until the session says more play.
     private var framesStepped = 0
     private var lastButtons: UInt32 = 0
 
@@ -441,7 +447,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             onVideoFrame = nil
             onAudioPacket = nil
             onEvent = nil
-            playerOneFilter = nil
+            portFilter = nil
             lockstep = nil
             #if DEBUG
             onFrameTimed = nil
@@ -456,12 +462,13 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             guard lastFatalMessage == nil, let inst = instance, let stepFn = coreInterface.step_frame else { return }
             presentVideo = true
             playAudio = true
-            var inArray = inputs
-            while inArray.count < 4 {
+            let count = min(inputs.count, ControllerManager.slotCount)
+            var inArray = Array(inputs.prefix(count))
+            while inArray.count < max(count, 4) {
                 inArray.append(GagaInputState())
             }
             recordRewind(inst)
-            stepFn(inst, inArray, UInt32(min(inputs.count, 4)))
+            stepFn(inst, inArray, UInt32(count))
         }
     }
 
@@ -490,26 +497,32 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     private func stepOnce(_ inst: OpaquePointer, _ stepFn: StepFunction, record: Bool = true) {
         inputLock.lock()
         var currentInputs = playerInputs
+        var count = playerCount
         let frame = framesStepped
         inputLock.unlock()
 
-        if let filter = playerOneFilter { currentInputs[0] = filter(currentInputs[0], frame) }
+        if let filter = portFilter {
+            for port in currentInputs.indices { currentInputs[port] = filter(port, currentInputs[port], frame) }
+        }
         if let lockstep {
             guard let all = lockstep(currentInputs) else { return } // Held: the other phone's input is not here yet.
-            currentInputs = Array((all + currentInputs).prefix(4))
+            // Every port from the lockstep, this phone's and the other's; ports past it get nothing.
+            currentInputs = currentInputs.indices.map { $0 < all.count ? all[$0] : GagaInputState() }
+            count = lockstepPlayerCount
         } else if record {
             recordRewind(inst)
         }
         // A layer-path core presents itself, so it must hear which frames fast-forward drops.
         currentInputs[0].skip_present = !presentVideo
+        let players = UInt32(min(max(count, 1), currentInputs.count))
         #if DEBUG
         let wallStart = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
         let cpuStart = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID)
-        stepFn(inst, currentInputs, 4)
+        stepFn(inst, currentInputs, players)
         onFrameTimed?(wallStart, clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - wallStart,
                       clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - cpuStart)
         #else
-        stepFn(inst, currentInputs, 4)
+        stepFn(inst, currentInputs, players)
         #endif
 
         inputLock.lock()
@@ -519,9 +532,16 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     }
 
     public func setInput(player: Int, state: GagaInputState) {
-        guard player >= 0 && player < 4 else { return }
+        guard playerInputs.indices.contains(player) else { return }
         inputLock.lock()
         playerInputs[player] = state
+        inputLock.unlock()
+    }
+
+    /// Ports in use from the next frame (`GameSession.portCount`).
+    public func setPlayerCount(_ count: Int) {
+        inputLock.lock()
+        playerCount = min(max(count, 1), playerInputs.count)
         inputLock.unlock()
     }
 

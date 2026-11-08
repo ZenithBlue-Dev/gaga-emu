@@ -22,6 +22,26 @@ typedef struct {
     const char* value;
 } GagaLibretroVariable;
 
+// One retro_set_controller_port_device call.
+typedef struct {
+    unsigned port;
+    unsigned device;
+} GagaLibretroPortDevice;
+
+#define GAGA_LIBRETRO_MULTITAP_DEVICES 4
+
+// A multiplayer adapter (Four Score, Super Multitap, Team Player, PlayStation Multitap, 6Player). The host's
+// player_count says how many ports are in use: past base_players the adapter goes in, at base_players or fewer it
+// comes out. Each change also re-reads the core's options (RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE).
+typedef struct {
+    uint32_t base_players;                  // Ports the console has without the adapter.
+    const GagaLibretroVariable* variables;  // While in: these values win over the core's table. Ends with a NULL key.
+    GagaLibretroPortDevice in[GAGA_LIBRETRO_MULTITAP_DEVICES];  // Set when it goes in.
+    unsigned in_count;
+    GagaLibretroPortDevice out[GAGA_LIBRETRO_MULTITAP_DEVICES]; // Set after load and when it comes out.
+    unsigned out_count;
+} GagaLibretroMultitap;
+
 typedef struct {
     const char* name;                       // In messages for the player, such as "Gambatte".
     const char* game_kind;                  // Ends "This file is not ...", such as "a Game Boy game".
@@ -62,6 +82,8 @@ typedef struct {
     // Azahar records the frame's draw and leaves the submit to its own worker thread, with no semaphore, so it
     // waits for that submit here and the copy queues after the draw.
     void (*before_present)(void);
+    // Optional. The core's multiplayer adapter, switched by the host's player_count.
+    const GagaLibretroMultitap* multitap;
 } GagaLibretroCore;
 
 extern const GagaLibretroCore gaga_libretro_core;
@@ -70,6 +92,7 @@ GagaInstance* gaga_lr_create(const char* system_dir, const char* save_dir);
 void gaga_lr_destroy(GagaInstance* inst);
 bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_data, size_t rom_size);
 void gaga_lr_reset(GagaInstance* inst);
+// inputs holds max(player_count, 4) states (GagaBridge.h). Ports past the fifth are not read.
 void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
 void gaga_lr_set_video_callback(GagaInstance* inst, void (*cb)(const GagaFrameDescriptor*, void*), void* userdata);
 void gaga_lr_set_audio_callback(GagaInstance* inst, void (*cb)(const GagaAudioDescriptor*, void*), void* userdata);

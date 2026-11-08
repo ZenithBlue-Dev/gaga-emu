@@ -310,7 +310,10 @@ final class NetplaySession: ObservableObject {
         }
         driver.setDelay(roundTrip: 0, fps: core.targetFPS)
         slot.driver = driver
-        core.betweenFrames { core.lockstep = { driver.tick(local: $0) } }
+        core.betweenFrames {
+            core.lockstepPlayerCount = ports.host + ports.joiner
+            core.lockstep = { driver.tick(local: $0) }
+        }
         game.setFastForward(1)
         game.setRewindHeld(false)
         phase = .connected(peer: peer)

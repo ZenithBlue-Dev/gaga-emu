@@ -151,7 +151,9 @@ typedef struct GagaCoreInterface {
     bool (*load_rom)(GagaInstance* inst, const char* rom_path, const void* rom_data, size_t rom_size);
     void (*reset)(GagaInstance* inst);
 
-    // Execution slice (supports up to 4 local controller inputs)
+    // Execution slice. inputs holds max(player_count, 4) states; player_count is the ports in use, which a core
+    // with a multiplayer adapter reads to plug it in. A core built before player_count past 4 reads 4 at most,
+    // so the ABI stays at 5.
     void (*step_frame)(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count);
 
     // Layer path, for a core with GAGA_CORE_CAP_METAL_LAYER. The host attaches its CAMetalLayer with the
