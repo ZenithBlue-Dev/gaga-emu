@@ -122,6 +122,30 @@ final class AzaharCoreTests: GagaTestCase {
         core.stop()
     }
 
+    /// Device pending (docs/07 5.7): the frame Azahar sends with GagaEmu's options is the arrangement ScreenLayout
+    /// cuts, so each region holds its own screen's colour.
+    func testTheFrameIsTheArrangementScreenLayoutCuts() async throws {
+        final class Capture { var fatal: String? }
+        let core = try makeCore()
+        let capture = Capture()
+        core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
+        try await core.loadROM(path: try write(N3DSTestProgram.build(), name: "test.3dsx"))
+        for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
+        XCTAssertNil(capture.fatal)
+        let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented")
+        let regions = try XCTUnwrap(ScreenLayout.regions(platformID: "n3ds", frame: CGSize(width: frame.width, height: frame.height)))
+        XCTAssertEqual(regions.map(\.pixels.width), [CGFloat(frame.width) * 400 / 720, CGFloat(frame.width) * 320 / 720])
+        func near(_ got: [UInt8], _ want: [UInt8]) -> Bool { zip(got, want).allSatisfy { abs(Int($0) - Int($1)) <= 8 } }
+        for (region, want) in zip(regions, [N3DSTestProgram.topBGRA, N3DSTestProgram.bottomBGRA]) {
+            for share in [0.05, 0.5, 0.95] {
+                let x = Int((region.rect.minX + region.rect.width * share) * CGFloat(frame.width))
+                let i = ((frame.height / 2) * frame.width + x) * 4
+                XCTAssertTrue(near(Array(frame.pixels[i..<i + 4]), want), "\(region.id) screen at column \(x)")
+            }
+        }
+        core.stop()
+    }
+
     /// A finger on the middle of the bottom screen reaches Azahar as that screen's middle. Azahar scales the
     /// libretro pointer over the whole frame and keeps it if it lands on the bottom screen (mouse_tracker.cpp).
     func testAFingerOnTheBottomScreenMapsToItsTouchPoint() throws {
