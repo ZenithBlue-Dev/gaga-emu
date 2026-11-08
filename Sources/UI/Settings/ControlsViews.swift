@@ -252,6 +252,14 @@ struct ControllerMappingView: View {
                 Rule()
                 Toggle("Left Stick Moves the D-pad", isOn: Binding(get: { profile.stickAsDpad }, set: { v in update { $0.stickAsDpad = v } }))
                     .tint(AppTheme.accentFill).frame(minHeight: 44)
+                Toggle("Hold Menu to Open Pause Menu", isOn: Binding(get: { profile.menuHold > 0 }, set: { v in update { $0.menuHold = v ? 1 : 0 } }))
+                    .tint(AppTheme.accentFill).frame(minHeight: 44)
+                if profile.menuHold > 0 {
+                    slider("Hold Time", value: Binding(get: { profile.menuHold }, set: { v in update { $0.menuHold = v } }),
+                           range: PadProfile.menuHoldRange, text: String(format: "%.1f s", profile.menuHold))
+                }
+                Text("Home opens the pause menu where iOS passes it through. Holding Menu does too: a short press is still Start.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
                 slider("Deadzone", value: Binding(get: { profile.deadzone }, set: { v in update { $0.deadzone = v } }),
                        range: PadProfile.deadzoneRange, text: "\(Int((profile.deadzone * 100).rounded()))%")
                 slider("Sensitivity", value: Binding(get: { profile.sensitivity }, set: { v in update { $0.sensitivity = v } }),

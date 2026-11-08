@@ -383,6 +383,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         hasRun = true
         UIApplication.shared.isIdleTimerDisabled = true
         observeSystem()
+        controllers.reserveSystemGestures(true)
         let link = CADisplayLink(target: self, selector: #selector(tick))
         link.add(to: .main, forMode: .common)
         displayLink = link
@@ -459,6 +460,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         rumble?.pause() // After the core: it sends no more.
         audio.stop()
         clearTouches()
+        controllers.reserveSystemGestures(false)
         flushPlayTime()
         UIApplication.shared.isIdleTimerDisabled = false
         let finish = onFinish
@@ -782,6 +784,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private func pushInputs() {
         guard let core else { return }
         var states = Self.capped(controllers.sample(), maxPlayers: maxPlayers)
+        if applyMenuHold(startHeld: states[0].buttons & ControllerManager.Button.start != 0,
+                         seconds: { controllers.menuHoldSeconds() }, now: ProcessInfo.processInfo.systemUptime) {
+            states[0].buttons &= ~ControllerManager.Button.start // The hold fired: release Start so it is not stuck.
+        }
         if touchActive {
             states[0].buttons |= touchMask | accessibilityMask
             states[0].actions.formUnion(skins.heldActions.union(accessibilityActions))
@@ -820,6 +826,19 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             log.notice("input p1 buttons=0x\(String(self.loggedButtons, radix: 16), privacy: .public)")
         }
         #endif
+    }
+
+    private var menuHold = MenuHold()
+
+    /// Hold Menu (Start) opens the pause menu. Start reaches the core until the hold fires; true means keep it
+    /// from the core until released. The benchmark is core input only, so it never holds.
+    func applyMenuHold(startHeld: Bool, seconds: () -> Double, now: TimeInterval) -> Bool {
+        #if DEBUG
+        guard !benchmarkScripted else { return false }
+        #endif
+        let wait = startHeld && !menuHold.fired ? seconds() : 0
+        if menuHold.update(held: startHeld, seconds: wait, now: now), phase == .running { pause(.menu) }
+        return menuHold.fired
     }
 
     /// Opens the menu on the press, or closes it again, so holding the pair does not flicker.

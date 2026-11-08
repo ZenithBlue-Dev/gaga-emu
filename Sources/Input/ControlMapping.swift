@@ -161,13 +161,17 @@ struct PadProfile: Codable, Equatable, Sendable {
     var deadzone = 0.1
     /// Multiplies the stick's travel past the deadzone.
     var sensitivity = 1.0
+    /// Seconds Menu (Start) is held to open the pause menu; 0 is off. Start reaches the game at once and a short
+    /// press is just Start. Home also opens the menu, where iOS passes it through.
+    var menuHold = 1.0
 
     static let deadzoneRange = 0.0...0.5
     static let sensitivityRange = 0.5...2.0
+    static let menuHoldRange = 0.5...2.0
 
-    /// RetroPad by position, and Home opens the menu. No default combo: a combo takes its buttons from the game,
-    /// so Menu and Options (Start and Select) would eat soft resets, and Options with L1 or R1 game combos.
-    /// Players add combos in Controls.
+    /// RetroPad by position, Home opens the menu, and so does holding Menu. No default combo: a combo takes its
+    /// buttons from the game, so Menu and Options (Start and Select) would eat soft resets, and Options with L1 or
+    /// R1 game combos. Players add combos in Controls.
     static func standard(for kind: ControllerManager.Kind = .mfi) -> PadProfile {
         let b = ControllerManager.Button.self
         let single: [(PadInput, UInt32)] = [(.a, b.south), (.b, b.east), (.x, b.west), (.y, b.north), (.l1, b.l1), (.r1, b.r1),
@@ -183,8 +187,39 @@ struct PadProfile: Codable, Equatable, Sendable {
         var copy = self
         copy.deadzone = deadzone.isFinite ? min(max(deadzone, Self.deadzoneRange.lowerBound), Self.deadzoneRange.upperBound) : 0.1
         copy.sensitivity = sensitivity.isFinite ? min(max(sensitivity, Self.sensitivityRange.lowerBound), Self.sensitivityRange.upperBound) : 1
+        copy.menuHold = !menuHold.isFinite ? 1 : menuHold <= 0 ? 0
+            : min(max(menuHold, Self.menuHoldRange.lowerBound), Self.menuHoldRange.upperBound)
         copy.bindings = bindings.filter { !$0.inputs.isEmpty }
         return copy
+    }
+}
+
+/// A file from before a field existed still decodes. In an extension, so the memberwise init stays.
+extension PadProfile {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bindings = try c.decode([PadBinding].self, forKey: .bindings)
+        stickAsDpad = try c.decodeIfPresent(Bool.self, forKey: .stickAsDpad) ?? false
+        deadzone = try c.decodeIfPresent(Double.self, forKey: .deadzone) ?? 0.1
+        sensitivity = try c.decodeIfPresent(Double.self, forKey: .sensitivity) ?? 1
+        menuHold = try c.decodeIfPresent(Double.self, forKey: .menuHold) ?? 1
+    }
+}
+
+/// Times a hold of Menu (Start). It fires once after `seconds`, then stays `fired` until Start is released, so
+/// the caller keeps Start from the core only after the trigger. Time is a parameter, for tests.
+struct MenuHold {
+    private var since: TimeInterval?
+    private(set) var fired = false
+
+    /// True once, when the hold passes `seconds`. A `seconds` of 0 is off.
+    mutating func update(held: Bool, seconds: Double, now: TimeInterval) -> Bool {
+        guard held else { since = nil; fired = false; return false }
+        let start = since ?? now
+        since = start
+        guard seconds > 0, !fired, now - start >= seconds else { return false }
+        fired = true
+        return true
     }
 }
 

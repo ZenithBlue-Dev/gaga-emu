@@ -278,6 +278,58 @@ final class ControlsTests: GagaTestCase {
         XCTAssertEqual(session.quickSlot, 2)
     }
 
+    // MARK: Hold Menu
+
+    func testHoldingMenuFiresOnceAfterTheThresholdAndAShortPressNever() {
+        var hold = MenuHold()
+        XCTAssertFalse(hold.update(held: true, seconds: 1, now: 10))
+        XCTAssertFalse(hold.update(held: true, seconds: 1, now: 10.9), "Not yet")
+        XCTAssertTrue(hold.update(held: true, seconds: 1, now: 11))
+        XCTAssertFalse(hold.update(held: true, seconds: 1, now: 13), "Once per hold")
+        XCTAssertTrue(hold.fired)
+        XCTAssertFalse(hold.update(held: false, seconds: 1, now: 14))
+        XCTAssertFalse(hold.fired, "Release clears it")
+        XCTAssertFalse(hold.update(held: true, seconds: 1, now: 20))
+        XCTAssertFalse(hold.update(held: false, seconds: 1, now: 20.5), "A short press never fires")
+        XCTAssertFalse(hold.update(held: true, seconds: 0, now: 30))
+        XCTAssertFalse(hold.update(held: true, seconds: 0, now: 40), "Off never fires")
+    }
+
+    func testMenuHoldDefaultsRangeAndOldFiles() throws {
+        XCTAssertEqual(PadProfile.standard().menuHold, 1)
+        XCTAssertEqual(PadProfile(bindings: [], menuHold: 9).normalized().menuHold, 2)
+        XCTAssertEqual(PadProfile(bindings: [], menuHold: 0.1).normalized().menuHold, 0.5)
+        XCTAssertEqual(PadProfile(bindings: [], menuHold: 0).normalized().menuHold, 0, "Off stays off")
+        let old = try JSONDecoder().decode(PadProfile.self, from: Data(#"{"bindings":[],"deadzone":0.2}"#.utf8))
+        XCTAssertEqual(old.menuHold, 1)
+        XCTAssertEqual(old.deadzone, 0.2)
+    }
+
+    func testStartPassesToTheGameAtOnceAndHoldingOpensTheMenuAndReleasesStart() async throws {
+        let (session, _, _) = try session()
+        try await session.prepare()
+        session.run()
+        defer { session.stop() }
+        XCTAssertFalse(session.applyMenuHold(startHeld: true, seconds: { 1 }, now: 100), "Start reaches the core at once")
+        XCTAssertFalse(session.applyMenuHold(startHeld: false, seconds: { 1 }, now: 100.3))
+        XCTAssertFalse(session.menuOpen, "A short press leaves the menu shut")
+        XCTAssertFalse(session.applyMenuHold(startHeld: true, seconds: { 1 }, now: 200))
+        XCTAssertTrue(session.applyMenuHold(startHeld: true, seconds: { 1 }, now: 201), "Start is withheld once it fires")
+        XCTAssertTrue(session.menuOpen)
+        XCTAssertFalse(session.applyMenuHold(startHeld: false, seconds: { 1 }, now: 202))
+    }
+
+    func testTheBenchmarkIgnoresMenuHold() async throws {
+        let (session, _, _) = try session()
+        try await session.prepare()
+        session.attachBenchmark(script: { _ in 0 }, timing: { _, _, _ in })
+        session.run()
+        defer { session.stop() }
+        XCTAssertFalse(session.applyMenuHold(startHeld: true, seconds: { 1 }, now: 300))
+        XCTAssertFalse(session.applyMenuHold(startHeld: true, seconds: { 1 }, now: 305))
+        XCTAssertFalse(session.menuOpen)
+    }
+
     func testQuickSaveAndLoadUseTheChosenSlot() async throws {
         let (session, _, _) = try session()
         try await session.prepare()

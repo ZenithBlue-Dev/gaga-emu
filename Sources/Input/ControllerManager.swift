@@ -202,12 +202,30 @@ public final class ControllerManager: ObservableObject {
         return keys
     }
 
+    // MARK: System gestures
+
+    private var gesturesReserved = false
+
+    /// Home, Menu and Options (Share) may belong to iOS (Control Center, the app switcher, screen recording).
+    /// While a game runs the app asks for them; `false` hands them back. Also applies to a pad that joins later.
+    func reserveSystemGestures(_ reserve: Bool) {
+        gesturesReserved = reserve
+        controllers.values.forEach(applyGestures)
+    }
+
+    private func applyGestures(_ controller: GCController) {
+        guard let pad = controller.extendedGamepad else { return }
+        let state: GCControllerElement.SystemGestureState = gesturesReserved ? .disabled : .enabled
+        for button in [pad.buttonHome, pad.buttonMenu, pad.buttonOptions] { button?.preferredSystemGestureState = state }
+    }
+
     // MARK: Discovery
 
     func attach(_ controller: GCController) {
         let id = stableID(controller)
         guard controllers[id] == nil else { return }
         controllers[id] = controller
+        applyGestures(controller)
         let kind = Self.classify(controller)
         let name = controller.vendorName ?? kind.label
         let slot = defaults.stringArray(forKey: Self.unassignedKey)?.contains(name) == true ? nil : firstFreeSlot()
@@ -254,6 +272,12 @@ public final class ControllerManager: ObservableObject {
     /// The mapping for a controller type. The running game sets it from its Controls.json profiles; the
     /// defaults are the RetroPad by position, with Home for the menu.
     var profile: (Kind) -> PadProfile = { .standard(for: $0) }
+
+    /// Seconds Menu is held on player 1's controller to open the pause menu; 0 when off or none is assigned.
+    func menuHoldSeconds() -> Double {
+        guard let kind = device(inSlot: 0)?.kind else { return 0 }
+        return profile(kind).menuHold
+    }
 
     private func read(_ controller: GCController) -> InputState {
         guard let pad = controller.extendedGamepad else { return .zero }
