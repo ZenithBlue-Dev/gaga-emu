@@ -186,6 +186,10 @@ struct SkinEditorView: View {
         let saved = (try? Data(contentsOf: fallback)).flatMap { try? TouchSkinEngine.decodeFlex($0, id: platformID) }
         landscape = saved?.buttons ?? builtInButtons
         upright = saved?.portraitButtons ?? TouchSkinEngine.portrait(from: landscape)
+        // What a two-screen game shows upright when this layout was never edited (TouchSkinEngine.buttons).
+        if ScreenLayout.isDual(platformID), upright == TouchSkinEngine.portrait(from: landscape) {
+            upright = TouchSkinEngine.compact(upright)
+        }
         opacity = saved?.opacity ?? TouchSkinEngine.defaultOpacity
         overlay = saved?.overlay ?? false
         editingPortrait = UIScreen.main.bounds.height > UIScreen.main.bounds.width
