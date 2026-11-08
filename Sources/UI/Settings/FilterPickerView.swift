@@ -17,6 +17,8 @@ struct FilterPickerView: View {
     @State private var importFailure: ImportFailure?
     @State private var imported: [ImportedFilterStore.Entry] = []
     @State private var presets: [SavedFilterPreset] = []
+    @State private var query = ""
+    @FocusState private var searching: Bool
     @State private var showNaming = false
     @State private var nameField = ""
     /// The preset being renamed, or nil while naming a new one.
@@ -68,23 +70,44 @@ struct FilterPickerView: View {
                     .accessibilityIdentifier("filtersSkippedNote")
             }
             Rule().padding(.top, 8)
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                TextField("Search", text: $query)
+                    .submitLabel(.search)
+                    .focused($searching)
+                    .accessibilityLabel("Search filters")
+            }
+            .frame(minHeight: 44)
+            .disabled(filtersSkipped)
+            Rule()
             Group {
-                ForEach(ShaderCatalog.builtIn) { shader in
+                ForEach(ShaderCatalog.builtIn.filter { matches($0.name) }) { shader in
                     row(shader)
                     Rule()
                 }
-                sectionHeader("Community")
-                Rule()
-                ForEach(ShaderCatalog.community) { shader in
-                    row(shader)
+                if ShaderCatalog.community.contains(where: { matches($0.name) }) {
+                    sectionHeader("Community")
                     Rule()
+                    ForEach(ShaderCatalog.community.filter { matches($0.name) }) { shader in
+                        row(shader)
+                        Rule()
+                    }
                 }
-                savedSection
-                importedSection
+                if query.isEmpty || presets.contains(where: { matches($0.name) }) { savedSection }
+                if query.isEmpty || imported.contains(where: { matches($0.name) }) { importedSection }
+                if noMatches {
+                    Text("No filters match.").font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
+                }
             }
             .disabled(filtersSkipped)
         }
         .padding(16)
+    }
+
+    private func matches(_ name: String) -> Bool { query.isEmpty || name.localizedCaseInsensitiveContains(query) }
+
+    private var noMatches: Bool {
+        !ShaderCatalog.all.contains { matches($0.name) } && !presets.contains { matches($0.name) } && !imported.contains { matches($0.name) }
     }
 
     private var previewHeader: some View {
@@ -111,9 +134,12 @@ struct FilterPickerView: View {
             if horizontalSize == .compact && verticalSize == .regular {
                 VStack(alignment: .leading, spacing: 8) {
                     previewHeader.padding(.horizontal, 16).padding(.top, 8)
-                    preview.frame(height: 190).padding(.horizontal, 16)
-                    FilterControls(shaderID: selected, shaderManager: shaderManager)
-                        .frame(height: 120).padding(.horizontal, 16)
+                    // While typing the keyboard would leave the results no room below these.
+                    if !searching {
+                        preview.frame(height: 190).padding(.horizontal, 16)
+                        FilterControls(shaderID: selected, shaderManager: shaderManager)
+                            .frame(height: 120).padding(.horizontal, 16)
+                    }
                     Rule()
                     ScrollView { filterList }
                 }
@@ -200,7 +226,7 @@ struct FilterPickerView: View {
                     .font(.footnote).foregroundStyle(AppTheme.muted)
                     .padding(.vertical, 8)
             }
-            ForEach(presets) { preset in
+            ForEach(presets.filter { matches($0.name) }) { preset in
                 let base = ShaderCatalog.all.first { $0.id == preset.shaderID }
                 let locked = base.map { $0.premium && !store.canUseShader($0.id) } ?? false
                 let isOn = selected == preset.shaderID && (state.shaderParameters[preset.shaderID] ?? ShaderParameterValues()) == preset.values
@@ -260,7 +286,7 @@ struct FilterPickerView: View {
         VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Imported")
             Rule()
-            ForEach(imported) { entry in
+            ForEach(imported.filter { matches($0.name) }) { entry in
                 HStack(spacing: 8) {
                     Button { select(entry.id) } label: { rowLabel(entry.name, credit: nil, selected: selected == entry.id, locked: false, premium: false) }
                         .buttonStyle(.plain)
