@@ -2,6 +2,32 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611090020), 2026-11-09
+
+Settings has a new Display tab, the Library sorts, and ROM patching reads more formats.
+
+**Display**
+- Settings > Display: choose Automatic, Light or Dark.
+- Pick an accent colour, games per row, shelf titles and cover style, or hide scroll indicators.
+- Change each one and check the Library updates.
+
+**Library**
+- Sort by title, date added, last played or play time.
+
+**Patching**
+- Patch ROMs with PPF, APS and RUP files, as well as the formats already supported.
+
+**Filters and BIOS**
+- Search the filter list.
+- Import or replace a BIOS from its own row.
+
+**Portrait**
+- Every Settings tab now fits in portrait.
+- The NDS and 3DS skin editor matches the portrait layout.
+
+**Known limits**
+- Games and BIOS files are not included. Add your own.
+
 ## 1.0.0 (202611082311), 2026-11-08
 
 Portrait play and menus are fixed. Hold your phone upright and check each screen.
