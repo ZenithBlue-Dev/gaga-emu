@@ -540,11 +540,12 @@ enum CoreCatalog {
     static let zipSidecarExtensions: Set<String> = ["txt", "nfo", "diz", "htm", "html", "url", "sfv", "pdf", "jpg", "jpeg", "png"]
 
     /// The most a console ROM in a .zip may inflate to, so a zip bomb stops there. Each is above the largest
-    /// real image for the platform; any other platform gets 2 GiB.
+    /// real image for the platform; any other platform gets 2 GiB. A 3DS card image is up to 4 GiB (device run 9:
+    /// a zip64 entry of exactly 4 GiB was refused as too large).
     static func zipROMLimit(_ platformID: String) -> Int {
         let mib = 1 << 20
         let limits = ["gb": 8 * mib, "gbc": 8 * mib, "gba": 32 * mib, "nes": 8 * mib, "snes": 16 * mib,
-                      "megadrive": 16 * mib, "n64": 64 * mib, "nds": 512 * mib]
+                      "megadrive": 16 * mib, "n64": 64 * mib, "nds": 512 * mib, "n3ds": 4096 * mib]
         return limits[platformID] ?? 2048 * mib
     }
 
@@ -579,11 +580,12 @@ enum CoreCatalog {
     }
 
     enum ZipError: LocalizedError {
-        case unsupported, corrupt, tooLarge, unsafeName
+        case unsupported, corrupt, truncated, tooLarge, unsafeName
         var errorDescription: String? {
             switch self {
             case .unsupported: return "The archive uses encryption or a compression GagaEmu cannot read."
             case .corrupt: return "The archive is damaged."
+            case .truncated: return "The archive is incomplete: its end is missing. Copy or download it again."
             case .tooLarge: return "The file in the archive is too large."
             case .unsafeName: return "The file in the archive has a path GagaEmu refuses, such as one that leaves its folder."
             }
@@ -721,7 +723,7 @@ enum CoreCatalog {
     /// until a finished file or set moves into place, and never touches the archive itself.
     static func unpackArchive(_ url: URL, into romDirectory: URL, progress: Progress) throws -> Unpacked {
         let entries = archiveEntries(url)
-        guard !entries.isEmpty else { throw ZipError.corrupt }
+        guard !entries.isEmpty else { throw startsAsZip(url) ? ZipError.truncated : ZipError.corrupt }
         if let rom = try zipConsoleCheck(entries)?.get() {
             let name = WiFiTransferServer.sanitize(String(rom.entry.name.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last ?? ""))
             guard !name.isEmpty else { throw ZipError.unsafeName }
@@ -733,6 +735,13 @@ enum CoreCatalog {
             return .discSet(folder)
         }
         return .kept
+    }
+
+    /// A zip's first local header with no readable directory: the end of the file is missing (device run 9).
+    static func startsAsZip(_ url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        return (try? handle.read(upToCount: 4)) == Data([0x50, 0x4B, 3, 4])
     }
 
     /// The records in a ZIP's central directory, or none when the file is not a readable ZIP.
@@ -1409,7 +1418,8 @@ final class AppState: ObservableObject {
         // Off the main thread: the copy can be gigabytes.
         let copied = try await Task.detached { try ClipboardImporter.persist(.file(url), into: romDirectory) }.value
         let (game, note) = await importArrived(copied)
-        print("[gaga-import] done \(url.lastPathComponent) -> \(game?.platformID ?? (biosName(url) == nil ? "none" : "system (BIOS)"))")
+        print("[gaga-import] done \(url.lastPathComponent) -> \(game?.platformID ?? (biosName(url) == nil ? "none" : "system (BIOS)"))"
+              + (note.map { " (\($0))" } ?? ""))
         if let note { launchFailure = LaunchFailure(title: "Import", message: note) }
         if let game {
             platformFilter = game.platformID

@@ -144,14 +144,15 @@ final class ZipImportTests: GagaTestCase {
 
     /// One deflated entry written as zip64: the central record's sizes and offset, and the end record's directory
     /// size and offset, are all ones and live in the zip64 extra and the zip64 end record.
-    static func zip64(_ name: String, _ data: Data) throws -> Data {
+    /// `claimedSize` overrides the size the zip64 extra states, so a huge entry is described without its bytes.
+    static func zip64(_ name: String, _ data: Data, claimedSize: Int? = nil) throws -> Data {
         func le(_ value: Int, _ bytes: Int) -> Data { Data((0..<bytes).map { UInt8(truncatingIfNeeded: value >> ($0 * 8)) }) }
         let packed = try (data as NSData).compressed(using: .zlib) as Data, file = Data(name.utf8)
         let crc = Int(RomPatcher.crc32(data)), ones = 0xFFFF_FFFF
         func fields(_ list: [(Int, Int)]) -> Data { list.reduce(into: Data()) { $0 += le($1.0, $1.1) } }
         var out = fields([(0x0403_4B50, 4), (45, 2), (0, 2), (8, 2), (0, 4), (crc, 4), (packed.count, 4), (data.count, 4),
                           (file.count, 2), (0, 2)]) + file + packed
-        let extra = fields([(1, 2), (24, 2), (data.count, 8), (packed.count, 8), (0, 8)])
+        let extra = fields([(1, 2), (24, 2), (claimedSize ?? data.count, 8), (packed.count, 8), (0, 8)])
         let directory = fields([(0x0201_4B50, 4), (45, 2), (45, 2), (0, 2), (8, 2), (0, 4), (crc, 4), (ones, 4), (ones, 4),
                                 (file.count, 2), (extra.count, 2), (0, 2), (0, 2), (0, 2), (0, 4), (ones, 4)]) + file + extra
         let start = out.count
@@ -173,6 +174,27 @@ final class ZipImportTests: GagaTestCase {
         XCTAssertEqual(CoreCatalog.platformID(forFile: zip), "gba")
         let out = try CoreCatalog.extractZipEntry(entry, from: zip, to: dir.appendingPathComponent("Game.gba"), limit: 1 << 30)
         XCTAssertEqual(try Data(contentsOf: out), gba)
+    }
+
+    /// Device run 9: a zip whose one .3ds entry is exactly 4 GiB (zip64, its 32-bit sizes all ones) was refused as too
+    /// large. The records here claim that size over a few bytes of data, so no 4 GiB file is written.
+    func testAFourGiBZip64EntryIsA3DSGame() throws {
+        let zip = dir.appendingPathComponent("card.zip")
+        try Self.zip64("Card.3ds", Data(count: 0x200), claimedSize: 1 << 32).write(to: zip)
+        let entry = try XCTUnwrap(CoreCatalog.zipEntries(zip).first)
+        XCTAssertEqual(entry.size, 1 << 32, "no 32-bit wrap to 0 or 0xFFFFFFFF")
+        XCTAssertGreaterThanOrEqual(CoreCatalog.zipROMLimit("n3ds"), 1 << 32)
+        try XCTSkipIf(GagaCoreRegistry_IsExcluded("azahar"), "GAGA_CORE_SET left the 3DS core out")
+        XCTAssertEqual(CoreCatalog.platformID(forFile: zip), "n3ds")
+        XCTAssertEqual(try CoreCatalog.zipConsoleCheck([entry])?.get().platformID, "n3ds")
+        for name in ["Card.cci", "Card.cxi"] {
+            XCTAssertEqual(CoreCatalog.zipConsoleROM([record(name, size: 1 << 32)])?.platformID, "n3ds", name)
+        }
+        XCTAssertNil(CoreCatalog.zipConsoleROM([record("Card.3ds", size: (1 << 32) + 1)]), "over 4 GiB is refused")
+    }
+
+    private func record(_ name: String, size: Int) -> CoreCatalog.ZipEntry {
+        CoreCatalog.ZipEntry(name: name, flags: 0, method: 8, crc: 0, compressedSize: 0, size: size, localHeaderOffset: 0)
     }
 
     /// An .iso names no platform by itself, so one in a zip or 7z is unpacked and placed by its sector 16, as a bare
@@ -294,6 +316,7 @@ final class ZipImportTests: GagaTestCase {
         garbled[30 + 8 + 4] ^= 0xFF // Inside the deflated data, after the 30-byte header and "game.gba".
         let cases: [(String, Data, CoreCatalog.ZipError)] = [
             ("broken", Data("PK".utf8), .corrupt),
+            ("cut", try Self.deflatedZip([("game.gba", gba, nil)]).prefix(64), .truncated),
             ("garbled", garbled, .corrupt),
             ("up", try Self.deflatedZip([("../evil.gba", gba, nil)]), .unsafeName),
             ("big", try Self.deflatedZip([("big.gba", gba, 64 << 20)]), .tooLarge)
