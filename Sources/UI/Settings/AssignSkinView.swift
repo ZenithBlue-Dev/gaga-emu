@@ -67,6 +67,7 @@ struct AssignSkinView: View {
                             .accessibilityLabel("Edit \(platform.name) skin")
                     }
                     .frame(minHeight: 44)
+                    SkinStyleRows(platformID: platform.id).padding(.leading, 16)
                     Rule()
                 }
             }

@@ -23,7 +23,9 @@ struct GameView: View {
             let custom = session.isDualScreen && session.screen.preset == .custom
             let reserve = (touchVisible || !state.autoFullScreen) && session.screen.area == .betweenControls && !custom
             ZStack(alignment: .topLeading) {
-                if external.showsPicture {
+                if let art = skins.skin?.device, touchVisible, !external.showsPicture {
+                    DeviceSkinView(session: session, skins: skins, art: art, macros: state.controls.file.macros)
+                } else if external.showsPicture {
                     Text("The picture is on the other screen.")
                         .font(.footnote)
                         .foregroundStyle(AppTheme.onLetterbox)
@@ -44,12 +46,14 @@ struct GameView: View {
                         .accessibilityLabel("\(session.game.title), game picture")
                         .accessibilityAddTraits(.isImage)
                 }
-                if touchVisible { TouchControls(session: session, skins: skins, macros: state.controls.file.macros) }
+                // With the picture on another screen, a device skin's buttons draw as outlines.
+                if touchVisible && (skins.skin?.device == nil || external.showsPicture) { TouchControls(session: session, skins: skins, macros: state.controls.file.macros) }
                 HStack(spacing: 0) {
                     pauseButton
                     Spacer(minLength: 0)
                     if session.recordingMacro { stopRecordingButton }
-                    if session.isDualScreen { swapButton }
+                    // A device skin fixes both screens in its bezel.
+                    if session.isDualScreen && !(touchVisible && skins.skin?.device != nil) { swapButton }
                     if session.rewindStatus == .ready { rewindButton }
                     fastForwardButton
                 }
@@ -432,6 +436,137 @@ private struct StickActions: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// MARK: - Device skin
+
+/// A console-style skin (docs/06 section 3.8), fitted to the whole screen and centred on its fill colour. Drawn in
+/// order: the shell PDF, the picture in the screen rects, the pressed PDF clipped to each held button, the stick caps
+/// moved with the sticks, then the labels in the system font. Fingers land through the same fitted canvas.
+private struct DeviceSkinView: View {
+    @ObservedObject var session: GameSession
+    @ObservedObject var skins: TouchSkinEngine
+    let art: TouchSkinEngine.DeviceArt
+    var macros: [Macro] = []
+
+    var body: some View {
+        GeometryReader { geometry in
+            let face = art.face(portrait: geometry.size.height > geometry.size.width)
+            let fit = TouchSkinEngine.DeviceArt.fitted(face.canvas, in: geometry.size)
+            let picture = Self.place(TouchSkinEngine.DeviceArt.pictureRect(face.screens), in: fit)
+            let buttons = skins.buttons
+            ZStack(alignment: .topLeading) {
+                Self.color(face.fill)
+                pdf(face.background, fit).position(x: fit.midX, y: fit.midY)
+                GamePicture(session: session, takesTouch: true)
+                    .frame(width: picture.width, height: picture.height)
+                    .position(x: picture.midX, y: picture.midY)
+                    .accessibilityElement()
+                    .accessibilityLabel("\(session.game.title), game picture")
+                    .accessibilityAddTraits(.isImage)
+                let local = CGRect(origin: .zero, size: fit.size)
+                let held = TouchSkinEngine.pressedFrames(held: skins.pressed, in: buttons)
+                if !held.isEmpty {
+                    pdf(face.pressed, fit)
+                        .mask {
+                            ZStack {
+                                ForEach(held.indices, id: \.self) { index in
+                                    let r = Self.place(held[index], in: local)
+                                    Rectangle().frame(width: r.width, height: r.height).position(x: r.midX, y: r.midY)
+                                }
+                            }
+                            .frame(width: fit.width, height: fit.height)
+                        }
+                        .position(x: fit.midX, y: fit.midY)
+                }
+                ForEach(buttons.filter { $0.shape == .stick }) { stick in
+                    let r = Self.place(stick.frame, in: local)
+                    let right = stick.id != "lstick"
+                    // The cap is 0.6 of the well across, so it travels 0.2 of it to reach the rim.
+                    let travel = r.width * 0.2
+                    let x = CGFloat(right ? skins.analog.rx : skins.analog.lx) / 32767, y = -CGFloat(right ? skins.analog.ry : skins.analog.ly) / 32767
+                    pdf(face.pressed, fit)
+                        .mask { Rectangle().frame(width: r.width, height: r.height).position(x: r.midX, y: r.midY).frame(width: fit.width, height: fit.height) }
+                        .position(x: fit.midX + x * travel, y: fit.midY + y * travel)
+                }
+                ForEach(face.labels.indices, id: \.self) { index in
+                    let label = face.labels[index]
+                    let k = fit.width / face.canvas.width
+                    Text(label.text)
+                        .font(.system(size: label.size * k, weight: .heavy, design: .rounded))
+                        .foregroundStyle(Self.color(label.onBody == true ? face.ink : label.color))
+                        .fixedSize()
+                        .position(x: fit.minX + label.x * fit.width, y: fit.minY + label.y * fit.height)
+                        .accessibilityHidden(true)
+                }
+                TouchInputLayer { session.setTouches($0, windowPoints: $1) }
+                    .frame(width: fit.width, height: fit.height)
+                    .position(x: fit.midX, y: fit.midY)
+                    .accessibilityHidden(true)
+                ForEach(buttons.filter { $0.shape != .hidden }) { button in
+                    let r = Self.place(button.frame, in: fit)
+                    Color.clear
+                        .frame(width: r.width, height: r.height)
+                        .position(x: r.midX, y: r.midY)
+                        .allowsHitTesting(false)
+                        .accessibilityElement()
+                        .accessibilityLabel(TouchSkinEngine.label(for: button, macros: macros).spoken)
+                        .accessibilityAddTraits(.isButton)
+                        .modifier(StickActions(button: button, session: session))
+                        .accessibilityAction {
+                            if let action = button.action { session.tapActionForAccessibility(action) } else { session.tapForAccessibility(button.mask) }
+                        }
+                }
+            }
+            .onChange(of: face.screens, initial: true) { session.deviceScreens = TouchSkinEngine.DeviceArt.screenPlaces(face.screens) }
+        }
+        .ignoresSafeArea()
+        .onDisappear { session.deviceScreens = nil }
+    }
+
+    /// A normalised rect placed in `box`.
+    static func place(_ rect: CGRect, in box: CGRect) -> CGRect {
+        CGRect(x: box.minX + rect.minX * box.width, y: box.minY + rect.minY * box.height,
+               width: rect.width * box.width, height: rect.height * box.height)
+    }
+
+    static func color(_ hex: String) -> Color {
+        guard let c = TouchSkinEngine.DeviceArt.rgba(hex) else { return AppTheme.letterbox }
+        return Color(.sRGB, red: c.r, green: c.g, blue: c.b, opacity: c.a)
+    }
+
+    @ViewBuilder private func pdf(_ name: String, _ fit: CGRect) -> some View {
+        if let image = DevicePDF.image(art.folder.appendingPathComponent(name), size: fit.size) {
+            Image(uiImage: image).resizable()
+                .frame(width: fit.width, height: fit.height)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Device skin PDFs drawn with `CGPDFDocument`, cached per file and size, so a turn or a press never redraws one.
+enum DevicePDF {
+    private static let cache = NSCache<NSString, UIImage>()
+
+    @MainActor static func image(_ url: URL, size: CGSize) -> UIImage? {
+        let size = CGSize(width: size.width.rounded(), height: size.height.rounded())
+        guard size.width >= 1, size.height >= 1 else { return nil }
+        let key = "\(url.path)|\(Int(size.width))x\(Int(size.height))" as NSString
+        if let hit = cache.object(forKey: key) { return hit }
+        guard let page = CGPDFDocument(url as CFURL)?.page(at: 1) else { return nil }
+        let box = page.getBoxRect(.mediaBox)
+        guard box.width > 0, box.height > 0 else { return nil }
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let c = context.cgContext
+            c.translateBy(x: 0, y: size.height)
+            c.scaleBy(x: size.width / box.width, y: -size.height / box.height)
+            c.translateBy(x: -box.minX, y: -box.minY)
+            c.drawPDFPage(page)
+        }
+        cache.setObject(image, forKey: key)
+        return image
     }
 }
 

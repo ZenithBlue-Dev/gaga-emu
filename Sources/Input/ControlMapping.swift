@@ -339,6 +339,13 @@ final class FrameInputProcessor: @unchecked Sendable {
 
 // MARK: - Store
 
+/// Classic is GagaEmu's own outlined controls; Device draws the console-style shell (docs/06 section 3.8).
+enum SkinStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+    case classic, device
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
 /// Touch haptic strength for presses on the touch controls. Separate from game rumble.
 enum HapticStrength: String, Codable, CaseIterable, Identifiable, Sendable {
     case off, light, medium, strong
@@ -364,11 +371,16 @@ final class ControlsStore: ObservableObject {
         var hideTouchWithController = true
         /// By game ID: "portrait" or "landscape". Missing follows the device.
         var orientation: [String: String] = [:]
+        /// Touch skin style by "platform:<id>" or "game:<uuid>", a `SkinStyle` raw value. Missing is Classic.
+        var skinStyle: [String: String] = [:]
+        /// A device skin's colourway name by platform ID. Missing is the skin's own.
+        var skinVariant: [String: String] = [:]
 
         init() {}
 
         private enum Keys: String, CodingKey {
-            case version, pads, macros, turboHertz, fastForwardSpeed, quickSlot, touchHaptics, hideTouchWithController, orientation
+            case version, pads, macros, turboHertz, fastForwardSpeed, quickSlot, touchHaptics, hideTouchWithController, orientation,
+                 skinStyle, skinVariant
         }
 
         init(from decoder: Decoder) throws {
@@ -383,6 +395,14 @@ final class ControlsStore: ObservableObject {
             touchHaptics = value(.touchHaptics, touchHaptics)
             hideTouchWithController = value(.hideTouchWithController, hideTouchWithController)
             orientation = value(.orientation, orientation)
+            skinStyle = value(.skinStyle, skinStyle)
+            skinVariant = value(.skinVariant, skinVariant)
+        }
+
+        /// The game's own style, then its platform's, then Classic. An unknown value reads as Classic.
+        func style(platformID: String, gameID: UUID?) -> SkinStyle {
+            (gameID.flatMap { skinStyle["game:\($0.uuidString)"] } ?? skinStyle["platform:\(platformID)"])
+                .flatMap(SkinStyle.init) ?? .classic
         }
     }
 

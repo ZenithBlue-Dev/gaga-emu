@@ -171,7 +171,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// The pause menu and Settings offer the two-screen options only when the host places the screens.
     var isDualScreen: Bool { hostDrawsPicture && ScreenLayout.isDual(game.platformID) }
     /// The touch screen is not drawn, so touch input is off.
-    var touchScreenHidden: Bool { isDualScreen && !ScreenLayout.showsTouchScreen(screen) }
+    var touchScreenHidden: Bool { isDualScreen && deviceScreens == nil && !ScreenLayout.showsTouchScreen(screen) }
     /// The layer the core presents to, with its drawable size. Kept until the core exists.
     private var layerTarget: (layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat)?
 
@@ -213,8 +213,20 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         syncScreen()
     }
 
+    /// A device skin's two screen places in the picture view (`TouchSkinEngine.DeviceArt.screenPlaces`), which replace
+    /// the two-screen layout while it shows. Nil otherwise. Not saved: the player's own layout stays as it was.
+    var deviceScreens: [CGRect]? {
+        didSet { if deviceScreens != oldValue { syncScreen() } }
+    }
+
     private func syncScreen() {
-        renderer.setScreen(screen, platformID: hostDrawsPicture ? game.platformID : "")
+        var placed = screen
+        if let places = deviceScreens, places.count == 2 {
+            placed.preset = .custom
+            placed.customTop = places[0]; placed.customBottom = places[1]
+            placed.swapped = false; placed.showTop = true; placed.showBottom = true; placed.rotation = .none
+        }
+        renderer.setScreen(placed, platformID: hostDrawsPicture ? game.platformID : "")
     }
 
     /// The quick toggle: exchanges the screens, or picks the other one in One Screen.

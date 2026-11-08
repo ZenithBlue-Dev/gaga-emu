@@ -1207,7 +1207,12 @@ final class AppState: ObservableObject {
 
     /// The game's own layout, then the game's choice, then the platform's. Custom loads the saved layout; a missing
     /// or unreadable one falls back to the platform's own built-in layout.
+    /// The Device style, when chosen for the game or its system, wins over every layout; a missing one falls back.
     func applySkin(for game: GameItem) {
+        if controls.file.style(platformID: game.platformID, gameID: game.id) == .device,
+           (try? skins.loadDevice(platformID: game.platformID, variant: controls.file.skinVariant[game.platformID])) != nil {
+            return
+        }
         if hasCustomSkin(game.platformID, gameID: game.id), (try? skins.loadFlex(from: customSkinURL(game.platformID, gameID: game.id))) != nil {
             return
         }

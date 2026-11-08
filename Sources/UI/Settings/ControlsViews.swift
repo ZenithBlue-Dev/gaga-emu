@@ -43,6 +43,8 @@ struct ControlsSheet: View {
             }
         }
         .fullScreenCover(item: $editing, onDismiss: reloadSkin) { SkinEditorView(platformID: $0.id, gameID: $0.gameID) }
+        .onChange(of: state.controls.file.skinStyle) { reloadSkin() }
+        .onChange(of: state.controls.file.skinVariant) { reloadSkin() }
     }
 
     /// A layout saved from the pause menu shows in the running game at once.
@@ -113,6 +115,8 @@ struct ControlOptions: View {
                     .labelsHidden()
                 }
                 .frame(minHeight: 44)
+                Rule().padding(.vertical, 4)
+                SkinStyleRows(platformID: game.platformID, game: game)
             }
         }
     }
@@ -123,6 +127,69 @@ struct ControlOptions: View {
                     state.controls.file.orientation[game.id.uuidString] = value.isEmpty ? nil : value
                     OrientationLock.set(value.isEmpty ? nil : value)
                 })
+    }
+}
+
+/// Skin Style for a system and, with a game, that game's own choice, plus the device skin's colour. Default is
+/// Classic. Device skins are fixed layouts: the layout editor changes the Classic skin only.
+struct SkinStyleRows: View {
+    @EnvironmentObject private var state: AppState
+    let platformID: String
+    var game: GameItem?
+
+    /// The game's choice; empty is the system's.
+    private static let sameAsSystem = ""
+
+    var body: some View {
+        if TouchSkinEngine.hasDevice(platformID) {
+            VStack(alignment: .leading, spacing: 0) {
+                row(game == nil ? "Skin Style" : "Skin Style, This System", selection: style("platform:\(platformID)", fallback: SkinStyle.classic.rawValue)) {
+                    ForEach(SkinStyle.allCases) { Text($0.title).tag($0.rawValue) }
+                }
+                if let game {
+                    row("Skin Style, This Game", selection: style("game:\(game.id.uuidString)", fallback: Self.sameAsSystem)) {
+                        Text("Same as System").tag(Self.sameAsSystem)
+                        ForEach(SkinStyle.allCases) { Text($0.title).tag($0.rawValue) }
+                    }
+                }
+                if usesDevice {
+                    row("Skin Colour", selection: colour) {
+                        Text("Standard").tag("")
+                        ForEach(TouchSkinEngine.deviceVariants(platformID), id: \.self) { Text($0).tag($0) }
+                    }
+                    Text("Device skins are fixed layouts. The layout editor changes the Classic skin.")
+                        .font(.footnote).foregroundStyle(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    /// The colour row shows while this system or this game uses Device.
+    private var usesDevice: Bool {
+        let file = state.controls.file
+        return file.style(platformID: platformID, gameID: nil) == .device
+            || game.map { file.style(platformID: platformID, gameID: $0.id) == .device } == true
+    }
+
+    private func row<Content: View>(_ title: String, selection: Binding<String>, @ViewBuilder content: () -> Content) -> some View {
+        HStack {
+            Text(title)
+            Spacer(minLength: 12)
+            Picker(title, selection: selection, content: content).labelsHidden()
+        }
+        .frame(minHeight: 44)
+    }
+
+    /// Classic and the game's Same as System are stored as no entry.
+    private func style(_ key: String, fallback: String) -> Binding<String> {
+        Binding(get: { state.controls.file.skinStyle[key] ?? fallback },
+                set: { state.controls.file.skinStyle[key] = $0 == fallback || $0.isEmpty ? nil : $0 })
+    }
+
+    private var colour: Binding<String> {
+        Binding(get: { state.controls.file.skinVariant[platformID] ?? "" },
+                set: { state.controls.file.skinVariant[platformID] = $0.isEmpty ? nil : $0 })
     }
 }
 

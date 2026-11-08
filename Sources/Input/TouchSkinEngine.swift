@@ -44,6 +44,145 @@ public final class TouchSkinEngine: ObservableObject {
         var portraitButtons: [Button] = []
         /// Controls may sit over the picture.
         var overlay = false
+        /// A console-style skin's art. Nil for a classic skin.
+        var device: DeviceArt? = nil
+    }
+
+    /// A device skin's art (docs/06 section 3.8): per orientation, the shell and pressed PDFs, the canvas, the screen
+    /// rects and the labels this app draws with the system font. Frames are normalised to the canvas.
+    struct DeviceArt: Equatable {
+        struct Variant: Codable, Equatable { let name, background, fill, ink: String }
+        struct Label: Codable, Equatable {
+            let text: String
+            /// Centre, normalised. `size` is in canvas points.
+            let x, y, size: Double
+            let color: String
+            /// On the shell, so it takes the colourway's ink.
+            var onBody: Bool?
+        }
+        struct Face: Equatable {
+            var canvas: CGSize
+            var screens: [CGRect]
+            var background, pressed, fill, ink: String
+            var variants: [Variant]
+            var labels: [Label]
+        }
+        let folder: URL
+        var landscape: Face
+        var portrait: Face
+        /// The colourway's name, nil for the skin's own.
+        var variant: String?
+
+        /// The orientation's face in the chosen colourway. An unknown name keeps the skin's own.
+        func face(portrait upright: Bool) -> Face {
+            var face = upright ? portrait : landscape
+            if let chosen = face.variants.first(where: { $0.name == variant }) {
+                face.background = chosen.background; face.fill = chosen.fill; face.ink = chosen.ink
+            }
+            return face
+        }
+
+        /// "#RRGGBB" or "#RRGGBBAA" as components 0...1. Nil for anything else.
+        static func rgba(_ hex: String) -> (r: Double, g: Double, b: Double, a: Double)? {
+            let digits = hex.hasPrefix("#") ? hex.dropFirst() : Substring(hex)
+            guard digits.count == 6 || digits.count == 8, let v = UInt32(digits, radix: 16) else { return nil }
+            let full = digits.count == 6 ? v << 8 | 0xFF : v
+            return (Double(full >> 24 & 255) / 255, Double(full >> 16 & 255) / 255, Double(full >> 8 & 255) / 255, Double(full & 255) / 255)
+        }
+
+        /// The canvas fitted inside `size`, centred.
+        static func fitted(_ canvas: CGSize, in size: CGSize) -> CGRect {
+            guard canvas.width > 0, canvas.height > 0, size.width > 0, size.height > 0 else { return .zero }
+            let k = min(size.width / canvas.width, size.height / canvas.height)
+            let w = canvas.width * k, h = canvas.height * k
+            return CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h)
+        }
+
+        /// The picture view's rect, normalised in the canvas: the one screen, or the box round both.
+        static func pictureRect(_ screens: [CGRect]) -> CGRect {
+            screens.dropFirst().reduce(screens.first ?? .zero) { $0.union($1) }
+        }
+
+        /// With two screens, each one's place as a share of `pictureRect`, top first, for the custom screen layout.
+        /// Nil with one screen, which the picture view fills by the scaling choice.
+        static func screenPlaces(_ screens: [CGRect]) -> [CGRect]? {
+            guard screens.count == 2 else { return nil }
+            let box = pictureRect(screens)
+            guard box.width > 0, box.height > 0 else { return nil }
+            return screens.map {
+                CGRect(x: ($0.minX - box.minX) / box.width, y: ($0.minY - box.minY) / box.height,
+                       width: $0.width / box.width, height: $0.height / box.height)
+            }
+        }
+    }
+
+    /// The device skins folder in the app bundle (`Resources/Skins/Device`, a folder reference).
+    static var deviceRoot: URL? { Bundle(for: TouchSkinEngine.self).url(forResource: "Device", withExtension: nil) }
+
+    static func hasDevice(_ platformID: String, root: URL? = deviceRoot) -> Bool {
+        guard let root else { return false }
+        return FileManager.default.fileExists(atPath: root.appendingPathComponent("\(platformID)/landscape.json").path)
+    }
+
+    /// The colourway names of a platform's device skin, without its own.
+    static func deviceVariants(_ platformID: String, root: URL? = deviceRoot) -> [String] {
+        guard let url = root?.appendingPathComponent("\(platformID)/landscape.json"),
+              let file = try? JSONDecoder().decode(DeviceFile.self, from: Data(contentsOf: url)) else { return [] }
+        return file.variants.map(\.name)
+    }
+
+    /// Loads a platform's device skin in both orientations, in the colourway `variant` (nil for its own).
+    func loadDevice(platformID: String, variant: String?, root: URL? = deviceRoot) throws {
+        guard let root else { throw CocoaError(.fileNoSuchFile) }
+        var loaded = try Self.decodeDevice(folder: root.appendingPathComponent(platformID))
+        loaded.device?.variant = variant
+        opacity = 1
+        skin = loaded
+    }
+
+    /// Both orientations' JSON as one skin. Buttons go through the flex decoder; each `analog` frame becomes a
+    /// stick element, and the C buttons are the ids `cPush` knows, with mask 0.
+    static func decodeDevice(folder: URL) throws -> Skin {
+        func face(_ name: String) throws -> (buttons: [Button], face: DeviceArt.Face, name: String) {
+            let data = try Data(contentsOf: folder.appendingPathComponent("\(name).json"))
+            let file = try JSONDecoder().decode(DeviceFile.self, from: data)
+            guard file.theme == "device", file.canvas.width > 0, file.canvas.height > 0, !file.screens.isEmpty else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            let sticks = (file.analog ?? []).map {
+                Button(id: $0.id, frame: $0.frame.rect, mask: 0, asset: nil, shape: .stick)
+            }
+            let buttons = try decodeFlex(data, id: name).buttons + sticks
+            return (buttons, DeviceArt.Face(canvas: CGSize(width: file.canvas.width, height: file.canvas.height),
+                                            screens: file.screens.map(\.rect), background: file.background,
+                                            pressed: file.pressed, fill: file.fill, ink: file.ink,
+                                            variants: file.variants, labels: file.labels), file.name)
+        }
+        let land = try face("landscape"), upright = try face("portrait")
+        return Skin(id: "device", name: land.name, format: .flex, buttons: land.buttons, opacity: 1, scale: 1,
+                    landscape: true, assets: [:], svg: nil, portraitButtons: upright.buttons, overlay: true,
+                    device: DeviceArt(folder: folder, landscape: land.face, portrait: upright.face, variant: nil))
+    }
+
+    /// The frames to show from the pressed PDF for the held buttons. A hidden diagonal shows the directions in its
+    /// mask. Sticks are drawn apart, moved with the stick.
+    static func pressedFrames(held: Set<String>, in buttons: [Button]) -> [CGRect] {
+        let shown = buttons.filter { $0.shape != .hidden && $0.shape != .stick }
+        return buttons.filter { held.contains($0.id) && $0.shape != .stick }.flatMap { button -> [CGRect] in
+            guard button.shape == .hidden else { return [button.frame] }
+            return shown.filter { $0.mask != 0 && $0.mask & ~button.mask == 0 }.map(\.frame)
+        }
+    }
+
+    /// The smallest phone's whole screen in points, landscape (iPhone 17e). A device skin is fitted to the whole
+    /// screen, not the safe area, so its 44pt check uses this.
+    static let smallestScreen = CGSize(width: 844, height: 390)
+
+    /// A device skin's problems: on the screen, 44pt on the smallest phone with its canvas fitted there, unique
+    /// ids and no overlaps. Its buttons may sit anywhere outside its screens, so the side-band check is skipped.
+    static func deviceProblems(_ buttons: [Button], canvas: CGSize, portrait: Bool) -> [String] {
+        let screen = portrait ? CGSize(width: smallestScreen.height, height: smallestScreen.width) : smallestScreen
+        return problems(in: buttons, portrait: portrait, overlay: true, canvas: DeviceArt.fitted(canvas, in: screen).size)
     }
 
     @Published public private(set) var skin: Skin?
@@ -206,10 +345,11 @@ public final class TouchSkinEngine: ObservableObject {
     /// Why a touch layout cannot be used, empty when it can: every button inside the canvas and, unless `overlay`,
     /// outside the picture (the left and right `controlBand`, or below `portraitControlTop` upright), at least 44pt on
     /// the smallest phone, ids unique, and no two buttons overlapping.
-    static func problems(in buttons: [Button], portrait: Bool = false, overlay: Bool = false) -> [String] {
+    /// `canvas` replaces the smallest phone's safe canvas for the 44pt check.
+    static func problems(in buttons: [Button], portrait: Bool = false, overlay: Bool = false, canvas size: CGSize? = nil) -> [String] {
         var found: [String] = []
         let band = controlBand
-        let canvas = portrait ? smallestPortraitCanvas : smallestCanvas
+        let canvas = size ?? (portrait ? smallestPortraitCanvas : smallestCanvas)
         for button in buttons {
             let name = label(for: button).spoken
             let frame = button.frame
@@ -349,7 +489,8 @@ public final class TouchSkinEngine: ObservableObject {
     }
 
     private func scaled(_ frame: CGRect) -> CGRect {
-        let factor = CGFloat(scale)
+        // A device skin's buttons are drawn in the art, so touch keeps the drawn size.
+        let factor = skin?.device == nil ? CGFloat(scale) : 1
         let grown = CGRect(x: frame.midX - frame.width * factor / 2,
                            y: frame.midY - frame.height * factor / 2,
                            width: frame.width * factor, height: frame.height * factor)
@@ -659,6 +800,20 @@ private struct FlexSkin: Codable {
         var label: Bool?
         var deadzone: Double?
     }
+}
+
+/// The device fields of a device skin JSON. Its buttons are read by the flex decoder.
+private struct DeviceFile: Decodable {
+    let name: String
+    let theme: String
+    let canvas: Size
+    let screens: [Frame]
+    let background, pressed, fill, ink: String
+    let variants: [TouchSkinEngine.DeviceArt.Variant]
+    let labels: [TouchSkinEngine.DeviceArt.Label]
+    let analog: [Stick]?
+    struct Size: Decodable { let width, height: Double }
+    struct Stick: Decodable { let id: String; let frame: Frame }
 }
 
 private struct Frame: Codable {
