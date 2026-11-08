@@ -496,7 +496,8 @@ final class ControlsTests: GagaTestCase {
         try await session.prepare()
         session.run()
         defer { session.stop() }
-        session.applyActions(perPort: [[], [.turbo(b.south, toggle: false)]])
+        // A toggle, since each frame samples the controllers again and a held turbo ends with no pad holding it.
+        session.applyActions(perPort: [[], [.turbo(b.south, toggle: true)]])
         var seen = Set<Bool>()
         let deadline = Date().addingTimeInterval(5)
         while seen.count < 2, Date() < deadline {
