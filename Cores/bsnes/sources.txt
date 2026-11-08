@@ -3,7 +3,7 @@ BsnesSupport.cpp
 libco.c
 ../shared/LibretroAdapter.c
 upstream/bsnes/target-libretro/libretro.cpp
-upstream/bsnes/target-libretro/program.cpp
+BsnesProgramGaga.cpp
 upstream/bsnes/emulator/emulator.cpp
 upstream/bsnes/lzma/lzma.cpp
 upstream/bsnes/sfc/interface/interface.cpp
