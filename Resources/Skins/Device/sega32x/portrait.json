@@ -1,0 +1,237 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.30790000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "select",
+      "input" : "select",
+      "mask" : 8192,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.51149999999999995,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.57750000000000001
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.69479999999999997
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.63619999999999999
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.63619999999999999
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.57750000000000001
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.57750000000000001
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.69479999999999997
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.69479999999999997
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.53939999999999999,
+        "y" : 0.59860000000000002
+      },
+      "id" : "l",
+      "input" : "l",
+      "mask" : 256,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.67679999999999996,
+        "y" : 0.59860000000000002
+      },
+      "id" : "north",
+      "input" : "north",
+      "mask" : 128,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.81420000000000003,
+        "y" : 0.59860000000000002
+      },
+      "id" : "r",
+      "input" : "r",
+      "mask" : 512,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.51910000000000001,
+        "y" : 0.66900000000000004
+      },
+      "id" : "west",
+      "input" : "west",
+      "mask" : 64,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.65649999999999997,
+        "y" : 0.66900000000000004
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.79390000000000005,
+        "y" : 0.66900000000000004
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#0B0B0E",
+  "landscape" : false,
+  "name" : "Six Button Pad Plus",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.30399999999999999,
+    "width" : 0.87280000000000002,
+    "x" : 0.063600000000000004,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "sega32x",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.2969,
+      "width" : 0.85750000000000004,
+      "x" : 0.071199999999999999,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-light-grey.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Light Grey"
+    },
+    {
+      "background" : "portrait-shell-grape.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Grape"
+    }
+  ]
+}

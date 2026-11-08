@@ -1,0 +1,189 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.20610000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "select",
+      "input" : "select",
+      "mask" : 8192,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.40970000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.61319999999999997,
+        "y" : 0.90139999999999998
+      },
+      "id" : "l3",
+      "input" : "l3",
+      "mask" : 16384,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.19850000000000001,
+        "y" : 0.60329999999999995
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.19850000000000001,
+        "y" : 0.72540000000000004
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.066199999999999995,
+        "y" : 0.6643
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.33079999999999998,
+        "y" : 0.6643
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.066199999999999995,
+        "y" : 0.60329999999999995
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.33079999999999998,
+        "y" : 0.60329999999999995
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.066199999999999995,
+        "y" : 0.72540000000000004
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.060999999999999999,
+        "width" : 0.1323,
+        "x" : 0.33079999999999998,
+        "y" : 0.72540000000000004
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.093899999999999997,
+        "width" : 0.2036,
+        "x" : 0.63360000000000005,
+        "y" : 0.64790000000000003
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#0B0B0E",
+  "landscape" : false,
+  "name" : "Home Computer 8-bit",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.30399999999999999,
+    "width" : 0.87280000000000002,
+    "x" : 0.063600000000000004,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "atari8bit",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.2969,
+      "width" : 0.85750000000000004,
+      "x" : 0.071199999999999999,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-grape.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Grape"
+    },
+    {
+      "background" : "portrait-shell-sunflower.pdf",
+      "fill" : "#0B0B0E",
+      "name" : "Sunflower"
+    }
+  ]
+}

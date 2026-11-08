@@ -1,0 +1,177 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "landscape-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.084500000000000006,
+        "x" : 0.0751,
+        "y" : 0.84219999999999995
+      },
+      "id" : "select",
+      "input" : "select",
+      "mask" : 8192,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.12720000000000001,
+        "width" : 0.084500000000000006,
+        "x" : 0.16900000000000001,
+        "y" : 0.84219999999999995
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.1338,
+        "y" : 0.22900000000000001
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.1338,
+        "y" : 0.49359999999999998
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.072800000000000004,
+        "y" : 0.36130000000000001
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.1948,
+        "y" : 0.36130000000000001
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.072800000000000004,
+        "y" : 0.22900000000000001
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.1948,
+        "y" : 0.22900000000000001
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.072800000000000004,
+        "y" : 0.49359999999999998
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.1323,
+        "width" : 0.060999999999999999,
+        "x" : 0.1948,
+        "y" : 0.49359999999999998
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.2036,
+        "width" : 0.093899999999999997,
+        "x" : 0.78869999999999996,
+        "y" : 0.39950000000000002
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 393,
+    "width" : 852
+  },
+  "fill" : "#1A1A1A",
+  "landscape" : true,
+  "name" : "Woodgrain Stick",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.68700000000000006,
+    "width" : 0.42020000000000002,
+    "x" : 0.28989999999999999,
+    "y" : 0.14499999999999999
+  },
+  "platform" : "atari2600",
+  "pressed" : "landscape-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.67179999999999995,
+      "width" : 0.41310000000000002,
+      "x" : 0.29339999999999999,
+      "y" : 0.1527
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "landscape-shell-sunflower.pdf",
+      "fill" : "#E3B23C",
+      "name" : "Sunflower"
+    },
+    {
+      "background" : "landscape-shell-ocean.pdf",
+      "fill" : "#2F6C9C",
+      "name" : "Ocean"
+    }
+  ]
+}

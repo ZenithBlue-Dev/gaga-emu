@@ -1,0 +1,201 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.2545,
+        "x" : 0.0407,
+        "y" : 0.37909999999999999
+      },
+      "id" : "l",
+      "input" : "l",
+      "mask" : 256,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.2545,
+        "x" : 0.70479999999999998,
+        "y" : 0.37909999999999999
+      },
+      "id" : "r",
+      "input" : "r",
+      "mask" : 512,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.40970000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.58220000000000005
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.69950000000000001
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.64080000000000004
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.64080000000000004
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.58220000000000005
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.58220000000000005
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.69950000000000001
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.69950000000000001
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.55979999999999996,
+        "y" : 0.65259999999999996
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.74809999999999999,
+        "y" : 0.61270000000000002
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#252527",
+  "landscape" : false,
+  "name" : "Wide Handheld Color",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.2477,
+    "width" : 0.83209999999999995,
+    "x" : 0.084000000000000005,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "lynx",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.24060000000000001,
+      "width" : 0.81679999999999997,
+      "x" : 0.091600000000000001,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-coral.pdf",
+      "fill" : "#D9735F",
+      "name" : "Coral"
+    },
+    {
+      "background" : "portrait-shell-light-grey.pdf",
+      "fill" : "#C6C7CB",
+      "name" : "Light Grey"
+    }
+  ]
+}

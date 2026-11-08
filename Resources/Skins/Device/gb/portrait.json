@@ -1,0 +1,189 @@
+{
+  "analog" : [
+
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.30790000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "select",
+      "input" : "select",
+      "mask" : 8192,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.51149999999999995,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.59740000000000004
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.71479999999999999
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.65610000000000002
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.65610000000000002
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.59740000000000004
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.59740000000000004
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.71479999999999999
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.71479999999999999
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.55979999999999996,
+        "y" : 0.66779999999999995
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.0751,
+        "width" : 0.1628,
+        "x" : 0.74809999999999999,
+        "y" : 0.62790000000000001
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#C8C4BB",
+  "landscape" : false,
+  "name" : "Pocket Classic",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.34620000000000001,
+    "width" : 0.83209999999999995,
+    "x" : 0.084000000000000005,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "gb",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.3392,
+      "width" : 0.81679999999999997,
+      "x" : 0.091600000000000001,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-charcoal.pdf",
+      "fill" : "#2F3034",
+      "name" : "Charcoal"
+    },
+    {
+      "background" : "portrait-shell-grape.pdf",
+      "fill" : "#6A4C9C",
+      "name" : "Grape"
+    }
+  ]
+}

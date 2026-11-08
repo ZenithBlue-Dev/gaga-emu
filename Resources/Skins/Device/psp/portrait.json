@@ -1,0 +1,246 @@
+{
+  "analog" : [
+    {
+      "frame" : {
+        "height" : 0.082199999999999995,
+        "width" : 0.17810000000000001,
+        "x" : 0.17560000000000001,
+        "y" : 0.7077
+      },
+      "id" : "lstick",
+      "input" : "lstick"
+    }
+  ],
+  "background" : "portrait-shell.pdf",
+  "buttons" : [
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.2545,
+        "x" : 0.0407,
+        "y" : 0.35089999999999999
+      },
+      "id" : "l",
+      "input" : "l",
+      "mask" : 256,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.2545,
+        "x" : 0.70479999999999998,
+        "y" : 0.35089999999999999
+      },
+      "id" : "r",
+      "input" : "r",
+      "mask" : 512,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.30790000000000001,
+        "y" : 0.90139999999999998
+      },
+      "id" : "select",
+      "input" : "select",
+      "mask" : 8192,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.1832,
+        "x" : 0.51149999999999995,
+        "y" : 0.90139999999999998
+      },
+      "id" : "start",
+      "input" : "start",
+      "mask" : 4096,
+      "shape" : "rect"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.52229999999999999
+      },
+      "id" : "up",
+      "input" : "up",
+      "mask" : 1,
+      "shape" : "dpup"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.20100000000000001,
+        "y" : 0.63970000000000005
+      },
+      "id" : "down",
+      "input" : "down",
+      "mask" : 2,
+      "shape" : "dpdown"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.58099999999999996
+      },
+      "id" : "left",
+      "input" : "left",
+      "mask" : 4,
+      "shape" : "dpleft"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.58099999999999996
+      },
+      "id" : "right",
+      "input" : "right",
+      "mask" : 8,
+      "shape" : "dpright"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.52229999999999999
+      },
+      "id" : "upleft",
+      "input" : "upleft",
+      "mask" : 5,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.52229999999999999
+      },
+      "id" : "upright",
+      "input" : "upright",
+      "mask" : 9,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.073800000000000004,
+        "y" : 0.63970000000000005
+      },
+      "id" : "downleft",
+      "input" : "downleft",
+      "mask" : 6,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.058700000000000002,
+        "width" : 0.12720000000000001,
+        "x" : 0.32819999999999999,
+        "y" : 0.63970000000000005
+      },
+      "id" : "downright",
+      "input" : "downright",
+      "mask" : 10,
+      "shape" : "hidden"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.66669999999999996,
+        "y" : 0.56100000000000005
+      },
+      "id" : "north",
+      "input" : "north",
+      "mask" : 128,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.80410000000000004,
+        "y" : 0.62439999999999996
+      },
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.66669999999999996,
+        "y" : 0.68779999999999997
+      },
+      "id" : "south",
+      "input" : "south",
+      "mask" : 16,
+      "shape" : "circle"
+    },
+    {
+      "frame" : {
+        "height" : 0.063399999999999998,
+        "width" : 0.13739999999999999,
+        "x" : 0.52929999999999999,
+        "y" : 0.62439999999999996
+      },
+      "id" : "west",
+      "input" : "west",
+      "mask" : 64,
+      "shape" : "circle"
+    }
+  ],
+  "canvas" : {
+    "height" : 852,
+    "width" : 393
+  },
+  "fill" : "#1B1C1F",
+  "landscape" : false,
+  "name" : "Portable Widescreen",
+  "opacity" : 1,
+  "pictureArea" : {
+    "height" : 0.2195,
+    "width" : 0.83209999999999995,
+    "x" : 0.084000000000000005,
+    "y" : 0.085699999999999998
+  },
+  "platform" : "psp",
+  "pressed" : "portrait-pressed.pdf",
+  "screens" : [
+    {
+      "height" : 0.21240000000000001,
+      "width" : 0.81679999999999997,
+      "x" : 0.091600000000000001,
+      "y" : 0.089200000000000002
+    }
+  ],
+  "theme" : "device",
+  "variants" : [
+    {
+      "background" : "portrait-shell-light-grey.pdf",
+      "fill" : "#C6C7CB",
+      "name" : "Light Grey"
+    },
+    {
+      "background" : "portrait-shell-grape.pdf",
+      "fill" : "#6A4C9C",
+      "name" : "Grape"
+    }
+  ]
+}
