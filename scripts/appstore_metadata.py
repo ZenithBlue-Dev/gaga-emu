@@ -45,11 +45,15 @@ FORBIDDEN = [r"play\s*station", r"\bps\s*[1-5]\b", r"\bps\b", r"\bsony\b", r"\bp
              r"\bbios\s+download", r"\bdownload\s+(games|roms|firmware)\b", r"\biso\s+download"]
 # Screenshot folders (AppStore/screenshots/<locale>/<folder>/*.png) and their display types.
 # The 6.7" slot takes the 6.9" sizes (1320 x 2868). The 6.1" slot takes the 6.3" sizes (1206 x 2622), Apple's
-# required "Dynamic Island (medium display)" class. scripts/make_screenshots.swift writes both folders.
-SCREENSHOT_TYPES = {"iphone-6.9": "APP_IPHONE_67", "iphone-6.3": "APP_IPHONE_61"}
+# required "Dynamic Island (medium display)" class. The app runs on iPad, so Apple also requires the 13" iPad class
+# (2064 x 2752, or 2048 x 2732; read 2026-11-08, App Store Connect Help, Screenshot specifications).
+# scripts/make_screenshots.swift writes all three folders.
+# shortcut: APP_IPAD_PRO_3GEN_129 is the API slot believed to hold 13" iPad shots; confirm against the API on first upload.
+SCREENSHOT_TYPES = {"iphone-6.9": "APP_IPHONE_67", "iphone-6.3": "APP_IPHONE_61", "ipad-13": "APP_IPAD_PRO_3GEN_129"}
 SCREENSHOT_SIZES = {"APP_IPHONE_67": {(1320, 2868), (2868, 1320), (1290, 2796), (2796, 1290)},
-                    "APP_IPHONE_61": {(1206, 2622), (2622, 1206), (1179, 2556), (2556, 1179)}}
-MIN_SCREENSHOTS = {"APP_IPHONE_67": 3, "APP_IPHONE_61": 3}
+                    "APP_IPHONE_61": {(1206, 2622), (2622, 1206), (1179, 2556), (2556, 1179)},
+                    "APP_IPAD_PRO_3GEN_129": {(2064, 2752), (2752, 2064), (2048, 2732), (2732, 2048)}}
+MIN_SCREENSHOTS = {"APP_IPHONE_67": 3, "APP_IPHONE_61": 3, "APP_IPAD_PRO_3GEN_129": 3}
 # Guideline 4.7: the listing must say no games or firmware ship with the app.
 REQUIRED_PHRASES = {"description": [r"does not include", r"legally", r"roms?", r"bios"]}
 

@@ -10,7 +10,9 @@
 // Sizes: Apple, "Screenshot specifications", App Store Connect Help, read 2026-11-08:
 // https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications
 // iPhone with Dynamic Island (large display), 2868 x 1320 landscape, and (medium display), 2622 x 1206
-// landscape. Apple lists the medium class as the required one. The folders match scripts/appstore_metadata.py.
+// landscape. Apple lists the medium class as the required one. iPad 13-inch display (required because the app runs
+// on iPad), 2752 x 2064 landscape (2732 x 2048 is also accepted), read 2026-11-08 on the same page.
+// The folders match scripts/appstore_metadata.py.
 //
 // Placeholders draw this app's own screens from its tokens and labels, with the picture of the repo's homebrew
 // GBATestROM (Sources/Debug/GBATestROM.swift). Replace them with real captures before release.
@@ -20,7 +22,8 @@ import UniformTypeIdentifiers
 
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
 let store = root.appendingPathComponent("design/store")
-let classes = [(folder: "iphone-6.9", w: 2868, h: 1320), (folder: "iphone-6.3", w: 2622, h: 1206)]
+let classes = [(folder: "iphone-6.9", w: 2868, h: 1320), (folder: "iphone-6.3", w: 2622, h: 1206),
+               (folder: "ipad-13", w: 2752, h: 2064)]
 
 func hex(_ v: UInt32) -> NSColor {
     NSColor(srgbRed: CGFloat(v >> 16 & 255) / 255, green: CGFloat(v >> 8 & 255) / 255, blue: CGFloat(v & 255) / 255, alpha: 1)
@@ -296,7 +299,7 @@ func compose(_ capture: CGImage, caption: String, w: Int, h: Int) -> CGImage {
         // The capture, aspect fit under the header, with the phone's rounded corners and a hairline.
         let area = CGRect(x: margin, y: top + side + 56 * u, width: W - 2 * margin, height: H - (top + side + 56 * u) - 72 * u)
         let cw = CGFloat(capture.width), ch = CGFloat(capture.height), k = min(area.width / cw, area.height / ch)
-        let r = CGRect(x: area.midX - cw * k / 2, y: area.minY, width: cw * k, height: ch * k)
+        let r = CGRect(x: area.midX - cw * k / 2, y: area.midY - ch * k / 2, width: cw * k, height: ch * k)
         let corner = r.height * 0.13
         NSGraphicsContext.saveGraphicsState()
         NSBezierPath(roundedRect: r, xRadius: corner, yRadius: corner).addClip()
