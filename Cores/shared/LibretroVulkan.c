@@ -64,6 +64,7 @@ typedef struct {
     VkImage shot;
     VkDeviceMemory shot_memory;
     VkExtent2D shot_extent;
+    LrVkImage described; // The core image last logged: a new size, format or layout is logged once.
 
     void* layer;
     uint32_t layer_width, layer_height; // Asked for before the device existed, or for a rebuild.
@@ -673,6 +674,12 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
     if (show) {
         image.width = width;
         image.height = height;
+        if (image.width != s_vk.described.width || image.height != s_vk.described.height ||
+            image.format != s_vk.described.format || image.layout != s_vk.described.layout) {
+            lr_vk_log("[gaga-vk] core image %ux%u format %d layout %d, %u semaphores\n", image.width, image.height,
+                      (int)image.format, (int)image.layout, image_wait_count);
+            s_vk.described = image;
+        }
         // The core's image is read once, into the shot, and the screen is drawn from that.
         const LrVkImage* source = &image;
         if (shot) {
@@ -822,6 +829,11 @@ bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity
     memcpy(pixels, mapped, bytes);
     vkUnmapMemory(device, buffer_memory);
     ok = true;
+    // An all-black copy of a frame the core drew black looks like a broken read back (PPSSPP, device runs 9, 10).
+    size_t lit = 0;
+    for (size_t i = 0; i < bytes; i += 4) lit += (((const uint8_t*)pixels)[i] | ((const uint8_t*)pixels)[i + 1] | ((const uint8_t*)pixels)[i + 2]) != 0;
+    lr_vk_log("[gaga-vk] read back %ux%u B8G8R8A8 from core format %d, %zu of %zu pixels not black\n", src.width, src.height,
+              (int)s_vk.described.format, lit, bytes / 4);
 
 done:
     if (!ok) lr_vk_log("[gaga-vk] read back %ux%u failed at %s\n", src.width, src.height, step);
