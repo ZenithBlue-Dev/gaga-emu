@@ -2,30 +2,38 @@
 # No-JIT gate (docs/04 section 8). A non-zero exit fails the build. iOS itself denies JIT (W^X and no
 # public entitlement); this gate catches a core that would depend on it, before it crashes on a device.
 #
-#   nojit-gate.sh <binary or object> [forbidden-strings-regex]   one core binary
+#   nojit-gate.sh <binary or object> [strings-regex] [extra-forbidden-imports] [allowed-imports]   one core binary
 #   nojit-gate.sh --entitlements <plist>                         refuses JIT entitlement keys
 #   nojit-gate.sh --app <App.app> <entitlements plist>           Xcode build step: everything in a built app,
 #                                                                plus the boot ROM gate on each embedded framework
 #   nojit-gate.sh --release-set "<core ids>"                     refuses a release set with a non-commercial core
 #   nojit-gate.sh --release-app <App.app>                        refuses an app that embeds a non-commercial core
+#   nojit-gate.sh --release-ipa <App.ipa>                        unzips an exported IPA: signed entitlements (no
+#                                                                get-task-allow, no JIT key), release cores, imports
+#   nojit-gate.sh --archive-set "<core ids>"                     release set that is inside GAGA_RELEASE_SET (mgba)
 #   nojit-gate.sh --sideload-app <App.app>                       refuses a sideload app that links StoreKit
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 default_strings='asmjit::JitRuntime'
 # Same list as S3/scripts/ios/build-core.sh:46.
-code_gen_imports='_pthread_jit_write_protect_np|_sys_icache_invalidate|___clear_cache|_mach_vm_protect|_vm_protect$'
-jit_entitlements='allow-jit|allow-unsigned-executable-memory|disable-executable-page-protection|dynamic-codesigning'
+code_gen_imports='_pthread_jit_write_protect_np|_pthread_jit_write_with_callback_np|_sys_icache_invalidate|_sys_dcache_flush|___clear_cache|_mach_vm_protect|_vm_protect$|_mach_vm_remap|_vm_remap$'
+# get-task-allow is in the source plist's refusal list: Xcode adds it when it signs a development build, never the plist.
+jit_entitlements='allow-jit|allow-unsigned-executable-memory|disable-executable-page-protection|dynamic-codesigning|get-task-allow'
 
+# Third and fourth arguments: the core's FORBIDDEN_IMPORTS (extra refused imports) and ALLOWED_IMPORTS (reviewed
+# exceptions to code_gen_imports, a regex per core in its core.env, with the reason beside it).
 check_binary() {
-    local binary=$1 strings_regex=${2:-$default_strings} imports contents found
+    local binary=$1 strings_regex=${2:-$default_strings} extra=${3:-} allowed=${4:-} imports contents found
     # A file the tools cannot read must fail, not pass with nothing found.
     if ! imports=$(nm -u "$binary") || ! contents=$(strings -a "$binary"); then
         echo "no-JIT gate: cannot read $binary" >&2
         return 1
     fi
-    if found=$(grep -E "$code_gen_imports" <<<"$imports"); then
-        echo "no-JIT gate: $binary imports a code-generation API: $found" >&2
+    found=$(grep -E "$code_gen_imports${extra:+|$extra}" <<<"$imports" || true)
+    [ -z "$allowed" ] || found=$(grep -vE "$allowed" <<<"$found" || true)
+    if [ -n "$found" ]; then
+        echo "no-JIT gate: $binary imports a code-generation or refused API: $found" >&2
         return 1
     fi
     if found=$(grep -E "$strings_regex" <<<"$contents"); then
@@ -44,17 +52,44 @@ check_entitlements() {
     echo "no-JIT gate: pass $(basename "$1")"
 }
 
-# A framework without a core.env is not a core. XCTest ships in test builds, and anything else gets the default list.
-strings_for_framework() {
+# A core.env variable of the core that builds framework $1 (empty if unset). A framework without a core.env is
+# not a core: XCTest ships in test builds, and anything else gets the default lists.
+core_var() {
     local env
     for env in "$root"/Cores/*/core.env; do
         if grep -qx "CORE_FRAMEWORK=$1" "$env"; then
             # shellcheck source=/dev/null
-            (source "$env" && echo "$FORBIDDEN_STRINGS")
+            (source "$env" && eval "echo \"\${$2:-}\"")
             return
         fi
     done
-    echo "$default_strings"
+}
+
+# One embedded core: its strings, plus the same FORBIDDEN_IMPORTS as build-core.sh, so a stale framework in
+# DerivedData cannot skip them.
+check_core_binary() {
+    check_binary "$2" "$(core_var "$1" FORBIDDEN_STRINGS)" "$(core_var "$1" FORBIDDEN_IMPORTS)" "$(core_var "$1" ALLOWED_IMPORTS)"
+}
+
+# Entitlements of the signed product (codesign), not the source plist. An unsigned app has none to read.
+# $2 = strict: also refuse get-task-allow (a distribution build never has it) and refuse an unsigned app.
+check_signed_entitlements() {
+    local ents flat
+    if ! ents=$(codesign -d --entitlements :- "$1" 2>/dev/null); then
+        [ "${2:-}" != strict ] || { echo "release gate: $1 is not signed" >&2; return 1; }
+        echo "release gate: $(basename "$1") is unsigned, signed entitlements not checked"
+        return 0
+    fi
+    flat=$(tr -d ' \n\t' <<<"$ents")
+    if grep -oE 'allow-jit|allow-unsigned-executable-memory|disable-executable-page-protection|dynamic-codesigning' <<<"$flat"; then
+        echo "release gate: $1 is signed with a JIT entitlement" >&2
+        return 1
+    fi
+    if [ "${2:-}" = strict ] && grep -q 'get-task-allow</key><true/>' <<<"$flat"; then
+        echo "release gate: $1 is signed with get-task-allow, a development build" >&2
+        return 1
+    fi
+    echo "release gate: pass signed entitlements of $(basename "$1")"
 }
 
 # Legal gate for non-commercial licences (docs/03 section 5): snes9x, Genesis Plus GX, PicoDrive and FBNeo
@@ -86,6 +121,47 @@ check_release_set() {
     echo "release gate: pass $1"
 }
 
+# An archive's core set: a valid release set that stays inside the cores cleared for release (GAGA_RELEASE_SET,
+# default mgba, the MPL-only set). Run by the app build step on any Release archive, Organizer ones included.
+check_archive_set() {
+    local core release=${GAGA_RELEASE_SET:-mgba}
+    check_release_set "$1" || return 1
+    for core in $1; do
+        if [[ " $release " != *" $core "* ]]; then
+            echo "release gate: $core is outside the release set ($release). Regenerate with GAGA_CORE_SET=\"$release\"." >&2
+            return 1
+        fi
+    done
+}
+# An exported IPA: unzip it, then check the signed app the way a store build must be.
+check_release_ipa() {
+    local tmp app rc=0
+    tmp=$(mktemp -d)
+    unzip -q "$1" -d "$tmp" || { rm -rf "$tmp"; echo "release gate: cannot unzip $1" >&2; return 1; }
+    app=$(ls -d "$tmp"/Payload/*.app 2>/dev/null | head -n 1)
+    if [ -z "$app" ]; then
+        echo "release gate: $1 has no Payload/*.app" >&2
+        rc=1
+    else
+        check_ipa_app "$app" || rc=1
+    fi
+    rm -rf "$tmp"
+    return $rc
+}
+
+# `|| return 1` on each line: inside a `||` caller, set -e is off and only the last status would count.
+check_ipa_app() {
+    local framework name
+    check_signed_entitlements "$1" strict || return 1
+    check_release_app "$1" || return 1
+    check_binary "$1/$(basename "$1" .app)" || return 1
+    for framework in "$1"/Frameworks/*.framework; do
+        [ -d "$framework" ] || continue
+        name=$(basename "$framework" .framework)
+        check_core_binary "$name" "$framework/$name" || return 1
+    done
+}
+
 # A built release app (an archive's): no non-commercial core framework and no debug core inside it.
 check_release_app() {
     local framework core
@@ -101,6 +177,7 @@ check_release_app() {
             return 1
         fi
     done
+    check_signed_entitlements "$1"
     echo "release gate: pass $(basename "$1")"
 }
 
@@ -137,6 +214,11 @@ check_app() {
     if [ "${GAGA_RELEASE:-}" = 1 ] || [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" PAYWALL_ENABLED "* ]]; then
         check_release_app "$app"
     fi
+    # Any Release archive, Organizer's too (Xcode sets ACTION=install), must use the release core set.
+    if [ "${ACTION:-}" = install ] && [ "${CONFIGURATION:-}" = Release ] && [ "${GAGA_SIDELOAD:-}" != 1 ]; then
+        check_archive_set "${GAGA_CORE_SET:-}"
+        check_release_app "$app"
+    fi
     for env in "$root"/Cores/*/core.env; do
         # shellcheck source=/dev/null
         name=$(source "$env" && echo "$CORE_FRAMEWORK")
@@ -160,7 +242,7 @@ check_app() {
         [ -d "$framework" ] || continue
         name=$(basename "$framework" .framework)
         case "$name" in XC* | Testing) continue ;; esac
-        check_binary "$framework/$name" "$(strings_for_framework "$name")"
+        check_core_binary "$name" "$framework/$name"
         # A stale core framework in DerivedData skips build-core.sh's own boot ROM check (docs/07, JGenesis 32X).
         python3 -I "$root/scripts/bootrom-gate.py" "$framework/$name"
         # Read whole, not piped into grep -q: with pipefail an early grep exit fails the pipe and hides a hit.
@@ -200,7 +282,9 @@ case "${1:-}" in
     --app) check_app "${2:?usage: nojit-gate.sh --app <App.app> <plist>}" "${3:?usage: nojit-gate.sh --app <App.app> <plist>}" ;;
     --release-set) check_release_set "${2:-}" ;;
     --release-app) check_release_app "${2:?usage: nojit-gate.sh --release-app <App.app>}" ;;
+    --release-ipa) check_release_ipa "${2:?usage: nojit-gate.sh --release-ipa <App.ipa>}" ;;
+    --archive-set) check_archive_set "${2:-}" ;;
     --sideload-app) check_sideload_app "${2:?usage: nojit-gate.sh --sideload-app <App.app>}" ;;
     "") echo "usage: nojit-gate.sh <binary> [strings-regex]" >&2; exit 2 ;;
-    *) check_binary "$1" "${2:-$default_strings}" ;;
+    *) check_binary "$1" "${2:-$default_strings}" "${3:-}" "${4:-}" ;;
 esac
