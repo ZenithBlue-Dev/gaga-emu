@@ -26,7 +26,7 @@ final class LibraryLayoutTests: XCTestCase {
 
     func testBeforeTheFirstMeasureTheMinimumsHold() {
         XCTAssertEqual(LibraryMetrics(width: 0, compact: true), LibraryMetrics(width: 1, compact: true))
-        XCTAssertEqual(LibraryMetrics(width: 0, compact: true).panel, 180)
+        XCTAssertEqual(LibraryMetrics(width: 0, compact: true).panel, 200)
         XCTAssertEqual(LibraryMetrics(width: 0, compact: true).search, 130)
     }
 }

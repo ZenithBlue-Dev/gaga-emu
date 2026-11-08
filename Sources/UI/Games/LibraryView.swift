@@ -250,7 +250,7 @@ struct LibraryView: View {
     }
 
     private func tile(_ game: GameItem) -> some View {
-        let width = (compact ? 90 : 140) * min(tileScale, 1.8)
+        let width = (compact ? 120 : 140) * min(tileScale, 1.8)
         return Button { state.launch(game) } label: {
             VStack(alignment: .leading, spacing: 4) {
                 CoverArt(game: game, width: width)
@@ -399,7 +399,8 @@ struct LibraryMetrics: Equatable {
     var search: CGFloat
 
     init(width: CGFloat, compact: Bool) {
-        panel = min(max(width * 0.27, compact ? 180 : 220), 300)
+        // 200pt in landscape: a 13-letter title in the serif title face fits one line once the 16pt padding is off.
+        panel = min(max(width * 0.27, compact ? 200 : 220), 300)
         search = min(max(width * 0.2, 130), 260)
     }
 }
