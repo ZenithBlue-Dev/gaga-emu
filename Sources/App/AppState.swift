@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import Foundation
 import Compression
 import UniformTypeIdentifiers
@@ -1029,6 +1030,9 @@ final class AppState: ObservableObject {
     var romDirectory: URL
     /// Custom touch layouts from the skin editor, one flex skin per platform ID.
     let skinDirectory: URL
+    /// Scaling and two-screen layouts per system and per game, in ScreenLayouts.json beside Skins.
+    let screens: ScreenLayoutStore
+    private var screensChanged: AnyCancellable?
     private let storeURL: URL
 
     struct Snapshot: Codable {
@@ -1070,6 +1074,7 @@ final class AppState: ObservableObject {
         romDirectory = root.appendingPathComponent("ROMs", isDirectory: true)
         storeURL = root.appendingPathComponent("state.json")
         skinDirectory = root.appendingPathComponent("Skins", isDirectory: true)
+        screens = ScreenLayoutStore(url: root.appendingPathComponent("ScreenLayouts.json"))
         wifi = WiFiTransferServer(romDirectory: romDirectory)
         filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
         let documents = Self.rootOverride.map { $0.appendingPathComponent("Documents", isDirectory: true) }
@@ -1103,6 +1108,8 @@ final class AppState: ObservableObject {
         skins.loadDefault()
         if Self.rootOverride != nil { systemDirectory = root.appendingPathComponent("System", isDirectory: true) }
         if migrated != nil { save() }
+        // Views that read a layout through AppState redraw when one changes.
+        screensChanged = screens.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         wifi.onUploaded = { [weak self] names in
             Task { @MainActor in await self?.addUploads(names) }
         }
@@ -1488,6 +1495,12 @@ final class AppState: ObservableObject {
         session.autoSaveEnabled = { [weak self] in self?.autoSaveEnabled ?? false }
         session.rewindEnabled = rewind
         session.renderer.apply(shaderParameters[shader] ?? ShaderParameterValues())
+        session.screen = screens.settings(platformID: game.platformID, gameID: game.id)
+        // Saved where it came from: the game's own choice while it has one, else its system's.
+        session.onScreenChange = { [weak self, id = game.id, platform = game.platformID] settings in
+            guard let self else { return }
+            screens.save(settings, platformID: platform, gameID: screens.hasOverride(id) ? id : nil)
+        }
         return session
     }
 

@@ -236,12 +236,16 @@ private struct LibraryPane: View {
 private struct GraphicsPane: View {
     @EnvironmentObject private var state: AppState
     @State private var showFilters = false
+    @State private var showScreen = false
 
     var body: some View {
         ActionRow(title: "Default Filter", value: ShaderCatalog.all.first { $0.id == state.shaderID }?.name
                   ?? state.filters.name(of: state.shaderID) ?? "Original") {
             showFilters = true
         }
+        Rule()
+        ActionRow(title: "Screen", value: "Scaling and layouts") { showScreen = true }
+            .sheet(isPresented: $showScreen) { ScreenSettingsView(store: state.screens) }
         Rule()
         // AirPlay Fullscreen (ExternalDisplay.swift) stays hidden until it is checked on a real second screen:
         // this Xcode has no Simulator app, so no external display could be attached (docs/07 milestone 3.11).

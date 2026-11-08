@@ -192,6 +192,51 @@ final class MelonDSCoreTests: GagaTestCase {
         XCTAssertNil(GameSession.libretroPointer(CGPoint(x: 900, y: 150), bounds: bounds, content: content), "letterbox")
     }
 
+    /// Device pending (docs/07 5.7): the frame melonDS DS sends with GagaEmu's options is the arrangement
+    /// ScreenLayout cuts, top screen left and bottom screen right with no gap.
+    func testTheFrameIsTheArrangementScreenLayoutCuts() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        let regions = try XCTUnwrap(ScreenLayout.regions(platformID: "nds", frame: CGSize(width: capture.width, height: capture.height)))
+        XCTAssertEqual(regions.map(\.pixels), [CGSize(width: NDSTestROM.screenWidth, height: NDSTestROM.screenHeight),
+                                               CGSize(width: NDSTestROM.screenWidth, height: NDSTestROM.screenHeight)])
+        for region in regions {
+            let left = Int(region.rect.minX * CGFloat(capture.width))
+            for (x, y) in [(0, 0), (region.pixels.width - 1, 0), (0, region.pixels.height - 1), (region.pixels.width / 2, region.pixels.height / 2)] {
+                let fx = left + Int(x), fy = Int(y)
+                XCTAssertEqual(capture.pixel(x: fx, y: fy), NDSTestROM.expectedColor(x: fx, y: fy, keys: 0, toggle: false, cheat: false, touch: nil),
+                               "\(region.id) screen at (\(fx), \(fy))")
+            }
+        }
+        core.stop()
+    }
+
+    /// Device pending (docs/07 5.7): a finger on the bottom screen drawn stacked, smaller, swapped and turned
+    /// still reaches the core under the finger.
+    func testAFingerOnAPlacedBottomScreenLandsUnderIt() async throws {
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        var settings = ScreenSettings()
+        settings.preset = .largeTop
+        settings.swapped = true
+        settings.rotation = .left
+        let placements = ScreenLayout.placements(frame: CGSize(width: NDSTestROM.frameWidth, height: NDSTestROM.screenHeight),
+                                                 canvas: CGSize(width: 2556, height: 1179), platformID: "nds", settings: settings)
+        let bottom = try XCTUnwrap(placements.first { $0.id == .bottom })
+        let touch = (x: 100, y: 50)
+        // Where that pixel's centre is drawn: Turn Left shows source (sx, sy) at (sy, 1 - sx).
+        let sx = (Double(touch.x) + 0.5) / Double(NDSTestROM.screenWidth), sy = (Double(touch.y) + 0.5) / Double(NDSTestROM.screenHeight)
+        let finger = CGPoint(x: bottom.dest.minX + sy * bottom.dest.width, y: bottom.dest.minY + (1 - sx) * bottom.dest.height)
+        let pointer = try XCTUnwrap(ScreenLayout.pointer(at: finger, placements: placements))
+        var input = GagaInputState()
+        input.pointer_x = pointer.x
+        input.pointer_y = pointer.y
+        input.pointer_down = true
+        for _ in 0..<4 { core.step(inputs: [input]) }
+        assertPicture(capture, touch: touch)
+        core.stop()
+    }
+
     func testAudioIsTheExpectedTone() async throws {
         let (core, capture) = try await loaded()
         run(core, frames: 120)

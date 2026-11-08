@@ -15,7 +15,10 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let reserveBands = touchVisible || !state.autoFullScreen
+            // Between Controls keeps the picture out of the bands (and the safe area beside them); Full Screen and a
+            // custom two-screen layout use the whole display, under the controls.
+            let custom = session.isDualScreen && session.screen.preset == .custom
+            let reserveBands = (touchVisible || !state.autoFullScreen) && session.screen.area == .betweenControls && !custom
             ZStack(alignment: .topLeading) {
                 if external.showsPicture {
                     Text("The picture is on the other screen.")
@@ -26,7 +29,7 @@ struct GameView: View {
                 } else {
                     GamePicture(session: session, takesTouch: true)
                         .padding(.horizontal, reserveBands ? geometry.size.width * TouchSkinEngine.controlBand : 0)
-                        .ignoresSafeArea(edges: .vertical)
+                        .ignoresSafeArea(edges: reserveBands ? .vertical : .all)
                         .accessibilityElement()
                         .accessibilityLabel("\(session.game.title), game picture")
                         .accessibilityAddTraits(.isImage)
@@ -35,8 +38,19 @@ struct GameView: View {
                 HStack(spacing: 0) {
                     pauseButton
                     Spacer(minLength: 0)
+                    if session.isDualScreen { swapButton }
                     if session.rewindStatus == .ready { rewindButton }
                     fastForwardButton
+                }
+                if session.touchScreenHidden {
+                    Text("Bottom screen hidden. Touch input is off.")
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.onLetterbox)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(AppTheme.letterbox.opacity(0.7), in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                        .padding(.bottom, 4)
+                        .allowsHitTesting(false)
                 }
             }
         }
@@ -75,6 +89,19 @@ struct GameView: View {
         }
         .opacity(0.8)
         .accessibilityLabel("Pause game")
+    }
+
+    /// Exchanges the two screens, or shows the other one in One Screen.
+    private var swapButton: some View {
+        Button { session.swapScreens() } label: {
+            Image(systemName: "arrow.up.arrow.down.square")
+                .foregroundStyle(AppTheme.onLetterbox)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .opacity(0.8)
+        .accessibilityLabel("Swap screens")
+        .accessibilityHint(session.screen.preset == .single ? "Shows the other screen." : "Exchanges the top and bottom screens.")
     }
 
     /// Rewinds while a finger stays on it. Filled while it runs, with the word, so colour is not the only cue.
@@ -161,7 +188,7 @@ private struct MetalPicture: UIViewRepresentable {
 /// A layer-path core's picture: the core presents to this view's CAMetalLayer itself, so no filter runs.
 /// The core stops stepping while paused, which keeps GPU work out of the background.
 private struct LayerPicture: UIViewRepresentable {
-    let session: GameSession
+    @ObservedObject var session: GameSession
     var takesTouch: Bool
 
     func makeUIView(context: Context) -> MetalLayerView {
@@ -171,23 +198,45 @@ private struct LayerPicture: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: MetalLayerView, context: Context) {}
+    func updateUIView(_ view: MetalLayerView, context: Context) {
+        view.place(content: session.frameSize, scaling: session.screen.scaling)
+    }
 
     static func dismantleUIView(_ view: MetalLayerView, coordinator: ()) { view.detach() }
 }
 
+/// Holds the layer the core presents to, sized and placed by the scaling mode (docs/05 section 2.6). The core
+/// fits its frame in the layer's drawable, so the drawable keeps the frame's shape and Stretch is the layer
+/// drawn at another shape. Zoom's overflow is clipped here.
 final class MetalLayerView: UIView {
-    override class var layerClass: AnyClass { CAMetalLayer.self }
+    private final class Surface: UIView {
+        override class var layerClass: AnyClass { CAMetalLayer.self }
+    }
+
     weak var session: GameSession?
+    private let surface = Surface()
     private var attachedSize: CGSize = .zero
+    private var content: CGSize?
+    private var scaling = ScalingMode.fit
+    private var metalLayer: CAMetalLayer? { surface.layer as? CAMetalLayer }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = UIColor(AppTheme.letterbox)
-        if let layer = layer as? CAMetalLayer { MetalRenderer.configureOutput(layer) }
+        clipsToBounds = true
+        surface.backgroundColor = UIColor(AppTheme.letterbox)
+        addSubview(surface)
+        if let metalLayer { MetalRenderer.configureOutput(metalLayer) }
     }
 
     required init?(coder: NSCoder) { fatalError("Not used from a storyboard") }
+
+    func place(content: CGSize?, scaling: ScalingMode) {
+        guard content != self.content || scaling != self.scaling else { return }
+        self.content = content
+        self.scaling = scaling
+        setNeedsLayout()
+    }
 
     // A rotation between the two landscapes keeps the size, so it needs nothing here.
     override func layoutSubviews() {
@@ -201,19 +250,30 @@ final class MetalLayerView: UIView {
     }
 
     private func attach() {
-        guard let window, let layer = layer as? CAMetalLayer else { return }
+        guard let window, let metalLayer else { return }
         let scale = window.screen.scale
-        contentScaleFactor = scale
-        let pixels = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
+        let canvas = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
+        guard canvas.width > 0, canvas.height > 0 else { return }
+        // Before the first frame the core fits itself in the whole view.
+        let frame = content.map { ScreenLayout.scaledRect(content: $0, canvas: canvas, mode: scaling) } ?? CGRect(origin: .zero, size: canvas)
+        // Stretch: the layer keeps the frame's shape and a transform stretches it, so the drawable always matches
+        // the layer's bounds and MoltenVK never sees a resized surface.
+        let pixels = content.map { scaling == .stretch ? ScreenLayout.scaledRect(content: $0, canvas: frame.size, mode: .fit).size : frame.size }
+            ?? frame.size
+        surface.transform = .identity
+        surface.bounds = CGRect(x: 0, y: 0, width: pixels.width / scale, height: pixels.height / scale)
+        surface.center = CGPoint(x: frame.midX / scale, y: frame.midY / scale)
+        surface.transform = CGAffineTransform(scaleX: frame.width / max(pixels.width, 1), y: frame.height / max(pixels.height, 1))
+        surface.contentScaleFactor = scale
         guard pixels.width > 0, pixels.height > 0, pixels != attachedSize else { return }
         attachedSize = pixels
-        session?.attachLayer(layer, width: Int(pixels.width), height: Int(pixels.height), scale: scale)
+        session?.attachLayer(metalLayer, width: Int(pixels.width), height: Int(pixels.height), scale: scale)
     }
 
     func detach() {
-        guard attachedSize != .zero, let layer = layer as? CAMetalLayer else { return }
+        guard attachedSize != .zero, let metalLayer else { return }
         attachedSize = .zero
-        session?.detachLayer(layer)
+        session?.detachLayer(metalLayer)
     }
 }
 
@@ -336,9 +396,11 @@ final class TouchInputView: UIView {
 private struct PauseMenu: View {
     @ObservedObject var session: GameSession
     @EnvironmentObject private var store: StoreKitManager
+    @EnvironmentObject private var state: AppState
     @State private var showSaves = false
     @State private var showCheats = false
     @State private var showPlans = false
+    @State private var showScreen = false
     @State private var saved: Date?
 
     private func resume() { session.resume(.menu) }
@@ -348,46 +410,20 @@ private struct PauseMenu: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            AppTheme.letterbox.opacity(0.5)
+            // Lighter on the Screen page, so changes show on the picture.
+            AppTheme.letterbox.opacity(showScreen ? 0.15 : 0.5)
                 .contentShape(Rectangle())
                 .onTapGesture(perform: resume)
                 .accessibilityHidden(true)
             Rule()
             ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                    Text(session.game.title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(3)
-                    Rule().padding(.vertical, 4)
-                    Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
-                    if session.supportsSaveStates {
-                        menuRow(title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" }, action: saveState)
-                        menuRow(title: "Load State", action: { showSaves = true })
-                    }
-                    fastForward
-                    rewindNote
-                    if session.supportsCheats {
-                        menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
-                    } else if let note = session.noCheatsNote {
-                        Text(note)
-                            .font(.footnote).foregroundStyle(AppTheme.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("noCheatsNote")
-                    }
-                    if offersPlus {
-                        menuRow(title: "See Gaga Plus", action: { showPlans = true })
-                    }
-                    Rule().padding(.vertical, 4)
-                    Button("Quit to Library", action: { session.stop() })
-                        .buttonStyle(QuietButtonStyle())
-                        .frame(maxWidth: .infinity)
-                }
-                .padding(16)
+                if showScreen { screenPage } else { mainPage }
             }
             .frame(width: 280)
             .foregroundStyle(AppTheme.ink)
             .background(AppTheme.paper)
             .accessibilityAddTraits(.isModal)
-            .accessibilityAction(.escape, resume)
+            .accessibilityAction(.escape) { if showScreen { showScreen = false } else { resume() } }
         }
         .ignoresSafeArea(edges: .vertical)
         .sheet(isPresented: $showSaves) {
@@ -400,6 +436,70 @@ private struct PauseMenu: View {
         #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
         #endif
+    }
+
+    /// Changes show on the picture beside the menu as they are made.
+    private var screenPage: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { showScreen = false } label: {
+                Label("Back", systemImage: "chevron.left")
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(AppTheme.accent)
+            Text("Screen").font(.screenTitle).accessibilityAddTraits(.isHeader)
+            ScreenOptionsForm(settings: $session.screen, platformID: session.game.platformID, dual: session.isDualScreen,
+                              gameOnly: gameOnly)
+        }
+        .padding(16)
+    }
+
+    /// On: this game keeps its own choice. Off: it drops it and uses its system's.
+    private var gameOnly: Binding<Bool> {
+        let id = session.game.id, platform = session.game.platformID
+        return Binding(get: { state.screens.hasOverride(id) },
+                       set: { on in
+                           if on {
+                               state.screens.save(session.screen, platformID: platform, gameID: id)
+                           } else {
+                               state.screens.removeOverride(id)
+                               session.screen = state.screens.settings(platformID: platform, gameID: nil)
+                           }
+                       })
+    }
+
+    private var mainPage: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
+            Text(session.game.title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(3)
+            Rule().padding(.vertical, 4)
+            Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
+            if session.supportsSaveStates {
+                menuRow(title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" }, action: saveState)
+                menuRow(title: "Load State", action: { showSaves = true })
+            }
+            menuRow(title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
+                    action: { showScreen = true })
+            fastForward
+            rewindNote
+            if session.supportsCheats {
+                menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
+            } else if let note = session.noCheatsNote {
+                Text(note)
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("noCheatsNote")
+            }
+            if offersPlus {
+                menuRow(title: "See Gaga Plus", action: { showPlans = true })
+            }
+            Rule().padding(.vertical, 4)
+            Button("Quit to Library", action: { session.stop() })
+                .buttonStyle(QuietButtonStyle())
+                .frame(maxWidth: .infinity)
+        }
+        .padding(16)
     }
 
     private func saveState() {
