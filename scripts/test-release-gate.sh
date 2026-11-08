@@ -18,6 +18,8 @@ cp "$root/scripts/nojit-gate.sh" "$tmp/scripts/"
 printf 'CORE_FRAMEWORK=FreeCore\n' >"$tmp/Cores/free/core.env"
 printf 'CORE_FRAMEWORK=NcCore\nCORE_NONCOMMERCIAL=1\n' >"$tmp/Cores/nc/core.env"
 printf 'CORE_FRAMEWORK=VkTestCore\n' >"$tmp/Cores/vktest/core.env"
+mkdir -p "$tmp/Cores/held" "$tmp/Held.app/Frameworks/HeldCore.framework"
+printf 'CORE_FRAMEWORK=HeldCore\nCORE_RELEASE_HOLD=1\n' >"$tmp/Cores/held/core.env"
 
 failures=0
 expect() { # pass|fail, then the gate's arguments
@@ -40,8 +42,10 @@ expect fail --release-app "$tmp/Mixed.app"
 expect fail --release-app "$tmp/Debug.app"
 expect fail --release-app "$tmp/Snes.app" # named non-commercial framework, no core.env flag
 expect fail --release-set "snes9x"
+expect fail --release-set "free held"
+expect fail --release-app "$tmp/Held.app"
 
-# Default release set: every core except the non-commercial ones and vktest.
+# Default release set: every core except the non-commercial ones, held ones and vktest.
 unset GAGA_RELEASE_SET
 got=$("$tmp/scripts/nojit-gate.sh" --default-release-set)
 if [ "$got" != free ]; then

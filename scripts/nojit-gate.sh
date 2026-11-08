@@ -104,8 +104,14 @@ noncommercial_framework() { # framework name -> core id, or nothing
         PicodriveCore) echo picodrive; return ;;
         FbneoCore) echo fbneo; return ;;
     esac
+    flagged_framework "$1" CORE_NONCOMMERCIAL
+}
+
+# Framework name and a core.env flag -> the core id when that core sets the flag to 1, or nothing.
+flagged_framework() {
+    local env
     for env in "$root"/Cores/*/core.env; do
-        if grep -qx "CORE_FRAMEWORK=$1" "$env" && grep -qx 'CORE_NONCOMMERCIAL=1' "$env"; then
+        if grep -qx "CORE_FRAMEWORK=$1" "$env" && grep -qx "$2=1" "$env"; then
             basename "$(dirname "$env")"
             return
         fi
@@ -127,18 +133,23 @@ check_release_set() {
             echo "release gate: $core has a non-commercial licence and must not be in a release core set" >&2
             return 1
         fi
+        if grep -qx 'CORE_RELEASE_HOLD=1' "$root/Cores/$core/core.env" 2>/dev/null; then
+            echo "release gate: $core sets CORE_RELEASE_HOLD=1 (see its core.env) and must not be in a release core set" >&2
+            return 1
+        fi
     done
     echo "release gate: pass $1"
 }
 
 # The cores cleared for an App Store or TestFlight build (owner decision 2026-11-08, docs/03 section 5): every
-# core in Cores/ except the non-commercial ones and the vktest debug core. GPL cores are in it.
+# core in Cores/ except the non-commercial ones, those with CORE_RELEASE_HOLD=1 and the vktest debug core.
+# GPL cores are in it.
 default_release_set() {
     local env core set=''
     for env in "$root"/Cores/*/core.env; do
         core=$(basename "$(dirname "$env")")
         [ "$core" != vktest ] || continue
-        grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || set+="${set:+ }$core"
+        grep -qxE 'CORE_(NONCOMMERCIAL|RELEASE_HOLD)=1' "$env" || set+="${set:+ }$core"
     done
     echo "$set"
 }
@@ -196,6 +207,11 @@ check_release_app() {
         core=$(noncommercial_framework "$(basename "$framework" .framework)")
         if [ -n "$core" ]; then
             echo "release gate: $1 embeds $core, which has a non-commercial licence" >&2
+            return 1
+        fi
+        core=$(flagged_framework "$(basename "$framework" .framework)" CORE_RELEASE_HOLD)
+        if [ -n "$core" ]; then
+            echo "release gate: $1 embeds $core, which sets CORE_RELEASE_HOLD=1 (see its core.env)" >&2
             return 1
         fi
     done
