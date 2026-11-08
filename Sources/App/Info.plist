@@ -55,10 +55,11 @@
     <key>UIRequiresFullScreen</key>
     <true/>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>GagaEmu uses the local network only for WiFi transfer, to receive game files from a browser on the same network.</string>
+    <string>GagaEmu finds a nearby phone so you can play together. It also uses the local network for WiFi transfer, to receive game files from a browser on the same network.</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_http._tcp</string>
+        <string>_gagaplay._tcp</string>
     </array>
     <key>GCSupportedGameControllers</key>
     <array>

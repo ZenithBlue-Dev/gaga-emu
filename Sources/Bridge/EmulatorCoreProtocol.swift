@@ -125,6 +125,10 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     public var onEvent: ((Event) -> Void)?
     /// Last chance to change player 1's input for this frame (TriggerPro). Gets the frame number.
     public var playerOneFilter: ((GagaInputState, Int) -> GagaInputState)?
+    /// Play Nearby (`Sources/Netplay`). Queue only: set it inside `betweenFrames`. Gets player 1's input for the
+    /// next frame and returns every port's input for it, or nil to hold the frame until the other phone's
+    /// input arrives. While set, each tick runs one frame: no fast-forward, no rewind.
+    var lockstep: ((GagaInputState) -> [GagaInputState]?)?
     #if DEBUG
     /// Benchmark timing for each timed frame: start time, wall time and this thread's CPU time, in ns.
     public var onFrameTimed: ((UInt64, UInt64, UInt64) -> Void)?
@@ -437,6 +441,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             onAudioPacket = nil
             onEvent = nil
             playerOneFilter = nil
+            lockstep = nil
             #if DEBUG
             onFrameTimed = nil
             #endif
@@ -465,8 +470,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     private func tickFrame() {
         guard stepping, lastFatalMessage == nil, let inst = instance, let stepFn = coreInterface.step_frame else { return }
         inputLock.lock()
-        let steps = speed
-        let back = rewindHeld
+        let steps = lockstep == nil ? speed : 1
+        let back = rewindHeld && lockstep == nil
         inputLock.unlock()
         if back, rewindTrack?.decided == true {
             rewindOnce(inst, stepFn)
@@ -482,13 +487,18 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     private typealias StepFunction = @convention(c) (OpaquePointer?, UnsafePointer<GagaInputState>?, UInt32) -> Void
 
     private func stepOnce(_ inst: OpaquePointer, _ stepFn: StepFunction, record: Bool = true) {
-        if record { recordRewind(inst) }
         inputLock.lock()
         var currentInputs = playerInputs
         let frame = framesStepped
         inputLock.unlock()
 
         if let filter = playerOneFilter { currentInputs[0] = filter(currentInputs[0], frame) }
+        if let lockstep {
+            guard let all = lockstep(currentInputs[0]) else { return } // Held: the other phone's input is not here yet.
+            currentInputs = Array((all + currentInputs).prefix(4))
+        } else if record {
+            recordRewind(inst)
+        }
         // A layer-path core presents itself, so it must hear which frames fast-forward drops.
         currentInputs[0].skip_present = !presentVideo
         #if DEBUG
@@ -610,8 +620,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         try executionQueue.sync { try captureState() }
     }
 
-    // Queue only.
-    private func captureState() throws -> Data {
+    // Queue only. Internal for Play Nearby's state checks, which run inside `lockstep`.
+    func captureState() throws -> Data {
         guard let inst = instance, let sizeFn = coreInterface.state_size, let saveFn = coreInterface.save_state else {
             throw EmulatorCoreError.saveStateFailed("This core has no save states.")
         }
@@ -625,18 +635,21 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     /// A refused state leaves the game as it was. A core that fails partway through is put back from a
     /// snapshot taken first, so that promise does not rest on every core's own checks.
     public func loadState(_ state: Data) throws {
-        try executionQueue.sync {
-            guard let inst = instance, let loadFn = coreInterface.load_state else {
-                throw EmulatorCoreError.loadStateFailed("This core has no save states.")
-            }
-            let snapshot = try? captureState()
-            var error = [CChar](repeating: 0, count: 256)
-            let loaded = state.withUnsafeBytes { loadFn(inst, $0.baseAddress, state.count, &error, error.count) }
-            guard loaded else {
-                _ = snapshot?.withUnsafeBytes { loadFn(inst, $0.baseAddress, $0.count, nil, 0) }
-                let reason = String(cString: error)
-                throw EmulatorCoreError.loadStateFailed(reason.isEmpty ? "The core could not load this save state." : reason)
-            }
+        try executionQueue.sync { try restoreState(state) }
+    }
+
+    // Queue only. Internal for Play Nearby's resync, which runs inside `lockstep`.
+    func restoreState(_ state: Data) throws {
+        guard let inst = instance, let loadFn = coreInterface.load_state else {
+            throw EmulatorCoreError.loadStateFailed("This core has no save states.")
+        }
+        let snapshot = try? captureState()
+        var error = [CChar](repeating: 0, count: 256)
+        let loaded = state.withUnsafeBytes { loadFn(inst, $0.baseAddress, state.count, &error, error.count) }
+        guard loaded else {
+            _ = snapshot?.withUnsafeBytes { loadFn(inst, $0.baseAddress, $0.count, nil, 0) }
+            let reason = String(cString: error)
+            throw EmulatorCoreError.loadStateFailed(reason.isEmpty ? "The core could not load this save state." : reason)
         }
     }
 
