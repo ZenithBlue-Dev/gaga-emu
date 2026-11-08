@@ -312,6 +312,14 @@ final class GameSessionTests: GagaTestCase {
         XCTAssertEqual(session.phase, .stopped)
     }
 
+    /// Device run 14: a launch failure reaches the console too, without file names or paths.
+    func testALaunchFailureConsoleLineNamesNoFile() {
+        XCTAssertEqual(AppState.LaunchFailure.consoleLine("This 3DS game is encrypted. GagaEmu plays decrypted dumps only."),
+                       "[gaga-launch] refused: This 3DS game is encrypted. GagaEmu plays decrypted dumps only.")
+        XCTAssertEqual(AppState.LaunchFailure.consoleLine("The file “Game (USA).3ds” couldn’t be opened at /var/mobile/x.3ds."),
+                       "[gaga-launch] refused: The file <name> couldn’t be opened at <path>")
+    }
+
     // MARK: - Bridge
 
     func testPauseAndResumeReachTheCore() async throws {

@@ -971,6 +971,26 @@ final class AppState: ObservableObject {
         let title: String
         let message: String
 
+        /// Every launch failure and core refusal also goes to the console, so a device run reads it from the log
+        /// (device run 14 could not confirm the encrypted 3DS refusal). The title never does.
+        init(title: String, message: String) {
+            self.title = title
+            self.message = message
+            #if DEBUG
+            if message.hasPrefix("Benchmark saved") { return }
+            #endif
+            if title != Self.importTitle { print(Self.consoleLine(message)) }
+        }
+
+        /// The message with quoted names and anything path-like taken out, since a system error may name the file.
+        static func consoleLine(_ message: String) -> String {
+            let redacted = message
+                .replacingOccurrences(of: "[“\"][^”\"]*[”\"]", with: "<name>", options: .regularExpression)
+                .replacingOccurrences(of: "\\S*/\\S*", with: "<path>", options: .regularExpression)
+                .replacingOccurrences(of: "\n", with: " ")
+            return "[gaga-launch] refused: \(redacted)"
+        }
+
         var heading: String {
             #if DEBUG
             // A finished benchmark ends its session the same way a failure does.
