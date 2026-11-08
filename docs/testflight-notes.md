@@ -2,6 +2,27 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611081709), 2026-11-08
+
+Most cores are now included. Bring your own games and BIOS files, then load a game on each system you own.
+
+**New systems**
+- N64, PS1, PSP, Nintendo DS, 3DS, Saturn and Dreamcast.
+- Game Boy and Game Boy Color, NES, Mega Drive and Master System.
+- PC Engine, WonderSwan, Neo Geo Pocket, Virtual Boy, Lynx, Pokemon Mini and Jaguar.
+- Atari systems, Commodore 64, Amiga, DOS, Doom and arcade.
+- Check each game starts, shows video, plays sound and takes touch input.
+
+**PSP**
+- Loading screens are smoother. Frame duplication is on. Watch for stutter or flicker in loading screens.
+
+**Changes**
+- The paste-a-link download is gone. Read Clipboard still imports files.
+
+**Known limits**
+- SNES is not in this build.
+- Games and BIOS files are not included. Add your own.
+
 ## 1.0.0 (202611081435), 2026-11-08
 
 More control options, plus a rotation fix. Load a Game Boy Advance game and try these.
