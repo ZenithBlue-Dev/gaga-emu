@@ -62,6 +62,14 @@ build_slice() { # core dir sdk target
         objects+=("$root/build/cores/$core/cargo/$rust_target/release/$CORE_CARGO_LIB")
     fi
 
+    # Optional: data files the core copies into the player's System folder itself (Cores/ppsspp), from the
+    # framework's System folder. Paths are relative to the core's directory; each keeps its own name.
+    if [ -n "${CORE_SYSTEM_FILES:-}" ]; then
+        mkdir -p "$framework/System"
+        # shellcheck disable=SC2086 # a list of paths.
+        (cd "$dir" && cp -R $CORE_SYSTEM_FILES "$framework/System/")
+    fi
+
     # -x keeps local symbols out of the binary. They stay available in the dSYM.
     xcrun --sdk "$sdk" "$link_driver" -dynamiclib -target "$target" -isysroot "$sysroot" \
         -install_name "@rpath/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK" \
@@ -129,7 +137,7 @@ build_core() {
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
     # Optional, so one core's value must not reach the next.
     unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS SOURCE_AUDIT_REVIEWED
-    unset CORE_UPSTREAM_SUBMODULES CORE_BLANK_FILES
+    unset CORE_UPSTREAM_SUBMODULES CORE_BLANK_FILES CORE_SYSTEM_FILES
     # shellcheck source=/dev/null
     source "$dir/core.env"
 

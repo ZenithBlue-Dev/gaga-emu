@@ -19,6 +19,7 @@ static const GagaLibretroVariable s_variables[] = {
 };
 
 const char* gaga_ppsspp_finish_load(void); // PpssppSupport.cpp
+const char* gaga_ppsspp_install_assets(const char* system_dir, const char* rom_path); // PpssppSupport.cpp
 
 // "0x" and 8 hex digits, one CWCheat word.
 static bool cw_word(const char** text) {
@@ -51,6 +52,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .is_cheat = ppsspp_is_cheat,
     .cheat_lines_are_one_code = true,
     .finish_load = gaga_ppsspp_finish_load,
+    .refuse_load = gaga_ppsspp_install_assets, // Installs PPSSPP's assets and refuses nothing.
 };
 
 const GagaCoreInterface* Ppsspp_GetInterface(void) {

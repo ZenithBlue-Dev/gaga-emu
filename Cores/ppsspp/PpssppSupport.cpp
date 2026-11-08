@@ -3,7 +3,10 @@
 #include <stddef.h>
 #include <string.h>
 
+#include <dlfcn.h>
+
 #include <chrono>
+#include <filesystem>
 #include <thread>
 
 #include "Common/Arm64Emitter.h"
@@ -82,6 +85,23 @@ extern "C" const char *gaga_ppsspp_finish_load(void) {
 		if (std::chrono::steady_clock::now() >= deadline) return "The game took too long to start.";
 		std::this_thread::sleep_for(std::chrono::milliseconds(2));
 	}
+	return nullptr;
+}
+
+// The frontend reads compat.ini, ppge_atlas.zim, the flash0 fonts and the VFPU tables from <system>/PPSSPP
+// (libretro.cpp, retro_init); without them dialogs and font text draw nothing. build-core.sh puts upstream's
+// copies in this framework's System folder, and this copies any missing or older file there before each
+// load. It never refuses: a failed copy leaves the game as it ran without them.
+extern "C" const char *gaga_ppsspp_install_assets(const char *system_dir, const char *rom_path) {
+	(void)rom_path;
+	Dl_info info;
+	if (!system_dir || !dladdr((const void *)&gaga_ppsspp_install_assets, &info) || !info.dli_fname) return nullptr;
+	namespace fs = std::filesystem;
+	std::error_code error;
+	const fs::path target = fs::path(system_dir) / "PPSSPP";
+	fs::create_directories(target, error);
+	fs::copy(fs::path(info.dli_fname).parent_path() / "System", target,
+	         fs::copy_options::recursive | fs::copy_options::update_existing, error);
 	return nullptr;
 }
 
