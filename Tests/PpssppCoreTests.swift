@@ -61,7 +61,9 @@ final class PpssppCoreTests: GagaTestCase {
         try await core.loadROM(path: elfPath)
         XCTAssertTrue(core.attachMetalLayer(layer, width: 960, height: 544, scale: 2))
         let deadline = Date().addingTimeInterval(20)
-        while capture.frames == 0 && Date() < deadline { run(core, frames: 1) }
+        // A fatal event stops the wrapper stepping, so waiting on would only spin (device run 9: 20 s, then no audio).
+        while capture.frames == 0 && capture.fatal == nil && Date() < deadline { run(core, frames: 1) }
+        XCTAssertNil(capture.fatal, "the core stopped while booting")
         run(core, frames: 120)
         return (core, capture)
     }
