@@ -52,15 +52,37 @@ const char* gaga_azahar_finish_load(void); // AzaharSupport.cpp: asynchronous sh
 // Citra picks a loader by the file's magic and falls back to the extension, so a .3dsx with no 3DSX header reached
 // the 3DSX loader and stopped the app in an assert (SetupMainThread, device run 5). Only files that carry one of
 // the magics a loader checks are passed on.
+// Azahar loads no encrypted NCCH, keys or not: NCCHContainer::Load returns ErrorEncrypted when NoCrypto is clear,
+// and keys.txt in its sysdata folder only serves system data. Device run 13: three encrypted dumps gave no
+// message for minutes, so they are refused here from the header. NoCrypto is bit 2 of the NCCH flags byte at
+// 0x18F (upstream/src/core/file_sys/ncch_container.h). An NCSD (.3ds, .cci) holds the game's NCCH in
+// partition 0, whose offset at 0x120 counts 0x200-byte media units.
+static bool azahar_encrypted(FILE* file, const uint8_t* head) {
+    uint8_t ncch[0x200];
+    if (memcmp(head + 0x100, "NCSD", 4) == 0) {
+        uint32_t units = (uint32_t)head[0x120] | (uint32_t)head[0x121] << 8 | (uint32_t)head[0x122] << 16 |
+                         (uint32_t)head[0x123] << 24;
+        // An NCCH that cannot be read is left to Azahar's own loader, which refuses it.
+        if (fseeko(file, (off_t)units * 0x200, SEEK_SET) != 0 || fread(ncch, 1, sizeof(ncch), file) != sizeof(ncch) ||
+            memcmp(ncch + 0x100, "NCCH", 4) != 0) return false;
+        head = ncch;
+    }
+    return (head[0x18F] & 0x04) == 0;
+}
+
 static const char* azahar_refuse_load(const char* system_dir, const char* rom_path) {
     (void)system_dir;
-    uint8_t head[0x104] = { 0 };
+    uint8_t head[0x200] = { 0 };
     FILE* file = fopen(rom_path, "rb");
     size_t got = file ? fread(head, 1, sizeof(head), file) : 0;
+    const char* refusal = "This file is not a decrypted Nintendo 3DS game or 3DS homebrew.";
+    if (got >= 4 && (memcmp(head, "3DSX", 4) == 0 || memcmp(head, "\x7f" "ELF", 4) == 0)) {
+        refusal = NULL;
+    } else if (got == sizeof(head) && (memcmp(head + 0x100, "NCSD", 4) == 0 || memcmp(head + 0x100, "NCCH", 4) == 0)) {
+        refusal = azahar_encrypted(file, head) ? "This 3DS game is encrypted. GagaEmu plays decrypted dumps only." : NULL;
+    }
     if (file) fclose(file);
-    if (got >= 4 && (memcmp(head, "3DSX", 4) == 0 || memcmp(head, "\x7f" "ELF", 4) == 0)) return NULL;
-    if (got == sizeof(head) && (memcmp(head + 0x100, "NCSD", 4) == 0 || memcmp(head + 0x100, "NCCH", 4) == 0)) return NULL;
-    return "This file is not a decrypted Nintendo 3DS game or 3DS homebrew.";
+    return refusal;
 }
 
 const GagaLibretroCore gaga_libretro_core = {
