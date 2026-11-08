@@ -2,6 +2,21 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611081847), 2026-11-08
+
+SNES is here, and joining a Play Nearby game is more reliable.
+
+**New systems**
+- SNES is now included. Load a game and check it starts, shows video, plays sound and takes touch input.
+- SNES uses GagaEmu's own sound boot program, so no extra file is needed for sound.
+
+**Play Nearby**
+- Fixed joining that could wait forever. If the host does not confirm the code within a minute, you now see a message and can try again.
+- Try hosting on one phone and joining on another. Leave the host without confirming and check the joiner stops waiting.
+
+**Known limits**
+- Games and BIOS files are not included. Add your own.
+
 ## 1.0.0 (202611081709), 2026-11-08
 
 Most cores are now included. Bring your own games and BIOS files, then load a game on each system you own.
