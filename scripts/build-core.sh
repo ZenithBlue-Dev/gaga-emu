@@ -91,7 +91,7 @@ build_slice() { # core dir sdk target
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleName</key><string>$CORE_FRAMEWORK</string>
     <key>CFBundlePackageType</key><string>FMWK</string>
-    <key>CFBundleShortVersionString</key><string>${CORE_VERSION//[^0-9.]/}</string>
+    <key>CFBundleShortVersionString</key><string>$(printf %s "${CORE_VERSION//[^0-9.]/}" | cut -d. -f1-3)</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>MinimumOSVersion</key><string>$min_ios</string>
 </dict>
