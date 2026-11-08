@@ -450,6 +450,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     // MARK: - Save states
 
     var supportsSaveStates: Bool { core?.supportsSaveStates ?? false }
+    /// Play Nearby's hook (`Sources/Netplay`): the running core, for its lockstep and state checks.
+    var netplayCore: GagaCoreWrapper? { core }
 
     @discardableResult
     func saveState() throws -> SaveSlot {
