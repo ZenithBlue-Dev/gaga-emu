@@ -1,7 +1,9 @@
 import MetalKit
 import SwiftUI
 
-/// Picture centred on ink, touch controls in the bands left and right of it, pause menu on top.
+/// Picture centred on ink, touch controls in the bands left and right of it, pause menu on top. Upright, the
+/// picture keeps the top of the screen and the controls the area below. Turning the device re-lays the view only:
+/// the core keeps running, and the picture views resize their drawables.
 struct GameView: View {
     @ObservedObject var session: GameSession
     @EnvironmentObject private var state: AppState
@@ -11,14 +13,15 @@ struct GameView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dropTargeted = false
 
-    private var touchVisible: Bool { controllers.touchOwnsPlayerOne }
+    private var touchVisible: Bool { controllers.touchOwnsPlayerOne || !state.controls.file.hideTouchWithController }
 
     var body: some View {
         GeometryReader { geometry in
             // Between Controls keeps the picture out of the bands (and the safe area beside them); Full Screen and a
             // custom two-screen layout use the whole display, under the controls.
+            let upright = geometry.size.height > geometry.size.width
             let custom = session.isDualScreen && session.screen.preset == .custom
-            let reserveBands = (touchVisible || !state.autoFullScreen) && session.screen.area == .betweenControls && !custom
+            let reserve = (touchVisible || !state.autoFullScreen) && session.screen.area == .betweenControls && !custom
             ZStack(alignment: .topLeading) {
                 if external.showsPicture {
                     Text("The picture is on the other screen.")
@@ -26,21 +29,40 @@ struct GameView: View {
                         .foregroundStyle(AppTheme.onLetterbox)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if upright && reserve {
+                    GamePicture(session: session, takesTouch: true)
+                        .frame(width: geometry.size.width, height: geometry.size.height * TouchSkinEngine.portraitControlTop)
+                        .ignoresSafeArea(edges: .horizontal)
+                        .accessibilityElement()
+                        .accessibilityLabel("\(session.game.title), game picture")
+                        .accessibilityAddTraits(.isImage)
                 } else {
                     GamePicture(session: session, takesTouch: true)
-                        .padding(.horizontal, reserveBands ? geometry.size.width * TouchSkinEngine.controlBand : 0)
-                        .ignoresSafeArea(edges: reserveBands ? .vertical : .all)
+                        .padding(.horizontal, reserve && !upright ? geometry.size.width * TouchSkinEngine.controlBand : 0)
+                        .ignoresSafeArea(edges: reserve ? .vertical : .all)
                         .accessibilityElement()
                         .accessibilityLabel("\(session.game.title), game picture")
                         .accessibilityAddTraits(.isImage)
                 }
-                if touchVisible { TouchControls(session: session, skins: skins) }
+                if touchVisible { TouchControls(session: session, skins: skins, macros: state.controls.file.macros) }
                 HStack(spacing: 0) {
                     pauseButton
                     Spacer(minLength: 0)
+                    if session.recordingMacro { stopRecordingButton }
                     if session.isDualScreen { swapButton }
                     if session.rewindStatus == .ready { rewindButton }
                     fastForwardButton
+                }
+                if let flash = session.flash {
+                    Text(flash)
+                        .font(.footnote)
+                        .foregroundStyle(AppTheme.onLetterbox)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(AppTheme.letterbox.opacity(0.7), in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 48)
+                        .allowsHitTesting(false)
+                        .accessibilityAddTraits(.updatesFrequently)
                 }
                 if session.touchScreenHidden {
                     Text("Bottom screen hidden. Touch input is off.")
@@ -53,6 +75,7 @@ struct GameView: View {
                         .allowsHitTesting(false)
                 }
             }
+            .onChange(of: upright, initial: true) { session.setPortrait(upright) }
         }
         .overlay {
             if session.menuOpen {
@@ -74,10 +97,26 @@ struct GameView: View {
         .defersSystemGestures(on: .all)
         .onChange(of: touchVisible) { session.clearTouches() }
         .onAppear {
+            session.touchWithController = !state.controls.file.hideTouchWithController
+            OrientationLock.set(state.controls.file.orientation[session.game.id.uuidString])
             external.present(state.airPlayFullscreen ? session : nil)
             session.run()
         }
-        .onDisappear { external.present(nil) }
+        .onDisappear {
+            OrientationLock.set(nil)
+            external.present(nil)
+        }
+    }
+
+    private var stopRecordingButton: some View {
+        Button { session.stopRecordingMacro() } label: {
+            Text("Stop").font(.meta.weight(.bold)).foregroundStyle(AppTheme.onAccent)
+                .frame(minWidth: 44, minHeight: 44)
+                .padding(.horizontal, 6)
+                .background(AppTheme.accentFill, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Stop recording macro")
     }
 
     private var pauseButton: some View {
@@ -238,7 +277,8 @@ final class MetalLayerView: UIView {
         setNeedsLayout()
     }
 
-    // A rotation between the two landscapes keeps the size, so it needs nothing here.
+    // A turn to or from upright changes the size: `attach` hands the core the new drawable size, and the core
+    // keeps running (`GameSession.attachLayer`).
     override func layoutSubviews() {
         super.layoutSubviews()
         attach()
@@ -282,15 +322,18 @@ final class MetalLayerView: UIView {
 private struct TouchControls: View {
     @ObservedObject var session: GameSession
     @ObservedObject var skins: TouchSkinEngine
+    var macros: [Macro] = []
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
                 TouchInputLayer { session.setTouches($0, windowPoints: $1) }
                     .accessibilityHidden(true)
-                ForEach(skins.skin?.buttons.filter { $0.shape != .hidden } ?? []) { button in
-                    glyph(button)
-                        .opacity(skins.opacity)
+                ForEach(skins.buttons.filter { $0.shape != .hidden }) { button in
+                    let name = TouchSkinEngine.label(for: button, macros: macros)
+                    let on = isOn(button.action)
+                    glyph(button, on: on)
+                        .opacity(skins.opacity * (button.opacity ?? 1))
                         .frame(width: button.frame.width * geometry.size.width,
                                height: button.frame.height * geometry.size.height)
                         .scaleEffect(skins.scale)
@@ -299,19 +342,48 @@ private struct TouchControls: View {
                         // Touches go to the layer underneath, which tracks every finger.
                         .allowsHitTesting(false)
                         .accessibilityElement()
-                        .accessibilityLabel(TouchSkinEngine.label(for: button.id).spoken)
+                        .accessibilityLabel(name.spoken)
+                        .accessibilityValue(on.map { $0 ? "On" : "Off" } ?? "")
                         .accessibilityAddTraits(.isButton)
-                        .accessibilityAction { session.tapForAccessibility(button.mask) }
+                        .modifier(StickActions(button: button, session: session))
+                        .accessibilityAction {
+                            if let action = button.action { session.tapActionForAccessibility(action) } else { session.tapForAccessibility(button.mask) }
+                        }
                 }
             }
         }
     }
 
-    @ViewBuilder private func glyph(_ button: TouchSkinEngine.Button) -> some View {
-        let held = skins.pressed.contains(button.id)
+    /// A toggle's state, so its element can show it. Nil for an element that is not a toggle.
+    private func isOn(_ action: ControlAction?) -> Bool? {
+        switch action {
+        case .app(.fastForwardToggle), .app(.fastForwardHold): return session.fastForward > 1
+        case .app(.mute): return session.muted
+        case .app(.rewindHold): return session.rewinding
+        case .turbo(let mask, true): return session.turboToggled & mask != 0
+        case .macro(let id): return session.runningMacros.contains(id)
+        default: return nil
+        }
+    }
+
+    @ViewBuilder private func glyph(_ button: TouchSkinEngine.Button, on: Bool?) -> some View {
+        let held = skins.pressed.contains(button.id) || on == true
         let content = held ? AppTheme.onAccent : AppTheme.onLetterbox
-        let label = TouchSkinEngine.label(for: button.id).glyph
+        // Text says a toggle is on, so colour is not the only cue.
+        let base = button.showsLabel ? TouchSkinEngine.label(for: button, macros: macros).glyph : nil
+        let label = on == true ? (base ?? "").isEmpty ? "On" : "\(base ?? "") On" : base
         switch button.shape {
+        case .stick:
+            let right = button.id != "lstick"
+            let x = CGFloat(right ? skins.analog.rx : skins.analog.lx) / 32767, y = -CGFloat(right ? skins.analog.ry : skins.analog.ly) / 32767
+            GeometryReader { box in
+                Circle().stroke(AppTheme.onLetterbox, lineWidth: 1)
+                    .overlay(
+                        Circle().fill(held ? AppTheme.accentFill : AppTheme.onLetterbox.opacity(0.35))
+                            .frame(width: box.size.width * 0.45, height: box.size.height * 0.45)
+                            .offset(x: x * box.size.width * 0.275, y: y * box.size.height * 0.275)
+                    )
+            }
         case .circle:
             Circle()
                 .fill(held ? AppTheme.accentFill : Color.clear)
@@ -340,6 +412,39 @@ private struct TouchControls: View {
         case .dpleft: return "arrowtriangle.left.fill"
         default: return "arrowtriangle.right.fill"
         }
+    }
+}
+
+/// VoiceOver has no drag: a stick gets one named action per direction.
+private struct StickActions: ViewModifier {
+    let button: TouchSkinEngine.Button
+    let session: GameSession
+
+    func body(content: Content) -> some View {
+        if button.shape == .stick {
+            let right = button.id != "lstick"
+            content
+                .accessibilityHint("Drag to move the stick. Actions push it one way.")
+                .accessibilityAction(named: "Push Up") { session.pushStickForAccessibility(right: right, x: 0, y: 32767) }
+                .accessibilityAction(named: "Push Down") { session.pushStickForAccessibility(right: right, x: 0, y: -32768) }
+                .accessibilityAction(named: "Push Left") { session.pushStickForAccessibility(right: right, x: -32768, y: 0) }
+                .accessibilityAction(named: "Push Right") { session.pushStickForAccessibility(right: right, x: 32767, y: 0) }
+        } else {
+            content
+        }
+    }
+}
+
+/// A game's orientation lock (Auto, Portrait or Landscape). The app delegate reports the mask; nil follows the device.
+enum OrientationLock {
+    @MainActor static var mask: UIInterfaceOrientationMask = .all
+
+    @MainActor static func set(_ choice: String?) {
+        mask = choice == "portrait" ? .portrait : choice == "landscape" ? .landscape : .all
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.session.role == .windowApplication }) else { return }
+        scene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask)) { _ in }
     }
 }
 
@@ -401,6 +506,7 @@ private struct PauseMenu: View {
     @State private var showCheats = false
     @State private var showPlans = false
     @State private var showScreen = false
+    @State private var showControls = false
     @State private var saved: Date?
 
     private func resume() { session.resume(.menu) }
@@ -433,6 +539,7 @@ private struct PauseMenu: View {
             }
         }
         .sheet(isPresented: $showCheats) { CheatsSheet(session: session) }
+        .sheet(isPresented: $showControls) { ControlsSheet(game: session.game, session: session) }
         #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
         #endif
@@ -457,14 +564,14 @@ private struct PauseMenu: View {
 
     /// On: this game keeps its own choice. Off: it drops it and uses its system's.
     private var gameOnly: Binding<Bool> {
-        let id = session.game.id, platform = session.game.platformID
-        return Binding(get: { state.screens.hasOverride(id) },
+        let id = session.game.id, platform = session.game.platformID, upright = session.portrait
+        return Binding(get: { state.screens.hasOverride(id, portrait: upright) },
                        set: { on in
                            if on {
-                               state.screens.save(session.screen, platformID: platform, gameID: id)
+                               state.screens.save(session.screen, platformID: platform, gameID: id, portrait: upright)
                            } else {
-                               state.screens.removeOverride(id)
-                               session.screen = state.screens.settings(platformID: platform, gameID: nil)
+                               state.screens.removeOverride(id, portrait: upright)
+                               session.screen = state.screens.settings(platformID: platform, gameID: nil, portrait: upright)
                            }
                        })
     }
@@ -481,6 +588,17 @@ private struct PauseMenu: View {
             }
             menuRow(title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
                     action: { showScreen = true })
+            menuRow(title: "Controls", value: "Layout, mapping, macros", action: { showControls = true })
+            if session.supportsSaveStates {
+                Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
+                    Text("Quick Slot \(session.quickSlot)")
+                }
+                .frame(minHeight: 44)
+            }
+            menuRow(title: "Record Macro", value: "Plays until you tap Stop", action: {
+                session.startRecordingMacro()
+                resume()
+            })
             fastForward
             rewindNote
             if session.supportsCheats {
