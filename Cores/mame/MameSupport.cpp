@@ -3,6 +3,7 @@
 #include "emu.h"
 
 #include "audit.h"
+#include "cheat.h"
 #include "drivenum.h"
 #include "emuopts.h"
 #include "fileio.h"
@@ -21,9 +22,11 @@
 
 #include "sqlite3.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
+#include <string_view>
 
 // running_machine writes NVRAM files only when the machine stops, keeps nvram_filename() private, and its
 // nvram_save() skips a file it cannot open without saying so. An explicit instantiation may name a private
@@ -122,6 +125,108 @@ extern "C" const char* gaga_mame_refuse_load(const char* system_dir, const char*
         return nullptr; // The audit could not run; MAME's own load still checks the set.
     }
     return nullptr;
+}
+
+// Cheats. mame_cheats_enable makes MAME load System/mame/cheat/<set>.xml (or the same inside cheat.7z or
+// cheat.zip there) when the machine starts. A code is one cheat's description from that file, "Infinite Lives",
+// or for a cheat with settings, "Starting Level = 5", the setting as MAME's own cheat menu shows it.
+// mame_machine_manager::cheat() asserts, so the engine is reached as nvram_filename is, and checked for null.
+namespace {
+std::unique_ptr<cheat_manager>& cheat_engine(mame_machine_manager& manager);
+template <std::unique_ptr<cheat_manager> mame_machine_manager::*Member> struct cheat_engine_access {
+    friend std::unique_ptr<cheat_manager>& cheat_engine(mame_machine_manager& manager) { return manager.*Member; }
+};
+template struct cheat_engine_access<&mame_machine_manager::m_cheat>;
+
+cheat_manager* running_cheats() {
+    mame_machine_manager* manager = mame_machine_manager::instance();
+    if (!manager || !manager->machine()) return nullptr;
+    cheat_manager* engine = cheat_engine(*manager).get();
+    return engine && engine->enabled() ? engine : nullptr;
+}
+
+std::string trimmed(std::string_view text) {
+    std::string_view::size_type const start = text.find_first_not_of(" \t\r\n");
+    if (start == std::string_view::npos) return std::string();
+    return std::string(text.substr(start, text.find_last_not_of(" \t\r\n") - start + 1));
+}
+
+bool same(std::string_view a, std::string_view b) {
+    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) {
+        return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y));
+    });
+}
+
+struct cheat_choice {
+    cheat_entry* entry = nullptr;
+    std::string setting; // Empty for an on/off or one-shot cheat.
+};
+
+cheat_choice find_cheat(cheat_manager& engine, std::string_view line) {
+    auto named = [&](std::string const& name) -> cheat_entry* {
+        for (auto const& entry : engine.entries()) {
+            if (!entry->is_text_only() && same(trimmed(entry->description()), name)) return entry.get();
+        }
+        return nullptr;
+    };
+    cheat_choice choice;
+    if ((choice.entry = named(trimmed(line)))) {
+        if (!choice.entry->is_onoff() && !choice.entry->is_oneshot()) choice.entry = nullptr; // Needs "= setting".
+        return choice;
+    }
+    std::string_view::size_type const equals = line.rfind('=');
+    if (equals == std::string_view::npos) return choice;
+    choice.entry = named(trimmed(line.substr(0, equals)));
+    choice.setting = trimmed(line.substr(equals + 1));
+    if (!choice.entry || choice.setting.empty() || !(choice.entry->is_value_parameter() || choice.entry->is_itemlist_parameter()))
+        choice.entry = nullptr;
+    return choice;
+}
+
+// Steps a cheat with settings from off to the one named, as MAME's menu does. False if none has that name.
+bool select_setting(cheat_entry& entry, std::string const& setting) {
+    entry.select_default_state();
+    for (int step = 0; step < 4096 && entry.select_next_state(); ++step) {
+        std::string description, state;
+        uint32_t flags = 0;
+        entry.menu_text(description, state, flags);
+        if (same(trimmed(state), setting)) return true;
+    }
+    entry.select_default_state();
+    return false;
+}
+} // namespace
+
+extern "C" bool gaga_mame_is_cheat(const char* line) {
+    cheat_manager* engine = running_cheats();
+    if (!engine || !line) return false;
+    cheat_choice const choice = find_cheat(*engine, line);
+    if (!choice.entry) return false;
+    if (choice.setting.empty()) return true;
+    bool const found = select_setting(*choice.entry, choice.setting); // The adapter resets and applies next.
+    choice.entry->select_default_state();
+    return found;
+}
+
+extern "C" void gaga_mame_cheat_reset(void) {
+    if (cheat_manager* engine = running_cheats()) {
+        for (auto const& entry : engine->entries()) entry->select_default_state();
+    }
+}
+
+extern "C" void gaga_mame_cheat_set(unsigned, bool enabled, const char* code) {
+    cheat_manager* engine = running_cheats();
+    if (!engine || !enabled || !code) return;
+    cheat_choice const choice = find_cheat(*engine, code);
+    if (!choice.entry) return;
+    if (choice.entry->is_oneshot()) {
+        choice.entry->activate(); // shortcut: a one-shot runs again whenever the list changes. Fine for "set" cheats.
+    } else if (choice.setting.empty()) {
+        choice.entry->select_default_state();
+        choice.entry->select_next_state(); // Off to on.
+    } else if (select_setting(*choice.entry, choice.setting) && choice.entry->is_oneshot_parameter()) {
+        choice.entry->activate();
+    }
 }
 
 // The web server is off unless -http is passed, and this build never passes it.
