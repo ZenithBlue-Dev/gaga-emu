@@ -351,6 +351,9 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(record["frames"] as? Int), 60)
         XCTAssertEqual(try XCTUnwrap(record["fps"] as? Double), 59.7275, accuracy: 6)
         XCTAssertEqual(record["interrupted"] as? Bool, false)
+        XCTAssertNil(record["interruption"], "a reason only for an interrupted run")
+        XCTAssertEqual(record["filter"] as? String, "original")
+        XCTAssertEqual(record["filterOnOutputTexture"] as? Bool, false)
         XCTAssertEqual((record["rom"] as? [String: Any])?["sha256"] as? String,
                        SHA256Hex(try Data(contentsOf: URL(fileURLWithPath: romPath))))
         for key in ["device", "os", "appBuild", "buildCommit", "core", "coreCPUMsPerFrame", "frameIntervalMs", "fps1PercentLow",

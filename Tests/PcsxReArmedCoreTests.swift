@@ -595,8 +595,14 @@ final class PcsxReArmedCoreTests: GagaTestCase {
         await run.drive()
 
         let url = try XCTUnwrap(written)
-        defer { try? FileManager.default.removeItem(at: url) }
+        let png = url.deletingPathExtension().appendingPathExtension("png")
+        defer {
+            try? FileManager.default.removeItem(at: url)
+            try? FileManager.default.removeItem(at: png)
+        }
         XCTAssertTrue(url.lastPathComponent.hasPrefix("pcsx_rearmed-"))
+        // Device run 13 wrote none: the core's RGB565 frames had no CGImage format.
+        XCTAssertNotNil(UIImage(contentsOfFile: png.path), "the run's last frame beside the record")
         let record = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         XCTAssertEqual((record["core"] as? [String: Any])?["id"] as? String, "pcsx_rearmed")
         XCTAssertGreaterThan(try XCTUnwrap(record["frames"] as? Int), 60)

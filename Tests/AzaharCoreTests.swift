@@ -71,6 +71,36 @@ final class AzaharCoreTests: GagaTestCase {
         }
     }
 
+    /// A crafted NCCH header: flags byte 7 at 0x18F, bit 2 NoCrypto.
+    private func ncch(noCrypto: Bool) -> Data {
+        var header = Data(count: 0x200)
+        header.replaceSubrange(0x100..<0x104, with: Array("NCCH".utf8))
+        header[0x18F] = noCrypto ? 0x04 : 0x00
+        return header
+    }
+
+    /// Device run 13: encrypted dumps gave no message for minutes. They are refused at load, from the header,
+    /// as a bare NCCH (.cxi) and as partition 0 of an NCSD (.3ds), here at media unit 1 (0x200).
+    func testEncryptedGamesAreRefusedWithAMessage() async throws {
+        var ncsd = Data(count: 0x200)
+        ncsd.replaceSubrange(0x100..<0x104, with: Array("NCSD".utf8))
+        ncsd[0x120] = 1
+        let files = [try write(ncch(noCrypto: false), name: "encrypted.cxi"),
+                     try write(ncsd + ncch(noCrypto: false), name: "encrypted.3ds")]
+        for path in files {
+            let core = try makeCore()
+            let started = Date()
+            do {
+                try await core.loadROM(path: path)
+                XCTFail("loaded \(path)")
+            } catch {
+                XCTAssertEqual(error.localizedDescription, "This 3DS game is encrypted. GagaEmu plays decrypted dumps only.")
+            }
+            XCTAssertLessThan(Date().timeIntervalSince(started), 5, "refused at once, never a hang")
+            core.stop()
+        }
+    }
+
     /// No keys, firmware or system files are shipped or written.
     func testNoSystemFilesAreWritten() async throws {
         let core = try makeCore()

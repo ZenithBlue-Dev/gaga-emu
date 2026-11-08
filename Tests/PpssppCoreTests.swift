@@ -232,6 +232,46 @@ final class PpssppCoreTests: GagaTestCase {
         }
     }
 
+    /// Device run 13: after many cores had run in one process, every load failed with "[BOOT] Memory init failed".
+    /// A layer-path core loaded and stopped many times, on both its picture paths, must leave room for PPSSPP.
+    func testBootsAfterALayerCoreLoadedManyTimes() async throws {
+        try XCTSkipIf(GagaCoreRegistry_IsExcluded("vktest"), "GAGA_CORE_SET left the Vulkan test core out")
+        let vktest = GagaCoreRegistry_FindByID("vktest")!.pointee
+        let rom = try write(VkTestROM.build(), name: "triangle.gagavk")
+        for round in 0..<20 {
+            let core = try GagaCoreWrapper(interface: vktest, systemDirectory: directory.path, saveDirectory: directory.path)
+            try await core.loadROM(path: rom)
+            if round % 2 == 0 {
+                XCTAssertTrue(core.attachOutputTexture())
+            } else {
+                XCTAssertTrue(core.attachMetalLayer(layer, width: 960, height: 544, scale: 2))
+            }
+            run(core, frames: 3)
+            core.stop()
+        }
+        let (core, capture) = try await loaded()
+        try assertPicture(core)
+        XCTAssertNil(capture.fatal)
+        core.stop()
+    }
+
+    /// Upstream probed for the memory base only between 4 and 6 GiB, where the app's frameworks and heap live. With
+    /// the scratchpad address of every base it tried taken, PPSSPP still boots: its block is reserved at load.
+    func testBootsWithTheOldMemoryProbeRangeTaken() async throws {
+        var taken: [vm_address_t] = []
+        defer { for address in taken { vm_deallocate(mach_task_self_, address, 0x4000) } }
+        for base in stride(from: vm_address_t(0x1_0000_0000), to: 0x1_7FFF_0000, by: 0x80_0000) {
+            var address = base + 0x10000
+            if vm_allocate(mach_task_self_, &address, 0x4000, VM_FLAGS_FIXED) == KERN_SUCCESS { taken.append(address) }
+        }
+        for _ in 0..<2 { // The second boot reuses the block the first released.
+            let (core, capture) = try await loaded()
+            try assertPicture(core)
+            XCTAssertNil(capture.fatal)
+            core.stop()
+        }
+    }
+
     func testBenchmarkWritesATestFile() throws {
         XCTAssertEqual(try BenchmarkRun.writeTestROM(platformID: "psp", to: directory).pathExtension, "elf")
     }

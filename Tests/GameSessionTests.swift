@@ -295,6 +295,23 @@ final class GameSessionTests: GagaTestCase {
         XCTAssertEqual(session.phase, .stopped)
     }
 
+    /// Device run 13: a core that never shows a frame ends the session with a message instead of hanging.
+    func testAGameWithNoFrameIsStoppedWithAMessage() async throws {
+        var silent = mock
+        silent.step_frame = { _, _, _ in }
+        let session = try makeSession(interface: silent)
+        session.firstFrameTimeout = 1
+        try await session.prepare()
+        let finished = expectation(description: "Finished")
+        session.onFinish = { message in
+            XCTAssertEqual(message, "The game showed no picture for 1 seconds, so it was stopped.")
+            finished.fulfill()
+        }
+        session.run()
+        await fulfillment(of: [finished], timeout: 5)
+        XCTAssertEqual(session.phase, .stopped)
+    }
+
     // MARK: - Bridge
 
     func testPauseAndResumeReachTheCore() async throws {
@@ -374,8 +391,7 @@ final class GameSessionTests: GagaTestCase {
         XCTAssertEqual(result, [1, 2, 3, 4])
     }
 
-    #if targetEnvironment(simulator)
-    func testSimulatorExpands565() {
+    func testExpands565() {
         let source: [UInt16] = [0xF800, 0x07E0, 0x001F, 0x0000]
         var result = [UInt32](repeating: 0, count: 4)
         source.withUnsafeBytes { input in
@@ -385,7 +401,24 @@ final class GameSessionTests: GagaTestCase {
         }
         XCTAssertEqual(result, [0xFFFF_0000, 0xFF00_FF00, 0xFF00_00FF, 0xFF00_0000])
     }
-    #endif
+
+    /// Device run 13: an RGB565 core's benchmark wrote no PNG. A padded 2x2 frame of red, green, blue and black.
+    func testAnRGB565FrameBecomesAPNG() throws {
+        let rows: [UInt16] = [0xF800, 0x07E0, 0xAAAA, 0xAAAA, 0x001F, 0x0000, 0xAAAA, 0xAAAA] // 8 bytes a row, 4 used
+        let png = try XCTUnwrap(rows.withUnsafeBytes {
+            MetalTextureRing.png(Data($0), width: 2, height: 2, bytesPerRow: 8, pixelFormat: .b5g6r5Unorm)
+        })
+        let image = try XCTUnwrap(UIImage(data: png)?.cgImage)
+        XCTAssertEqual(image.width, 2)
+        XCTAssertEqual(image.height, 2)
+        var rgba = [UInt8](repeating: 0, count: 16)
+        rgba.withUnsafeMutableBytes { buffer in
+            let context = CGContext(data: buffer.baseAddress, width: 2, height: 2, bitsPerComponent: 8, bytesPerRow: 8,
+                                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            context?.draw(image, in: CGRect(x: 0, y: 0, width: 2, height: 2))
+        }
+        XCTAssertEqual(rgba,[255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 0, 0, 0, 255])
+    }
 
     /// Start cycles the mock's format and Select its size. Follows touch to core to ring.
     func testFormatAndSizeChangesReachTheRing() async throws {
