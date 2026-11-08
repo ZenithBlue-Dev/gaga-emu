@@ -85,6 +85,13 @@ final class GagaEmuWalkTests: XCTestCase {
         var app = launchApp()
         snapshot("Library")
         let play = importedGame(app, "The \(title) game")
+        sleep(1)
+        snapshot("Library landscape")
+        XCUIDevice.shared.orientation = .portrait
+        sleep(2)
+        snapshot("Library portrait")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
         play.tap()
         let pause = app.buttons["Pause game"]
         XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
