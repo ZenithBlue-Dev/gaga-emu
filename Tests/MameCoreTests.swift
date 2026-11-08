@@ -162,7 +162,7 @@ final class MameCoreTests: GagaTestCase {
         XCTAssertEqual(found.native_sample_rate, 48000)
         XCTAssertEqual(found.target_fps, 60.0, accuracy: 0.0001)
         XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension("zip")).pointee.core_id), "mame")
-        XCTAssertNil(found.cheat_add, "no cheats: upstream's retro_cheat_set does nothing")
+        XCTAssertNotNil(found.cheat_add, "cheats run in MAME's own cheat engine")
         var error = [CChar](repeating: 0, count: 64)
         XCTAssertTrue(found.self_test(&error, error.count))
         XCTAssertNil(CoreCatalog.platformID(forExtension: "zip"), "placed by content")

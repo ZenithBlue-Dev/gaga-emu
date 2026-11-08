@@ -115,7 +115,7 @@ final class PpssppCoreTests: GagaTestCase {
         XCTAssertNotEqual(interface.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue, 0)
         for ext in ["cso", "elf"] { XCTAssertEqual(CoreCatalog.platformID(forExtension: ext), "psp") }
         XCTAssertEqual(CoreCatalog.defaultCore(for: "psp"), "ppsspp")
-        XCTAssertNil(interface.cheat_add, "CWCheat is not wired yet")
+        XCTAssertNotNil(interface.cheat_add, "CWCheat is wired")
     }
 
     func testBootsTheHomebrewProgramAndDrawsTheBands() async throws {
