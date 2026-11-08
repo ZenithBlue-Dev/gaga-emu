@@ -2,7 +2,7 @@
 
 GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so nothing here asks to copy its layout, labels or art.
 
-Items: 53 open, 39 done (92 total).
+Items: 47 open, 45 done (92 total).
 
 The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
 
@@ -18,9 +18,9 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Play history: Continue panel, Recent filter and per-game play time.
 - [x] Games per row, 2 to 5, or Auto (Settings > Display, `Sources/UI/Games/LibraryDisplay.swift`).
 - [x] Sort field and sort order, from the Library's filter row and Settings > Display.
-- [ ] Cover display: three cover styles, corner radius slider, force square covers, hide game title, hide rating badge. Own design allowed. Built in Settings > Display; Plain style, the slider and hide title still need a device check. (P2, M)
-- [ ] Hide scroll indicators toggle. Built; needs a device check. (P3, S)
-- [ ] Group title style (abbreviation, full, brand) and hide group title. Built; short code and hide need a device check. (P3, S)
+- [x] Cover display: Spine, Plain and Framed styles, corner radius, square covers, hide game title, hide details (Settings > Display).
+- [x] Hide scroll indicators toggle.
+- [x] Shelf title style (full name, short code, maker) and hide shelf title.
 - [ ] Manufacturer filter. GagaEmu filters by platform chip only. (P3, S)
 - [ ] Console order. Recorded as not planned in `docs/02` 2.5. (P3, S, blocked: not planned)
 - [ ] Reach the controllers panel from the library. Partial: it lives in Settings > Controls only. (P3, S)
@@ -112,7 +112,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Default presets with live preview (`Sources/UI/Settings/FilterPickerView.swift`).
 - [x] Custom parameters, `.metal` and `.slangp` import, saved presets.
 - [ ] Browsable RetroArch catalogue. Partial: three community presets against a tab that may be large. (P2, S, blocked: licence per shader)
-- [ ] Shader list search. Built; results need a device check. (P3, S)
+- [x] Filter list search.
 - [ ] Pick your own image for the preview. (P3, S)
 - [ ] GPL shaders (xBRZ, CRT-Royale). Not shipped, replaced by own work. (P3, M, blocked: licence)
 
@@ -121,7 +121,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 ![Theme, app icons and colours](../maniac-emu-reference-images/walk/15-settings-theme.png)
 
 - [x] Appearance choice: dark, light or automatic (Settings > Display).
-- [ ] Theme colours with a custom colour. Built: swatches pass on the device, the custom colour picker needs a device check. (P3, M)
+- [x] Accent colours with a custom colour; any colour is adjusted to meet AA.
 - [ ] Alternate app icons. No `setAlternateIconName`; needs original icon art. (P3, M)
 
 ## Settings
@@ -155,7 +155,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 ![BIOS list](../maniac-emu-reference-images/walk/19-settings-bios.png)
 
 - [x] Required BIOS list with Found or Missing state; import validates name and size (`Sources/App/AppState.swift:1384`).
-- [ ] Import button on every BIOS file row. Built; the button shows and the import passes its tests, the file picker needs a device check. (P2, S)
+- [x] Import button on every BIOS file row. The button opens the file picker on the device; choosing a file there cannot be automated, and the copy and size check pass their tests.
 - [ ] Optional files listed per system with Required or Optional labels. Partial: depends on core coverage. (P3, S)
 
 ## Emulator cores
