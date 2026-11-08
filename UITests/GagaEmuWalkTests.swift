@@ -185,6 +185,14 @@ final class GagaEmuWalkTests: XCTestCase {
         }
     }
 
+    /// The accessibility tree as text: scroll bars and system sheets show here, not always in a screenshot.
+    private func dumpTree(_ app: XCUIApplication, _ name: String) {
+        let attachment = XCTAttachment(string: app.debugDescription)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func flip(_ app: XCUIApplication, _ toggle: String) {
         let row = app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", toggle)).firstMatch
         if row.waitForExistence(timeout: 6) { row.switches.firstMatch.tap() }
@@ -195,6 +203,13 @@ final class GagaEmuWalkTests: XCTestCase {
     func testAuditDisplay() {
         continueAfterFailure = true
         XCUIDevice.shared.orientation = .portrait
+        // More shelves than one screen holds, so the Library scrolls.
+        for extra in ["nestopia", "melonds_ds", "azahar"] {
+            let other = XCUIApplication()
+            other.launchArguments = ["-GagaImportTestROM", extra]
+            other.launch()
+            _ = importedGame(other, "The \(extra) game")
+        }
         let app = launchApp()
         _ = importedGame(app, "The \(title) game")
         // The system's Game Center banner sits over the tabs just after launch: a tap there opened its dashboard.
@@ -219,7 +234,9 @@ final class GagaEmuWalkTests: XCTestCase {
         guard !promptUp() else { return }
         app.buttons["Library"].firstMatch.tap()
         sleep(1)
+        open(app, "All games")
         audit("22 Library three per row")
+        dumpTree(app, "22 hierarchy")
         if open(app, "Sort games") {
             snapshot("23 Sort menu portrait")
             open(app, "Title")
@@ -234,14 +251,64 @@ final class GagaEmuWalkTests: XCTestCase {
             app.buttons[choice].firstMatch.tap()
             sleep(1)
         }
-        for toggle in ["Hide Game Titles", "Hide Shelf Titles", "Hide Scroll Indicators"] where !promptUp() { flip(app, toggle) }
+        app.sliders.firstMatch.adjust(toNormalizedSliderPosition: 1)
+        sleep(1)
+        for toggle in ["Hide Game Titles", "Hide Scroll Indicators"] where !promptUp() { flip(app, toggle) }
+        if open(app, "Shelf Title") { open(app, "Short Code") }
+        audit("25 Display second pass")
         guard !promptUp() else { return }
         app.buttons["Library"].firstMatch.tap()
         sleep(1)
-        audit("25 Library five per row")
+        audit("26 Library five per row")
+        dumpTree(app, "26 hierarchy")
         guard !promptUp() else { return }
         app.buttons["Settings"].tap()
         sleep(1)
+        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
+        sleep(1)
+        flip(app, "Hide Shelf Titles")
+        guard !promptUp() else { return }
+        app.buttons["Library"].firstMatch.tap()
+        sleep(1)
+        audit("27 Library no shelf titles")
+        guard !promptUp() else { return }
+        app.buttons["Settings"].tap()
+        sleep(1)
+        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
+        sleep(1)
+        let well = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Custom accent colour")).firstMatch
+        if well.waitForExistence(timeout: 6) {
+            well.tap()
+            sleep(2)
+            snapshot("28 Colour picker portrait")
+            dumpTree(app, "28 hierarchy")
+            guard !promptUp() else { return }
+            // A spot in the picker's colour area, then away.
+            app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.62)).tap()
+            sleep(1)
+            snapshot("28 Colour picked")
+            close(app)
+            sleep(1)
+            snapshot("29 Custom accent portrait")
+        } else {
+            snapshot("MISSING colour well")
+        }
+        guard !promptUp() else { return }
+        tap(app.buttons["settings.Library"].firstMatch, "The Library tab")
+        sleep(1)
+        if open(app, "BIOS Files") {
+            if open(app, "Import scph5500") {
+                sleep(2)
+                snapshot("30 BIOS file picker")
+                dumpTree(app, "30 hierarchy")
+                guard !promptUp() else { return }
+                // The picker's own X: the sheet behind it has a Close button too.
+                app.buttons["Cancel"].firstMatch.tap()
+                sleep(1)
+            }
+            close(app)
+        }
+        guard !promptUp() else { return }
         tap(app.buttons["settings.Graphics"].firstMatch, "The Graphics tab")
         sleep(1)
         guard open(app, "Default Filter") else { return }
@@ -254,6 +321,11 @@ final class GagaEmuWalkTests: XCTestCase {
             search.typeText(XCUIKeyboardKey.delete.rawValue + XCUIKeyboardKey.delete.rawValue + XCUIKeyboardKey.delete.rawValue + "cr")
             sleep(1)
             snapshot("24 Filter search")
+            dumpTree(app, "24 hierarchy")
+            XCUIDevice.shared.orientation = .landscapeLeft
+            sleep(2)
+            snapshot("24 Filter search landscape")
+            XCUIDevice.shared.orientation = .portrait
         }
     }
 
