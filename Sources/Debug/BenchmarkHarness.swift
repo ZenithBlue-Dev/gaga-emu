@@ -10,7 +10,9 @@ import os
 /// Start it from Settings > About > Run Benchmark, or with the launch argument `-GagaBenchmark`. Options:
 /// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60`,
 /// `-GagaBenchmarkROM <file name in the ROM folder>`, `-GagaBenchmarkInput start@8,cross@12` (see `parseInput`) and
-/// `-GagaBenchmarkFilter crt-v1` (default `original`; on a layer-path core a filter runs through the output texture). With no ROM it generates the homebrew test ROM for
+/// `-GagaBenchmarkFilter crt-v1` (default `original`; on a layer-path core a filter runs through the output texture) and
+/// `-GagaBenchmarkLit YES` (a layer-path core reads its shown frame back once a second and prints how many pixels are
+/// not black, `[gaga-bench] lit`; each read waits for the GPU, so frame times are not comparable). With no ROM it generates the homebrew test ROM for
 /// GBA, GB, GBC, NES, SNES, NDS, PS1, DOS, PC Engine or the Vulkan test core, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
 /// app shows on a device. The procedure is in docs/04 section 7.2.
 @MainActor
@@ -242,11 +244,16 @@ final class BenchmarkRun {
         let measureFrom = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
         let statsAtStart = session.stats // Underruns while the game starts are not the measured run's.
         watchInterruptions(since: measureFrom)
-        for _ in 0..<Int(seconds) {
+        let litEachSecond = UserDefaults.standard.bool(forKey: "GagaBenchmarkLit")
+        for second in 1..<(Int(seconds) + 1) {
             try? await Task.sleep(for: .seconds(1))
             guard session.phase == .running else { break }
             sampleThreads()
             noteThermal()
+            // Device runs 14 and 15: is the 3DS session 2 picture black on screen, or only in the read back?
+            if litEachSecond, let lit = session.benchmarkLitPixels() {
+                print("[gaga-bench] lit at \(second) s: \(lit.lit) of \(lit.total) pixels not black")
+            }
         }
         watchers = []
         if let interruption { print("[gaga-bench] interrupted: \(interruption)") }

@@ -179,6 +179,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private let log = Logger(subsystem: "com.zenithblue.gagaemu", category: "session")
     private var ticks = 0
     private var loggedButtons: UInt32 = 0
+    /// Set by `attachBenchmark`: the script is the only input, so no touch or controller app function acts.
+    private var benchmarkScripted = false
     #endif
 
     init(game: GameItem, interface: GagaCoreInterface, romPath: String, audio: AudioEngineManager = .shared,
@@ -654,8 +656,12 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         case .ended:
             let options = (note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
                 .map(AVAudioSession.InterruptionOptions.init(rawValue:)) ?? []
-            // Without shouldResume the system expects the player to choose, so the menu takes over.
-            if !options.contains(.shouldResume) { pause(.menu) }
+            // Without shouldResume the system expects the player to choose, so the menu takes over. iOS may send an
+            // end with no begin; that one paused nothing, so it opens no menu.
+            #if DEBUG
+            print("[gaga-audio] interruption ended, began seen \(pauseReasons.contains(.interruption)), shouldResume \(options.contains(.shouldResume))")
+            #endif
+            if !options.contains(.shouldResume), pauseReasons.contains(.interruption) { pause(.menu) }
             resume(.interruption)
         @unknown default:
             break
@@ -665,6 +671,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     #if DEBUG
     /// Benchmark hooks. Call between `prepare` and `run`. Both closures run on the core's queue.
     func attachBenchmark(script: @escaping (Int) -> UInt32, timing: @escaping (UInt64, UInt64, UInt64) -> Void) {
+        benchmarkScripted = true
         core?.playerOneFilter = { state, frame in
             var scripted = state
             scripted.buttons = script(frame)
@@ -675,6 +682,16 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     /// The picture on screen as a PNG, read back from the layer for a layer-path core.
     func benchmarkScreenshot() -> Data? { core.flatMap(thumbnail) }
+
+    /// Pixels not black, of all, in the frame a layer-path core last presented: on the output-texture path, the
+    /// texture the screen shows. Nil for a core the host draws.
+    func benchmarkLitPixels() -> (lit: Int, total: Int)? {
+        guard drawsOwnPicture, let frame = core?.readLayerPixels() else { return nil }
+        let lit = frame.pixels.withUnsafeBytes { raw in
+            stride(from: 0, to: raw.count - 3, by: 4).reduce(0) { $0 + (raw[$1] | raw[$1 + 1] | raw[$1 + 2] != 0 ? 1 : 0) }
+        }
+        return (lit, frame.width * frame.height)
+    }
     #endif
 
     // MARK: - Input
@@ -777,6 +794,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         // Turbo and macros reach player 1 only (`wire`), so only player 1 may press them.
         var actions = states.dropFirst().reduce(into: Set<ControlAction>()) { $0.formUnion($1.actions.filter { $0.app != nil }) }
         actions.formUnion(states[0].actions)
+        #if DEBUG
+        if benchmarkScripted { actions = [] } // Device run 15: a menu opened mid-run. Core input only.
+        #endif
         applyActions(actions)
         // A DOS program reads the keys themselves, so the keyboard does not also press pad buttons there.
         let typing = Self.typingPlatforms.contains(game.platformID)
@@ -806,6 +826,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     func menuPair(held: Bool) {
         defer { menuPairHeld = held }
         guard held, !menuPairHeld, phase == .running || phase == .paused else { return }
+        #if DEBUG
+        print("[gaga-input] menu \(menuOpen ? "closed" : "opened") by an app binding")
+        #endif
         if menuOpen { resume(.menu) } else { pause(.menu) }
     }
 
