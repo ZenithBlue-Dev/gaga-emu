@@ -73,6 +73,10 @@ final class BenchmarkRun {
         /// When each frame interval over 25 ms ended, in seconds after measuring began: one entry is a single hitch
         /// (a shader compile), entries at a steady spacing are a periodic stall.
         let slowFramesAtSeconds: [Double]
+        /// The same intervals with the core thread's wall and CPU ms for the frame that began each one: wall near CPU
+        /// is emulation work, wall well over CPU is a wait (GPU, pipeline compile, another thread), and a short wall
+        /// is the host's pacing.
+        let slowFrames: [SlowFrame]
         /// The same during the warm-up, in seconds after the first frame: start-up hitches such as first shader
         /// compiles, kept out of every measured figure.
         let startupSlowFrames: [Double]
@@ -85,6 +89,13 @@ final class BenchmarkRun {
         let audio: Audio
         let video: Video
         let codeGenViolations: [String]
+    }
+
+    struct SlowFrame: Codable {
+        let at: Double
+        let intervalMs: Double
+        let coreWallMs: Double
+        let coreCPUMs: Double
     }
 
     /// Filled on the core's queue, read on the main actor after `core.pause`, which is a barrier.
@@ -335,6 +346,16 @@ final class BenchmarkRun {
         let slowest = Array(intervals.sorted().suffix(Swift.max(1, intervals.count / 100)))
         let slowestMean = slowest.reduce(0, +) / Double(Swift.max(1, slowest.count))
         let measured = starts.count > 1 ? Double(starts.last! - starts.first!) / 1_000_000_000 : 0
+        func tenths(_ nanoseconds: UInt64) -> Double { (Double(nanoseconds) / 100_000).rounded() / 10 }
+        let slowFrames = (first..<Swift.max(first, samples.starts.count - 1)).compactMap { index -> SlowFrame? in
+            let interval = samples.starts[index + 1] - samples.starts[index]
+            guard interval > 25_000_000 else { return nil }
+            // The frame's start in uptime seconds, as the cores' [gaga-pace] lines give it.
+            print(String(format: "[gaga-bench] slow frame at %.3f s: interval %.1f ms, core wall %.1f, cpu %.1f",
+                         Double(samples.starts[index]) / 1e9, tenths(interval), tenths(samples.walls[index]), tenths(samples.cpus[index])))
+            return SlowFrame(at: (Double(samples.starts[index + 1] - samples.starts[first]) / 10_000_000).rounded() / 100,
+                             intervalMs: tenths(interval), coreWallMs: tenths(samples.walls[index]), coreCPUMs: tenths(samples.cpus[index]))
+        }
 
         let stats = session.stats
         // Streamed: reading a 1.7 GB PSP ISO whole put it in the footprint this record reports (device run 6).
@@ -377,6 +398,7 @@ final class BenchmarkRun {
             frameIntervalMs: Percentiles(intervals),
             slowFramesAtSeconds: zip(starts.dropFirst(), intervals).filter { $1 > 25 }
                 .map { (Double($0.0 - starts.first!) / 10_000_000).rounded() / 100 },
+            slowFrames: slowFrames,
             startupSlowFrames: startupSlow,
             coreCPUMsPerFrame: Percentiles(samples.cpus[first...].map { Double($0) / 1_000_000 }),
             coreWallMsPerFrame: Percentiles(samples.walls[first...].map { Double($0) / 1_000_000 }),

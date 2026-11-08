@@ -358,7 +358,7 @@ final class MgbaCoreTests: GagaTestCase {
                        SHA256Hex(try Data(contentsOf: URL(fileURLWithPath: romPath))))
         for key in ["device", "os", "appBuild", "buildCommit", "core", "coreCPUMsPerFrame", "frameIntervalMs", "fps1PercentLow",
                     "threadCPUPercentOfOneCore", "memory", "thermal", "audio", "video", "inputScript", "codeGenViolations",
-                    "startupSlowFrames"] {
+                    "startupSlowFrames", "slowFrames"] {
             XCTAssertNotNil(record[key], key)
         }
         XCTAssertEqual(record["codeGenViolations"] as? [String], [])

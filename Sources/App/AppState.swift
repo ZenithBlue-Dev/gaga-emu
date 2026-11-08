@@ -1501,6 +1501,7 @@ final class AppState: ObservableObject {
     func runBenchmarkIfRequested() {
         let defaults = UserDefaults.standard
         guard ProcessInfo.processInfo.arguments.contains("-GagaBenchmark") else { return }
+        setenv("GAGA_PACE_LOG", "1", 0) // A layer-path core logs where each frame over 25 ms waited (LibretroVulkan.c).
         let seconds = defaults.double(forKey: "GagaBenchmarkSeconds")
         let input = defaults.string(forKey: "GagaBenchmarkInput")
         if let input, BenchmarkRun.parseInput(input) == nil {
