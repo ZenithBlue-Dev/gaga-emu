@@ -617,11 +617,11 @@ GagaEmu never fetches or ships a cheat file or database.
 
 ### 3.8 Device skins
 
-Status: art and skin data built; the engine does not load them yet.
+Status: shipped as an option. Skin Style is Classic (GagaEmu's own outlined controls, the default) or Device, per system in Settings > Controls > Touch Layout and per game in the pause menu's Controls (Same as System, Classic or Device), with a Skin Colour picker. Device skins are fixed layouts: the skin editor changes the Classic skin only. Not yet checked on a device.
 
 A device skin is an optional touch skin that draws the whole phone screen as a console shell: the picture sits in a bezel and the touch buttons are drawn as that system's buttons. `scripts/make_device_skins.swift` draws every one from shapes and gradients, so the art is reproducible and resolution independent. Run it with `swift scripts/make_device_skins.swift`; `--no-preview` skips the PNGs in `build/skin-previews/`.
 
-The art is original. It evokes each system's era through body shape, colour, button layout and materials. It uses no photo, trace, logo, wordmark, model name or text copied from a device, and nothing from the Manic EMU reference images. Skin names are generic, such as Pocket Classic, Handheld Color and Home Console 16-bit. Button glyphs are letters, numbers, generic captions (Start, Select, Mode, Pause) and plain neutral shapes. Text is drawn as glyph outlines, so no PDF embeds a font.
+The art is original. It evokes each system's era through body shape, colour, button layout and materials. It uses no photo, trace, logo, wordmark, model name or text copied from a device, and nothing from the Manic EMU reference images. Skin names are generic, such as Pocket Classic, Handheld Color and Home Console 16-bit. Button glyphs are letters, numbers, generic captions (Start, Select, Mode, Pause) and plain neutral shapes. No PDF holds any text: shapes and arrows are vector art, and every letter and caption is a `labels` entry in the JSON that the app draws at runtime with the system font (SF Rounded, heavy). Redistributing glyph outlines taken from Apple's fonts may not be allowed by their licence, so the PDFs hold neither outlines nor an embedded font, which `DeviceSkinTests.testNoPDFHoldsAFontOrText` checks.
 
 **Files.** One folder per `CoreCatalog` platform ID (except `vktest`) in `Resources/Skins/Device/<platform>/`. FDS uses `nes`, and MAME and FBNeo use `arcade`. For each of `portrait` and `landscape`:
 
@@ -630,7 +630,7 @@ The art is original. It evokes each system's era through body shape, colour, but
 | `<o>.json` | Skin data below |
 | `<o>-shell.pdf` | Body, bezel, decoration and every button at rest. The screen rects are black. |
 | `<o>-shell-<variant>.pdf` | The same shell in another colourway (two per platform from Charcoal, Light Grey, Grape, Sunflower, Ocean, Mint and Coral). Buttons keep their colours. |
-| `<o>-pressed.pdf` | Every button drawn pressed on a clear page |
+| `<o>-pressed.pdf` | Every button drawn pressed on a clear page, and each stick's cap (the shell has only the well) |
 
 **Canvas.** Portrait is 393 x 852 pt and landscape 852 x 393 pt, the full screen of a 6.1-inch phone. The art bleeds to every edge. Buttons stay out of the Dynamic Island and home indicator: portrait between y 59 and 818, landscape between x 44 and 808. Every button is at least 49 pt, so it stays at least 44 pt down to 0.9 scale. Portrait homes, arcade and computers draw a screen surround over a controller, control panel or keyboard. Landscape is always one wide handheld body, with the pad, stick, Start and Select on the left and the face buttons on the right.
 
@@ -643,22 +643,23 @@ The art is original. It evokes each system's era through body shape, colour, but
 | `platform` | `CoreCatalog` platform ID |
 | `canvas` | Design size in points |
 | `background`, `pressed` | Shell and pressed PDF names in the same folder |
-| `variants` | `name`, `background` and `fill` for each colourway |
+| `variants` | `name`, `background`, `fill` and `ink` for each colourway |
 | `fill` | Colour at the canvas edge, for a screen whose shape differs from the canvas |
+| `ink` | Colour of the captions printed on the shell, which follows the colourway |
+| `labels` | `text`, centre `x` and `y` (normalised), `size` in canvas points, `color` (`#RRGGBBAA`) and, for a caption on the shell, `onBody: true`, which takes `ink` instead |
 | `screens` | One rect per game screen, at the core's aspect. Two for DS and 3DS, top screen first. |
-| `pictureArea` | The glass around the screens, which Zoom and Stretch may use |
-| `analog` | `lstick` frames: art only until the engine has an analog stick |
+| `pictureArea` | The glass around the screens (not used by the app yet) |
+| `analog` | `lstick` frames, which the app turns into stick elements |
 
-Buttons with no `mask` are drawn but inactive, and the flex decoder drops them. These are the C buttons of the 64-bit pad (`input` `rstick-up`, `rstick-down`, `rstick-left` and `rstick-right`). Button mappings follow the libretro RetroPad defaults per core: the six-button pads send A=Y, B=B, C=A, X=L, Y=X and Z=R; the arcade panel sends Y X L over B A R; Virtual Boy and WonderSwan second pads use the masks of `Layout.twinPad` and `Layout.xyPad`. Platforms that type (`GameSession.typingPlatforms`) have a Keys button on L3. Before shipping a skin, check its mapping on a device with the core.
+The C buttons of the 64-bit pad have the ids `cup`, `cdown`, `cleft` and `cright` and mask 0: the engine pushes the right stick for them (`TouchSkinEngine.cPush`), which is how Mupen64Plus-Next reads C by default. Button masks follow each default core's input code, checked against the upstream sources: the Mega Drive, Mega-CD and 32X six-button pads send A=Y, B=B, C=A, X=L, Y=X and Z=R; the Saturn pad (Beetle Saturn `input_map_pad`) sends X=Y, Y=X, Z=L, A=B, B=A and C=R; the Jaguar pad (Virtual Jaguar) sends A=A, B=B and C=Y; the 5200 stick (Atari800's joystick device) sends fire 2 on X and the `#` key on Select; the arcade panel sends Y X L over B A R; Virtual Boy and WonderSwan second pads use the masks of `Layout.twinPad` and `Layout.xyPad`. Platforms that type (`GameSession.typingPlatforms`) have a Keys button: L3 on DOS and the Atari 8-bit, Select on the C64 and Amiga, where VICE and PUAE open their virtual keyboard. Check each mapping on a device with the core.
 
-**What the engine must support** (after the controls rewrite merges):
+**Engine** (`TouchSkinEngine.decodeDevice`, `loadDevice` and `DeviceArt`, `DeviceSkinView` in `Sources/UI/Game/GameView.swift`):
 
-1. Load `theme: "device"` skins for the platform and orientation, and offer them per platform and game in Assign Skin. Load the chosen variant's `background` in place of the default.
-2. Draw in this order: the shell PDF scaled to fit the screen, centred on `fill`; the picture inside each `screens` rect, using that skin's Screen choice inside `pictureArea`; then, for each held button, the pressed PDF clipped to that button's frame. A hidden diagonal shows the pressed frames of the two directions in its mask.
-3. Turn the normalised frames into touches with the same fit transform. Skip the controlBand check (`problems(in:)`), which applies to landscape side-band layouts only. Portrait skins need the game view to allow portrait.
-4. Keep the VoiceOver labels from `label(for:)`, and use the skin's 44 pt check against the fitted canvas.
-5. Later: a moving cap over each `analog` frame, and a right-stick mask for the `rstick-*` inputs.
-6. Add `Resources/Skins/Device` to the app target in `project.yml` as a folder reference.
+1. `AppState.applySkin` loads the device skin when the game's style, else its system's, is Device (`ControlsStore.File.style`), in the chosen colourway (`skinVariant`), before any classic or custom layout. Both orientation files load together; turning the device switches between them with the classic layouts' portrait flag.
+2. The canvas is fitted to the whole screen, past the safe area, centred on `fill`. Drawn in order: the shell PDF; the picture in the screen rect, or for two screens one picture view over the box round both, with `GameSession.deviceScreens` placing each screen through the custom two-screen layout (the player's own layout is untouched and not saved), on the Metal and the output-texture paths alike; the pressed PDF clipped to each held button's frame, a hidden diagonal showing its two directions (`pressedFrames`); each stick's cap from the pressed PDF, moved with the stick; then the labels. PDFs are drawn with `CGPDFDocument` and cached per file and size (`DevicePDF`).
+3. Touch uses the same fitted canvas, at the drawn size (the Scale setting does not grow device buttons). The checks (`deviceProblems`) keep on the screen, 44 pt on the smallest phone's whole screen with the canvas fitted there, unique ids and no overlaps, and skip the side-band check. VoiceOver keeps the `label(for:)` names and the stick actions.
+4. With the picture on an external screen, or touch hidden for a controller, the classic view is used.
+5. `Resources/Skins/Device` is a folder reference in the app target (`project.yml`), read from the bundle's `Device` folder.
 
 ---
 
