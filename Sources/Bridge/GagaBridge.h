@@ -67,7 +67,22 @@ typedef enum {
     GAGA_PIXEL_FORMAT_RGB565   = 0,
     GAGA_PIXEL_FORMAT_XRGB8888 = 1,
     GAGA_PIXEL_FORMAT_RGBA8888 = 2,
+    // Only from a GAGA_CORE_CAP_OUTPUT_TEXTURE core the host attached with no layer: pixel_data points to a
+    // GagaMetalTextureFrame and pitch is 0. A host that never attaches that way never sees it.
+    GAGA_PIXEL_FORMAT_METAL_TEXTURE = 3,
 } GagaPixelFormat;
+
+// A frame rendered off-screen for host shaders (docs/05 section 2.4). The objects belong to the core and are
+// valid only during the callback. The host encodes, on its own MTLCommandQueue, a wait for ready_event to
+// reach ready_value, its reads of texture, then a signal of done_event to done_value. It does this for every
+// such frame, including one it does not show: the core writes texture again only once done_value is reached.
+typedef struct {
+    void*    texture;     // id<MTLTexture>, MTLPixelFormatBGRA8Unorm, the descriptor's width and height
+    void*    ready_event; // id<MTLSharedEvent>, signalled by the core
+    uint64_t ready_value;
+    void*    done_event;  // id<MTLSharedEvent>, signalled by the host
+    uint64_t done_value;
+} GagaMetalTextureFrame;
 
 // Video frame descriptor emitted to Metal
 typedef struct {
@@ -102,9 +117,13 @@ typedef enum {
 #define GAGA_RUMBLE_CODE(port, motor, strength) \
     ((int32_t)((((uint32_t)(port) & 3u) << 17) | (((uint32_t)(motor) & 1u) << 16) | ((uint32_t)(strength) & 0xFFFFu)))
 
-// Bits 0 and 2 are kept for the host-buffer and output-texture paths (docs/06 section 2.4).
+// Bit 0 is kept for the host-buffer path (docs/06 section 2.4).
 typedef enum {
     GAGA_CORE_CAP_METAL_LAYER = 1u << 1, // Presents to an attached CAMetalLayer. Host shaders do not run.
+    // With METAL_LAYER: attach_metal_layer with a NULL layer switches the core to off-screen frames of
+    // GAGA_PIXEL_FORMAT_METAL_TEXTURE, so host shaders run. A core without the bit returns false for NULL.
+    // Older cores lack the bit and older hosts never pass NULL, so the ABI stays at 5.
+    GAGA_CORE_CAP_OUTPUT_TEXTURE = 1u << 2,
 } GagaCoreCapability;
 
 // Threading contract. The host makes every instance call on one serial queue, never concurrently.
@@ -137,7 +156,8 @@ typedef struct GagaCoreInterface {
 
     // Layer path, for a core with GAGA_CORE_CAP_METAL_LAYER. The host attaches its CAMetalLayer with the
     // drawable size in pixels, and again whenever that size changes. Frames stepped while no layer is
-    // attached render but are not shown. Detach returns with no GPU work using the layer.
+    // attached render but are not shown. Detach returns with no GPU work using the layer. A NULL layer is
+    // the output-texture path (GAGA_CORE_CAP_OUTPUT_TEXTURE); detach ends it.
     bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer,
                                uint32_t width_px, uint32_t height_px, float content_scale);
     void (*detach_metal_layer)(GagaInstance* inst);
