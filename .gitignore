@@ -26,6 +26,9 @@ xcuserdata/
 .idea/
 .vscode/
 
+# App Store Connect key ids (scripts/testflight_notes.py reads it; plain KEY=value lines, so `set -a; . scripts/asc.local.env` works too)
+scripts/asc.local.env
+
 # Fastlane / CI / temp
 *.log
 *.tmp
