@@ -72,7 +72,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// Whole frames per tick. 1 is normal speed.
     @Published private(set) var fastForward = 1
     /// What the touch button switches to. The pause menu sets it.
-    private var fastForwardChoice = 2
+    var fastForwardChoice = 2
     @Published private(set) var cheats: [CheatEntry] = []
     /// A message for the player that does not end the session.
     @Published var notice: String?
@@ -89,6 +89,33 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     @Published private(set) var rewindStatus: RewindStatus = .off
     @Published private(set) var rewinding = false
     private var rewindTouchHeld = false
+
+    // MARK: Control options, set by the owner before `run`
+    /// Turbo and macros, stepped per emulated frame for player 1. Made in `wire`.
+    private(set) var processor = FrameInputProcessor()
+    var turboHertz = 15.0
+    /// The saved macros, looked up when one is pressed, so an edit in the pause menu applies at once.
+    var macros: () -> [Macro] = { [] }
+    /// A finished recording, as steps.
+    var onMacroRecorded: (([Macro.Step]) -> Void)?
+    /// The quick save slot changed, for the owner to keep.
+    var onQuickSlotChange: ((Int) -> Void)?
+    /// Players this system takes (`CoreCatalog.maxPlayers`). Controllers past it reach no port.
+    var maxPlayers = 4
+    /// The app actions held last time inputs were read, to act on presses and releases only.
+    private var heldActions: Set<ControlAction> = []
+    private var fastForwardHeld = false
+    @Published private(set) var turboToggled: UInt32 = 0
+    @Published private(set) var muted = false
+    @Published private(set) var recordingMacro = false
+    @Published private(set) var runningMacros: Set<UUID> = []
+    @Published var quickSlot = 1
+    /// A short line over the game, such as "Saved to slot 2". Clears itself.
+    @Published private(set) var flash: String?
+    /// The device is upright. The game view sets it; the owner swaps the screen settings for the orientation.
+    @Published private(set) var portrait = false
+    /// The screen settings for an orientation, from the owner's store.
+    var screenForOrientation: ((Bool) -> ScreenSettings)?
 
     var onStarted: (() -> Void)?
     /// Seconds actually played since the last call. Called on pause and on stop, so a kill loses little.
@@ -141,7 +168,6 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     var onScreenChange: ((ScreenSettings) -> Void)?
     /// The core's frame size, for the layer picture to place itself. Updated each display frame.
     @Published private(set) var frameSize: CGSize?
-    private var swapPairHeld = false
     /// The pause menu and Settings offer the two-screen options only when the host places the screens.
     var isDualScreen: Bool { hostDrawsPicture && ScreenLayout.isDual(game.platformID) }
     /// The touch screen is not drawn, so touch input is off.
@@ -309,18 +335,21 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             // A fatal during load surfaces through the error prepare() throws, so fatal() ignores it here.
             Task { @MainActor in self?.fatal(event.message) }
         }
-        if !bindings.isEmpty {
-            // shortcut: TriggerPro applies to player 1 only, because bindings have no player field; give them one if local multiplayer needs it.
-            let trigger = TriggerProManager()
-            trigger.bindings = bindings
-            let fps = core.targetFPS
-            core.playerOneFilter = { state, frame in
+        // shortcut: TriggerPro, turbo and macros apply to player 1 only, because the core's per-frame hook is player 1's; add a per-port filter if local multiplayer needs them.
+        let trigger: TriggerProManager? = bindings.isEmpty ? nil : TriggerProManager()
+        trigger?.bindings = bindings
+        let fps = core.targetFPS
+        let processor = FrameInputProcessor(hertz: turboHertz, frameRate: fps)
+        self.processor = processor
+        core.playerOneFilter = { state, frame in
+            var result = state
+            if let trigger {
                 var raw = ControllerManager.InputState()
                 raw.buttons = state.buttons
-                var result = state
                 result.buttons = trigger.process(raw, frame: frame, frameRate: fps).buttons
-                return result
             }
+            result.buttons = processor.process(result.buttons, frame: frame)
+            return result
         }
     }
 
@@ -368,6 +397,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard phase == .running || phase == .paused else { return }
         pauseReasons.insert(reason)
         rewindTouchHeld = false // The button may vanish under the finger, and its release with it.
+        processor.cancelMacros()
+        runningMacros = []
         if reason == .menu { clearTouches() }
         updateDisplayLink()
         guard phase == .running else { return }
@@ -675,18 +706,62 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         }
     }
 
+    /// The touch controls stay on with a controller connected, when the player chose that.
+    var touchWithController = false
+    /// Touch input reaches player 1: no controller has taken it, or the player keeps both.
+    var touchActive: Bool { controllers.touchOwnsPlayerOne || touchWithController }
+    private var accessibilityActions: Set<ControlAction> = []
+    private var accessibilityStick: (right: Bool, x: Int16, y: Int16)?
+
+    /// VoiceOver's activate on an app, turbo or macro element: a short press, so presses and toggles act once.
+    func tapActionForAccessibility(_ action: ControlAction) {
+        accessibilityActions.insert(action)
+        pushInputs()
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(120))
+            guard let self else { return }
+            self.accessibilityActions.remove(action)
+            self.pushInputs()
+        }
+    }
+
+    /// VoiceOver's named stick actions push the stick fully one way for half a second.
+    func pushStickForAccessibility(right: Bool, x: Int16, y: Int16) {
+        accessibilityStick = (right, x, y)
+        pushInputs()
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard let self else { return }
+            self.accessibilityStick = nil
+            self.pushInputs()
+        }
+    }
+
     /// Platforms whose core takes the hardware keyboard key by key (GagaInputState.keys).
     static let typingPlatforms: Set<String> = ["dos", "atari8bit", "c64", "amiga"]
 
+    /// Players past the system's count get nothing, so a fifth pad or a two-player system's third does not reach
+    /// a port the core never reads, or one it reads for something else.
+    static func capped(_ states: [ControllerManager.InputState], maxPlayers: Int) -> [ControllerManager.InputState] {
+        states.enumerated().map { $0.offset < max(maxPlayers, 1) ? $0.element : .zero }
+    }
+
     private func pushInputs() {
         guard let core else { return }
-        var states = controllers.sample()
-        menuPair(held: states.contains(where: \.openMenu))
-        let swapHeld = states.contains(where: \.swapScreens)
-        if swapHeld, !swapPairHeld, phase == .running { swapScreens() }
-        swapPairHeld = swapHeld
-        updateRewinding(controllerHeld: states.contains(where: \.rewind))
-        if controllers.touchOwnsPlayerOne { states[0].buttons |= touchMask | accessibilityMask }
+        var states = Self.capped(controllers.sample(), maxPlayers: maxPlayers)
+        if touchActive {
+            states[0].buttons |= touchMask | accessibilityMask
+            states[0].actions.formUnion(skins.heldActions.union(accessibilityActions))
+            if let stick = accessibilityStick {
+                if stick.right { states[0].rightX = stick.x; states[0].rightY = stick.y } else { states[0].leftX = stick.x; states[0].leftY = stick.y }
+            }
+            if states[0].leftX == 0, states[0].leftY == 0 { states[0].leftX = skins.analog.lx; states[0].leftY = skins.analog.ly }
+            if states[0].rightX == 0, states[0].rightY == 0 { states[0].rightX = skins.analog.rx; states[0].rightY = skins.analog.ry }
+        }
+        // Turbo and macros reach player 1 only (`wire`), so only player 1 may press them.
+        var actions = states.dropFirst().reduce(into: Set<ControlAction>()) { $0.formUnion($1.actions.filter { $0.app != nil }) }
+        actions.formUnion(states[0].actions)
+        applyActions(actions)
         // A DOS program reads the keys themselves, so the keyboard does not also press pad buttons there.
         let typing = Self.typingPlatforms.contains(game.platformID)
         if !typing { states[0].buttons |= controllers.keyboardButtons() }
@@ -716,6 +791,150 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         defer { menuPairHeld = held }
         guard held, !menuPairHeld, phase == .running || phase == .paused else { return }
         if menuOpen { resume(.menu) } else { pause(.menu) }
+    }
+
+    // MARK: - App actions
+
+    /// Acts on presses and releases of app functions, turbo and macros, from touch and controllers alike.
+    /// Holds follow the held set every time; one-shot functions fire on the press, and only while playing.
+    func applyActions(_ actions: Set<ControlAction>) {
+        let pressed = actions.subtracting(heldActions)
+        heldActions = actions
+        menuPair(held: actions.contains(.app(.pauseMenu)))
+        updateRewinding(controllerHeld: actions.contains(.app(.rewindHold)))
+        let ffHeld = actions.contains(.app(.fastForwardHold)) && phase == .running
+        if ffHeld != fastForwardHeld {
+            fastForwardHeld = ffHeld
+            setFastForward(ffHeld ? fastForwardChoice : 1)
+        }
+        var turbo: UInt32 = 0
+        for action in actions { if case .turbo(let mask, false) = action { turbo |= mask } }
+        for action in pressed where phase == .running {
+            switch action {
+            case .app(let function): perform(function)
+            case .turbo(let mask, true): turboToggled ^= mask
+            case .macro(let id):
+                if let macro = macros().first(where: { $0.id == id }) { processor.toggle(macro) }
+                runningMacros = processor.runningMacros
+            default: break
+            }
+        }
+        processor.setTurbo(turbo | turboToggled, hertz: turboHertz)
+        if !runningMacros.isEmpty { runningMacros = processor.runningMacros }
+    }
+
+    /// One-shot app functions. Holds and the menu are handled in `applyActions`.
+    func perform(_ function: AppFunction) {
+        switch function {
+        case .quickSave: quickSave()
+        case .quickLoad: quickLoad()
+        case .fastForwardToggle: toggleFastForward()
+        case .swapScreens: swapScreens()
+        case .screenshot: takeScreenshot()
+        case .mute: toggleMute()
+        case .nextSlot: setQuickSlot(quickSlot + 1)
+        case .previousSlot: setQuickSlot(quickSlot - 1)
+        case .reset:
+            core?.reset()
+            show("Game reset.")
+        case .pauseMenu, .fastForwardHold, .rewindHold: break // `applyActions` handles these.
+        }
+    }
+
+    /// Wraps round the quick slots.
+    func setQuickSlot(_ slot: Int) {
+        let range = ControlsStore.quickSlots
+        quickSlot = slot > range.upperBound ? range.lowerBound : slot < range.lowerBound ? range.upperBound : slot
+        onQuickSlotChange?(quickSlot)
+        show("Quick slot \(quickSlot).")
+    }
+
+    func quickSave() {
+        guard let core, core.supportsSaveStates else { return show("This system cannot save states.") }
+        let exists = saves.quickSlot(quickSlot) != nil
+        let allowed = entitlements()
+        guard exists || allowed.canAddSaveState(current: saves.manualCount) else {
+            return show(SaveStateError.limitReached(allowed.maxSaveStates).localizedDescription)
+        }
+        do {
+            let file = SaveStateFile.encode(payload: try core.saveState(), coreID: core.coreID, stateVersion: core.stateVersion)
+            try saves.writeState(file, thumbnail: thumbnail(core), quick: quickSlot)
+            show("Saved to quick slot \(quickSlot).")
+        } catch {
+            show(error.localizedDescription)
+        }
+    }
+
+    func quickLoad() {
+        guard let slot = saves.quickSlot(quickSlot) else { return show("Quick slot \(quickSlot) is empty.") }
+        do {
+            try loadState(slot)
+            show("Loaded quick slot \(quickSlot).")
+        } catch {
+            show(error.localizedDescription)
+        }
+    }
+
+    func toggleMute() {
+        muted.toggle()
+        audio.volume = muted ? 0 : 1
+        show(muted ? "Sound off." : "Sound on.")
+    }
+
+    /// The picture as a PNG in Documents/Screenshots, which the Files app shows.
+    func takeScreenshot() {
+        guard let core, let png = thumbnail(core) else { return show("No picture to save yet.") }
+        let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Screenshots", isDirectory: true)
+        let stamp = Date().formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false)).replacingOccurrences(of: ":", with: "-")
+        let name = game.title.components(separatedBy: CharacterSet(charactersIn: "/\\:")).joined(separator: "-")
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try AtomicFile.write(png, to: folder.appendingPathComponent("\(name) \(stamp).png"))
+            show("Screenshot saved in Files.")
+        } catch {
+            show(error.localizedDescription)
+        }
+    }
+
+    func show(_ line: String) {
+        flash = line
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            if self?.flash == line { self?.flash = nil }
+        }
+    }
+
+    /// Records player 1's buttons per frame until `stopRecordingMacro`.
+    func startRecordingMacro() {
+        processor.startRecording()
+        recordingMacro = true
+    }
+
+    func stopRecordingMacro() {
+        recordingMacro = false
+        guard let frames = processor.stopRecording() else { return }
+        let steps = Macro.steps(recorded: frames)
+        guard !steps.isEmpty else { return show("Nothing was pressed, so no macro was saved.") }
+        onMacroRecorded?(steps)
+        show("Macro saved.")
+    }
+
+    // MARK: - Orientation
+
+    /// Re-lays the game for the device's new orientation without touching the core: the touch layout and the screen
+    /// settings change, and the picture views resize their drawables on their next layout pass.
+    func setPortrait(_ upright: Bool) {
+        guard upright != portrait else { return }
+        portrait = upright
+        skins.portrait = upright
+        clearTouches()
+        if let settings = screenForOrientation?(upright) {
+            let save = onScreenChange
+            onScreenChange = nil // Loaded, not chosen: nothing to save.
+            screen = settings
+            onScreenChange = save
+        }
     }
 
     /// Controllers have no change callback worth trusting per button, so read them once per display frame.

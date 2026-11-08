@@ -22,22 +22,33 @@ final class ScreenLayoutStore: ObservableObject {
         file = decoded.flatMap { $0.version <= File.currentVersion ? $0 : nil } ?? File()
     }
 
-    /// The game's own choice, then its system's, then the defaults.
-    func settings(platformID: String, gameID: UUID?) -> ScreenSettings {
-        (gameID.flatMap { file.games[$0.uuidString] } ?? file.systems[platformID] ?? ScreenSettings()).normalized()
+    /// Upright choices are kept apart, under the same key with this suffix, so each orientation has its own.
+    private static func key(_ id: String, _ portrait: Bool) -> String { portrait ? id + "@portrait" : id }
+
+    /// Upright, the picture starts above the controls; a two-screen system keeps Stacked, its default.
+    static func defaults(portrait: Bool) -> ScreenSettings {
+        var settings = ScreenSettings()
+        if portrait { settings.area = .betweenControls }
+        return settings
     }
 
-    func hasOverride(_ gameID: UUID) -> Bool { file.games[gameID.uuidString] != nil }
+    /// The game's own choice, then its system's, then the defaults, for one orientation.
+    func settings(platformID: String, gameID: UUID?, portrait: Bool = false) -> ScreenSettings {
+        (gameID.flatMap { file.games[Self.key($0.uuidString, portrait)] } ?? file.systems[Self.key(platformID, portrait)]
+            ?? Self.defaults(portrait: portrait)).normalized()
+    }
+
+    func hasOverride(_ gameID: UUID, portrait: Bool = false) -> Bool { file.games[Self.key(gameID.uuidString, portrait)] != nil }
 
     /// A nil `gameID` saves the system's choice.
-    func save(_ settings: ScreenSettings, platformID: String, gameID: UUID?) {
+    func save(_ settings: ScreenSettings, platformID: String, gameID: UUID?, portrait: Bool = false) {
         let value = settings.normalized()
-        if let gameID { file.games[gameID.uuidString] = value } else { file.systems[platformID] = value }
+        if let gameID { file.games[Self.key(gameID.uuidString, portrait)] = value } else { file.systems[Self.key(platformID, portrait)] = value }
         write()
     }
 
-    func removeOverride(_ gameID: UUID) {
-        guard file.games.removeValue(forKey: gameID.uuidString) != nil else { return }
+    func removeOverride(_ gameID: UUID, portrait: Bool = false) {
+        guard file.games.removeValue(forKey: Self.key(gameID.uuidString, portrait)) != nil else { return }
         write()
     }
 
