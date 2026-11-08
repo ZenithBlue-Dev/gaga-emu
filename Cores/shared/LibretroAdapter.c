@@ -8,6 +8,7 @@
 #include <libretro.h>
 
 #include <fcntl.h>
+#include <fenv.h>
 #include <limits.h>
 #include <math.h>
 #include <pthread.h>
@@ -89,6 +90,27 @@ static bool lr_claim(LrInstance* a) {
 }
 
 static void lr_release(void) { atomic_store_explicit(&s_current, NULL, memory_order_release); }
+
+// The core's floating-point mode stays the core's. Flycast's SH-4 interpreter puts FPCR in round-toward-zero,
+// and the host calls in through executionQueue.sync, often on the main thread: device run 11 then read the
+// JSON 0.2 back as 0.19999999 in ShaderPresetStoreTests. Each entry point swaps the core's mode in and the
+// caller's mode back on return. Queue only, like every other call into the core.
+static fenv_t s_core_fenv;
+static bool s_core_fenv_ready; // False until the core has run once: it then starts from the caller's mode.
+
+static void lr_enter_core_fenv(fenv_t* host) {
+    fegetenv(host);
+    if (s_core_fenv_ready) fesetenv(&s_core_fenv);
+}
+
+static void lr_leave_core_fenv(fenv_t* host) {
+    fegetenv(&s_core_fenv);
+    s_core_fenv_ready = true;
+    fesetenv(host);
+}
+
+// First line of an entry point. Every return restores the caller's mode.
+#define LR_CORE_FENV fenv_t lr_host_fenv __attribute__((cleanup(lr_leave_core_fenv))); lr_enter_core_fenv(&lr_host_fenv)
 
 static void lr_emit(LrInstance* a, GagaEventSeverity severity, int32_t code, const char* message) {
     if (a->event_cb) a->event_cb(severity, code, message, a->event_userdata);
@@ -450,6 +472,8 @@ GagaInstance* gaga_lr_create(const char* system_dir, const char* save_dir) {
         free(a);
         return NULL;
     }
+    s_core_fenv_ready = false;
+    LR_CORE_FENV;
     if (system_dir) strlcpy(a->system_dir, system_dir, sizeof(a->system_dir));
     if (save_dir) strlcpy(a->save_dir, save_dir, sizeof(a->save_dir));
     a->pixel_format = RETRO_PIXEL_FORMAT_0RGB1555; // libretro's default until the core says otherwise.
@@ -468,6 +492,7 @@ static void lr_cheat_reset(void);
 static void lr_apply_cheats(LrInstance* a);
 
 void gaga_lr_destroy(GagaInstance* inst) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (!a) return;
     a->video_cb = NULL;
@@ -534,6 +559,7 @@ static uint8_t* lr_read_rom(LrInstance* a, const char* rom_path, size_t* size) {
 bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_data, size_t rom_size) {
     (void)rom_data; // The host passes a path only.
     (void)rom_size;
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (!a || !rom_path || a->loaded) return false;
     const char* refusal = gaga_libretro_core.refuse_load ? gaga_libretro_core.refuse_load(a->system_dir, rom_path) : NULL;
@@ -613,6 +639,7 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
 }
 
 void gaga_lr_reset(GagaInstance* inst) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (!a || !a->loaded) return;
     retro_reset();
@@ -622,6 +649,7 @@ void gaga_lr_reset(GagaInstance* inst) {
 // The host's timer sets the pace, and fast-forward calls this several times in a tick. retro_run runs
 // exactly one frame and keeps nothing from one call to the next that this adapter has to reset.
 void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint32_t player_count) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (!a || !a->loaded) return;
     memset(a->inputs, 0, sizeof(a->inputs));
@@ -667,6 +695,7 @@ void gaga_lr_pause(GagaInstance* inst) {
 void gaga_lr_resume(GagaInstance* inst) { (void)inst; }
 
 void gaga_lr_flush_battery_save(GagaInstance* inst) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (a && a->loaded) lr_flush(a);
 }
@@ -674,6 +703,7 @@ void gaga_lr_flush_battery_save(GagaInstance* inst) {
 // MARK: - Save states
 
 size_t gaga_lr_state_size(GagaInstance* inst) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (!a || !a->loaded) return 0;
     size_t payload = retro_serialize_size();
@@ -681,6 +711,7 @@ size_t gaga_lr_state_size(GagaInstance* inst) {
 }
 
 bool gaga_lr_save_state(GagaInstance* inst, void* buffer, size_t size) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     size_t payload = a && a->loaded ? retro_serialize_size() : 0;
     if (payload == 0 || !buffer || size != sizeof(LrStateHeader) + payload) return false;
@@ -692,6 +723,7 @@ bool gaga_lr_save_state(GagaInstance* inst, void* buffer, size_t size) {
 
 // A core may overwrite its memory before it finds a state is bad, so it gets a snapshot to go back to.
 bool gaga_lr_load_state(GagaInstance* inst, const void* buffer, size_t size, char* error, size_t error_capacity) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     size_t payload = a && a->loaded ? retro_serialize_size() : 0;
     size_t current = payload; // The running game's size, for the snapshot.
@@ -796,6 +828,7 @@ static char* lr_clean_cheat(const char* code, char* error, size_t error_capacity
 }
 
 bool gaga_lr_cheat_add(GagaInstance* inst, uint32_t id, const char* code, bool enabled, char* error, size_t error_capacity) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     if (!a || !code) return false;
     char* clean = lr_clean_cheat(code, error, error_capacity);
@@ -818,6 +851,7 @@ bool gaga_lr_cheat_add(GagaInstance* inst, uint32_t id, const char* code, bool e
 }
 
 void gaga_lr_cheat_remove(GagaInstance* inst, uint32_t id) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     LrCheat* cheat = a ? lr_find_cheat(a, id) : NULL;
     if (!cheat) return;
@@ -827,6 +861,7 @@ void gaga_lr_cheat_remove(GagaInstance* inst, uint32_t id) {
 }
 
 void gaga_lr_cheat_set_enabled(GagaInstance* inst, uint32_t id, bool enabled) {
+    LR_CORE_FENV;
     LrInstance* a = (LrInstance*)inst;
     LrCheat* cheat = a ? lr_find_cheat(a, id) : NULL;
     if (!cheat) return;
