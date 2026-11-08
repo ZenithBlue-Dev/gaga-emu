@@ -32,7 +32,7 @@ struct RootView: View {
         AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
             if !upright {
                 LeftRail(selection: $screen)
-                Rule().ignoresSafeArea(edges: .vertical)
+                Rule(vertical: true).ignoresSafeArea(edges: .vertical)
             }
             Group {
                 switch screen {

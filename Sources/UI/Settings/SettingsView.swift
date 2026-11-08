@@ -42,7 +42,7 @@ struct SettingsView: View {
                     }
                 }
                 .frame(width: (verticalSize == .compact ? 170 : 240) * min(columnScale, 1.5))
-                Rule().ignoresSafeArea(edges: .vertical)
+                Rule(vertical: true).ignoresSafeArea(edges: .vertical)
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {

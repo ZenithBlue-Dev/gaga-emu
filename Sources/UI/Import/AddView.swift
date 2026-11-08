@@ -33,7 +33,7 @@ struct AddView: View {
                 .padding(16)
             }
             .frame(maxWidth: .infinity)
-            if upright { Rule() } else { Rule().ignoresSafeArea(edges: .vertical) }
+            if upright { Rule() } else { Rule(vertical: true).ignoresSafeArea(edges: .vertical) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     wifiRow

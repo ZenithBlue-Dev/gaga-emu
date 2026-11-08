@@ -37,9 +37,19 @@ extension Font {
     static let meta = Font.system(.caption, design: .monospaced)
 }
 
-/// Hairline in place of shadows and cards. Follows the stack's axis.
+/// Hairline in place of shadows and cards. Follows a plain stack's axis. Inside `AnyLayout` a Divider cannot see the
+/// axis and lies flat, taking a share of the row's width, so a vertical rule there passes `vertical: true`.
 struct Rule: View {
-    var body: some View { Divider().overlay(AppTheme.rule) }
+    var vertical = false
+    @Environment(\.displayScale) private var scale
+
+    var body: some View {
+        if vertical {
+            AppTheme.rule.frame(width: 1 / scale)
+        } else {
+            Divider().overlay(AppTheme.rule)
+        }
+    }
 }
 
 struct PrimaryButtonStyle: ButtonStyle {

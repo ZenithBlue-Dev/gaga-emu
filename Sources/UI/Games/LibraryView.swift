@@ -51,7 +51,7 @@ struct LibraryView: View {
                         Rule()
                     } else {
                         continuePanel.frame(width: metrics.panel)
-                        Rule().ignoresSafeArea(edges: .vertical)
+                        Rule(vertical: true).ignoresSafeArea(edges: .vertical)
                     }
                     VStack(spacing: 0) {
                         ImportProgressRows().padding(.leading, lead).padding(.trailing, trail)
