@@ -46,5 +46,10 @@ for core in $noncommercial; do
     fi
 done
 
+if ! python3 "$root/scripts/check_store_assets.py" >/dev/null; then
+    echo "FAIL: scripts/check_store_assets.py" >&2
+    failures=$((failures + 1))
+fi
+
 [ "$failures" -eq 0 ] || exit 1
 echo "release gate tests: pass"
