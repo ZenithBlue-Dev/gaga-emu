@@ -198,9 +198,13 @@ private struct LibraryPane: View {
         ValueRow(title: "Games", value: "\(state.games.count)")
         Rule()
         ToggleRow(title: "Cover Art",
-                  note: "Off by default. When on, your game titles are sent to \(LibretroThumbnails.host) to look for box art, and pictures are kept in the cache.",
+                  note: "Off by default. When on, GagaEmu reads box art lists from \(LibretroThumbnails.host) and asks it for the art of each game it matches, so that server sees which games you have. Pictures are kept in the cache. Turn this off at any time.",
                   isOn: $state.coverArt)
         Rule()
+        if state.coverArt {
+            ActionRow(title: "Refresh Covers", symbol: "arrow.clockwise") { state.refetchCovers() }
+            Rule()
+        }
         ActionRow(title: "BIOS Files") { showBIOS = true }
             .sheet(isPresented: $showBIOS) { BIOSManagerView() }
         Rule()
