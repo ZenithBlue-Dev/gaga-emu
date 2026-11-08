@@ -1,5 +1,6 @@
 import AVFoundation
 import Metal
+import MetalKit
 import QuartzCore
 import UIKit
 import os
@@ -121,9 +122,27 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// and host shaders are unused.
     let drawsOwnPicture: Bool
     /// A layer-path core whose frames go through the renderer and the filter chain instead (docs/05 section 2.4):
-    /// a filter is chosen and the core can render off-screen. Without a filter it presents directly, at no cost.
-    /// Turns false, and the layer picture takes over, if the core refuses.
+    /// a filter is chosen, or the system has two screens for the host to place (section 2.6), and the core can
+    /// render off-screen. Otherwise it presents directly, at no cost. Turns false, and the layer picture takes
+    /// over, if the core refuses.
     @Published private(set) var filtersLayerCore: Bool
+    /// The renderer draws the core's frames, so screen layouts and filters reach them.
+    var hostDrawsPicture: Bool { !drawsOwnPicture || filtersLayerCore }
+    /// Scaling and, on a two-screen system, the layout. The owner saves each change through `onScreenChange`.
+    @Published var screen = ScreenSettings() {
+        didSet {
+            syncScreen()
+            if screen != oldValue { onScreenChange?(screen) }
+        }
+    }
+    var onScreenChange: ((ScreenSettings) -> Void)?
+    /// The core's frame size, for the layer picture to place itself. Updated each display frame.
+    @Published private(set) var frameSize: CGSize?
+    private var swapPairHeld = false
+    /// The pause menu and Settings offer the two-screen options only when the host places the screens.
+    var isDualScreen: Bool { hostDrawsPicture && ScreenLayout.isDual(game.platformID) }
+    /// The touch screen is not drawn, so touch input is off.
+    var touchScreenHidden: Bool { isDualScreen && !ScreenLayout.showsTouchScreen(screen) }
     /// The layer the core presents to, with its drawable size. Kept until the core exists.
     private var layerTarget: (layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat)?
 
@@ -142,7 +161,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         }
         drawsOwnPicture = interface.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue != 0
         guard !drawsOwnPicture || GPUFloor.supportsLayerPathCores(device) else { throw GameLaunchError.gpuBelowFloor }
-        filtersLayerCore = drawsOwnPicture && CoreCatalog.isFilter(shaderID)
+        // A two-screen system always goes through the renderer, so a layout change in the pause menu needs no
+        // switch between the two paths mid-game. The cost is one copy of a small frame.
+        filtersLayerCore = drawsOwnPicture && (CoreCatalog.isFilter(shaderID) || ScreenLayout.isDual(game.platformID))
             && interface.capabilities & GAGA_CORE_CAP_OUTPUT_TEXTURE.rawValue != 0
         self.saves = saveDirectory.map(SaveStore.init(directory:)) ?? SaveStore(romPath: romPath)
         self.entitlements = entitlements
@@ -160,6 +181,17 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         super.init()
         renderer.textureRing = ring
         renderer.activePreset = ShaderPreset.from(id: shaderID)
+        syncScreen()
+    }
+
+    private func syncScreen() {
+        renderer.setScreen(screen, platformID: hostDrawsPicture ? game.platformID : "")
+    }
+
+    /// The quick toggle: exchanges the screens, or picks the other one in One Screen.
+    func swapScreens() {
+        guard isDualScreen else { return }
+        screen.swapped.toggle()
     }
 
     #if DEBUG
@@ -207,7 +239,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             }
             core.enableRewind()
         }
-        if filtersLayerCore, !core.attachOutputTexture() { filtersLayerCore = false }
+        if filtersLayerCore, !core.attachOutputTexture() {
+            filtersLayerCore = false
+            syncScreen()
+        }
         if let target = layerTarget { attachLayer(target.layer, width: target.width, height: target.height, scale: target.scale) }
         cheats = saves.cheats()
         if core.supportsCheats {
@@ -581,10 +616,16 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// coordinates: the first one on the picture is the pointer, for a core with a touch screen.
     func setTouches(_ points: [CGPoint], windowPoints: [CGPoint] = []) {
         touchMask = skins.setTouches(points)
-        pointer = windowPoints.lazy.compactMap { [self] point -> (x: Int16, y: Int16)? in
-            guard let view = pictureView, let content = renderer.contentSize else { return nil }
-            return Self.libretroPointer(view.convert(point, from: nil), bounds: view.bounds.size, content: content)
-        }.first
+        pointer = nil
+        if let view = pictureView, !windowPoints.isEmpty, view.bounds.width > 0 {
+            // The renderer places screens in pixels, so Whole Pixels lands the same for a finger.
+            let scale = (view as? MTKView).map { $0.drawableSize.width / view.bounds.width } ?? view.traitCollection.displayScale
+            let placements = renderer.placements(canvas: CGSize(width: view.bounds.width * scale, height: view.bounds.height * scale))
+            pointer = windowPoints.lazy.compactMap { point -> (x: Int16, y: Int16)? in
+                let local = view.convert(point, from: nil)
+                return ScreenLayout.pointer(at: CGPoint(x: local.x * scale, y: local.y * scale), placements: placements)
+            }.first
+        }
         pushInputs()
     }
 
@@ -595,14 +636,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         pushInputs()
     }
 
-    /// libretro's pointer scale, -32767 to 32767 across the frame as the renderer fits it in `bounds`.
+    /// libretro's pointer scale, -32767 to 32767 across the frame as the renderer fits it whole in `bounds`.
     /// Nil off the picture, in the letterbox.
     static func libretroPointer(_ point: CGPoint, bounds: CGSize, content: CGSize) -> (x: Int16, y: Int16)? {
-        let fit = MetalRenderer.fittedViewport(contentWidth: Int(content.width), contentHeight: Int(content.height), drawable: bounds)
-        guard fit.width > 0, fit.height > 0 else { return nil }
-        let u = (Double(point.x) - fit.originX) / fit.width, v = (Double(point.y) - fit.originY) / fit.height
-        guard (0..<1).contains(u), (0..<1).contains(v) else { return nil }
-        return (Int16((u * 65534 - 32767).rounded()), Int16((v * 65534 - 32767).rounded()))
+        ScreenLayout.pointer(at: point, placements: ScreenLayout.placements(frame: content, canvas: bounds, platformID: "",
+                                                                            settings: ScreenSettings()))
     }
 
     /// VoiceOver has no press and hold, so its activate action holds the button long enough for a core to see it.
@@ -624,6 +662,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard let core else { return }
         var states = controllers.sample()
         menuPair(held: states.contains(where: \.openMenu))
+        let swapHeld = states.contains(where: \.swapScreens)
+        if swapHeld, !swapPairHeld, phase == .running { swapScreens() }
+        swapPairHeld = swapHeld
         updateRewinding(controllerHeld: states.contains(where: \.rewind))
         if controllers.touchOwnsPlayerOne { states[0].buttons |= touchMask | accessibilityMask }
         // A DOS program reads the keys themselves, so the keyboard does not also press pad buttons there.
@@ -660,6 +701,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// Controllers have no change callback worth trusting per button, so read them once per display frame.
     @objc private func tick() {
         pushInputs()
+        let size = renderer.contentSize
+        if size != frameSize { frameSize = size }
         #if DEBUG
         ticks += 1
         if ticks % 120 == 0 {

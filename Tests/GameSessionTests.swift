@@ -341,16 +341,16 @@ final class GameSessionTests: GagaTestCase {
     }
 
     func testAspectFitLetterboxesAndPillarboxes() {
-        let wide = MetalRenderer.fittedViewport(contentWidth: 256, contentHeight: 224, drawable: CGSize(width: 2000, height: 1000))
+        let wide = ScreenLayout.scaledRect(content: CGSize(width: 256, height: 224), canvas: CGSize(width: 2000, height: 1000), mode: .fit)
         XCTAssertEqual(wide.height, 1000)
         XCTAssertEqual(wide.width, 1143)
-        XCTAssertEqual(wide.originX, 428.5)
-        XCTAssertEqual(wide.originY, 0)
+        XCTAssertEqual(wide.minX, 428, "on a whole pixel")
+        XCTAssertEqual(wide.minY, 0)
 
-        let tall = MetalRenderer.fittedViewport(contentWidth: 240, contentHeight: 160, drawable: CGSize(width: 600, height: 1000))
+        let tall = ScreenLayout.scaledRect(content: CGSize(width: 240, height: 160), canvas: CGSize(width: 600, height: 1000), mode: .fit)
         XCTAssertEqual(tall.width, 600)
         XCTAssertEqual(tall.height, 400)
-        XCTAssertEqual(tall.originY, 300)
+        XCTAssertEqual(tall.minY, 300)
     }
 
     func testRingMapsEveryBridgeFormat() throws {

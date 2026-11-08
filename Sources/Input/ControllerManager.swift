@@ -53,12 +53,14 @@ public final class ControllerManager: ObservableObject {
         public var openMenu = false
         /// Options and L1 held together: rewind, on a core that has it. Never reaches a core either.
         public var rewind = false
+        /// Options and R1 held together: swap a two-screen system's screens. Never reaches a core either.
+        public var swapScreens = false
         public static let zero = InputState()
 
         /// Past stick and trigger drift, which a pad nobody is holding can report.
         var isDeliberate: Bool {
             let half: Int32 = 16384
-            return buttons != 0 || openMenu || rewind || triggerL > 0.5 || triggerR > 0.5
+            return buttons != 0 || openMenu || rewind || swapScreens || triggerL > 0.5 || triggerR > 0.5
                 || [leftX, leftY, rightX, rightY].contains { abs(Int32($0)) > half }
         }
     }
@@ -280,6 +282,8 @@ public final class ControllerManager: ObservableObject {
         // Select and L1 alone still reach the game; only the pair means rewind.
         state.rewind = !pair && pad.buttonOptions?.isPressed == true && pad.leftShoulder.isPressed
         if state.rewind { state.buttons &= ~(Button.select | Button.l1) }
+        state.swapScreens = !pair && pad.buttonOptions?.isPressed == true && pad.rightShoulder.isPressed
+        if state.swapScreens { state.buttons &= ~(Button.select | Button.r1) }
         state.leftX = axis(pad.leftThumbstick.xAxis.value)
         state.leftY = axis(pad.leftThumbstick.yAxis.value)
         state.rightX = axis(pad.rightThumbstick.xAxis.value)

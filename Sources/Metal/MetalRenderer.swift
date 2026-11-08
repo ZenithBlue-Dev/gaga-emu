@@ -223,8 +223,21 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
     private var pipelineStates: [PipelineKey: MTLRenderPipelineState] = [:]
     private var nearestSampler: MTLSamplerState?
     private var linearSampler: MTLSamplerState?
-    /// One target per chain position, kept across frames.
-    private var intermediates: [MTLTexture?] = []
+    /// One target per screen and chain position, kept across frames.
+    private var intermediates: [[MTLTexture?]] = []
+    /// Each screen cut out of a two-screen frame, turned if asked (docs/05 section 2.6).
+    private var cropTargets: [MTLTexture?] = []
+    private lazy var cropPipeline: MTLRenderPipelineState? = {
+        let desc = MTLRenderPipelineDescriptor()
+        desc.vertexFunction = library.makeFunction(name: "screen_crop_vertex")
+        desc.fragmentFunction = library.makeFunction(name: "screen_crop_fragment")
+        desc.colorAttachments[0].pixelFormat = .bgra8Unorm
+        return try? device.makeRenderPipelineState(descriptor: desc)
+    }()
+    /// How the picture is placed. The platform is empty when the core draws its own picture, so the core's
+    /// frame is placed whole.
+    private var screen = ScreenSettings()
+    private var screenPlatform = ""
 
     public var uniforms = ShaderUniforms()
     public var activePreset: ShaderPreset = .original
@@ -260,19 +273,6 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
     static func configureOutput(_ layer: CAMetalLayer) {
         layer.pixelFormat = outputPixelFormat
         layer.colorspace = outputColorSpace
-    }
-
-    /// Aspect fit, centred. The clear colour shows in the rest.
-    /// shortcut: treats core pixels as square, add a display aspect to the frame descriptor when a core needs it (SNES 8:7).
-    static func fittedViewport(contentWidth: Int, contentHeight: Int, drawable: CGSize) -> MTLViewport {
-        guard contentWidth > 0, contentHeight > 0, drawable.width > 0, drawable.height > 0 else {
-            return MTLViewport(originX: 0, originY: 0, width: Double(drawable.width), height: Double(drawable.height), znear: 0, zfar: 1)
-        }
-        let scale = min(drawable.width / CGFloat(contentWidth), drawable.height / CGFloat(contentHeight))
-        let width = (CGFloat(contentWidth) * scale).rounded()
-        let height = (CGFloat(contentHeight) * scale).rounded()
-        return MTLViewport(originX: Double((drawable.width - width) / 2), originY: Double((drawable.height - height) / 2),
-                           width: Double(width), height: Double(height), znear: 0, zfar: 1)
     }
 
     /// The whole chain for this selection, upscaling pass first.
@@ -350,6 +350,23 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         return customTexture.map { CGSize(width: $0.width, height: $0.height) } ?? presentedSize
     }
 
+    /// `platformID` empty places the frame whole, as one screen.
+    func setScreen(_ settings: ScreenSettings, platformID: String) {
+        lock.lock()
+        screen = settings
+        screenPlatform = platformID
+        lock.unlock()
+    }
+
+    /// Where the last frame's screens are drawn in a canvas of `canvas` pixels, for placing a finger.
+    func placements(canvas: CGSize) -> [ScreenPlacement] {
+        guard let content = contentSize else { return [] }
+        lock.lock()
+        let (settings, platform) = (screen, screenPlatform)
+        lock.unlock()
+        return ScreenLayout.placements(frame: content, canvas: canvas, platformID: platform, settings: settings)
+    }
+
     /// Sliders and the upscaler. Saved values pass through a clamp, because state.json is a file.
     public func apply(_ values: ShaderParameterValues) {
         uniforms.curvature = min(max(values.curvature, 0), 1)
@@ -381,18 +398,48 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         return state
     }
 
-    /// Reuses this chain position's target while its size and format still fit.
-    private func intermediate(at index: Int, width: Int, height: Int, format: MTLPixelFormat) -> MTLTexture? {
-        if intermediates.count <= index { intermediates += Array(repeating: nil, count: index + 1 - intermediates.count) }
-        if let current = intermediates[index], current.width == width, current.height == height, current.pixelFormat == format {
-            return current
+    /// Reuses this screen's chain-position target while its size and format still fit.
+    private func intermediate(screen: Int, at index: Int, width: Int, height: Int, format: MTLPixelFormat) -> MTLTexture? {
+        while intermediates.count <= screen { intermediates.append([]) }
+        if intermediates[screen].count <= index {
+            intermediates[screen] += Array(repeating: nil, count: index + 1 - intermediates[screen].count)
         }
-        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width, height: height, mipmapped: false)
+        let texture = reuse(intermediates[screen][index], width: width, height: height, format: format)
+        intermediates[screen][index] = texture
+        return texture
+    }
+
+    private func reuse(_ current: MTLTexture?, width: Int, height: Int, format: MTLPixelFormat) -> MTLTexture? {
+        if let current, current.width == width, current.height == height, current.pixelFormat == format { return current }
+        // Zoom can ask for an output-sized pass past the GPU's limit.
+        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: min(max(width, 1), 8192),
+                                                            height: min(max(height, 1), 8192), mipmapped: false)
         desc.usage = [.renderTarget, .shaderRead]
         desc.storageMode = .private
-        let texture = device.makeTexture(descriptor: desc)
-        intermediates[index] = texture
-        return texture
+        return device.makeTexture(descriptor: desc)
+    }
+
+    /// The placement's part of the frame, turned, at the screen's own pixel size.
+    private func cropped(_ source: MTLTexture, _ placement: ScreenPlacement, screen: Int, into cmdBuffer: MTLCommandBuffer) -> MTLTexture? {
+        guard let pipeline = cropPipeline else { return nil }
+        let w = max(Int((CGFloat(source.width) * placement.source.width).rounded()), 1)
+        let h = max(Int((CGFloat(source.height) * placement.source.height).rounded()), 1)
+        let (width, height) = placement.rotation == .none ? (w, h) : (h, w)
+        while cropTargets.count <= screen { cropTargets.append(nil) }
+        guard let target = reuse(cropTargets[screen], width: width, height: height, format: .bgra8Unorm) else { return nil }
+        cropTargets[screen] = target
+        let pass = MTLRenderPassDescriptor()
+        pass.colorAttachments[0].texture = target
+        pass.colorAttachments[0].loadAction = .dontCare
+        pass.colorAttachments[0].storeAction = .store
+        guard let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: pass) else { return nil }
+        var corners = ScreenLayout.cropCorners(placement)
+        encoder.setRenderPipelineState(pipeline)
+        encoder.setVertexBytes(&corners, length: MemoryLayout<SIMD2<Float>>.stride * corners.count, index: 0)
+        encoder.setFragmentTexture(source, index: 0)
+        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+        encoder.endEncoding()
+        return target
     }
 
     // MARK: - MTKViewDelegate
@@ -437,7 +484,39 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         // Releases one acquired ring slot, if any is waiting. Attaches nothing on a repeat draw.
         textureRing?.attachCompletion(to: cmdBuffer)
 
-        let viewport = Self.fittedViewport(contentWidth: source.width, contentHeight: source.height, drawable: size)
+        lock.lock()
+        let (settings, platform) = (screen, screenPlatform)
+        lock.unlock()
+        let placements = ScreenLayout.placements(frame: CGSize(width: source.width, height: source.height), canvas: size,
+                                                 platformID: platform, settings: settings)
+        if slangChain != nil || importedPipeline != nil { watchImported(cmdBuffer) }
+        // The filter chain runs once per screen, on that screen alone (docs/05 section 2.6). The first screen drawn
+        // clears the target and the rest load it.
+        var cleared = false
+        for (index, placement) in placements.enumerated() {
+            let bounds = CGRect(origin: .zero, size: size)
+            let visible = placement.dest.intersection(bounds).integral.intersection(bounds)
+            guard !visible.isNull, visible.width >= 1, visible.height >= 1,
+                  let input = placement.isWholeFrame ? source : cropped(source, placement, screen: index, into: cmdBuffer) else { continue }
+            let target: MTLRenderPassDescriptor
+            if cleared {
+                target = rpd.copy() as! MTLRenderPassDescriptor // swiftlint:disable:this force_cast
+                target.colorAttachments[0].loadAction = .load
+            } else {
+                target = rpd
+            }
+            cleared = true
+            let viewport = MTLViewport(originX: Double(placement.dest.minX), originY: Double(placement.dest.minY),
+                                       width: Double(placement.dest.width), height: Double(placement.dest.height), znear: 0, zfar: 1)
+            let scissor = MTLScissorRect(x: Int(visible.minX), y: Int(visible.minY), width: Int(visible.width), height: Int(visible.height))
+            encodeScreen(input, screen: index, into: cmdBuffer, target: target, viewport: viewport, scissor: scissor)
+        }
+        if !cleared { cmdBuffer.makeRenderCommandEncoder(descriptor: rpd)?.endEncoding() }
+    }
+
+    /// One screen through the whole chain. The last pass draws into `viewport` of `target`, cut to `scissor`.
+    private func encodeScreen(_ source: MTLTexture, screen: Int, into cmdBuffer: MTLCommandBuffer, target rpd: MTLRenderPassDescriptor,
+                              viewport: MTLViewport, scissor: MTLScissorRect) {
         var values = uniforms
         values.time = Float(CACurrentMediaTime() - startTime)
         values.viewportW = UInt32(viewport.width)
@@ -446,13 +525,11 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         values.sourceH = UInt32(source.height)
 
         if let slang = slangChain {
-            watchImported(cmdBuffer)
-            encodeSlang(slang, into: cmdBuffer, target: rpd, source: source, viewport: viewport)
+            encodeSlang(slang, into: cmdBuffer, target: rpd, source: source, viewport: viewport, scissor: scissor, screen: screen)
             return
         }
         let chain = Self.chain(preset: activePreset, upscaler: upscaler)
         let imported = importedPipeline
-        if imported != nil { watchImported(cmdBuffer) }
         var input = source
 
         for (index, pass) in chain.enumerated() {
@@ -463,7 +540,7 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
             var output: MTLTexture?
             if let passSize = pass.size {
                 let pixels = Self.pixelSize(passSize, source: source, viewport: viewport)
-                guard let texture = intermediate(at: index, width: pixels.width, height: pixels.height, format: pass.format) else { continue }
+                guard let texture = intermediate(screen: screen, at: index, width: pixels.width, height: pixels.height, format: pass.format) else { continue }
                 output = texture
                 passDescriptor = MTLRenderPassDescriptor()
                 passDescriptor.colorAttachments[0].texture = texture
@@ -479,6 +556,7 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
                     encoder.setViewport(MTLViewport(originX: 0, originY: 0, width: Double(output.width), height: Double(output.height), znear: 0, zfar: 1))
                 } else {
                     encoder.setViewport(viewport)
+                    encoder.setScissorRect(scissor)
                 }
                 encoder.setFragmentBytes(&values, length: MemoryLayout<ShaderUniforms>.size, index: 0)
                 encoder.setFragmentTexture(input, index: 0)
@@ -494,7 +572,7 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
     /// Each pass draws a quad into its own target, sized by its scale type; the last draws into the picture.
     /// shortcut: a scale on the last pass is ignored (it always fills the picture), add a final blit if a preset needs it.
     private func encodeSlang(_ chain: SlangChain, into cmdBuffer: MTLCommandBuffer, target rpd: MTLRenderPassDescriptor,
-                             source: MTLTexture, viewport: MTLViewport) {
+                             source: MTLTexture, viewport: MTLViewport, scissor: MTLScissorRect, screen: Int) {
         frameCount &+= 1
         let view = (width: max(Int(viewport.width), 1), height: max(Int(viewport.height), 1))
         var parameters: [String: Float] = [:]
@@ -512,7 +590,7 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
                 descriptor = rpd
             } else {
                 size = SlangChain.outputSize(pass.spec, input: (input.width, input.height), viewport: view)
-                guard let texture = intermediate(at: index, width: size.width, height: size.height, format: pass.format) else { return }
+                guard let texture = intermediate(screen: screen, at: index, width: size.width, height: size.height, format: pass.format) else { return }
                 output = texture
                 descriptor = MTLRenderPassDescriptor()
                 descriptor.colorAttachments[0].texture = texture
@@ -522,6 +600,7 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
             guard let encoder = cmdBuffer.makeRenderCommandEncoder(descriptor: descriptor) else { return }
             encoder.setRenderPipelineState(pass.pipeline)
             encoder.setViewport(output.map { MTLViewport(originX: 0, originY: 0, width: Double($0.width), height: Double($0.height), znear: 0, zfar: 1) } ?? viewport)
+            if output == nil { encoder.setScissorRect(scissor) }
             let mod = UInt32(max(pass.spec.frameCountMod, 0))
             let frame = SlangChain.Frame(source: (input.width, input.height), original: (source.width, source.height), output: size,
                                          viewport: view, frameCount: mod > 0 ? frameCount % mod : frameCount, parameters: parameters)

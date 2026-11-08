@@ -32,6 +32,24 @@ vertex VertexOut vertex_main(uint vertex_id [[vertex_id]]) {
     return out;
 }
 
+// MARK: - Screen Crop
+
+// Cuts one screen out of a two-screen frame at its own pixel size, turned if asked (docs/05 section 2.6).
+// corners holds the frame UV shown at the target's top-left, top-right, bottom-left and bottom-right
+// (ScreenLayout.cropCorners), drawn as a 4-vertex strip.
+vertex VertexOut screen_crop_vertex(uint vertex_id [[vertex_id]], constant float2* corners [[buffer(0)]]) {
+    const float2 positions[4] = { float2(-1.0, 1.0), float2(1.0, 1.0), float2(-1.0, -1.0), float2(1.0, -1.0) };
+    VertexOut out;
+    out.position = float4(positions[vertex_id], 0.0, 1.0);
+    out.uv = corners[vertex_id];
+    return out;
+}
+
+fragment float4 screen_crop_fragment(VertexOut in [[stage_in]], texture2d<float> frame [[texture(0)]]) {
+    constexpr sampler nearest(filter::nearest, address::clamp_to_edge);
+    return frame.sample(nearest, in.uv);
+}
+
 // MARK: - Helper Functions
 
 // Relative luminance based on Rec.709
