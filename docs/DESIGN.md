@@ -92,8 +92,8 @@ The app runs upright and in landscape (`docs/06` section 3): iPhone upright, lan
 | Screen | Layout | Sizes |
 |---|---|---|
 | Root | Rail, rule, content | Rail 72pt |
-| Library | Continue panel on the left, chips and shelves on the right | Panel 240pt compact, else 300pt. Panel cover 84pt or 150pt wide. Shelf cover 90pt or 140pt wide, times the tile scale up to 1.8. |
-| Add | Two columns: Choose from Files and drop target, then the other sources and the legal notice | Choose from Files is 72pt high |
+| Library | Continue panel on the left, chips and shelves on the right | Panel 27% of the Library width, 180pt to 300pt compact, else 220pt to 300pt. Search 20%, 130pt to 260pt (`LibraryMetrics`). Panel cover 84pt or 150pt wide. Shelf cover 90pt or 140pt wide, times the tile scale up to 1.8. |
+| Add | Two columns: Choose from Files and drop target, then the other sources and the legal notice. A landscape phone has a compact width too, so only upright stacks them. | Choose from Files is 72pt high |
 | Settings | Two panes: categories, then the selected category | Only working rows appear |
 | Filter picker | List on the left, live preview and its controls on the right | List 240pt compact, else 320pt. Controls 190pt compact, else 240pt: Upscale chips in two columns, sliders, Reset. |
 | Game | Picture aspect fit on `letterbox`, a touch band on each side | Pause side sheet 280pt |
