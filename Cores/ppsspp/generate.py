@@ -49,6 +49,8 @@ EXCLUDE = [
     r"^GPU/Software/(DrawPixelX86|SamplerX86|RasterizerRegCache)\.cpp$",
     # Executable memory. Replaced by Cores/ppsspp/MemoryUtil.cpp, which never maps code.
     r"^Common/MemoryUtil(Horizon)?\.cpp$",
+    # The memory arena. Replaced by Cores/ppsspp/MemArenaDarwin.cpp, which reserves the PSP views once per process.
+    r"^Common/MemArenaDarwin\.cpp$",
     # Compiled through Cores/ppsspp/JitCommonNoJit.cpp, which selects upstream's FakeJit.
     r"^Core/MIPS/JitCommon/JitCommon\.cpp$",
     # OpenGL and OpenGL ES: not an accepted renderer (docs/05). Video is Vulkan on MoltenVK.
@@ -137,6 +139,7 @@ def main():
             for name, wraps in (("PpssppCore.c", None), ("PpssppSupport.cpp", None),
                                 ("JitCommonNoJit.cpp", "Core/MIPS/JitCommon/JitCommon.cpp"),
                                 ("MemoryUtil.cpp", "Common/MemoryUtil.cpp"),
+                                ("MemArenaDarwin.cpp", "Common/MemArenaDarwin.cpp"),
                                 ("LibretroVulkanContextGaga.cpp", "libretro/LibretroVulkanContext.cpp"),
                                 ("LibretroGraphicsContextNoGL.cpp", "libretro/LibretroGraphicsContext.cpp"),
                                 ("../shared/LibretroAdapter.c", None), ("../shared/LibretroVulkan.c", None)):
