@@ -1378,7 +1378,7 @@ final class AppState: ObservableObject {
     /// Runs the benchmark on `core` with `rom`, or with a generated test ROM. It stays out of the Library and
     /// play history.
     func runBenchmark(rom: URL? = nil, core coreID: String = "mgba", seconds: TimeInterval = BenchmarkRun.defaultSeconds,
-                      input: String? = nil) {
+                      input: String? = nil, filter: String = "original") {
         guard session == nil, !launching else { return }
         launching = true
         Task {
@@ -1392,11 +1392,14 @@ final class AppState: ObservableObject {
                 let romURL = try rom ?? BenchmarkRun.writeTestROM(platformID: platformID, to: romDirectory)
                 let game = GameItem(id: UUID(), title: "Benchmark", platformID: platformID, romPath: romURL.path,
                                     coverPath: nil, coreOverride: coreID, playTime: 0, lastPlayed: nil,
-                                    isFavorite: false, shaderID: "original")
+                                    isFavorite: false, shaderID: filter)
                 let next = try makeSession(for: game)
                 next.autoSaveEnabled = { false }
                 try await next.prepare()
-                let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds, input: input)
+                await applyImportedFilter(to: next)
+                let shown = store.canUseShader(filter) ? filter : "original (\(filter) needs Gaga Plus)" // As makeSession chose.
+                let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds, input: input,
+                                       filter: shown)
                 run.attach()
                 next.onFinish = { [weak self] message in self?.endSession(game: game, message: message) }
                 session = next
@@ -1416,9 +1419,15 @@ final class AppState: ObservableObject {
             launchFailure = LaunchFailure(title: "Benchmark", message: "-GagaBenchmarkInput takes button@seconds entries, such as start@8,cross@12.")
             return
         }
+        // -GagaBenchmarkFilter crt-v1: the filter's cost, on a layer-path core through its output texture.
+        let filter = defaults.string(forKey: "GagaBenchmarkFilter") ?? "original"
+        guard filter == ShaderPreset.original.rawValue || CoreCatalog.isFilter(filter) else {
+            launchFailure = LaunchFailure(title: "Benchmark", message: "-GagaBenchmarkFilter takes a filter ID, such as crt-v1.")
+            return
+        }
         runBenchmark(rom: defaults.string(forKey: "GagaBenchmarkROM").map { romDirectory.appendingPathComponent($0) },
                      core: defaults.string(forKey: "GagaBenchmarkCore") ?? "mgba",
-                     seconds: seconds > 0 ? seconds : BenchmarkRun.defaultSeconds, input: input)
+                     seconds: seconds > 0 ? seconds : BenchmarkRun.defaultSeconds, input: input, filter: filter)
     }
 
     /// `-GagaImportROM <path>`: copies the file in as Files import does, so core work can add a game

@@ -1,4 +1,5 @@
 #if DEBUG
+import Combine
 import CryptoKit
 import Foundation
 import UIKit
@@ -8,7 +9,8 @@ import os
 ///
 /// Start it from Settings > About > Run Benchmark, or with the launch argument `-GagaBenchmark`. Options:
 /// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60`,
-/// `-GagaBenchmarkROM <file name in the ROM folder>` and `-GagaBenchmarkInput start@8,cross@12` (see `parseInput`). With no ROM it generates the homebrew test ROM for
+/// `-GagaBenchmarkROM <file name in the ROM folder>`, `-GagaBenchmarkInput start@8,cross@12` (see `parseInput`) and
+/// `-GagaBenchmarkFilter crt-v1` (default `original`; on a layer-path core a filter runs through the output texture). With no ROM it generates the homebrew test ROM for
 /// GBA, GB, GBC, NES, SNES, NDS, PS1, DOS, PC Engine or the Vulkan test core, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
 /// app shows on a device. The procedure is in docs/04 section 7.2.
 @MainActor
@@ -52,7 +54,14 @@ final class BenchmarkRun {
         let core: Core
         let rom: ROM
         let inputScript: String
+        /// The filter the session ran, and whether a layer-path core sent its frames through the output texture for it.
+        let filter: String
+        let filterOnOutputTexture: Bool
+        /// True when the game left running during the measurement, even for a moment. `interruption` says why and
+        /// when, in seconds after measuring began: "background" (the app resigned active), "interruption" (an
+        /// audio session interruption), "menu" or "stopped".
         let interrupted: Bool
+        let interruption: String?
         let warmupSeconds: Double
         let measuredSeconds: Double
         let frames: Int
@@ -99,6 +108,9 @@ final class BenchmarkRun {
     private let inputScript: String
     private let samples: Samples
     private let interface: GagaCoreInterface
+    private let filter: String
+    private var interruption: String?
+    private var watchers: [AnyCancellable] = []
     private var thermalHigh = ProcessInfo.processInfo.thermalState
     private var threadTotals: [String: Double] = [:]
     private var threadSampleCount = 0
@@ -108,9 +120,10 @@ final class BenchmarkRun {
 
     /// `input` is the text of `-GagaBenchmarkInput`, already checked by `parseInput`.
     init(session: GameSession, interface: GagaCoreInterface, romURL: URL, seconds: TimeInterval, warmup: TimeInterval = BenchmarkRun.warmupSeconds,
-         input: String? = nil) {
+         input: String? = nil, filter: String = "original") {
         self.session = session
         self.interface = interface
+        self.filter = filter
         self.romURL = romURL
         self.seconds = seconds
         self.warmup = warmup
@@ -228,22 +241,21 @@ final class BenchmarkRun {
         try? await Task.sleep(for: .seconds(warmup))
         let measureFrom = clock_gettime_nsec_np(CLOCK_UPTIME_RAW)
         let statsAtStart = session.stats // Underruns while the game starts are not the measured run's.
-        var interrupted = false
+        watchInterruptions(since: measureFrom)
         for _ in 0..<Int(seconds) {
             try? await Task.sleep(for: .seconds(1))
-            guard session.phase == .running else {
-                interrupted = true
-                break
-            }
+            guard session.phase == .running else { break }
             sampleThreads()
             noteThermal()
         }
+        watchers = []
+        if let interruption { print("[gaga-bench] interrupted: \(interruption)") }
         guard session.phase != .stopped else { return }
         session.pause(.menu)
         // The last frame of the run, so a device run can see the picture (a layer-path core draws).
         let screenshot = session.benchmarkScreenshot()
 
-        let record = makeRecord(thermalStart: thermalStart, measureFrom: measureFrom, statsAtStart: statsAtStart, interrupted: interrupted)
+        let record = makeRecord(thermalStart: thermalStart, measureFrom: measureFrom, statsAtStart: statsAtStart)
         do {
             let url = try write(record, screenshot: screenshot)
             Logger(subsystem: "com.zenithblue.gagaemu", category: "benchmark").notice("record \(url.path, privacy: .public)")
@@ -252,6 +264,28 @@ final class BenchmarkRun {
         } catch {
             session.stop(message: "The benchmark record could not be written: \(error.localizedDescription)")
         }
+    }
+
+    /// Device run 13 flagged two runs with no reason given. Every pause, and the stop, is caught as it happens,
+    /// so one that ends within the harness's one-second check is recorded too.
+    private func watchInterruptions(since start: UInt64) {
+        func note(_ reason: String) {
+            guard interruption == nil else { return }
+            let seconds = Double(clock_gettime_nsec_np(CLOCK_UPTIME_RAW) - start) / 1_000_000_000
+            interruption = "\(reason) at \(String(format: "%.1f", seconds)) s"
+        }
+        watchers = [
+            session.$pauseReasons.sink { reasons in
+                MainActor.assumeIsolated {
+                    if let reason = reasons.map({ "\($0)" }).sorted().first { note(reason) }
+                }
+            },
+            session.$phase.sink { phase in
+                MainActor.assumeIsolated {
+                    if phase == .stopped { note("stopped") }
+                }
+            },
+        ]
     }
 
     private func noteThermal() {
@@ -283,8 +317,7 @@ final class BenchmarkRun {
         }
     }
 
-    private func makeRecord(thermalStart: ProcessInfo.ThermalState, measureFrom: UInt64, statsAtStart: GameSession.Stats,
-                            interrupted: Bool) -> Record {
+    private func makeRecord(thermalStart: ProcessInfo.ThermalState, measureFrom: UInt64, statsAtStart: GameSession.Stats) -> Record {
         noteThermal()
         let first = samples.starts.firstIndex { $0 >= measureFrom } ?? samples.starts.count
         let starts = samples.starts[first...]
@@ -325,7 +358,10 @@ final class BenchmarkRun {
             rom: .init(file: romURL.lastPathComponent,
                        sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined(), bytes: romBytes),
             inputScript: inputScript,
-            interrupted: interrupted,
+            filter: filter,
+            filterOnOutputTexture: session.filtersLayerCore,
+            interrupted: interruption != nil,
+            interruption: interruption,
             warmupSeconds: warmup,
             measuredSeconds: measured,
             frames: starts.count,
