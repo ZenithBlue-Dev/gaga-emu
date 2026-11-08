@@ -989,11 +989,13 @@ final class MgbaCoreTests: GagaTestCase {
         var state = manager.sample()[0]
         XCTAssertFalse(state.actions.contains(.app(.pauseMenu)), "Menu alone is Start")
         XCTAssertEqual(state.buttons, ControllerManager.Button.start)
+        // No default Menu+Options combo since 84aa0ed: Start+Select is a soft reset in many games.
         if let options = gamepad.buttonOptions {
             options.setValue(1)
             state = manager.sample()[0]
-            XCTAssertTrue(state.actions.contains(.app(.pauseMenu)))
-            XCTAssertEqual(state.buttons, 0, "the pair never reaches the game")
+            XCTAssertFalse(state.actions.contains(.app(.pauseMenu)))
+            XCTAssertEqual(state.buttons, ControllerManager.Button.start | ControllerManager.Button.select,
+                           "the pair reaches the game")
         }
 
         let session = try await mgbaSession()
