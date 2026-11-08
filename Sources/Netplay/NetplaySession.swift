@@ -83,6 +83,11 @@ final class NetplaySession: ObservableObject {
         phaseWatch = game.$phase.sink { [weak self] phase in self?.localPhaseChanged(phase) }
     }
 
+    #if DEBUG
+    /// The running driver, for `NetplayHarness`.
+    var debugDriver: LockstepDriver? { slot.driver }
+    #endif
+
     var isActive: Bool {
         switch phase {
         case .idle, .ended: return false
