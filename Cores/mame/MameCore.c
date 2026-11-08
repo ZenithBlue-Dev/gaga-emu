@@ -8,13 +8,16 @@
 bool gaga_mame_save_battery(void); // MameSupport.cpp
 void gaga_mame_after_deinit(void);
 const char* gaga_mame_refuse_load(const char* system_dir, const char* rom_path);
+bool gaga_mame_is_cheat(const char* line);
+void gaga_mame_cheat_reset(void);
+void gaga_mame_cheat_set(unsigned index, bool enabled, const char* code);
 
 // Option values are upstream's spelling (libretro_core_options.h). MAME runs on the host's queue alone
 // (no work-queue threads), reads no ini file, and rotates vertical games itself, because the adapter
 // does not answer SET_ROTATION. Software lists and the mouse are console and computer features.
 static const GagaLibretroVariable s_variables[] = {
     { "mame_thread_mode", "disabled" },
-    { "mame_cheats_enable", "disabled" },
+    { "mame_cheats_enable", "enabled" }, // MAME's cheat engine reads System/mame/cheat/<set>.xml or cheat.7z.
     { "mame_throttle", "disabled" },
     { "mame_boot_to_bios", "disabled" },
     { "mame_boot_to_osd", "disabled" },
@@ -49,12 +52,17 @@ const GagaLibretroCore gaga_libretro_core = {
     .save_battery = gaga_mame_save_battery,
     .after_deinit = gaga_mame_after_deinit,
     .refuse_load = gaga_mame_refuse_load,
+    // Upstream's retro_cheat_set does nothing, so these reach MAME's own cheat engine: a code names a cheat in
+    // the player's cheat file (MameSupport.cpp).
+    .is_cheat = gaga_mame_is_cheat,
+    .cheat_reset = gaga_mame_cheat_reset,
+    .cheat_set = gaga_mame_cheat_set,
 };
 
-// No cheats: upstream's retro_cheat_set does nothing, and MAME's own cheat engine reads cheat.dat files.
 const GagaCoreInterface* Mame_GetInterface(void) {
     static const GagaCoreInterface interface = {
         GAGA_LIBRETRO_ENTRY_POINTS,
+        GAGA_LIBRETRO_CHEATS,
         .core_id = "mame",
         .core_name = "MAME",
         .core_version = GAGA_CORE_VERSION,

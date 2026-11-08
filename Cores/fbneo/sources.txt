@@ -1,4 +1,5 @@
 FbneoCore.c
+FbneoSupport.cpp
 ../shared/LibretroAdapter.c
 upstream/src/burn/burn_bitmap.cpp
 upstream/src/burn/burn_gun.cpp

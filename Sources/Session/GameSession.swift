@@ -471,16 +471,22 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     var supportsCheats: Bool { core?.supportsCheats ?? false }
     var canAddCheat: Bool { entitlements().canAddCheat(current: cheats.count) }
+    /// The formats this core reads, for the cheat sheet, or why it has none, for the pause menu.
+    var cheatHint: String { CheatFormat.hint(coreID: core?.coreID ?? "") }
+    var noCheatsNote: String? {
+        guard let core, !core.supportsCheats else { return nil }
+        return CheatFormat.unsupported(coreName: core.name)
+    }
 
     /// The core judges the code. Nothing is stored unless it accepts.
-    func addCheat(name: String, code: String) throws {
+    func addCheat(name: String, code: String, enabled: Bool = true) throws {
         guard let core else { throw EmulatorCoreError.coreNotLoaded }
         guard canAddCheat else {
             let limit = entitlements().maxCheats
             throw EmulatorCoreError.cheatRejected("You have \(limit) cheats, the most without Gaga Plus. Remove one to add another.")
         }
-        let entry = CheatEntry(id: (cheats.map(\.id).max() ?? 0) + 1, name: name, code: code, enabled: true)
-        try core.addCheat(id: entry.id, code: code, enabled: true)
+        let entry = CheatEntry(id: (cheats.map(\.id).max() ?? 0) + 1, name: name, code: code, enabled: enabled)
+        try core.addCheat(id: entry.id, code: code, enabled: enabled)
         do {
             try saves.saveCheats(cheats + [entry])
         } catch {

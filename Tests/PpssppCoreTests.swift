@@ -164,6 +164,33 @@ final class PpssppCoreTests: GagaTestCase {
         }
     }
 
+    // MARK: - Cheats
+
+    /// A CWCheat code lands in PPSSPP's own cheat file, <save folder>/PSP/Cheats/<disc ID>.ini, and leaves it
+    /// when removed. The write goes to the middle of user memory, which the test program does not use.
+    func testCWCheatIsWrittenToTheCheatFileAndRemoved() async throws {
+        let (core, capture) = try await loaded()
+        XCTAssertTrue(core.supportsCheats)
+        XCTAssertThrowsError(try core.addCheat(id: 1, code: "0x20F00000", enabled: true), "half a code")
+        XCTAssertThrowsError(try core.addCheat(id: 1, code: "_C1 Lives", enabled: true), "a heading, not a code")
+        try core.addCheat(id: 1, code: "_L 0x20F00000 0x00000063\n0x20F00004 0x00000001", enabled: true)
+        let folder = directory.appendingPathComponent("PSP/Cheats")
+        func cheatFile() throws -> String {
+            let files = try FileManager.default.contentsOfDirectory(atPath: folder.path).filter { $0.hasSuffix(".ini") }
+            XCTAssertEqual(files.count, 1, "one file, named after the disc ID")
+            return try String(contentsOf: folder.appendingPathComponent(try XCTUnwrap(files.first)), encoding: .utf8)
+        }
+        let written = try cheatFile()
+        XCTAssertTrue(written.hasPrefix("_S "), written)
+        XCTAssertTrue(written.contains("_L 0x20F00000 0x00000063\n_L 0x20F00004 0x00000001"), written)
+        let frames = capture.frames
+        run(core, frames: 30)
+        XCTAssertGreaterThan(capture.frames, frames, "still running with the cheat on")
+        core.removeCheat(id: 1)
+        XCTAssertFalse(try cheatFile().contains("_L "))
+        core.stop()
+    }
+
     func testStateRoundTripAndARefusedStateLeavesTheGameRunning() async throws {
         let (core, _) = try await loaded()
         let chord = UInt32(GAGA_BTN_SOUTH.rawValue | GAGA_BTN_EAST.rawValue)

@@ -302,6 +302,60 @@ final class MameCoreTests: GagaTestCase {
         core.stop()
     }
 
+    // MARK: - Cheats
+
+    /// A player's cheat file for gridlee, in MAME's XML: an on/off cheat and one with settings, each writing an
+    /// NVRAM byte the program never touches, every frame. Hex numbers in actions, decimal in attributes.
+    private static let cheatXML = """
+        <mamecheat version="1">
+          <cheat desc="Mark NVRAM">
+            <script state="run"><action>maincpu.pb@9c80=5a</action></script>
+          </cheat>
+          <cheat desc="Mark Level">
+            <parameter>
+              <item value="17">Low</item>
+              <item value="34">High</item>
+            </parameter>
+            <script state="run"><action>maincpu.pb@9c81=param</action></script>
+          </cheat>
+        </mamecheat>
+        """
+
+    func testCheatsFromThePlayersCheatFileRunInMamesEngine() async throws {
+        _ = try write(Data(Self.cheatXML.utf8), as: "gridlee.xml", folder: "system/mame/cheat")
+        let (core, _) = try await loaded()
+        run(core, frames: bootFrames)
+        XCTAssertTrue(core.supportsCheats)
+        for refused in ["No Such Cheat", "Mark Level", "Mark Level = Medium", "maincpu.pb@9c80=5a"] {
+            XCTAssertThrowsError(try core.addCheat(id: 9, code: refused, enabled: true), refused)
+        }
+        try core.addCheat(id: 1, code: "MARK NVRAM", enabled: true) // The sheet's code field types capitals.
+        try core.addCheat(id: 2, code: "Mark Level = High", enabled: true)
+        run(core, frames: 2)
+        core.flushBatterySave()
+        var saved = [UInt8](try Data(contentsOf: nvram))
+        XCTAssertEqual(saved[0x80], 0x5A)
+        XCTAssertEqual(saved[0x81], 34)
+        XCTAssertEqual(Int(saved[GridleeTestSet.nvramBootCounterOffset]), 1, "the program's own bytes untouched")
+
+        core.setCheat(id: 2, enabled: false)
+        try core.addCheat(id: 3, code: "Mark Level = Low", enabled: true)
+        run(core, frames: 2)
+        core.flushBatterySave()
+        saved = [UInt8](try Data(contentsOf: nvram))
+        XCTAssertEqual(saved[0x81], 17, "the other setting, once the first is off")
+        core.stop()
+    }
+
+    func testWithoutACheatFileEveryNameIsRefused() async throws {
+        let (core, _) = try await loaded()
+        run(core, frames: 2)
+        XCTAssertThrowsError(try core.addCheat(id: 1, code: "Mark NVRAM", enabled: true)) { error in
+            XCTAssertEqual(error.localizedDescription, "MAME does not recognise this code: Mark NVRAM")
+        }
+        core.stop()
+    }
+
     // MARK: - Battery saves
 
     func testNVRAMReachesItsFileAndSurvivesARestart() async throws {

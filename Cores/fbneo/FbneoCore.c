@@ -42,18 +42,27 @@ static bool fbneo_is_rom(const uint8_t* data, size_t size) {
         || (size >= sizeof(sevenzip) && memcmp(data, sevenzip, sizeof(sevenzip)) == 0);
 }
 
-// No cheats: upstream's retro_cheat_set does nothing. NVRAM is upstream's own file, written when the game
-// closes, in the save folder's fbneo subfolder.
+bool gaga_fbneo_is_cheat(const char* line); // FbneoSupport.cpp
+void gaga_fbneo_cheat_reset(void);
+void gaga_fbneo_cheat_set(unsigned index, bool enabled, const char* code);
+
+// NVRAM is upstream's own file, written when the game closes, in the save folder's fbneo subfolder. Upstream's
+// retro_cheat_set does nothing, so cheats go to its cheat engine directly: a code names a cheat from the player's
+// files in System/fbneo/cheats/ (FbneoSupport.cpp).
 const GagaLibretroCore gaga_libretro_core = {
     .name = "FinalBurn Neo",
     .game_kind = "an FBNeo ROM set (a .zip named after the game) for a game in this build",
     .variables = s_variables,
     .is_rom = fbneo_is_rom,
+    .is_cheat = gaga_fbneo_is_cheat,
+    .cheat_reset = gaga_fbneo_cheat_reset,
+    .cheat_set = gaga_fbneo_cheat_set,
 };
 
 const GagaCoreInterface* Fbneo_GetInterface(void) {
     static const GagaCoreInterface interface = {
         GAGA_LIBRETRO_ENTRY_POINTS,
+        GAGA_LIBRETRO_CHEATS,
         .core_id = "fbneo",
         .core_name = "FinalBurn Neo",
         .core_version = GAGA_CORE_VERSION,

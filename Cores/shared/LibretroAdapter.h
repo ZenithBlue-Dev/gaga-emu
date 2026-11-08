@@ -43,6 +43,10 @@ typedef struct {
     // True when one cheat's lines must reach retro_cheat_set as one code, joined by '+', because the
     // core's format spans lines (Action Replay DS conditionals). False: one index per line.
     bool cheat_lines_are_one_code;
+    // Optional, for a core whose own retro_cheat_reset and retro_cheat_set do nothing (MAME, FBNeo): called in
+    // their place, with the same arguments, so the core can reach its own cheat engine.
+    void (*cheat_reset)(void);
+    void (*cheat_set)(unsigned index, bool enabled, const char* code);
     // True for a core whose state size changes from save to save (RETRO_SERIALIZATION_QUIRK_CORE_VARIABLE_SIZE,
     // Azahar's compressed states): load_state takes the size from the state's header, not from the running game.
     bool state_size_varies;
