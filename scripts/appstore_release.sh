@@ -9,11 +9,11 @@ TEAM=9227VF8RW4
 ARCHIVE=build/GagaEmu.xcarchive
 EXPORT=build/export
 
-# GPL cores do not ship while the legal gate is open (docs/07 milestone 4.0). This is the MPL-only set.
-GAGA_CORE_SET=${GAGA_CORE_SET:-mgba}
+# Every core except the non-commercial ones and vktest, GPL cores included (owner decision 2026-11-08,
+# docs/03 section 5). The archive step in nojit-gate.sh refuses a core outside GAGA_RELEASE_SET, whose
+# default is this same list.
+GAGA_CORE_SET=${GAGA_CORE_SET:-$(scripts/nojit-gate.sh --default-release-set)}
 export GAGA_CORE_SET
-# The archive step in nojit-gate.sh refuses a core outside GAGA_RELEASE_SET (default mgba). Widen it on purpose.
-export GAGA_RELEASE_SET=${GAGA_RELEASE_SET:-mgba}
 # Refuses the sideload profile, the Vulkan test core (debug and test builds only) and any core with a
 # non-commercial licence (docs/03 section 5). The archive is checked again below.
 scripts/nojit-gate.sh --release-set "$GAGA_CORE_SET"
