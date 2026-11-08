@@ -95,6 +95,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     var onPlayTime: ((TimeInterval) -> Void)?
     /// Called once, when the session ends. A message means it ended on an error.
     var onFinish: ((String?) -> Void)?
+    /// Running seconds a started game may go without a single frame before it is stopped with a message, so a
+    /// core stuck in its load never leaves a silent black screen (device run 13).
+    var firstFrameTimeout: TimeInterval = 30
 
     private let interface: GagaCoreInterface
     private let romPath: String
@@ -341,7 +344,24 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         link.add(to: .main, forMode: .common)
         displayLink = link
         onStarted?()
+        watchFirstFrame()
         if notice != nil { pause(.menu) } // A failed resume: let the player read it before the game moves on.
+    }
+
+    /// Counts running time only, so a game paused in the menu before its first frame is not stopped for it.
+    private func watchFirstFrame() {
+        let limit = firstFrameTimeout, step = 0.25
+        Task { [weak self] in
+            var waited: TimeInterval = 0
+            while waited < limit {
+                try? await Task.sleep(for: .seconds(step))
+                guard let self, phase == .running || phase == .paused else { return }
+                let video = ring.stats
+                if video.written + video.dropped > 0 { return }
+                if phase == .running { waited += step }
+            }
+            self?.stop(message: "The game showed no picture for \(Int(limit)) seconds, so it was stopped.")
+        }
     }
 
     func pause(_ reason: PauseReason) {
