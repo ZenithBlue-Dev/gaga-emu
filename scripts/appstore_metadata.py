@@ -44,10 +44,12 @@ FORBIDDEN = [r"play\s*station", r"\bps\s*[1-5]\b", r"\bps\b", r"\bsony\b", r"\bp
              r"\bnintendo\b", r"\bsega\b", r"\bxbox\b", r"\batari\b",
              r"\bbios\s+download", r"\bdownload\s+(games|roms|firmware)\b", r"\biso\s+download"]
 # Screenshot folders (AppStore/screenshots/<locale>/<folder>/*.png) and their display types.
-# The 6.7" slot takes the 6.9" sizes (1320 x 2868).
-SCREENSHOT_TYPES = {"iphone-6.9": "APP_IPHONE_67"}
-SCREENSHOT_SIZES = {"APP_IPHONE_67": {(1320, 2868), (2868, 1320), (1290, 2796), (2796, 1290)}}
-MIN_SCREENSHOTS = {"APP_IPHONE_67": 3}
+# The 6.7" slot takes the 6.9" sizes (1320 x 2868). The 6.1" slot takes the 6.3" sizes (1206 x 2622), Apple's
+# required "Dynamic Island (medium display)" class. scripts/make_screenshots.swift writes both folders.
+SCREENSHOT_TYPES = {"iphone-6.9": "APP_IPHONE_67", "iphone-6.3": "APP_IPHONE_61"}
+SCREENSHOT_SIZES = {"APP_IPHONE_67": {(1320, 2868), (2868, 1320), (1290, 2796), (2796, 1290)},
+                    "APP_IPHONE_61": {(1206, 2622), (2622, 1206), (1179, 2556), (2556, 1179)}}
+MIN_SCREENSHOTS = {"APP_IPHONE_67": 3, "APP_IPHONE_61": 3}
 # Guideline 4.7: the listing must say no games or firmware ship with the app.
 REQUIRED_PHRASES = {"description": [r"does not include", r"legally", r"roms?", r"bios"]}
 
