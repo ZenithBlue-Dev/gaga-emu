@@ -10,9 +10,11 @@ struct AddView: View {
     @State private var showPatcher = false
     @State private var notice: String?
     @State private var isTargeted = false
+    @Environment(\.horizontalSizeClass) private var horizontalSize
 
     var body: some View {
-        HStack(spacing: 0) {
+        // Upright on a phone the two columns stack.
+        AnyLayout(horizontalSize == .compact ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Add Games").font(.screenTitle).accessibilityAddTraits(.isHeader)
