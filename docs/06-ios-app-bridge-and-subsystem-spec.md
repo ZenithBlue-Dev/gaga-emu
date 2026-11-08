@@ -449,7 +449,7 @@ The app runs **upright and in landscape**: iPhone upright, landscape left and ri
 
 ### Design system
 
-Tokens live in `Sources/App/AppTheme.swift` (`Palette`, `AppTheme`) and follow the system appearance. There is no appearance or theme setting. `state.appearance` is kept only so old `state.json` files decode.
+Tokens live in `Sources/App/AppTheme.swift` (`Palette`, `AppTheme`) and follow the system appearance unless Settings > Display picks Light or Dark (`appearanceChoice`). The accent can be changed there; `ThemeAccent` adjusts any colour so it still meets AA. `state.appearance` is an older field, kept only so old `state.json` files decode.
 
 | Token | Light | Dark | Use |
 |---|---|---|---|
@@ -551,7 +551,7 @@ There is no profile card, nickname, avatar or membership banner. `nickname`, `jo
 | Language | About | Built, shown automatically when a second localisation exists. English only today (checked 2026-11-08). |
 | Online Play | Play | Not scheduled. Netplay is not promised or gated until built. |
 
-There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Theme and Appearance are gone, because the palette is fixed and follows the system. Skins are touch layouts only and carry no theme. Device skins (section 3.8) are drawn but not loaded yet.
+There is no JIT row, because GagaEmu ships no JIT and there is nothing to configure. Appearance, accent colour and the Library's shelf and cover options are in Display. Skins are touch layouts only and carry no theme. Device skins (section 3.8) are drawn but not loaded yet.
 
 Cover Art replaces the old Cover Scraping row. The old `coverScraping` value, which defaulted to on, is ignored, so no install starts sending titles without a new choice.
 

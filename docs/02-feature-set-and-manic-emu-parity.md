@@ -136,8 +136,8 @@ Rows and subtitles are [S] and describe Manic's screen. GagaEmu's labels and lay
 
 | Section | Row | Source detail | Status |
 | :--- | :--- | :--- | :--- |
-| General | `Appearance` | Shown `Dark Mode`; three unlabelled icons | not planned: the app follows the system appearance |
-| General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | not planned: the palette is fixed |
+| General | `Appearance` | Shown `Dark Mode`; three unlabelled icons | built, in Display: Automatic, Light or Dark |
+| General | `Theme` | `App Icons, Theme Colors, Boxart Settings, Console Ordering` | built in part, in Display: accent colours and cover and shelf options, in GagaEmu's own design. App icons are open; see `docs/manic-todo.md` |
 | General | `Quick Start` | `Skip preparation page`; shown off | built: GagaEmu has no preparation page, so it opens the most recent game when the app starts |
 | General | `Auto Save States` | Shown off | hidden |
 | General | `Assign Skin` | | built, in Controls |
