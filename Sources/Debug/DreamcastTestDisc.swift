@@ -88,6 +88,8 @@ enum DreamcastTestDisc {
             UInt32(color565) << 16 | UInt32(color565),
             0xA500_0000, // VRAM, 32-bit path
             640 * 480 / 2, // words
+            0xA05F_80E8, // VO_CONTROL
+            0x0016_0000, // the BIOS's VGA pixel clock delay, video not blanked
         ]
         var code: [UInt16] = []
         var loads: [(at: Int, literal: Int)] = []
@@ -100,6 +102,9 @@ enum DreamcastTestDisc {
         code.append(0x2102) // mov.l r0,@r1: FB_R_SOF1 first, so FB_R_SIZE's write watches the right range.
         load(1, 1); load(2, 0); code.append(0x2102)
         load(3, 1); load(4, 0); code.append(0x2102)
+        // VO_CONTROL resets to 0x108 with blank_video set and reios does not clear it as the BIOS does,
+        // so without this write Flycast shows the border colour (black) instead of the framebuffer.
+        load(8, 1); load(9, 0); code.append(0x2102)
         load(5, 2)
         let fill = code.count
         load(6, 1)
