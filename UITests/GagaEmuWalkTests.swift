@@ -71,6 +71,159 @@ final class GagaEmuWalkTests: XCTestCase {
         return game
     }
 
+    // MARK: Layout audit
+
+    /// The current screen upright and in landscape, ending upright, so a turn on every screen is shot too.
+    private func audit(_ name: String) {
+        XCUIDevice.shared.orientation = .portrait
+        sleep(2)
+        snapshot("\(name) portrait")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        snapshot("\(name) landscape")
+        XCUIDevice.shared.orientation = .portrait
+        sleep(1)
+    }
+
+    /// A system prompt over the app, such as a sign-in request, must not get the walk's taps: a tap could answer it.
+    private func promptUp() -> Bool {
+        let up = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch.exists
+        if up { snapshot("STOPPED system prompt") }
+        return up
+    }
+
+    /// Taps a button by its label's start. False, with a screenshot, when it is not there, so the audit goes on.
+    @discardableResult private func open(_ app: XCUIApplication, _ prefix: String) -> Bool {
+        if promptUp() { return false }
+        let element = button(app, prefix)
+        guard element.waitForExistence(timeout: 6) else {
+            snapshot("MISSING \(prefix)")
+            return false
+        }
+        element.tap()
+        sleep(1)
+        return true
+    }
+
+    /// Leaves a sheet or cover by its own button, else by a swipe down.
+    private func close(_ app: XCUIApplication) {
+        if promptUp() { return }
+        for label in ["Close", "Cancel", "Done"] where app.buttons[label].firstMatch.exists {
+            app.buttons[label].firstMatch.tap()
+            sleep(1)
+            return
+        }
+        app.swipeDown(velocity: .fast)
+        sleep(1)
+    }
+
+    private func auditPage(_ app: XCUIApplication, _ prefix: String, as name: String) {
+        guard open(app, prefix) else { return }
+        audit(name)
+        close(app)
+    }
+
+    /// Library, its long-press sheets, Add and every Settings page, each upright and in landscape.
+    func testAuditScreens() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        _ = importedGame(app, "The \(title) game")
+        sleep(1)
+        audit("01 Library")
+        for (index, entry) in ["Change Core", "Choose Filter", "Assign Skin", "Manage Saves", "Edit Details", "Delete"].enumerated() {
+            let tile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+            guard !promptUp(), tile.waitForExistence(timeout: 6) else { continue }
+            tile.press(forDuration: 1.2)
+            sleep(1)
+            if index == 0 { snapshot("02 Library menu portrait") }
+            auditPage(app, entry, as: "03 Game \(entry)")
+        }
+        guard !promptUp() else { return }
+        app.buttons["Add"].tap()
+        sleep(1)
+        audit("04 Add")
+        auditPage(app, "Multi-Disc", as: "05 Add Multi-Disc")
+        auditPage(app, "Patch a ROM", as: "05 Add Patch")
+        guard !promptUp() else { return }
+        app.buttons["Settings"].tap()
+        sleep(1)
+        for category in ["Play", "Library", "Graphics", "Controls", "Storage", "About"] {
+            if open(app, category) { audit("06 Settings \(category)") }
+            switch category {
+            case "Library": auditPage(app, "BIOS Files", as: "07 BIOS")
+            case "Graphics":
+                auditPage(app, "Default Filter", as: "07 Filter")
+                auditPage(app, "Screen", as: "07 Screen")
+            case "Controls":
+                if open(app, "Touch Layout") {
+                    audit("07 Assign Skin")
+                    let edit = app.buttons.matching(NSPredicate(format: "label ENDSWITH %@", "skin")).firstMatch
+                    if edit.waitForExistence(timeout: 6) {
+                        edit.tap()
+                        sleep(2)
+                        audit("07 Skin Editor")
+                        close(app)
+                    }
+                    close(app)
+                }
+                auditPage(app, "Controller Mapping", as: "07 Mapping")
+                auditPage(app, "Macros", as: "07 Macros")
+                auditPage(app, "Turbo", as: "07 Turbo")
+            case "About":
+                auditPage(app, "About Us", as: "07 About Us")
+                auditPage(app, "Licences", as: "07 Licences")
+            default: break
+            }
+        }
+    }
+
+    /// Playing, the pause menu and its pages, upright and in landscape.
+    private func auditGame(_ core: String, platform: String, tag: String) {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaImportTestROM", core]
+        app.launch()
+        _ = importedGame(app, "The \(title) game")
+        guard !promptUp() else { return }
+        // The Library keeps earlier tests' test ROMs, all of one title: the platform picks this one.
+        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, platform)).firstMatch, "The \(platform) tile")
+        let pause = app.buttons["Pause game"]
+        guard pause.waitForExistence(timeout: timeout) else {
+            snapshot("\(tag) did not start")
+            return
+        }
+        sleep(4)
+        audit("\(tag) Playing")
+        guard !promptUp() else { return }
+        pause.tap()
+        sleep(1)
+        audit("\(tag) Pause")
+        if open(app, "Screen") {
+            audit("\(tag) Pause Screen")
+            open(app, "Back")
+        }
+        auditPage(app, "Load State", as: "\(tag) Load State")
+        if open(app, "Controls") {
+            audit("\(tag) Controls")
+            if open(app, "Touch Layout") {
+                sleep(1)
+                audit("\(tag) Touch Editor")
+                close(app)
+            }
+            close(app)
+        }
+        auditPage(app, "Cheats", as: "\(tag) Cheats")
+        auditPage(app, "Play Nearby", as: "\(tag) Play Nearby")
+    }
+
+    func testAuditGameGBA() { auditGame("mgba", platform: "Game Boy Advance", tag: "10 GBA") }
+    func testAuditGameNES() { auditGame("nestopia", platform: "NES", tag: "11 NES") }
+    func testAuditGameNDS() { auditGame("melonds_ds", platform: "Nintendo DS", tag: "12 NDS") }
+    func testAuditGame3DS() { auditGame("azahar", platform: "Nintendo 3DS", tag: "13 3DS") }
+    func testAuditGamePSP() { auditGame("ppsspp", platform: "PSP", tag: "14 PSP") }
+
     /// Settings > About > Licences.
     func testOpenLicences() {
         let app = launchApp()
