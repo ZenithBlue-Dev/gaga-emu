@@ -1287,8 +1287,8 @@ final class AppState: ObservableObject {
         var errorDescription: String? { message }
     }
 
-    /// Every import ends here: Files, drop, clipboard, download, WiFi Transfer and the Debug launch arguments.
-    /// `url` is a file already placed in the ROM folder (`ClipboardImporter.persist` or `download`, or the WiFi
+    /// Every import ends here: Files, drop, clipboard, WiFi Transfer and the Debug launch arguments.
+    /// `url` is a file already placed in the ROM folder (`ClipboardImporter.persist`, or the WiFi
     /// server). A file a game already uses is that game, not a second entry. The note says why no game was
     /// stored or an older file was kept, as `lastImportNote`. A .zip or .7z unpacks off the main thread, as an
     /// `importJobs` row.

@@ -123,21 +123,8 @@ struct AddView: View {
     private func readClipboard() {
         do {
             let item = try ClipboardImporter.scan()
-            switch item {
-            case .remote(let url):
-                notice = "Downloading \(url.lastPathComponent)…"
-                Task {
-                    do {
-                        let dest = try await ClipboardImporter.download(url, into: state.romDirectory)
-                        notice = await state.importChosen(dest) ?? "Imported \(dest.lastPathComponent)"
-                    } catch {
-                        notice = error.localizedDescription
-                    }
-                }
-            default:
-                let dest = try ClipboardImporter.persist(item, into: state.romDirectory)
-                Task { notice = await state.importChosen(dest) ?? "Imported \(dest.lastPathComponent)" }
-            }
+            let dest = try ClipboardImporter.persist(item, into: state.romDirectory)
+            Task { notice = await state.importChosen(dest) ?? "Imported \(dest.lastPathComponent)" }
         } catch {
             notice = error.localizedDescription
         }

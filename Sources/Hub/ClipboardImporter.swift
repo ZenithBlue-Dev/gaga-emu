@@ -4,13 +4,12 @@ import UIKit
 #endif
 
 /// Reads the clipboard only when the user taps. Never polls.
-/// Accepts a file URL, an http(s) download URL, or a binary ROM blob.
+/// Accepts a file URL or a binary ROM blob. Web links are rejected: no ROM is downloaded.
 public struct ClipboardImporter: Sendable {
 
     public enum Item: Equatable {
         case file(URL)
         case archive(URL)
-        case remote(URL)
         case blob(filename: String, data: Data)
     }
 
@@ -50,7 +49,7 @@ public struct ClipboardImporter: Sendable {
             return try classify(url)
         }
         if let text = pasteboard.string, let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)) {
-            if url.isFileURL || remoteScheme(url) { return try classify(url) }
+            if url.isFileURL { return try classify(url) }
         }
         if let data = pasteboard.data(forPasteboardType: "public.data")
             ?? pasteboard.data(forPasteboardType: "public.zip-archive"), !data.isEmpty {
@@ -65,30 +64,11 @@ public struct ClipboardImporter: Sendable {
     #endif
 
     static func classify(_ url: URL) throws -> Item {
-        if remoteScheme(url) { return .remote(url) }
         guard url.isFileURL else { throw ImportError.unsupported }
         let ext = url.pathExtension.lowercased()
         guard romExtensions.contains(ext) else { throw ImportError.unsupported }
         guard FileManager.default.isReadableFile(atPath: url.path) else { throw ImportError.unreadable }
         return archiveExtensions.contains(ext) ? .archive(url) : .file(url)
-    }
-
-    /// Downloads a remote ROM into `directory`. Rejects non-http schemes and non-ROM names.
-    public static func download(_ url: URL, into directory: URL) async throws -> URL {
-        guard remoteScheme(url) else { throw ImportError.unsupported }
-        let (temp, response) = try await URLSession.shared.download(from: url)
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw ImportError.unreadable
-        }
-        let suggested = response.suggestedFilename ?? url.lastPathComponent
-        let name = WiFiTransferServer.sanitize(suggested)
-        let ext = (name as NSString).pathExtension.lowercased()
-        guard romExtensions.contains(ext), !name.isEmpty else {
-            try? FileManager.default.removeItem(at: temp)
-            throw ImportError.unsupported
-        }
-        defer { try? FileManager.default.removeItem(at: temp) }
-        return try placeROM(temp, named: name, in: directory)
     }
 
     public static func persist(_ item: Item, into directory: URL) throws -> URL {
@@ -107,8 +87,6 @@ public struct ClipboardImporter: Sendable {
             defer { try? FileManager.default.removeItem(at: part) }
             try data.write(to: part, options: .atomic)
             return try placeROM(part, named: name, in: directory)
-        case .remote:
-            throw ImportError.unsupported // use download(_:into:)
         }
     }
 
@@ -160,11 +138,6 @@ public struct ClipboardImporter: Sendable {
         return crcA == RomPatcher.crc32(fileAt: b)
     }
 
-    private static func remoteScheme(_ url: URL) -> Bool {
-        guard let scheme = url.scheme?.lowercased() else { return false }
-        return scheme == "http" || scheme == "https"
-    }
-
     /// Cheap magic-byte sniff so a raw paste still gets a usable extension.
     static func sniffExtension(_ data: Data) -> String? {
         if data.starts(with: Data([0x50, 0x4B, 0x03, 0x04])) { return "zip" }
@@ -183,7 +156,7 @@ enum ClipboardImporterChecks {
         assert(ClipboardImporter.sniffExtension(Data([0x50, 0x4B, 0x03, 0x04, 0x00])) == "zip")
         assert(ClipboardImporter.sniffExtension(Data("PATCH".utf8)) == "ips")
         let remote = URL(string: "https://example.com/game.gba")!
-        assert((try? ClipboardImporter.classify(remote)) == .remote(remote))
+        assert((try? ClipboardImporter.classify(remote)) == nil, "web links are not imported")
         let junk = URL(string: "file:///tmp/notes.txt")!
         assert((try? ClipboardImporter.classify(junk)) == nil)
 

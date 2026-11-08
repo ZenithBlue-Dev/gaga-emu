@@ -83,7 +83,7 @@ Status reflects a code read, not a device test. `docs/07` is canonical for phase
   - `NSLocalNetworkUsageDescription` is set in `Info.plist` because iOS requires it for local network access.
 - **Read Clipboard** [S]: `Supports files copied from macOS or Files app`. Status: built in `Sources/Hub/ClipboardImporter.swift`.
   - Reads the clipboard only when the user taps the button [G].
-  - Accepting http(s) download links and raw ROM data is [G]; neither is shown for Manic.
+  - Accepting raw ROM data is [G]; it is not shown for Manic. Web links are rejected: no ROM is downloaded (App Review 4.7).
 - **MultiDisc Helper** [S]: title only. Grouping by disc naming and writing `.m3u` playlists is [G]. Status: built.
 - **RomPatcher** [S]: title only. In-memory IPS, UPS and BPS patching with checksum verification is [G]. Status: built.
 - **Drag & Drop** [S]: `Drag files to any Manic EMU interface for transfer`, so the target is any screen, not only the game grid. Status: built on the Add screen, the Library and the game view (`docs/06` section 3.2).
