@@ -19,6 +19,7 @@
 #define LR_VK_MAX_IMAGES 4 // Swapchain images. MoltenVK gives at most 3, CAMetalLayer's drawable limit.
 #define LR_VK_MAX_WAITS 8  // Semaphores a core may pass to set_image.
 #define LR_VK_MAX_CMDS 8   // Command buffers a core may pass to set_command_buffers.
+#define LR_VK_SHOTS 2      // Copies of shown frames: the layer path uses the first only.
 
 typedef struct {
     VkImage image;
@@ -61,9 +62,12 @@ typedef struct {
     bool presented; // last holds the frame read_layer_pixels copies.
     LrVkImage last;
     // last's image: each shown frame is copied here as well, since a core may draw into its own image again.
-    VkImage shot;
-    VkDeviceMemory shot_memory;
+    // The output-texture path alternates two, so a frame is copied while the host still reads the one before
+    // (device run 14: with one, each frame waited for the GPU to finish the last, and the 3DS 1% low fell).
+    VkImage shot[LR_VK_SHOTS];
+    VkDeviceMemory shot_memory[LR_VK_SHOTS];
     VkExtent2D shot_extent;
+    uint32_t shot_index; // The shot written last.
     LrVkImage described; // The core image last logged: a new size, format or layout is logged once.
 
     // Output-texture path (docs/05 section 2.4): attached with no layer, each shown frame stays in shot and
@@ -73,7 +77,7 @@ typedef struct {
     VkSemaphore ready, done; // Timeline semaphores, each an MTLSharedEvent underneath.
     uint64_t ready_value;    // Signalled by the last shown frame's submit.
     bool output_pending;     // The last present made a frame lr_vk_output_frame has not handed out.
-    uint64_t done_owed;      // The done value the host owes before shot is written again. 0 for none.
+    uint64_t done_owed[LR_VK_SHOTS]; // Per shot, the done value the host owes before it is written again. 0 for none.
 
     void* layer;
     uint32_t layer_width, layer_height; // Asked for before the device existed, or for a rebuild.
@@ -548,15 +552,20 @@ static bool lr_vk_build_swapchain(void) {
 
 // shortcut: the core thread waits on the CPU, bounded so a host that never signals costs 50 ms a frame and
 // a log line rather than a hang. The host signals within its own copy, well before the next frame.
-static void lr_vk_wait_host(void) {
-    if (!s_vk.done_owed) return;
+static void lr_vk_wait_host_for(uint32_t shot) {
+    if (!s_vk.done_owed[shot]) return;
     VkSemaphoreWaitInfo wait = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, .semaphoreCount = 1, .pSemaphores = &s_vk.done,
-                                 .pValues = &s_vk.done_owed };
+                                 .pValues = &s_vk.done_owed[shot] };
     VkResult result = vkWaitSemaphores(s_vk.device, &wait, 50ull * 1000 * 1000);
     if (result != VK_SUCCESS) {
-        lr_vk_log("[gaga-vk] output: no done signal for frame %llu, VkResult %d\n", (unsigned long long)s_vk.done_owed, (int)result);
+        lr_vk_log("[gaga-vk] output: no done signal for frame %llu, VkResult %d\n", (unsigned long long)s_vk.done_owed[shot], (int)result);
     }
-    s_vk.done_owed = 0;
+    s_vk.done_owed[shot] = 0;
+}
+
+// Both shots: before either is freed, or the path changes.
+static void lr_vk_wait_host(void) {
+    for (uint32_t i = 0; i < LR_VK_SHOTS; ++i) lr_vk_wait_host_for(i);
 }
 
 static bool lr_vk_create_timeline(VkSemaphore* semaphore) {
@@ -584,7 +593,7 @@ static bool lr_vk_attach_output(void) {
 bool lr_vk_output_frame(GagaMetalTextureFrame* frame) {
     if (!s_vk.output_pending) return false;
     s_vk.output_pending = false;
-    VkExportMetalTextureInfoEXT texture = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT, .image = s_vk.shot,
+    VkExportMetalTextureInfoEXT texture = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT, .image = s_vk.shot[s_vk.shot_index],
                                             .plane = VK_IMAGE_ASPECT_COLOR_BIT };
     VkExportMetalSharedEventInfoEXT done = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT, .pNext = &texture,
                                              .semaphore = s_vk.done };
@@ -598,7 +607,7 @@ bool lr_vk_output_frame(GagaMetalTextureFrame* frame) {
     }
     *frame = (GagaMetalTextureFrame){ .texture = texture.mtlTexture, .ready_event = ready.mtlSharedEvent, .ready_value = s_vk.ready_value,
                                       .done_event = done.mtlSharedEvent, .done_value = s_vk.ready_value };
-    s_vk.done_owed = s_vk.ready_value;
+    s_vk.done_owed[s_vk.shot_index] = s_vk.ready_value;
     return true;
 }
 
@@ -692,34 +701,41 @@ static void lr_vk_record_copy(VkCommandBuffer cmd, const LrVkImage* src, VkImage
 static bool lr_vk_bind(VkMemoryRequirements needs, VkMemoryPropertyFlags flags, VkDeviceMemory* memory);
 
 static void lr_vk_destroy_shot(void) {
-    if (s_vk.shot) vkDestroyImage(s_vk.device, s_vk.shot, NULL);
-    if (s_vk.shot_memory) vkFreeMemory(s_vk.device, s_vk.shot_memory, NULL);
-    s_vk.shot = VK_NULL_HANDLE;
-    s_vk.shot_memory = VK_NULL_HANDLE;
+    for (uint32_t i = 0; i < LR_VK_SHOTS; ++i) {
+        if (s_vk.shot[i]) vkDestroyImage(s_vk.device, s_vk.shot[i], NULL);
+        if (s_vk.shot_memory[i]) vkFreeMemory(s_vk.device, s_vk.shot_memory[i], NULL);
+        s_vk.shot[i] = VK_NULL_HANDLE;
+        s_vk.shot_memory[i] = VK_NULL_HANDLE;
+    }
     s_vk.presented = false;
 }
 
-// A new size waits for the GPU first: the last present may still be copying into the old image.
-static bool lr_vk_ensure_shot(uint32_t width, uint32_t height) {
-    if (s_vk.shot && s_vk.shot_extent.width == width && s_vk.shot_extent.height == height) return true;
-    lr_vk_wait_idle();
-    lr_vk_destroy_shot();
+// A new size waits for the host and the GPU first: either may still be using an old image.
+static bool lr_vk_ensure_shot(uint32_t index, uint32_t width, uint32_t height) {
+    if (s_vk.shot_extent.width != width || s_vk.shot_extent.height != height) {
+        lr_vk_wait_host();
+        lr_vk_wait_idle();
+        lr_vk_destroy_shot();
+        s_vk.shot_extent = (VkExtent2D){ width, height };
+    }
+    if (s_vk.shot[index]) return true;
     VkImageCreateInfo info = { .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, .imageType = VK_IMAGE_TYPE_2D,
                                .format = VK_FORMAT_B8G8R8A8_UNORM, .extent = { width, height, 1 }, .mipLevels = 1,
                                .arrayLayers = 1, .samples = VK_SAMPLE_COUNT_1_BIT, .tiling = VK_IMAGE_TILING_OPTIMAL,
                                .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT };
     VkMemoryRequirements needs;
-    if (vkCreateImage(s_vk.device, &info, NULL, &s_vk.shot) != VK_SUCCESS) {
-        s_vk.shot = VK_NULL_HANDLE;
+    if (vkCreateImage(s_vk.device, &info, NULL, &s_vk.shot[index]) != VK_SUCCESS) {
+        s_vk.shot[index] = VK_NULL_HANDLE;
         return false;
     }
-    vkGetImageMemoryRequirements(s_vk.device, s_vk.shot, &needs);
-    if (!lr_vk_bind(needs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &s_vk.shot_memory) ||
-        vkBindImageMemory(s_vk.device, s_vk.shot, s_vk.shot_memory, 0) != VK_SUCCESS) {
+    vkGetImageMemoryRequirements(s_vk.device, s_vk.shot[index], &needs);
+    if (!lr_vk_bind(needs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &s_vk.shot_memory[index]) ||
+        vkBindImageMemory(s_vk.device, s_vk.shot[index], s_vk.shot_memory[index], 0) != VK_SUCCESS) {
+        lr_vk_wait_host();
+        lr_vk_wait_idle();
         lr_vk_destroy_shot();
         return false;
     }
-    s_vk.shot_extent = (VkExtent2D){ width, height };
     return true;
 }
 
@@ -742,10 +758,11 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
     // A dupe waits on no semaphore (libretro), and one with nothing to run or signal is a no-op.
     if (!fresh && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
     // A skipped fast-forward frame leaves the shot holding the last shown frame.
-    if (show) lr_vk_wait_host();
-    bool shot = show && lr_vk_ensure_shot(width, height);
+    uint32_t next = s_vk.output ? (s_vk.shot_index + 1) % LR_VK_SHOTS : 0;
+    if (show) lr_vk_wait_host_for(next); // The host read this shot two frames ago, so this rarely waits.
+    bool shot = show && lr_vk_ensure_shot(next, width, height);
     bool hand = shot && s_vk.output; // The output-texture path: shot is the frame the host gets.
-    LrVkImage shot_image = { .image = s_vk.shot, .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .format = VK_FORMAT_B8G8R8A8_UNORM,
+    LrVkImage shot_image = { .image = s_vk.shot[next], .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .format = VK_FORMAT_B8G8R8A8_UNORM,
                              .range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }, .queue_family = VK_QUEUE_FAMILY_IGNORED,
                              .width = width, .height = height };
     uint32_t slot = s_vk.index;
@@ -776,7 +793,7 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
         // The core's image is read once, into the shot, and the screen is drawn from that.
         const LrVkImage* source = &image;
         if (shot) {
-            lr_vk_record_copy(cmd, &image, s_vk.shot, s_vk.shot_extent, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            lr_vk_record_copy(cmd, &image, s_vk.shot[next], s_vk.shot_extent, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
             source = &shot_image;
         }
         if (target != UINT32_MAX) lr_vk_record_copy(cmd, source, s_vk.images[target], s_vk.extent, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -836,6 +853,7 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
         return false;
     }
     if (shot) {
+        s_vk.shot_index = next;
         s_vk.last = shot_image;
         s_vk.presented = true;
     }
