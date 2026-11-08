@@ -383,6 +383,157 @@ final class GagaEmuWalkTests: XCTestCase {
         audit("\(tag) Device Skin")
     }
 
+    /// Batch 2: Add's new rows and the WebDAV sheet, Guides, optional BIOS, Graphics, the Library menu and the
+    /// Multi-Disc picker, upright and in landscape. Types only placeholder text into the WebDAV address.
+    func testAuditManic2() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        _ = importedGame(app, "The \(title) game")
+        sleep(10)
+        guard !promptUp() else { return }
+        open(app, "Sort games")
+        snapshot("40 Sort menu with maker portrait")
+        if open(app, "Controllers") {
+            audit("41 Controllers from Library")
+            close(app)
+        }
+        guard !promptUp() else { return }
+        app.buttons["Add"].firstMatch.tap()
+        sleep(1)
+        audit("42 Add")
+        if open(app, "WebDAV Server") {
+            audit("43 WebDAV sign in")
+            let field = app.textFields["Server address"].firstMatch
+            if field.waitForExistence(timeout: 4), !promptUp() {
+                field.tap()
+                field.typeText("http://example.test")
+                app.keyboards.buttons["return"].firstMatch.tap()
+                sleep(1)
+                open(app, "Connect")
+                sleep(2)
+                snapshot("43 WebDAV plain HTTP refused")
+            }
+            close(app)
+        }
+        guard !promptUp() else { return }
+        auditPage(app, "Multi-Disc", as: "44 Multi-Disc picker")
+        guard !promptUp() else { return }
+        app.buttons["Settings"].firstMatch.tap()
+        sleep(1)
+        tap(app.buttons["settings.Play"].firstMatch, "The Play tab")
+        sleep(1)
+        audit("45 Play")
+        tap(app.buttons["settings.Graphics"].firstMatch, "The Graphics tab")
+        sleep(1)
+        audit("46 Graphics")
+        tap(app.buttons["settings.Library"].firstMatch, "The Library tab")
+        sleep(1)
+        auditPage(app, "BIOS Files", as: "47 BIOS optional")
+        tap(app.buttons["settings.About"].firstMatch, "The About tab")
+        sleep(1)
+        audit("48 About")
+        auditPage(app, "Guides", as: "49 Guides")
+    }
+
+    /// The maker filter, picking discs by hand, and the BIOS list's Optional section.
+    func testMakerFilterAndDiscPicker() {
+        XCUIDevice.shared.orientation = .portrait
+        let psp = XCUIApplication()
+        psp.launchArguments = ["-GagaImportTestROM", "ppsspp"]
+        psp.launch()
+        _ = importedGame(psp, "The ppsspp game")
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaSeedDiscs", "YES", "-GagaImportTestROM", core]
+        app.launch()
+        _ = importedGame(app, "The \(title) game")
+        sleep(10)
+        guard !promptUp() else { return }
+        tap(button(app, "All"), "All games")
+        sleep(1)
+        let pspGame = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, "PSP")).firstMatch
+        XCTAssertTrue(pspGame.waitForExistence(timeout: 6), "The PSP game is not listed before filtering")
+        open(app, "Sort games")
+        open(app, "Nintendo")
+        sleep(1)
+        audit("52 Filtered by Nintendo")
+        XCTAssertFalse(pspGame.exists, "The maker filter left the PSP game")
+
+        guard !promptUp() else { return }
+        app.buttons["Add"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(open(app, "Multi-Disc"))
+        tap(button(app, "Odd End.chd"), "The second disc")
+        tap(button(app, "Odd Start.chd"), "The first disc")
+        let name = app.textFields["Game title"].firstMatch
+        tap(name, "The title field")
+        name.typeText("Picked Set\n")
+        sleep(1)
+        snapshot("53 Discs picked")
+        tap(button(app, "Create Playlist"), "Create Playlist")
+        XCTAssertTrue(app.staticTexts["Wrote Picked Set.m3u"].waitForExistence(timeout: 6), "No playlist written")
+        audit("53 Playlist written")
+        close(app)
+
+        guard !promptUp() else { return }
+        app.buttons["Settings"].firstMatch.tap()
+        sleep(1)
+        tap(app.buttons["settings.Library"].firstMatch, "The Library tab")
+        sleep(1)
+        XCTAssertTrue(open(app, "BIOS Files"))
+        let optional = app.staticTexts["Optional"].firstMatch
+        for _ in 0..<8 where !optional.exists { app.swipeUp() }
+        XCTAssertTrue(optional.exists, "No Optional section")
+        audit("54 BIOS Optional")
+    }
+
+    /// Spanish through the launch arguments: the rail and Settings read it, and the Language row appears.
+    func testAuditSpanish() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-AppleLanguages", "(es)", "-AppleLocale", "es_ES", "-GagaImportTestROM", core]
+        app.launch()
+        _ = importedGame(app, "The \(title) game")
+        sleep(10)
+        guard !promptUp() else { return }
+        let settings = app.buttons["Ajustes"].firstMatch
+        XCTAssertTrue(settings.waitForExistence(timeout: 6), "No Ajustes tab")
+        settings.tap()
+        sleep(1)
+        tap(app.buttons["settings.About"].firstMatch, "The About tab")
+        sleep(1)
+        XCTAssertTrue(button(app, "Idioma").waitForExistence(timeout: 6), "No Idioma row")
+        audit("50 Spanish About")
+    }
+
+    /// Auto Save State: on, play, quit, and playing again offers Resume.
+    func testAutoSaveOffersResume() {
+        let app = launchApp()
+        let game = importedGame(app, "The \(title) game")
+        sleep(10)
+        guard !promptUp() else { return }
+        tap(app.buttons["Settings"].firstMatch, "Settings")
+        sleep(1)
+        flip(app, "Auto Save State")
+        snapshot("51 Auto Save on")
+        tap(app.buttons["Library"].firstMatch, "Library")
+        sleep(1)
+        game.tap()
+        let pause = app.buttons["Pause game"]
+        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
+        sleep(4)
+        pause.tap()
+        tap(button(app, "Quit to Library"), "Quit to Library")
+        XCTAssertTrue(game.waitForExistence(timeout: timeout), "Quit did not return to the Library")
+        sleep(1)
+        game.tap()
+        let resume = app.alerts.buttons["Resume"].firstMatch
+        XCTAssertTrue(resume.waitForExistence(timeout: timeout), "No Resume offer after quitting with Auto Save on")
+        snapshot("51 Resume offer")
+        app.alerts.buttons["Cancel"].firstMatch.tap()
+    }
+
     /// Leaves an editor whose parent sheet also has a Close button.
     private func cancel(_ app: XCUIApplication) {
         if promptUp() { return }
