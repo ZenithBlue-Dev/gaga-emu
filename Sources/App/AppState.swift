@@ -1355,7 +1355,8 @@ final class AppState: ObservableObject {
     #if DEBUG
     /// Runs the benchmark on `core` with `rom`, or with a generated test ROM. It stays out of the Library and
     /// play history.
-    func runBenchmark(rom: URL? = nil, core coreID: String = "mgba", seconds: TimeInterval = BenchmarkRun.defaultSeconds) {
+    func runBenchmark(rom: URL? = nil, core coreID: String = "mgba", seconds: TimeInterval = BenchmarkRun.defaultSeconds,
+                      input: String? = nil) {
         guard session == nil, !launching else { return }
         launching = true
         Task {
@@ -1373,7 +1374,7 @@ final class AppState: ObservableObject {
                 let next = try makeSession(for: game)
                 next.autoSaveEnabled = { false }
                 try await next.prepare()
-                let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds)
+                let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds, input: input)
                 run.attach()
                 next.onFinish = { [weak self] message in self?.endSession(game: game, message: message) }
                 session = next
@@ -1388,9 +1389,14 @@ final class AppState: ObservableObject {
         let defaults = UserDefaults.standard
         guard ProcessInfo.processInfo.arguments.contains("-GagaBenchmark") else { return }
         let seconds = defaults.double(forKey: "GagaBenchmarkSeconds")
+        let input = defaults.string(forKey: "GagaBenchmarkInput")
+        if let input, BenchmarkRun.parseInput(input) == nil {
+            launchFailure = LaunchFailure(title: "Benchmark", message: "-GagaBenchmarkInput takes button@seconds entries, such as start@8,cross@12.")
+            return
+        }
         runBenchmark(rom: defaults.string(forKey: "GagaBenchmarkROM").map { romDirectory.appendingPathComponent($0) },
                      core: defaults.string(forKey: "GagaBenchmarkCore") ?? "mgba",
-                     seconds: seconds > 0 ? seconds : BenchmarkRun.defaultSeconds)
+                     seconds: seconds > 0 ? seconds : BenchmarkRun.defaultSeconds, input: input)
     }
 
     /// `-GagaImportROM <path>`: copies the file in as Files import does, so core work can add a game

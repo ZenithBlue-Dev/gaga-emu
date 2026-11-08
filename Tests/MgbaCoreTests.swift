@@ -299,6 +299,19 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertNotEqual(BenchmarkRun.scriptedButtons(frame: 0), BenchmarkRun.scriptedButtons(frame: 30))
     }
 
+    func testBenchmarkInputPressesButtonsAtTheirSecond() throws {
+        let presses = try XCTUnwrap(BenchmarkRun.parseInput("start@8, Cross@12.5"))
+        let start = UInt32(GAGA_BTN_START.rawValue), cross = UInt32(GAGA_BTN_SOUTH.rawValue)
+        XCTAssertEqual(presses.map(\.frame), [480, 750])
+        XCTAssertEqual(BenchmarkRun.scriptedButtons(frame: 479, presses: presses) & start, 0)
+        XCTAssertEqual(BenchmarkRun.scriptedButtons(frame: 480, presses: presses) & start, start)
+        XCTAssertEqual(BenchmarkRun.scriptedButtons(frame: 489, presses: presses) & start, start)
+        XCTAssertEqual(BenchmarkRun.scriptedButtons(frame: 490, presses: presses) & start, 0)
+        XCTAssertEqual(BenchmarkRun.scriptedButtons(frame: 755, presses: presses) & cross, cross)
+        XCTAssertEqual(BenchmarkRun.scriptedButtons(frame: 7, presses: []), BenchmarkRun.scriptedButtons(frame: 7), "no arg, same script")
+        for bad in ["", "start", "jump@3", "start@-1", "start@x"] { XCTAssertNil(BenchmarkRun.parseInput(bad), bad) }
+    }
+
     @MainActor
     func testBenchmarkWritesALabelledRecord() async throws {
         let skins = TouchSkinEngine()

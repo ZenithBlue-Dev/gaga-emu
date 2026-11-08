@@ -7,8 +7,8 @@ import os
 /// The run record and metrics of docs/04 section 7.2, as code. Debug builds only.
 ///
 /// Start it from Settings > About > Run Benchmark, or with the launch argument `-GagaBenchmark`. Options:
-/// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60` and
-/// `-GagaBenchmarkROM <file name in the ROM folder>`. With no ROM it generates the homebrew test ROM for
+/// `-GagaBenchmarkCore <core_id>` (default `mgba`), `-GagaBenchmarkSeconds 60`,
+/// `-GagaBenchmarkROM <file name in the ROM folder>` and `-GagaBenchmarkInput start@8,cross@12` (see `parseInput`). With no ROM it generates the homebrew test ROM for
 /// GBA, GB, GBC, NES, SNES, NDS, PS1, DOS, PC Engine or the Vulkan test core, and any other core needs a ROM. The record lands in the app's Documents/Benchmarks, which the Files
 /// app shows on a device. The procedure is in docs/04 section 7.2.
 @MainActor
@@ -89,12 +89,14 @@ final class BenchmarkRun {
         }
     }
 
-    private static let inputScript = "A for 10 of every 60 frames; D-pad cycling each 120 frames"
+    private static let fixedScript = "A for 10 of every 60 frames; D-pad cycling each 120 frames"
 
     private let session: GameSession
     private let romURL: URL
     private let seconds: TimeInterval
     private let warmup: TimeInterval
+    private let presses: [Press]
+    private let inputScript: String
     private let samples: Samples
     private let interface: GagaCoreInterface
     private var thermalHigh = ProcessInfo.processInfo.thermalState
@@ -104,12 +106,16 @@ final class BenchmarkRun {
     /// Called with the record's location, after it is written and before the session ends.
     var onWritten: ((URL) -> Void)?
 
-    init(session: GameSession, interface: GagaCoreInterface, romURL: URL, seconds: TimeInterval, warmup: TimeInterval = BenchmarkRun.warmupSeconds) {
+    /// `input` is the text of `-GagaBenchmarkInput`, already checked by `parseInput`.
+    init(session: GameSession, interface: GagaCoreInterface, romURL: URL, seconds: TimeInterval, warmup: TimeInterval = BenchmarkRun.warmupSeconds,
+         input: String? = nil) {
         self.session = session
         self.interface = interface
         self.romURL = romURL
         self.seconds = seconds
         self.warmup = warmup
+        presses = input.flatMap(Self.parseInput) ?? []
+        inputScript = Self.fixedScript + (presses.isEmpty ? "" : "; presses \(input ?? "")")
         samples = Samples(capacity: Int((seconds + warmup + 5) * 62))
     }
 
@@ -167,8 +173,8 @@ final class BenchmarkRun {
 
     /// Call after `prepare` and before `run`.
     func attach() {
-        let samples = self.samples
-        session.attachBenchmark(script: Self.scriptedButtons) { start, wall, cpu in
+        let samples = self.samples, presses = self.presses
+        session.attachBenchmark(script: { Self.scriptedButtons(frame: $0, presses: presses) }) { start, wall, cpu in
             if samples.starts.isEmpty { pthread_setname_np("gaga.core") }
             samples.starts.append(start)
             samples.walls.append(wall)
@@ -182,6 +188,34 @@ final class BenchmarkRun {
         let pad = [GAGA_BTN_UP, GAGA_BTN_RIGHT, GAGA_BTN_DOWN, GAGA_BTN_LEFT]
         buttons |= UInt32(pad[(frame / 120) % pad.count].rawValue)
         return buttons
+    }
+
+    typealias Press = (frame: Int, button: UInt32)
+    static let pressFrames = 10
+
+    /// `-GagaBenchmarkInput start@8,cross@12`: each button is held for `pressFrames` frames from that many
+    /// seconds into the game (60 frames a second), on top of the fixed script. Names: start, select, up, down,
+    /// left, right, l, r, Sony cross, circle, square, triangle and Nintendo a, b, x, y. Nil if any entry does not parse.
+    nonisolated static func parseInput(_ text: String) -> [Press]? {
+        let names: [String: GagaButtonMask] = [
+            "start": GAGA_BTN_START, "select": GAGA_BTN_SELECT, "up": GAGA_BTN_UP, "down": GAGA_BTN_DOWN,
+            "left": GAGA_BTN_LEFT, "right": GAGA_BTN_RIGHT, "l": GAGA_BTN_L1, "r": GAGA_BTN_R1,
+            "cross": GAGA_BTN_SOUTH, "circle": GAGA_BTN_EAST, "square": GAGA_BTN_WEST, "triangle": GAGA_BTN_NORTH,
+            "a": GAGA_BTN_EAST, "b": GAGA_BTN_SOUTH, "x": GAGA_BTN_NORTH, "y": GAGA_BTN_WEST,
+        ]
+        var presses: [Press] = []
+        for entry in text.split(separator: ",") {
+            let parts = entry.trimmingCharacters(in: .whitespaces).lowercased().split(separator: "@")
+            guard parts.count == 2, let button = names[String(parts[0])], let seconds = Double(parts[1]),
+                  seconds >= 0, seconds < 3600 else { return nil }
+            presses.append((Int(seconds * 60), UInt32(button.rawValue)))
+        }
+        return presses.isEmpty ? nil : presses
+    }
+
+    /// The fixed script plus every press under way at `frame`.
+    nonisolated static func scriptedButtons(frame: Int, presses: [Press]) -> UInt32 {
+        presses.reduce(scriptedButtons(frame: frame)) { frame >= $1.frame && frame < $1.frame + pressFrames ? $0 | $1.button : $0 }
     }
 
     /// Waits for the game view to start the session, measures, writes the record, then ends the session.
@@ -290,7 +324,7 @@ final class BenchmarkRun {
                         settings: String(cString: interface.core_id) == "mgba" ? "defaults, HLE BIOS, skip BIOS boot" : "defaults"),
             rom: .init(file: romURL.lastPathComponent,
                        sha256: hasher.finalize().map { String(format: "%02x", $0) }.joined(), bytes: romBytes),
-            inputScript: Self.inputScript,
+            inputScript: inputScript,
             interrupted: interrupted,
             warmupSeconds: warmup,
             measuredSeconds: measured,
