@@ -118,6 +118,8 @@ iPhone height in landscape is about 375 to 440pt, so persistent chrome stays sma
 
 Backgrounds extend under the notch, Dynamic Island and home indicator. Content stays inside the safe area on whichever side the hardware sits, because landscape left and right put it on opposite sides. Check both, and upright. The game view hides the status bar and home indicator.
 
+The Library's shelf column (tip, chips and search, rules, shelves) runs under the side safe areas, so its rules reach the edge and covers scroll through the notch band. Its gutters are 16pt plus the side inset, so at rest nothing sits under the notch. The rail and Continue panel stay inside the safe area.
+
 ## Accessibility
 
 - Icon-only and cover controls have VoiceOver labels. Every touch control has one, and activating it presses that button briefly.

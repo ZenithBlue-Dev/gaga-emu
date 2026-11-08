@@ -14,6 +14,13 @@ struct LibraryView: View {
     @ScaledMetric(relativeTo: .footnote) private var tileScale: CGFloat = 1
     /// The Library's own width, inside the safe area and beside the rail.
     @State private var width: CGFloat = 0
+    /// How far the Library could extend into the side safe areas: in landscape the trailing notch inset, with the
+    /// rail on the leading side.
+    @State private var sides = EdgeInsets()
+    /// Shelf column gutters. The column runs under the side safe areas so covers scroll through them; at rest
+    /// everything starts inside them.
+    private var lead: CGFloat { 16 + sides.leading }
+    private var trail: CGFloat { 16 + sides.trailing }
 
     private enum GameSheet: Identifiable {
         case core(GameItem), saves(GameItem), edit(GameItem), skin(GameItem), delete(GameItem)
@@ -47,16 +54,19 @@ struct LibraryView: View {
                         Rule().ignoresSafeArea(edges: .vertical)
                     }
                     VStack(spacing: 0) {
-                        ImportProgressRows().padding(.horizontal, 16)
-                        TipLine(tip: .holdGame).padding(.horizontal, 16).padding(.top, 8)
+                        ImportProgressRows().padding(.leading, lead).padding(.trailing, trail)
+                        TipLine(tip: .holdGame).padding(.leading, lead).padding(.trailing, trail).padding(.top, 8)
                         filterRow
                         Rule()
                         shelvesList
                     }
+                    // The rail and Continue stay inside the safe area; the shelves and their rules run to the edge.
+                    .ignoresSafeArea(.container, edges: .horizontal)
                 }
             }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .onGeometryChange(for: EdgeInsets.self) { $0.safeAreaInsets } action: { sides = $0 }
         // A dropped game lands on its shelf; only a problem needs words.
         .gameFileDrop(isTargeted: $dropTargeted) { line, problem in
             if problem { state.launchFailure = .init(title: AppState.LaunchFailure.importTitle, message: line) }
@@ -153,7 +163,7 @@ struct LibraryView: View {
                         chip(CoreCatalog.platformCode(id), id: id, label: CoreCatalog.platformName(id))
                     }
                 }
-                .padding(.leading, 16)
+                .padding(.leading, lead)
             }
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
@@ -165,7 +175,7 @@ struct LibraryView: View {
             .frame(width: metrics.search)
             .frame(minHeight: 34)
             .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
-            .padding(.trailing, 16)
+            .padding(.trailing, trail)
         }
         .frame(minHeight: 44)
     }
@@ -214,7 +224,7 @@ struct LibraryView: View {
                     }
                     .buttonStyle(QuietButtonStyle())
                 }
-                .padding(16)
+                .padding(.vertical, 16).padding(.leading, lead).padding(.trailing, trail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             LazyVStack(alignment: .leading, spacing: 12) {
@@ -225,12 +235,12 @@ struct LibraryView: View {
                             Text("\(shelf.games.count)").font(.meta).foregroundStyle(AppTheme.muted)
                                 .accessibilityLabel("\(shelf.games.count) games")
                         }
-                        .padding(.horizontal, 16)
+                        .padding(.leading, lead).padding(.trailing, trail)
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(alignment: .top, spacing: 12) {
                                 ForEach(shelf.games) { tile($0) }
                             }
-                            .padding(.horizontal, 16)
+                            .padding(.leading, lead).padding(.trailing, trail)
                         }
                     }
                 }
