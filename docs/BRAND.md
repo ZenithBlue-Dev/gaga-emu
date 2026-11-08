@@ -92,6 +92,7 @@ The paid tier is **Gaga Plus**: two words, both capitalised. Not "Gaga+", "GagaE
 - No console logos, controllers or hardware from a console maker.
 - Show only features that work in that build.
 - Captions follow the voice rules: short, plain and factual.
+- Display classes, landscape, RGB with no alpha: iPhone 6.9" 2868 x 1320, iPhone 6.3" 2622 x 1206 (Apple's required iPhone class), iPad 13" 2752 x 2064 (required because the app runs on iPad; 2732 x 2048 is also accepted). Source: App Store Connect Help, Screenshot specifications, read 2026-11-08. Output folders `iphone-6.9`, `iphone-6.3`, `ipad-13`.
 
 **Pipeline:** `scripts/make_screenshots.swift` composes the set from `design/store/captions.json` and real captures in `design/store/captures/` (gitignored). Until those exist it uses `design/store/placeholders/`, drawn from this app's own screens and the homebrew GBA test picture. Do not upload the placeholder set. `scripts/check_store_assets.py` fails if a Manic EMU asset returns. The listing draft is `docs/store/metadata.md`.
 

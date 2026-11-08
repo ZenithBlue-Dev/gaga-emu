@@ -98,4 +98,4 @@ From `SiteLinks` in `Sources/App/AppState.swift`:
 
 ## Screenshots
 
-`scripts/make_screenshots.swift` composes them from `design/store/captions.json` and the captures in `design/store/captures/`. It writes to `build/store/` by default. Placeholders in `design/store/placeholders/` stand in until real device captures exist. Do not upload the placeholder set. `scripts/check_store_assets.py` fails if a Manic EMU asset path returns to the pipeline.
+`scripts/make_screenshots.swift` composes them from `design/store/captions.json` and the captures in `design/store/captures/`. It writes to `build/store/` by default, one folder per display class: `iphone-6.9` (2868 x 1320), `iphone-6.3` (2622 x 1206) and `ipad-13` (2752 x 2064; Apple requires 13" iPad screenshots because the app runs on iPad, read 2026-11-08 on App Store Connect Help, Screenshot specifications). The iPad set uses the same captions and captures. Placeholders in `design/store/placeholders/` stand in until real device captures exist. Do not upload the placeholder set. `scripts/check_store_assets.py` fails if a Manic EMU asset path returns to the pipeline.
