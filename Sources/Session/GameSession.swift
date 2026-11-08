@@ -560,7 +560,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     // MARK: - Rewind
 
-    /// The touch button. A controller holds Options and L1 instead (`ControllerManager.InputState.rewind`).
+    /// The touch button. A controller holds an input mapped to Rewind (Hold) instead.
     func setRewindHeld(_ held: Bool) {
         rewindTouchHeld = held
         pushInputs()

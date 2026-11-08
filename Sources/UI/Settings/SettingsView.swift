@@ -194,7 +194,7 @@ private struct PlayPane: View {
         }
         Rule()
         ToggleRow(title: "Rewind",
-                  note: "Hold the rewind button, or Options and L1 on a controller, to step back through recent play. Uses up to \(RewindPolicy.standard.budgetBytes / 1_048_576) MB of memory while a game runs. Only systems with a small, quick save state can rewind; the pause menu says when one cannot.",
+                  note: "Hold the rewind button, or a controller input mapped to Rewind in Controls, to step back through recent play. Uses up to \(RewindPolicy.standard.budgetBytes / 1_048_576) MB of memory while a game runs. Only systems with a small, quick save state can rewind; the pause menu says when one cannot.",
                   isOn: $state.rewind)
         Rule()
         ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen)

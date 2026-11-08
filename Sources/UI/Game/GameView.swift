@@ -784,7 +784,7 @@ private struct PauseMenu: View {
         let text: String? = switch session.rewindStatus {
         case .off: nil
         case .checking: "Rewind: checking this system."
-        case .ready: "Rewind: hold the rewind button, or Options and L1 on a controller."
+        case .ready: "Rewind: hold the rewind button, or a controller input mapped to Rewind."
         case .unavailable(let reason): "Rewind is off. \(reason)"
         }
         if let text {
