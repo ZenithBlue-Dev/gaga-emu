@@ -89,8 +89,8 @@ struct PaperSheet<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title).font(.screenTitle).accessibilityAddTraits(.isHeader)
-                if let subtitle { Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted) }
+                Text(title).font(.screenTitle).accessibilityAddTraits(.isHeader).layoutPriority(1)
+                if let subtitle { Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2) }
                 Spacer(minLength: 0)
                 Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
             }

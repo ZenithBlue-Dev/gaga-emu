@@ -29,7 +29,7 @@ struct SettingsView: View {
                     Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
                         .padding(.horizontal, 16).padding(.top, 8)
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 0) { ForEach(Category.visible) { categoryRow($0).fixedSize() } }
+                        HStack(spacing: 0) { ForEach(Category.visible) { categoryRow($0, underline: true).fixedSize() } }
                     }
                 }
                 Rule()
@@ -57,7 +57,7 @@ struct SettingsView: View {
         }
     }
 
-    private func categoryRow(_ item: Category) -> some View {
+    private func categoryRow(_ item: Category, underline: Bool = false) -> some View {
         let selected = category == item
         return Button { category = item } label: {
             Text(item.rawValue)
@@ -66,8 +66,10 @@ struct SettingsView: View {
                 .padding(.horizontal, 16).padding(.vertical, 6)
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
-                .overlay(alignment: .leading) {
-                    if selected { Rectangle().fill(AppTheme.accent).frame(width: 3) }
+                .overlay(alignment: underline ? .bottom : .leading) {
+                    if selected {
+                        Rectangle().fill(AppTheme.accent).frame(width: underline ? nil : 3, height: underline ? 3 : nil)
+                    }
                 }
         }
         .buttonStyle(.plain)

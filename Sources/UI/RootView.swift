@@ -112,8 +112,10 @@ private struct LeftRail: View {
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .contentShape(Rectangle())
                     .foregroundStyle(selected ? AppTheme.accent : AppTheme.muted)
-                    .overlay(alignment: .leading) {
-                        if selected { Rectangle().fill(AppTheme.accent).frame(width: 3) }
+                    .overlay(alignment: horizontal ? .top : .leading) {
+                        if selected {
+                            Rectangle().fill(AppTheme.accent).frame(width: horizontal ? nil : 3, height: horizontal ? 3 : nil)
+                        }
                     }
                 }
                 .buttonStyle(.plain)
