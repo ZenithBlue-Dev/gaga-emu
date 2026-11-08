@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <math.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -99,9 +100,20 @@ static void lr_error(char* error, size_t capacity, const char* format, const cha
 
 // MARK: - Environment
 
+// The core's last error line, printed only when the core stops the game: PPSSPP's reason for a failed boot
+// (device run 9 saw only "The core stopped this game."). Cores log from their own threads, hence the lock.
+static char s_last_error[256];
+static pthread_mutex_t s_last_error_lock = PTHREAD_MUTEX_INITIALIZER;
+
 static void lr_log(enum retro_log_level level, const char* format, ...) {
-    (void)level;
-    (void)format; // Without this a core prints to stdout. FATAL is the only message the host acts on.
+    // Without this a core prints to stdout. FATAL is the only message the host acts on.
+    if (level < RETRO_LOG_ERROR) return;
+    va_list args;
+    va_start(args, format);
+    pthread_mutex_lock(&s_last_error_lock);
+    vsnprintf(s_last_error, sizeof(s_last_error), format, args);
+    pthread_mutex_unlock(&s_last_error_lock);
+    va_end(args);
 }
 
 // Stored only: step_frame sends the change on the host's queue, so a core may call this from any thread.
@@ -167,6 +179,10 @@ static bool lr_environment(unsigned command, void* data) {
         a->sample_rate = (uint32_t)lround(((const struct retro_system_av_info*)data)->timing.sample_rate);
         return true;
     case RETRO_ENVIRONMENT_SHUTDOWN:
+        pthread_mutex_lock(&s_last_error_lock);
+        printf("[gaga-core] stopped the game; last error: %s\n", s_last_error[0] ? s_last_error : "none");
+        pthread_mutex_unlock(&s_last_error_lock);
+        fflush(stdout);
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_CORE_STOPPED, "The core stopped this game.");
         return true;
     case RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK:
