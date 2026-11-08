@@ -421,4 +421,134 @@ final class ControlsTests: GagaTestCase {
     func testEachPortReachesARealCore() throws {
         throw XCTSkip("device-pending: needs a two-player core and two controllers on a device (docs/07)")
     }
+
+    // MARK: Multitap
+
+    func testMultitapPlayersPerCoreAndMode() {
+        XCTAssertEqual(CoreCatalog.maxPlayers("snes", coreID: "bsnes", multitap: .auto), 5)
+        XCTAssertEqual(CoreCatalog.maxPlayers("snes", coreID: "snes9x", multitap: .on), 5)
+        XCTAssertEqual(CoreCatalog.maxPlayers("snes", coreID: "bsnes", multitap: .off), 2, "Off keeps the console's own ports")
+        XCTAssertEqual(CoreCatalog.maxPlayers("nes", coreID: "nestopia", multitap: .auto), 4)
+        XCTAssertEqual(CoreCatalog.maxPlayers("megadrive", coreID: "jgenesis", multitap: .on), 2, "JGenesis has no adapter")
+        XCTAssertEqual(CoreCatalog.maxPlayers("ps1", coreID: "beetle_psx", multitap: .auto), 2)
+        XCTAssertEqual(CoreCatalog.maxPlayers("pce", coreID: "beetle_pce_fast", multitap: .off), 5, "Always on the tap")
+        XCTAssertTrue(CoreCatalog.hasMultitap("saturn"))
+        XCTAssertFalse(CoreCatalog.hasMultitap("pce"))
+        XCTAssertLessThanOrEqual(CoreCatalog.multitap.values.max() ?? 0, ControllerManager.slotCount)
+    }
+
+    func testPortCountFollowsTheHighestPlayerOrMultitapOn() {
+        XCTAssertEqual(GameSession.portCount(highestSlot: nil, maxPlayers: 5, multitapOn: false), 1, "Touch is player 1")
+        XCTAssertEqual(GameSession.portCount(highestSlot: 1, maxPlayers: 5, multitapOn: false), 2)
+        XCTAssertEqual(GameSession.portCount(highestSlot: 2, maxPlayers: 5, multitapOn: false), 3, "Past two plugs the tap in")
+        XCTAssertEqual(GameSession.portCount(highestSlot: 4, maxPlayers: 2, multitapOn: false), 2, "Capped at the system's players")
+        XCTAssertEqual(GameSession.portCount(highestSlot: nil, maxPlayers: 5, multitapOn: true), 5)
+    }
+
+    func testMultitapSettingRoundTripsAndPicksPlayers() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("multitap-\(UUID().uuidString).json")
+        let store = ControlsStore(url: url)
+        store.file.multitap["snes"] = MultitapMode.off.rawValue
+        let file = ControlsStore(url: url).file
+        XCTAssertEqual(ControlsStore.multitap(in: file, platformID: "snes"), .off)
+        XCTAssertEqual(ControlsStore.multitap(in: file, platformID: "nes"), .auto, "Missing is Auto")
+
+        let (session, _, _) = try session(platformID: "snes")
+        session.setMultitap(.on)
+        XCTAssertEqual(session.maxPlayers, CoreCatalog.maxPlayers("snes"), "The mock core has no adapter")
+        XCTAssertFalse(session.multitapAlwaysOn)
+    }
+
+    func testThePortCountReachesTheCore() async throws {
+        let (session, _, _) = try session()
+        try await session.prepare()
+        session.run()
+        defer { session.stop() }
+        let deadline = Date().addingTimeInterval(5)
+        while session.stats.frames < 3, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertEqual(MockCore_LastPlayerCount(), 1, "Touch only: one port in use")
+    }
+
+    // MARK: Per-port turbo and macros
+
+    func testTurboAndMacrosRunPerPort() async throws {
+        let (session, _, _) = try session()
+        try await session.prepare()
+        session.run()
+        session.applyActions(perPort: [[], [.turbo(b.south, toggle: true)]])
+        session.applyActions(perPort: [[], [.turbo(b.south, toggle: true)]])
+        XCTAssertEqual(session.turboToggled, 0, "Player 1's toggle is apart from player 2's")
+        let p2 = session.processors[1], p3 = session.processors[2]
+        XCTAssertEqual((0..<4).map { p2.process(0, frame: $0) & b.south != 0 }, [true, true, false, false], "Held, it stays on")
+        XCTAssertEqual(session.processors[0].process(0, frame: 0), 0, "Player 1 gets no turbo")
+        session.applyActions(perPort: [[], []])
+        session.applyActions(perPort: [[], [.turbo(b.south, toggle: true)]])
+        XCTAssertEqual(p2.process(0, frame: 0), 0, "Toggled off by player 2's next press")
+        session.stop() // The core no longer steps the processors, so the macro below is read frame by frame alone.
+
+        p3.toggle(Macro(name: "Two", steps: [.init(buttons: b.west, frames: 2)]))
+        XCTAssertEqual((0..<3).map { p3.process(0, frame: $0) }, [b.west, b.west, 0], "Player 3's macro, frame by frame")
+        XCTAssertTrue(session.processors[0].runningMacros.isEmpty, "Player 1 runs none")
+    }
+
+    func testPerPortTurboReachesTheCorePort() async throws {
+        let (session, _, _) = try session()
+        try await session.prepare()
+        session.run()
+        defer { session.stop() }
+        session.applyActions(perPort: [[], [.turbo(b.south, toggle: false)]])
+        var seen = Set<Bool>()
+        let deadline = Date().addingTimeInterval(5)
+        while seen.count < 2, Date() < deadline {
+            seen.insert(MockCore_LastButtons(1) & b.south != 0)
+            XCTAssertEqual(MockCore_LastButtons(0) & b.south, 0, "Player 2's turbo stays on port 2")
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertEqual(seen, [true, false], "Port 2 pulses on and off")
+    }
+
+    // MARK: Keyboard
+
+    func testTheStandardKeyMapIsTheOldOne() {
+        let key = { (code: GCKeyCode) in Int(code.rawValue) }
+        let held = { (codes: [GCKeyCode]) in KeyMapper.resolve(held: Set(codes.map(key)), profile: .standard).buttons }
+        XCTAssertEqual(held([.keyW]), b.up)
+        XCTAssertEqual(held([.upArrow]), b.up)
+        XCTAssertEqual(held([.keyS, .keyD]), b.down | b.right)
+        XCTAssertEqual(held([.keyJ, .keyK, .keyU, .keyI]), b.south | b.east | b.west | b.north)
+        XCTAssertEqual(held([.keyQ, .keyE]), b.l1 | b.r1)
+        XCTAssertEqual(held([.returnOrEnter, .rightShift]), b.start | b.select)
+        XCTAssertEqual(held([.keyZ]), 0)
+        XCTAssertTrue(KeyProfile.standard.passThrough)
+        XCTAssertEqual(KeyProfile.name(key(.keyA)), "A")
+    }
+
+    func testKeysMapToButtonsAppFunctionsAndMacros() {
+        let id = UUID()
+        let profile = KeyProfile(bindings: [KeyBinding(key: 0x2C, action: .buttons(b.south | b.east)),
+                                            KeyBinding(key: 0x29, action: .app(.pauseMenu)),
+                                            KeyBinding(key: 0x3A, action: .macro(id)),
+                                            KeyBinding(key: 0x3B, action: .turbo(b.west, toggle: false))])
+        let state = KeyMapper.resolve(held: [0x2C, 0x29, 0x3A, 0x3B, 0x04], profile: profile)
+        XCTAssertEqual(state.buttons, b.south | b.east, "A is unmapped here")
+        XCTAssertEqual(state.actions, [.app(.pauseMenu), .macro(id), .turbo(b.west, toggle: false)])
+    }
+
+    func testAGameKeyMapWinsOverItsPlatformAndOldFilesDecode() throws {
+        var file = ControlsStore.File()
+        let game = UUID()
+        file.keys[ControlsStore.keyboardKey(platformID: "nes")] = KeyProfile(bindings: [KeyBinding(key: 0x04, action: .buttons(b.south))])
+        file.keys[ControlsStore.keyboardKey(gameID: game)] = KeyProfile(bindings: [KeyBinding(key: 0x05, action: .buttons(b.east))],
+                                                                         passThrough: false)
+        XCTAssertEqual(ControlsStore.keyProfile(in: file, platformID: "nes", gameID: game).bindings.map(\.key), [0x05])
+        XCTAssertEqual(ControlsStore.keyProfile(in: file, platformID: "nes", gameID: UUID()).bindings.map(\.key), [0x04])
+        XCTAssertEqual(ControlsStore.keyProfile(in: file, platformID: "snes", gameID: nil), .standard)
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("keys-\(UUID().uuidString).json")
+        let store = ControlsStore(url: url)
+        store.file = file
+        XCTAssertEqual(ControlsStore(url: url).file.keys, file.keys)
+        let old = try JSONDecoder().decode(KeyProfile.self, from: Data(#"{"bindings":[]}"#.utf8))
+        XCTAssertTrue(old.passThrough)
+    }
 }
