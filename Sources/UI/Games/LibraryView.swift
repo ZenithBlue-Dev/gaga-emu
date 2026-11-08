@@ -261,6 +261,7 @@ struct LibraryView: View {
 
     @ViewBuilder private func menu(_ game: GameItem) -> some View {
         Button { state.launch(game) } label: { Label("Play", systemImage: "play") }
+        PlayNearbyMenuItem(game: game)
         Button { sheet = .core(game) } label: { Label("Change Core", systemImage: "cpu") }
         Button { filterGame = game } label: { Label("Choose Filter", systemImage: "camera.filters") }
         Button { sheet = .skin(game) } label: { Label("Assign Skin", systemImage: "gamecontroller") }

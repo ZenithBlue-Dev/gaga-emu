@@ -483,6 +483,7 @@ private struct PauseMenu: View {
                     action: { showScreen = true })
             fastForward
             rewindNote
+            PlayNearbyRow(session: session)
             if session.supportsCheats {
                 menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
             } else if let note = session.noCheatsNote {
