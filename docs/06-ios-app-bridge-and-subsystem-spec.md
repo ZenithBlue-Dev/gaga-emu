@@ -109,14 +109,36 @@ typedef struct {
     // Keys held on a hardware keyboard, by USB HID usage (page 7, as GCKeyCode): usage u is bit (u & 7) of
     // keys[u >> 3]. Player 1 only, and only for a core that types (DOS); others get it zeroed.
     uint8_t  keys[32];
+    // Player 1's slot only: true when the host drops this frame's picture (fast-forward runs several frames
+    // per tick and shows the last). A layer-path core then renders but does not present. It sits in what was
+    // tail padding, so the size and every offset stay as ABI 5 shipped, and zero keeps the old behaviour.
+    bool     skip_present;
 } GagaInputState;
+#ifndef __cplusplus
+_Static_assert(sizeof(GagaInputState) == 72, "GagaInputState must keep its ABI 5 size");
+#endif
 
 // Pixel formats emitted by core
 typedef enum {
     GAGA_PIXEL_FORMAT_RGB565   = 0,
     GAGA_PIXEL_FORMAT_XRGB8888 = 1,
     GAGA_PIXEL_FORMAT_RGBA8888 = 2,
+    // Only from a GAGA_CORE_CAP_OUTPUT_TEXTURE core the host attached with no layer: pixel_data points to a
+    // GagaMetalTextureFrame and pitch is 0. A host that never attaches that way never sees it.
+    GAGA_PIXEL_FORMAT_METAL_TEXTURE = 3,
 } GagaPixelFormat;
+
+// A frame rendered off-screen for host shaders (docs/05 section 2.4). The objects belong to the core and are
+// valid only during the callback. The host encodes, on its own MTLCommandQueue, a wait for ready_event to
+// reach ready_value, its reads of texture, then a signal of done_event to done_value. It does this for every
+// such frame, including one it does not show: the core writes texture again only once done_value is reached.
+typedef struct {
+    void*    texture;     // id<MTLTexture>, MTLPixelFormatBGRA8Unorm, the descriptor's width and height
+    void*    ready_event; // id<MTLSharedEvent>, signalled by the core
+    uint64_t ready_value;
+    void*    done_event;  // id<MTLSharedEvent>, signalled by the host
+    uint64_t done_value;
+} GagaMetalTextureFrame;
 
 // Video frame descriptor emitted to Metal
 typedef struct {
@@ -151,9 +173,13 @@ typedef enum {
 #define GAGA_RUMBLE_CODE(port, motor, strength) \
     ((int32_t)((((uint32_t)(port) & 3u) << 17) | (((uint32_t)(motor) & 1u) << 16) | ((uint32_t)(strength) & 0xFFFFu)))
 
-// Bits 0 and 2 are kept for the host-buffer and output-texture paths (docs/06 section 2.4).
+// Bit 0 is kept for the host-buffer path (docs/06 section 2.4).
 typedef enum {
     GAGA_CORE_CAP_METAL_LAYER = 1u << 1, // Presents to an attached CAMetalLayer. Host shaders do not run.
+    // With METAL_LAYER: attach_metal_layer with a NULL layer switches the core to off-screen frames of
+    // GAGA_PIXEL_FORMAT_METAL_TEXTURE, so host shaders run. A core without the bit returns false for NULL.
+    // Older cores lack the bit and older hosts never pass NULL, so the ABI stays at 5.
+    GAGA_CORE_CAP_OUTPUT_TEXTURE = 1u << 2,
 } GagaCoreCapability;
 
 // Threading contract. The host makes every instance call on one serial queue, never concurrently.
@@ -186,7 +212,8 @@ typedef struct GagaCoreInterface {
 
     // Layer path, for a core with GAGA_CORE_CAP_METAL_LAYER. The host attaches its CAMetalLayer with the
     // drawable size in pixels, and again whenever that size changes. Frames stepped while no layer is
-    // attached render but are not shown. Detach returns with no GPU work using the layer.
+    // attached render but are not shown. Detach returns with no GPU work using the layer. A NULL layer is
+    // the output-texture path (GAGA_CORE_CAP_OUTPUT_TEXTURE); detach ends it.
     bool (*attach_metal_layer)(GagaInstance* inst, void* ca_metal_layer,
                                uint32_t width_px, uint32_t height_px, float content_scale);
     void (*detach_metal_layer)(GagaInstance* inst);
@@ -269,12 +296,13 @@ Fast-forward runs whole frames: at N times speed, each timer tick steps the core
 
 **Rumble, still ABI 5.** `GAGA_EVENT_RUMBLE` is a new event value, not a new member or struct, so the layout and the version stay. A RUMBLE event has a NULL message and a code from `GAGA_RUMBLE_CODE`: port, motor (`GAGA_RUMBLE_STRONG` or `GAGA_RUMBLE_WEAK`) and strength, sent from `step_frame` when a motor changes. A host from before rumble ignores it, as it ignores any event that is not FATAL. The libretro adapter answers `RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE`; `set_rumble_state` only stores the strength, from any core thread, and `step_frame` sends the changes after `retro_run`. mGBA sends its cartridge motor (Drill Dozer) on both motors, as the share of motor writes that turned it on in the frame. On the host, `RumbleManager` plays the latest strengths at most 30 times a second on CoreHaptics: a controller's `GCController.haptics`, with the left handle as the strong motor and the right as the weak where a pad has both, or the device for player 1 on touch when the Rumble setting is on. Rumble Strength scales it. `GameSession` stops every motor on pause, which covers the background, and on stop, and plays the last strengths again on resume.
 
+**Output texture, still ABI 5** (milestone 5.6, `docs/05` section 2.4). `GAGA_CORE_CAP_OUTPUT_TEXTURE` (bit 2), `GAGA_PIXEL_FORMAT_METAL_TEXTURE` and `GagaMetalTextureFrame` add no member to `GagaCoreInterface` and change no layout. The host asks for the path by calling `attach_metal_layer` with a NULL layer, only on a core that sets the bit; `detach_metal_layer`, or attaching a real layer, ends it. A core from before refuses a NULL layer and lacks the bit, and a host from before never passes NULL, so neither side meets the new frame format unasked, as with `skip_present`. The frame's objects are the core's and valid only during the callback. For every such frame the host encodes, on its own queue, a wait for `ready_event` at `ready_value`, its reads of `texture`, then a signal of `done_event` at `done_value`; the core writes the texture again only after that signal.
+
 **Planned.** These arrive with the frame paths that need them. Each changes `GagaCoreInterface`, so each bumps the ABI version.
 
 ```c
-// GagaCoreCapability bits 0 and 2.
+// GagaCoreCapability bit 0.
 GAGA_CORE_CAP_HOST_BUFFER    = 1u << 0, // accepts set_host_framebuffer
-GAGA_CORE_CAP_OUTPUT_TEXTURE = 1u << 2, // hands back an MTLTexture
 
 typedef struct {
     void*           base;          // MTLBuffer.contents() of the current ring slot
@@ -286,11 +314,6 @@ typedef struct {
 
 // Host-buffer path (docs/05 section 2.2). Called before each step_frame with the slot to fill.
 bool (*set_host_framebuffer)(GagaInstance* inst, const GagaHostFramebuffer* buffer);
-
-// Core-output texture path (docs/05 section 2.4). The id<MTLTexture> is borrowed and valid
-// until the next step_frame. It must come from the host's MTLDevice.
-void (*set_output_texture_callback)(GagaInstance* inst,
-    void (*cb)(void* mtl_texture, uint32_t width, uint32_t height, void* userdata), void* userdata);
 ```
 
 Precedent in the sister projects:
@@ -537,6 +560,8 @@ Cover Art replaces the old Cover Scraping row. The old `coverScraping` value, wh
 
 The list has the built-in presets, a Community section whose rows name the author and licence, and an Imported section with a delete button per filter and an `Import .metal File` button (`docs/05` section 4.1). A failed import shows the reason in plain text in a "Filter Not Imported" sheet and selects Original. Beside the preview, the controls show Upscale (Nearest, Bilinear, Bicubic, Edge Smooth) for filters that take one, a slider for each parameter the filter reads, and Reset. The values are saved per filter. An `Import .slangp Preset` button imports RetroArch slang presets (`docs/05` section 4.2); their parameters show as sliders. A Saved section lists named presets, with apply, rename and delete, and a `Save Preset` button stores the current filter and values (`docs/05` section 4.3). Neither is premium.
 
+For a game whose core is on the layer path without the output-texture path (`CoreCatalog.filtersAvailable`), the list is disabled and says "Filters are not available for this system", and the session presents directly with no filter. Every layer-path core in this build has the path, so the note shows for none of them.
+
 **Core picker** (`CorePickerSheet`): a simple list sheet for one game, with an action that also makes the choice the platform default. A file of unknown type says no cores are available.
 
 ### 3.5 Gaga Plus
@@ -613,7 +638,7 @@ Premium is five items. Free-tier numbers are GagaEmu policy.
 | Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film, the Community filters and imported filters | Geom CRT, Geom CRT Border, CRT Deluxe, Anime4K | Yes: `canUseShader` in `FilterPickerView.swift`, and `AppState.makeSession` falls back to Original without it. |
 | Auto Save State | Off | Available | Yes: `AppState.autoSaveEnabled` needs `canUseAutoSaveState`, and the Settings row becomes a locked row without it. |
 
-**Sell only what works.** `premiumShaderIDs` is `geom-crt`, `geom-crt-border`, `crt-deluxe` and `anime4k`, each drawn on real core frames (`docs/05` section 3.1). `crt-royale` is GPL and is not shipped; CRT Deluxe is the original multi-pass CRT sold in its place, and a saved `crt-royale` selection resets to Original. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) skip host shaders until the output-texture path exists. Netplay is not gated or promised until built.
+**Sell only what works.** `premiumShaderIDs` is `geom-crt`, `geom-crt-border`, `crt-deluxe` and `anime4k`, each drawn on real core frames (`docs/05` section 3.1). `crt-royale` is GPL and is not shipped; CRT Deluxe is the original multi-pass CRT sold in its place, and a saved `crt-royale` selection resets to Original. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) reach it through the output-texture path when a filter is chosen (`docs/05` section 2.4); a layer-path core without that path would skip host shaders. Netplay is not gated or promised until built.
 
 ### 4.4 Paywall requirements
 

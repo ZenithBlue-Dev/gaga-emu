@@ -2,7 +2,8 @@
 // (docs/05 section 2.3). Under libretro the frontend owns the Vulkan context, so this file is that
 // frontend: it creates the instance and device (or lets the core create the device through the context
 // negotiation interface), answers RETRO_ENVIRONMENT_GET_HW_RENDER_INTERFACE, and copies the image the
-// core hands set_image into the layer's swapchain. Host shaders do not run on this path.
+// core hands set_image into the layer's swapchain. Host shaders do not run on this path. Attached with no
+// layer, it hands each frame to the host as a Metal texture instead, for host shaders (docs/05 section 2.4).
 //
 // A core that asks for RETRO_HW_CONTEXT_VULKAN:
 //   - sets CORE_USES_MOLTENVK=1 in core.env, which links MoltenVK statically into its framework,
@@ -23,7 +24,7 @@ void gaga_lr_detach_metal_layer(GagaInstance* inst);
 bool gaga_lr_read_layer_pixels(GagaInstance* inst, void* pixels, size_t capacity, uint32_t* width, uint32_t* height);
 
 #define GAGA_LIBRETRO_VULKAN_LAYER \
-    .capabilities = GAGA_CORE_CAP_METAL_LAYER, \
+    .capabilities = GAGA_CORE_CAP_METAL_LAYER | GAGA_CORE_CAP_OUTPUT_TEXTURE, \
     .attach_metal_layer = gaga_lr_attach_metal_layer, \
     .detach_metal_layer = gaga_lr_detach_metal_layer, \
     .read_layer_pixels = gaga_lr_read_layer_pixels
@@ -43,6 +44,9 @@ void lr_vk_release(void);
 // From retro_video_refresh. dupe is a NULL frame. skip is a frame the host drops (fast-forward): its
 // semaphores are still waited on, but nothing is presented. True when a new frame went to the layer path.
 bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip);
+// After lr_vk_present returned true: on the output-texture path fills frame and returns true. The caller
+// must then hand frame to the host, which owes the done signal from then on.
+bool lr_vk_output_frame(GagaMetalTextureFrame* frame);
 // Returns with no GPU work in flight, so nothing runs after the host pauses for the background.
 void lr_vk_wait_idle(void);
 // Defined by LibretroAdapter.c: a FATAL event for the running game, such as a lost device.

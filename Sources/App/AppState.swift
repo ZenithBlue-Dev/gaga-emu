@@ -210,15 +210,30 @@ enum CoreCatalog {
     private static let debugPlatforms: [PlatformInfo] = []
     #endif
 
-    /// A layer-path core presents its own picture, so host shaders and filters do not run on it.
+    /// A layer-path core presents its own picture. Filters reach it only through `filtersAvailable`.
     static func drawsOwnPicture(_ coreID: String) -> Bool {
         guard let core = GagaCoreRegistry_FindByID(coreID), !GagaCoreRegistry_IsExcluded(coreID) else { return false }
         return core.pointee.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue != 0
     }
 
-    /// Names of this build's layer-path cores, for the Gaga Plus filter statement.
+    /// False for a layer-path core that cannot hand its frames to the filter chain (docs/05 section 2.4).
+    static func filtersAvailable(_ coreID: String) -> Bool {
+        guard let core = GagaCoreRegistry_FindByID(coreID), !GagaCoreRegistry_IsExcluded(coreID) else { return true }
+        return filtersAvailable(capabilities: core.pointee.capabilities)
+    }
+
+    static func filtersAvailable(capabilities: UInt32) -> Bool {
+        capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue == 0 || capabilities & GAGA_CORE_CAP_OUTPUT_TEXTURE.rawValue != 0
+    }
+
+    /// True for any filter but Original, which a layer-path core shows by presenting directly.
+    static func isFilter(_ shaderID: String) -> Bool {
+        ImportedFilter.isImported(shaderID) || ImportedFilter.isSlang(shaderID) || ShaderPreset.from(id: shaderID) != .original
+    }
+
+    /// Names of this build's cores that filters do not reach, for the Gaga Plus filter statement.
     static var layerPathCoreNames: [String] {
-        platforms.flatMap(\.cores).filter { drawsOwnPicture($0.id) }.map(\.name)
+        platforms.flatMap(\.cores).filter { !filtersAvailable($0.id) }.map(\.name)
             .reduce(into: []) { names, name in if !names.contains(name) { names.append(name) } }
     }
 

@@ -198,6 +198,25 @@ final class GagaEmuTests: GagaTestCase {
         XCTAssertEqual(GPUFloor.supportsLayerPathCores(device), device.supportsFamily(.apple7))
     }
 
+    /// The filter picker's "Filters are not available for this system": only a layer-path core without the
+    /// output-texture path (docs/05 section 2.4). Original is no filter, so it keeps the direct layer present.
+    func testFilterPickerAvailability() {
+        let layer = GAGA_CORE_CAP_METAL_LAYER.rawValue, output = GAGA_CORE_CAP_OUTPUT_TEXTURE.rawValue
+        XCTAssertTrue(CoreCatalog.filtersAvailable(capabilities: 0), "copy path")
+        XCTAssertFalse(CoreCatalog.filtersAvailable(capabilities: layer), "layer path only")
+        XCTAssertTrue(CoreCatalog.filtersAvailable(capabilities: layer | output))
+        XCTAssertTrue(CoreCatalog.filtersAvailable("gambatte"))
+        XCTAssertTrue(CoreCatalog.filtersAvailable("no-such-core"))
+        for id in ["vktest", "mupen64plus_next", "ppsspp", "flycast", "azahar", "beetle_psx"] where !GagaCoreRegistry_IsExcluded(id) {
+            XCTAssertTrue(CoreCatalog.filtersAvailable(id), id)
+        }
+        XCTAssertFalse(CoreCatalog.isFilter("original"))
+        XCTAssertTrue(CoreCatalog.isFilter("crt-v1"))
+        XCTAssertTrue(CoreCatalog.isFilter("crt_v1"))
+        XCTAssertTrue(CoreCatalog.isFilter(ImportedFilter.idPrefix + "mine"))
+        XCTAssertTrue(CoreCatalog.isFilter(ImportedFilter.slangPrefix + "mine"))
+    }
+
     // MARK: - Metal Renderer & Shader Manager Tests
 
     func testShaderPresetsAndUniforms() {

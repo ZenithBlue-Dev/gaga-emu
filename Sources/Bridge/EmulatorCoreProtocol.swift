@@ -685,6 +685,16 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         }
     }
 
+    /// The output-texture path (docs/05 section 2.4): the core renders off-screen and sends each frame as a
+    /// `GAGA_PIXEL_FORMAT_METAL_TEXTURE` frame, so host shaders run. Ended by `detachMetalLayer`.
+    public func attachOutputTexture() -> Bool {
+        executionQueue.sync {
+            guard let inst = instance, coreInterface.capabilities & GAGA_CORE_CAP_OUTPUT_TEXTURE.rawValue != 0,
+                  let attachFn = coreInterface.attach_metal_layer else { return false }
+            return attachFn(inst, nil, 1, 1, 1)
+        }
+    }
+
     public func detachMetalLayer() {
         executionQueue.sync {
             if let inst = instance { coreInterface.detach_metal_layer?(inst) }

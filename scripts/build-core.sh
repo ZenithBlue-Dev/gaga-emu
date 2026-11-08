@@ -112,7 +112,8 @@ PLIST
         echo "$CORE_FRAMEWORK ($sdk) imports a disabled feature's API: $found" >&2
         exit 1
     fi
-    "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS"
+    # FORBIDDEN_IMPORTS ran just above. ALLOWED_IMPORTS lists the core's reviewed exceptions, as the --app gate reads them.
+    "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS" "" "${ALLOWED_IMPORTS:-}"
     # No boot ROM or other firmware in any core (docs/03 section 5), including a file upstream embeds.
     python3 -I "$root/scripts/bootrom-gate.py" "$binary" "$dir"
 

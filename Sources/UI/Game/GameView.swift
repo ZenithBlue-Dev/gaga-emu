@@ -128,7 +128,7 @@ struct GamePicture: View {
     var takesTouch = false
 
     var body: some View {
-        if session.drawsOwnPicture {
+        if session.drawsOwnPicture && !session.filtersLayerCore {
             LayerPicture(session: session, takesTouch: takesTouch)
         } else {
             MetalPicture(session: session, takesTouch: takesTouch)
