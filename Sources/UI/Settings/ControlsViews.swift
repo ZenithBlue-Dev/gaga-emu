@@ -39,7 +39,7 @@ struct ControlsSheet: View {
             case .mapping: ControllerMappingView(platformID: game?.platformID, game: game)
             case .macros: MacrosView()
             case .turbo: TurboView()
-            case .players: PlayersView(platformID: game?.platformID)
+            case .players: PlayersView(platformID: game?.platformID, session: session)
             }
         }
         .fullScreenCover(item: $editing, onDismiss: reloadSkin) { SkinEditorView(platformID: $0.id, gameID: $0.gameID) }
@@ -211,7 +211,7 @@ struct ControllerMappingView: View {
         self.game = game
     }
 
-    static let kinds: [ControllerManager.Kind] = [.mfi, .xbox, .dualSense, .dualShock4, .joyConPair, .unknown]
+    static let kinds: [ControllerManager.Kind] = [.mfi, .xbox, .dualSense, .dualShock4, .joyConPair, .unknown, .keyboard]
 
     private var key: String {
         if gameOnly, let game { return ControlsStore.key(gameID: game.id, kind: kind) }
@@ -246,33 +246,44 @@ struct ControllerMappingView: View {
                 Text("Each controller type keeps its own mapping. A game's own mapping wins over its system's.")
                     .font(.footnote).foregroundStyle(AppTheme.muted)
                 Rule()
-                ForEach(profile.bindings) { binding in bindingRow(binding) }
-                Rule()
-                newBinding
-                Rule()
-                Toggle("Left Stick Moves the D-pad", isOn: Binding(get: { profile.stickAsDpad }, set: { v in update { $0.stickAsDpad = v } }))
-                    .tint(AppTheme.accentFill).frame(minHeight: 44)
-                Toggle("Hold Menu to Open Pause Menu", isOn: Binding(get: { profile.menuHold > 0 }, set: { v in update { $0.menuHold = v ? 1 : 0 } }))
-                    .tint(AppTheme.accentFill).frame(minHeight: 44)
-                if profile.menuHold > 0 {
-                    slider("Hold Time", value: Binding(get: { profile.menuHold }, set: { v in update { $0.menuHold = v } }),
-                           range: PadProfile.menuHoldRange, text: String(format: "%.1f s", profile.menuHold))
+                if kind == .keyboard {
+                    KeyboardMappingRows(platformID: platformID, gameID: gameOnly ? game?.id : nil)
+                } else {
+                    padRows
                 }
-                Text("Home opens the pause menu where iOS passes it through. Holding Menu does too: a short press is still Start.")
-                    .font(.footnote).foregroundStyle(AppTheme.muted)
-                slider("Deadzone", value: Binding(get: { profile.deadzone }, set: { v in update { $0.deadzone = v } }),
-                       range: PadProfile.deadzoneRange, text: "\(Int((profile.deadzone * 100).rounded()))%")
-                slider("Sensitivity", value: Binding(get: { profile.sensitivity }, set: { v in update { $0.sensitivity = v } }),
-                       range: PadProfile.sensitivityRange, text: String(format: "%.1fx", profile.sensitivity))
-                Button("Reset to Defaults") { state.controls.file.pads[key] = nil }
-                    .buttonStyle(QuietButtonStyle())
-                    .frame(minHeight: 44)
             }
         }
         .onAppear {
             if let first = controllers.devices.first(where: { !$0.isTouch }) { kind = first.kind }
-            if let game { gameOnly = ControllerManager.Kind.allKinds.contains { state.controls.file.pads[ControlsStore.key(gameID: game.id, kind: $0)] != nil } }
+            if let game {
+                gameOnly = ControllerManager.Kind.allKinds.contains { state.controls.file.pads[ControlsStore.key(gameID: game.id, kind: $0)] != nil }
+                    || state.controls.file.keys[ControlsStore.keyboardKey(gameID: game.id)] != nil
+            }
         }
+    }
+
+    @ViewBuilder private var padRows: some View {
+        ForEach(profile.bindings) { binding in bindingRow(binding) }
+        Rule()
+        newBinding
+        Rule()
+        Toggle("Left Stick Moves the D-pad", isOn: Binding(get: { profile.stickAsDpad }, set: { v in update { $0.stickAsDpad = v } }))
+            .tint(AppTheme.accentFill).frame(minHeight: 44)
+        Toggle("Hold Menu to Open Pause Menu", isOn: Binding(get: { profile.menuHold > 0 }, set: { v in update { $0.menuHold = v ? 1 : 0 } }))
+            .tint(AppTheme.accentFill).frame(minHeight: 44)
+        if profile.menuHold > 0 {
+            slider("Hold Time", value: Binding(get: { profile.menuHold }, set: { v in update { $0.menuHold = v } }),
+                   range: PadProfile.menuHoldRange, text: String(format: "%.1f s", profile.menuHold))
+        }
+        Text("Home opens the pause menu where iOS passes it through. Holding Menu does too: a short press is still Start.")
+            .font(.footnote).foregroundStyle(AppTheme.muted)
+        slider("Deadzone", value: Binding(get: { profile.deadzone }, set: { v in update { $0.deadzone = v } }),
+               range: PadProfile.deadzoneRange, text: "\(Int((profile.deadzone * 100).rounded()))%")
+        slider("Sensitivity", value: Binding(get: { profile.sensitivity }, set: { v in update { $0.sensitivity = v } }),
+               range: PadProfile.sensitivityRange, text: String(format: "%.1fx", profile.sensitivity))
+        Button("Reset to Defaults") { state.controls.file.pads[key] = nil }
+            .buttonStyle(QuietButtonStyle())
+            .frame(minHeight: 44)
     }
 
     private func bindingRow(_ binding: PadBinding) -> some View {
@@ -333,6 +344,74 @@ struct ControllerMappingView: View {
             Slider(value: value, in: range).tint(AppTheme.accentFill).accessibilityLabel(title).accessibilityValue(text)
         }
         .frame(minHeight: 44)
+    }
+}
+
+/// The hardware keyboard: any key to a core button, app function, turbo or macro, for a system or one game. It plays
+/// as player 1. A computer system passes keys straight to the game unless Pass-Through is off.
+struct KeyboardMappingRows: View {
+    @EnvironmentObject private var state: AppState
+    let platformID: String
+    let gameID: UUID?
+
+    private var key: String { gameID.map(ControlsStore.keyboardKey(gameID:)) ?? ControlsStore.keyboardKey(platformID: platformID) }
+    private var profile: KeyProfile { state.controls.file.keys[key] ?? ControlsStore.keyProfile(in: state.controls.file, platformID: platformID, gameID: gameID) }
+
+    private func update(_ change: (inout KeyProfile) -> Void) {
+        var copy = profile
+        change(&copy)
+        state.controls.file.keys[key] = copy
+    }
+
+    var body: some View {
+        if GameSession.typingPlatforms.contains(platformID) {
+            Toggle(isOn: Binding(get: { profile.passThrough }, set: { v in update { $0.passThrough = v } })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Keyboard Pass-Through")
+                    Text("The game reads every key as typed, and the mappings below wait until this is off.")
+                        .font(.footnote).foregroundStyle(AppTheme.muted)
+                }
+            }
+            .tint(AppTheme.accentFill)
+            .frame(minHeight: 44)
+            Rule()
+        }
+        ForEach(profile.bindings) { binding in
+            HStack {
+                Text(KeyProfile.name(binding.key))
+                Spacer(minLength: 8)
+                Menu(binding.action.title(macros: state.controls.file.macros)) {
+                    ActionChoices(macros: state.controls.file.macros) { action in
+                        update { profile in
+                            if let index = profile.bindings.firstIndex(where: { $0.id == binding.id }) { profile.bindings[index].action = action }
+                        }
+                    }
+                }
+                .foregroundStyle(AppTheme.accent)
+                Button { update { $0.bindings.removeAll { $0.id == binding.id } } } label: {
+                    Image(systemName: "minus.circle").frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(KeyProfile.name(binding.key))")
+            }
+            .frame(minHeight: 44)
+            .accessibilityElement(children: .contain)
+        }
+        Rule()
+        Menu("Add a Key") {
+            ForEach(KeyProfile.keys.filter { key in !profile.bindings.contains { $0.key == key.usage } }, id: \.usage) { key in
+                Menu(key.name) {
+                    ActionChoices(macros: state.controls.file.macros) { action in
+                        update { $0.bindings.append(KeyBinding(key: key.usage, action: action)) }
+                    }
+                }
+            }
+        }
+        .foregroundStyle(AppTheme.accent)
+        .frame(minHeight: 44)
+        Button("Reset to Defaults") { state.controls.file.keys[key] = nil }
+            .buttonStyle(QuietButtonStyle())
+            .frame(minHeight: 44)
     }
 }
 
@@ -513,16 +592,35 @@ struct TurboView: View {
 /// Which controller plays as which player. New controllers take the next free player as they connect; touch is
 /// always Player 1 until a controller there sends input.
 struct PlayersView: View {
+    @EnvironmentObject private var state: AppState
     @EnvironmentObject private var controllers: ControllerManager
     var platformID: String?
+    /// The running game, which takes a Multitap change from its next frame.
+    var session: GameSession?
 
     var body: some View {
         PaperSheet(title: "Players") {
             VStack(alignment: .leading, spacing: 0) {
                 if let platformID {
-                    let count = CoreCatalog.maxPlayers(platformID)
+                    let count = session?.maxPlayers ?? CoreCatalog.maxPlayers(platformID)
                     Text("\(CoreCatalog.platformName(platformID)) takes \(count) \(count == 1 ? "player" : "players"). Controllers past that are not read.")
                         .font(.footnote).foregroundStyle(AppTheme.muted).padding(.bottom, 8)
+                }
+                ForEach((platformID.map { [$0] } ?? CoreCatalog.platforms.map(\.id)).filter(CoreCatalog.hasMultitap), id: \.self) { id in
+                    HStack {
+                        Text(platformID == nil ? "Multitap: \(CoreCatalog.platformName(id))" : "Multitap")
+                        Spacer(minLength: 12)
+                        Picker("Multitap", selection: multitap(id)) {
+                            ForEach(MultitapMode.allCases) { Text($0.title).tag($0) }
+                        }
+                        .labelsHidden()
+                    }
+                    .frame(minHeight: 44)
+                    Rule()
+                }
+                if (platformID.map { [$0] } ?? CoreCatalog.platforms.map(\.id)).contains(where: CoreCatalog.hasMultitap) {
+                    Text("A multitap adds players 3 to 5. Auto plugs it in once a controller is Player 3 or later. If a game misreads its controllers with it in, choose Off.")
+                        .font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
                 }
                 HStack {
                     Text("Touch Controls")
@@ -558,5 +656,14 @@ struct PlayersView: View {
                 }
             }
         }
+    }
+
+    /// Auto is stored as no entry.
+    private func multitap(_ id: String) -> Binding<MultitapMode> {
+        Binding(get: { ControlsStore.multitap(in: state.controls.file, platformID: id) },
+                set: { mode in
+                    state.controls.file.multitap[id] = mode == .auto ? nil : mode.rawValue
+                    if let session, session.game.platformID == id { session.setMultitap(mode) }
+                })
     }
 }

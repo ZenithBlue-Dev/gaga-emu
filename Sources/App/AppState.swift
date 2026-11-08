@@ -242,17 +242,33 @@ enum CoreCatalog {
 
     static func platformName(_ id: String) -> String { platform(id)?.name ?? "Other" }
 
-    /// Local players each system takes, up to the bridge's four ports (`step_frame`). Multitap stays off in the
-    /// cores' options (PCSX-ReARMed `pcsx_rearmed_multitap`), so two-player systems take two. Handhelds take one:
-    /// link play is not offered. Arcade and computer games vary, so they get all four. Unlisted is one. PC Engine and
-    /// SuperGrafx assume Beetle's multitap, not yet checked on a device.
+    /// Local players each system takes on its own ports. Handhelds take one: link play is not offered. Arcade and
+    /// computer games vary, so they get all four. Unlisted is one. PC Engine and SuperGrafx have one port and always
+    /// read the 5-player multitap (Beetle PCE Fast hard-wires it; SuperGrafx sets `sgx_multitap`).
     static let maxPlayers: [String: Int] = [
         "nes": 2, "snes": 2, "n64": 4, "ps1": 2, "saturn": 2, "dreamcast": 4, "megadrive": 2, "megacd": 2, "sega32x": 2,
-        "mastersystem": 2, "sg1000": 2, "pce": 4, "sgx": 4, "atari2600": 2, "atari7800": 2, "atari5200": 4, "atari8bit": 2,
+        "mastersystem": 2, "sg1000": 2, "pce": 5, "sgx": 5, "atari2600": 2, "atari7800": 2, "atari5200": 4, "atari8bit": 2,
         "jaguar": 1, "arcade": 4, "c64": 2, "amiga": 2, "dos": 1
     ]
 
+    /// Players with the multiplayer adapter the core plugs in past the console's own ports (`GagaLibretroMultitap` in
+    /// the core's C file), by "platform:core". Capped at the host's five ports: Beetle Saturn's 6Player adaptor takes
+    /// seven. JGenesis and Beetle PSX have none they can switch while a game runs, so they stay at two.
+    static let multitap: [String: Int] = [
+        "nes:nestopia": 4, "snes:bsnes": 5, "snes:snes9x": 5, "megadrive:genesis_plus_gx": 5, "megadrive:picodrive": 4,
+        "ps1:pcsx_rearmed": 5, "ps1:swanstation": 5, "saturn:beetle_saturn": 5
+    ]
+
     static func maxPlayers(_ platformID: String) -> Int { min(maxPlayers[platformID] ?? 1, ControllerManager.slotCount) }
+
+    /// Players with the core's multiplayer adapter, unless it is Off.
+    static func maxPlayers(_ platformID: String, coreID: String, multitap mode: MultitapMode) -> Int {
+        guard mode != .off, let most = multitap["\(platformID):\(coreID)"] else { return maxPlayers(platformID) }
+        return min(most, ControllerManager.slotCount)
+    }
+
+    /// The platform has a core with a switchable multiplayer adapter, so Players offers Auto, On and Off.
+    static func hasMultitap(_ platformID: String) -> Bool { multitap.keys.contains { $0.hasPrefix("\(platformID):") } }
 
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
@@ -1252,7 +1268,10 @@ final class AppState: ObservableObject {
         controllers.profile = { [id = game.id, platform = game.platformID] kind in
             MainActor.assumeIsolated { controls.profile(kind: kind, platformID: platform, gameID: id) }
         }
-        session.maxPlayers = CoreCatalog.maxPlayers(game.platformID)
+        controllers.keyProfile = { [id = game.id, platform = game.platformID] in
+            MainActor.assumeIsolated { ControlsStore.keyProfile(in: controls.file, platformID: platform, gameID: id) }
+        }
+        session.setMultitap(ControlsStore.multitap(in: controls.file, platformID: game.platformID))
         session.turboHertz = controls.file.turboHertz
         session.fastForwardChoice = controls.file.fastForwardSpeed
         session.quickSlot = controls.file.quickSlot

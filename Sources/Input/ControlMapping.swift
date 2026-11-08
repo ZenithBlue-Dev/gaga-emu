@@ -275,9 +275,76 @@ enum PadMapper {
     }
 }
 
+// MARK: - Hardware keyboard
+
+/// One key, by its USB HID usage (GCKeyCode's raw value), and what it does.
+struct KeyBinding: Codable, Equatable, Identifiable, Sendable {
+    var id = UUID()
+    var key: Int
+    var action: ControlAction
+
+    /// Equal by what it does, as `PadBinding`.
+    static func == (lhs: KeyBinding, rhs: KeyBinding) -> Bool { lhs.key == rhs.key && lhs.action == rhs.action }
+}
+
+/// The hardware keyboard's mapping for one platform, or one game. It plays as player 1.
+struct KeyProfile: Codable, Equatable, Sendable {
+    var bindings: [KeyBinding]
+    /// A computer core (DOS, C64, Amiga, Atari 8-bit) gets every key as typed while this is on, and the bindings do
+    /// nothing there. Other systems ignore it.
+    var passThrough = true
+
+    /// Keys a player can map: letters, digits, Return to Space, the punctuation row, F1 to F12, the arrows and the
+    /// modifiers, by HID usage.
+    static let keys: [(usage: Int, name: String)] = {
+        var keys: [(usage: Int, name: String)] = (0..<26).map { (0x04 + $0, String(UnicodeScalar(UInt8(65 + $0)))) }
+        keys += (1...9).map { (0x1D + $0, "\($0)") }
+        keys += [(0x27, "0")]
+        keys += [(0x28, "Return"), (0x29, "Escape"), (0x2A, "Delete"), (0x2B, "Tab"), (0x2C, "Space"), (0x2D, "-"), (0x2E, "="),
+                 (0x2F, "["), (0x30, "]"), (0x31, "\\"), (0x33, ";"), (0x34, "'"), (0x35, "`"), (0x36, ","), (0x37, "."), (0x38, "/")]
+        keys += (1...12).map { (0x39 + $0, "F\($0)") }
+        keys += [(0x4F, "Right Arrow"), (0x50, "Left Arrow"), (0x51, "Down Arrow"), (0x52, "Up Arrow"),
+                 (0xE0, "Left Control"), (0xE1, "Left Shift"), (0xE2, "Left Option"), (0xE3, "Left Command"),
+                 (0xE4, "Right Control"), (0xE5, "Right Shift"), (0xE6, "Right Option"), (0xE7, "Right Command")]
+        return keys
+    }()
+
+    static func name(_ usage: Int) -> String { keys.first { $0.usage == usage }?.name ?? "Key \(usage)" }
+
+    /// WASD or the arrows, J K U I for the face buttons, Q E for the shoulders, Return and Right Shift for Start and
+    /// Select: the keys GagaEmu has always read.
+    static let standard: KeyProfile = {
+        let b = ControllerManager.Button.self
+        let pairs: [(Int, UInt32)] = [(0x1A, b.up), (0x52, b.up), (0x16, b.down), (0x51, b.down), (0x04, b.left), (0x50, b.left),
+                                      (0x07, b.right), (0x4F, b.right), (0x0D, b.south), (0x0E, b.east), (0x18, b.west), (0x0C, b.north),
+                                      (0x14, b.l1), (0x08, b.r1), (0x28, b.start), (0xE5, b.select)]
+        return KeyProfile(bindings: pairs.map { KeyBinding(key: $0.0, action: .buttons($0.1)) })
+    }()
+}
+
+/// A file from before a field existed still decodes.
+extension KeyProfile {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bindings = try c.decode([KeyBinding].self, forKey: .bindings)
+        passThrough = try c.decodeIfPresent(Bool.self, forKey: .passThrough) ?? true
+    }
+}
+
+enum KeyMapper {
+    /// The held keys through `profile`: core buttons, and app functions, turbo and macros as actions.
+    static func resolve(held: Set<Int>, profile: KeyProfile) -> ControllerManager.InputState {
+        var state = ControllerManager.InputState()
+        for binding in profile.bindings where held.contains(binding.key) {
+            if case .buttons(let mask) = binding.action { state.buttons |= mask } else { state.actions.insert(binding.action) }
+        }
+        return state
+    }
+}
+
 // MARK: - Turbo and macros
 
-/// Turbo and macro playback for player 1, stepped once per emulated frame on the core's queue, so timing is in
+/// Turbo and macro playback for one port, stepped once per emulated frame on the core's queue, so timing is in
 /// frames and holds at any speed. The main thread sets what is held; `process` reads it under the lock.
 final class FrameInputProcessor: @unchecked Sendable {
     private let lock = NSLock()
@@ -382,6 +449,14 @@ enum SkinStyle: String, Codable, CaseIterable, Identifiable, Sendable {
     var title: String { rawValue.capitalized }
 }
 
+/// A system's multiplayer adapter (`CoreCatalog.multitap`). Auto plugs it in once a controller sits past the console's
+/// own ports; On keeps it in; Off leaves the console's own ports only.
+enum MultitapMode: String, Codable, CaseIterable, Identifiable, Sendable {
+    case auto, on, off
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
 /// Touch haptic strength for presses on the touch controls. Separate from game rumble.
 enum HapticStrength: String, Codable, CaseIterable, Identifiable, Sendable {
     case off, light, medium, strong
@@ -411,12 +486,16 @@ final class ControlsStore: ObservableObject {
         var skinStyle: [String: String] = [:]
         /// A device skin's colourway name by platform ID. Missing is the skin's own.
         var skinVariant: [String: String] = [:]
+        /// The hardware keyboard by "platform:<id>" or "game:<uuid>". Missing is `KeyProfile.standard`.
+        var keys: [String: KeyProfile] = [:]
+        /// Multitap by platform ID: "on" or "off". Missing is Auto.
+        var multitap: [String: String] = [:]
 
         init() {}
 
         private enum Keys: String, CodingKey {
             case version, pads, macros, turboHertz, fastForwardSpeed, quickSlot, touchHaptics, hideTouchWithController, orientation,
-                 skinStyle, skinVariant
+                 skinStyle, skinVariant, keys, multitap
         }
 
         init(from decoder: Decoder) throws {
@@ -433,6 +512,8 @@ final class ControlsStore: ObservableObject {
             orientation = value(.orientation, orientation)
             skinStyle = value(.skinStyle, skinStyle)
             skinVariant = value(.skinVariant, skinVariant)
+            keys = value(.keys, keys)
+            multitap = value(.multitap, multitap)
         }
 
         /// The game's own style, then its platform's, then Classic. An unknown value reads as Classic.
@@ -464,6 +545,19 @@ final class ControlsStore: ObservableObject {
 
     func profile(kind: ControllerManager.Kind, platformID: String, gameID: UUID?) -> PadProfile {
         Self.profile(in: file, kind: kind, platformID: platformID, gameID: gameID)
+    }
+
+    static func keyboardKey(platformID: String) -> String { "platform:\(platformID)" }
+    static func keyboardKey(gameID: UUID) -> String { "game:\(gameID.uuidString)" }
+
+    /// The game's own keyboard mapping, then its platform's, then the keys GagaEmu has always read.
+    static func keyProfile(in file: File, platformID: String, gameID: UUID?) -> KeyProfile {
+        gameID.flatMap { file.keys[keyboardKey(gameID: $0)] } ?? file.keys[keyboardKey(platformID: platformID)] ?? .standard
+    }
+
+    /// Multitap for a platform. Missing or unknown is Auto.
+    static func multitap(in file: File, platformID: String) -> MultitapMode {
+        file.multitap[platformID].flatMap(MultitapMode.init) ?? .auto
     }
 
     func macro(_ id: UUID) -> Macro? { file.macros.first { $0.id == id } }

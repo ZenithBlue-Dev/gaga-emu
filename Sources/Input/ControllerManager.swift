@@ -3,11 +3,11 @@ import GameController
 import os
 
 /// Tracks MFi, DualShock 4, DualSense, Xbox, Joy-Con (paired or split), and keyboards.
-/// Assigns each physical controller to one of four player slots. Player 1 falls
-/// back to the on-screen touch skin when its slot is empty.
+/// Assigns each physical controller to one of five player slots: four ports, and a fifth through a multiplayer
+/// adapter (`CoreCatalog.multitap`). Player 1 falls back to the on-screen touch skin when its slot is empty.
 public final class ControllerManager: ObservableObject {
 
-    public static let slotCount = 4
+    public static let slotCount = 5
 
     public enum Kind: String, Sendable {
         case touch, keyboard, mfi, dualShock4, dualSense, xbox, joyConPair, joyConLeft, joyConRight, unknown
@@ -80,22 +80,9 @@ public final class ControllerManager: ObservableObject {
         public static let r3: UInt32     = 1 << 15
     }
 
-    /// Keyboard defaults for computer cores (DOSBox).
-    public struct KeyMap: Equatable, Sendable {
-        public var bindings: [GCKeyCode: UInt32]
-        public static let standard = KeyMap(bindings: [
-            .keyW: Button.up, .upArrow: Button.up,
-            .keyS: Button.down, .downArrow: Button.down,
-            .keyA: Button.left, .leftArrow: Button.left,
-            .keyD: Button.right, .rightArrow: Button.right,
-            .keyJ: Button.south, .keyK: Button.east, .keyU: Button.west, .keyI: Button.north,
-            .keyQ: Button.l1, .keyE: Button.r1,
-            .returnOrEnter: Button.start, .rightShift: Button.select
-        ])
-    }
-
     @Published public var devices: [Device] = []
-    @Published public var keyMap: KeyMap = .standard
+    /// The hardware keyboard's mapping. The running game sets it from Controls.json (`ControlsStore.keyProfile`).
+    var keyProfile: () -> KeyProfile = { .standard }
 
     private var controllers: [String: GCController] = [:]
     private var observers: [NSObjectProtocol] = []
@@ -164,7 +151,7 @@ public final class ControllerManager: ObservableObject {
 
     // MARK: Sampling
 
-    /// Current state for players 1-4. Empty slots read as zero.
+    /// Current state for players 1-5. Empty slots read as zero.
     public func sample() -> [InputState] {
         var states = Array(repeating: InputState.zero, count: Self.slotCount)
         for index in devices.indices {
@@ -176,29 +163,21 @@ public final class ControllerManager: ObservableObject {
         return states
     }
 
-    /// Keyboard overlay for the slot a keyboard is assigned to.
-    public func sampleKeyboard(_ pressed: Set<GCKeyCode>) -> InputState {
-        var state = InputState.zero
-        for (code, mask) in keyMap.bindings where pressed.contains(code) {
-            state.buttons |= mask
-        }
-        return state
+    /// Player 1's buttons and actions from the held keys, through `keyProfile`.
+    func sampleKeyboard(_ held: Set<Int>) -> InputState {
+        KeyMapper.resolve(held: held, profile: keyProfile())
     }
 
-    /// Buttons from the connected keyboard, through `keyMap`.
-    public func keyboardButtons() -> UInt32 {
-        guard let keyboard = GCKeyboard.coalesced?.keyboardInput, keyboard.isAnyKeyPressed else { return 0 }
-        return keyMap.bindings.reduce(0) { keyboard.button(forKeyCode: $1.key)?.isPressed == true ? $0 | $1.value : $0 }
+    /// The HID usages held on the connected keyboard, which are GCKeyCode's raw values. Letters through right GUI.
+    func keyboardHeld() -> Set<Int> {
+        guard let keyboard = GCKeyboard.coalesced?.keyboardInput, keyboard.isAnyKeyPressed else { return [] }
+        return Set((0x04...0xE7).filter { keyboard.button(forKeyCode: GCKeyCode(rawValue: $0))?.isPressed == true })
     }
 
-    /// Every key held on the connected keyboard, for a core that types: bit (u & 7) of byte u >> 3 for HID
-    /// usage u, which is GCKeyCode's raw value. Letters through right GUI (0x04 to 0xE7).
-    public func keyboardKeys() -> [UInt8] {
+    /// Every key held on the connected keyboard, for a core that types: bit (u & 7) of byte u >> 3 for HID usage u.
+    static func keyBits(_ held: Set<Int>) -> [UInt8] {
         var keys = [UInt8](repeating: 0, count: 32)
-        guard let keyboard = GCKeyboard.coalesced?.keyboardInput, keyboard.isAnyKeyPressed else { return keys }
-        for usage in 0x04...0xE7 where keyboard.button(forKeyCode: GCKeyCode(rawValue: usage))?.isPressed == true {
-            keys[usage >> 3] |= 1 << (usage & 7)
-        }
+        for usage in held where (0..<256).contains(usage) { keys[usage >> 3] |= 1 << (usage & 7) }
         return keys
     }
 
@@ -319,7 +298,7 @@ enum ControllerManagerChecks {
         manager.assign("b", to: 0)
         assert(manager.device(inSlot: 0)?.id == "b")
         assert(manager.devices.first { $0.id == "a" }?.slot == nil)
-        let keys = manager.sampleKeyboard([.keyW, .keyJ])
+        let keys = manager.sampleKeyboard([Int(GCKeyCode.keyW.rawValue), Int(GCKeyCode.keyJ.rawValue)])
         assert(keys.buttons & ControllerManager.Button.up != 0)
         assert(keys.buttons & ControllerManager.Button.south != 0)
     }

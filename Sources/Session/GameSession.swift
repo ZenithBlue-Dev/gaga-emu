@@ -91,8 +91,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private var rewindTouchHeld = false
 
     // MARK: Control options, set by the owner before `run`
-    /// Turbo and macros, stepped per emulated frame for player 1. Made in `wire`.
-    private(set) var processor = FrameInputProcessor()
+    /// Turbo and macros, stepped per emulated frame, one per port. Made in `wire`.
+    private(set) var processors = (0..<ControllerManager.slotCount).map { _ in FrameInputProcessor() }
+    /// Player 1's: touch, recording and the pause menu's macro list act there.
+    var processor: FrameInputProcessor { processors[0] }
     var turboHertz = 15.0
     /// The saved macros, looked up when one is pressed, so an edit in the pause menu applies at once.
     var macros: () -> [Macro] = { [] }
@@ -100,11 +102,18 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     var onMacroRecorded: (([Macro.Step]) -> Void)?
     /// The quick save slot changed, for the owner to keep.
     var onQuickSlotChange: ((Int) -> Void)?
-    /// Players this system takes (`CoreCatalog.maxPlayers`). Controllers past it reach no port.
+    /// Players this system takes (`CoreCatalog.maxPlayers`), with its multiplayer adapter unless that is Off.
+    /// Controllers past it reach no port.
     var maxPlayers = 4
-    /// The app actions held last time inputs were read, to act on presses and releases only.
-    private var heldActions: Set<ControlAction> = []
+    /// Multitap On: every port is in use, so the adapter stays in. Auto plugs it in once a controller sits past the
+    /// console's own ports (`CoreCatalog.multitap`).
+    var multitapAlwaysOn = false
+    /// The app actions held last time inputs were read, per port, to act on presses and releases only.
+    private var heldActions = Array(repeating: Set<ControlAction>(), count: ControllerManager.slotCount)
+    private var heldApps: Set<ControlAction> = []
     private var fastForwardHeld = false
+    /// Turbo toggled on, per port. Player 1's is `turboToggled`, which the touch controls show.
+    private var toggledTurbo = Array(repeating: UInt32(0), count: ControllerManager.slotCount)
     @Published private(set) var turboToggled: UInt32 = 0
     @Published private(set) var muted = false
     @Published private(set) var recordingMacro = false
@@ -349,20 +358,25 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             // A fatal during load surfaces through the error prepare() throws, so fatal() ignores it here.
             Task { @MainActor in self?.fatal(event.message) }
         }
-        // shortcut: TriggerPro, turbo and macros apply to player 1 only, because the core's per-frame hook is player 1's; add a per-port filter if local multiplayer needs them.
-        let trigger: TriggerProManager? = bindings.isEmpty ? nil : TriggerProManager()
-        trigger?.bindings = bindings
+        // TriggerPro, turbo and macros per port, each with its own state, on this phone's ports only: the filter runs
+        // before Play Nearby's lockstep merges the other phone's.
         let fps = core.targetFPS
-        let processor = FrameInputProcessor(hertz: turboHertz, frameRate: fps)
-        self.processor = processor
-        core.playerOneFilter = { state, frame in
+        let triggers: [TriggerProManager]? = bindings.isEmpty ? nil : (0..<ControllerManager.slotCount).map { _ in
+            let trigger = TriggerProManager()
+            trigger.bindings = bindings
+            return trigger
+        }
+        let processors = (0..<ControllerManager.slotCount).map { _ in FrameInputProcessor(hertz: turboHertz, frameRate: fps) }
+        self.processors = processors
+        core.portFilter = { port, state, frame in
+            guard processors.indices.contains(port) else { return state }
             var result = state
-            if let trigger {
+            if let trigger = triggers?[port] {
                 var raw = ControllerManager.InputState()
                 raw.buttons = state.buttons
                 result.buttons = trigger.process(raw, frame: frame, frameRate: fps).buttons
             }
-            result.buttons = processor.process(result.buttons, frame: frame)
+            result.buttons = processors[port].process(result.buttons, frame: frame)
             return result
         }
     }
@@ -412,7 +426,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         guard phase == .running || phase == .paused else { return }
         pauseReasons.insert(reason)
         rewindTouchHeld = false // The button may vanish under the finger, and its release with it.
-        processor.cancelMacros()
+        processors.forEach { $0.cancelMacros() }
         runningMacros = []
         if reason == .menu { clearTouches() }
         updateDisplayLink()
@@ -674,7 +688,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// Benchmark hooks. Call between `prepare` and `run`. Both closures run on the core's queue.
     func attachBenchmark(script: @escaping (Int) -> UInt32, timing: @escaping (UInt64, UInt64, UInt64) -> Void) {
         benchmarkScripted = true
-        core?.playerOneFilter = { state, frame in
+        core?.portFilter = { port, state, frame in
+            guard port == 0 else { return state }
             var scripted = state
             scripted.buttons = script(frame)
             return scripted
@@ -781,6 +796,20 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         states.enumerated().map { $0.offset < max(maxPlayers, 1) ? $0.element : .zero }
     }
 
+    /// Players and the multiplayer adapter for `mode` (Controls > Players). Applies from the next frame.
+    func setMultitap(_ mode: MultitapMode) {
+        let coreID = String(cString: interface.core_id)
+        maxPlayers = CoreCatalog.maxPlayers(game.platformID, coreID: coreID, multitap: mode)
+        multitapAlwaysOn = mode == .on && CoreCatalog.multitap["\(game.platformID):\(coreID)"] != nil
+    }
+
+    /// Ports in use, the core's player_count: up to the highest player with a controller (touch is player 1), or every
+    /// port with Multitap On. A core with a multiplayer adapter plugs it in past its own ports.
+    static func portCount(highestSlot: Int?, maxPlayers: Int, multitapOn: Bool) -> Int {
+        let most = max(maxPlayers, 1)
+        return multitapOn ? most : min(max((highestSlot ?? 0) + 1, 1), most)
+    }
+
     private func pushInputs() {
         guard let core else { return }
         var states = Self.capped(controllers.sample(), maxPlayers: maxPlayers)
@@ -797,20 +826,27 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             if states[0].leftX == 0, states[0].leftY == 0 { states[0].leftX = skins.analog.lx; states[0].leftY = skins.analog.ly }
             if states[0].rightX == 0, states[0].rightY == 0 { states[0].rightX = skins.analog.rx; states[0].rightY = skins.analog.ry }
         }
-        // Turbo and macros reach player 1 only (`wire`), so only player 1 may press them.
-        var actions = states.dropFirst().reduce(into: Set<ControlAction>()) { $0.formUnion($1.actions.filter { $0.app != nil }) }
-        actions.formUnion(states[0].actions)
+        // The keyboard plays as player 1 through its mapping. A DOS program reads the keys themselves, so with
+        // pass-through on a computer core gets them as typed and the mapping does nothing.
+        let held = controllers.keyboardHeld()
+        let passThrough = Self.typingPlatforms.contains(game.platformID) && controllers.keyProfile().passThrough
+        if !passThrough, !held.isEmpty {
+            let keyboard = controllers.sampleKeyboard(held)
+            states[0].buttons |= keyboard.buttons
+            states[0].actions.formUnion(keyboard.actions)
+        }
+        // Each port's turbo and macros are its own (`wire`); app functions act from any player.
+        var actions = states.map(\.actions)
         #if DEBUG
         if benchmarkScripted { actions = [] } // Device run 15: a menu opened mid-run. Core input only.
         #endif
-        applyActions(actions)
-        // A DOS program reads the keys themselves, so the keyboard does not also press pad buttons there.
-        let typing = Self.typingPlatforms.contains(game.platformID)
-        if !typing { states[0].buttons |= controllers.keyboardButtons() }
+        applyActions(perPort: actions)
+        core.setPlayerCount(Self.portCount(highestSlot: controllers.devices.compactMap(\.slot).max(), maxPlayers: maxPlayers,
+                                           multitapOn: multitapAlwaysOn))
         for (slot, state) in states.enumerated() {
             var input = GagaInputState(state)
-            if slot == 0, typing {
-                let keys = controllers.keyboardKeys()
+            if slot == 0, passThrough {
+                let keys = ControllerManager.keyBits(held)
                 withUnsafeMutableBytes(of: &input.keys) { $0.copyBytes(from: keys) }
             }
             if slot == 0, let pointer {
@@ -855,32 +891,42 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     // MARK: - App actions
 
-    /// Acts on presses and releases of app functions, turbo and macros, from touch and controllers alike.
+    /// Player 1's actions alone.
+    func applyActions(_ actions: Set<ControlAction>) { applyActions(perPort: [actions]) }
+
+    /// Acts on presses and releases of app functions, turbo and macros, from touch and controllers alike, one set per
+    /// port. App functions act from any port; turbo and macros run on the port that pressed them.
     /// Holds follow the held set every time; one-shot functions fire on the press, and only while playing.
-    func applyActions(_ actions: Set<ControlAction>) {
-        let pressed = actions.subtracting(heldActions)
-        heldActions = actions
-        menuPair(held: actions.contains(.app(.pauseMenu)))
-        updateRewinding(controllerHeld: actions.contains(.app(.rewindHold)))
-        let ffHeld = actions.contains(.app(.fastForwardHold)) && phase == .running
+    func applyActions(perPort: [Set<ControlAction>]) {
+        let apps = perPort.reduce(into: Set<ControlAction>()) { $0.formUnion($1.filter { $0.app != nil }) }
+        let pressedApps = apps.subtracting(heldApps)
+        heldApps = apps
+        menuPair(held: apps.contains(.app(.pauseMenu)))
+        updateRewinding(controllerHeld: apps.contains(.app(.rewindHold)))
+        let ffHeld = apps.contains(.app(.fastForwardHold)) && phase == .running
         if ffHeld != fastForwardHeld {
             fastForwardHeld = ffHeld
             setFastForward(ffHeld ? fastForwardChoice : 1)
         }
-        var turbo: UInt32 = 0
-        for action in actions { if case .turbo(let mask, false) = action { turbo |= mask } }
-        for action in pressed where phase == .running {
-            switch action {
-            case .app(let function): perform(function)
-            case .turbo(let mask, true): turboToggled ^= mask
-            case .macro(let id):
-                if let macro = macros().first(where: { $0.id == id }) { processor.toggle(macro) }
-                runningMacros = processor.runningMacros
-            default: break
+        for case .app(let function) in pressedApps where phase == .running { perform(function) }
+        for port in processors.indices {
+            let actions: Set<ControlAction> = port < perPort.count ? perPort[port].filter { $0.app == nil } : []
+            let pressed = actions.subtracting(heldActions[port])
+            heldActions[port] = actions
+            var turbo: UInt32 = 0
+            for case .turbo(let mask, false) in actions { turbo |= mask }
+            for action in pressed where phase == .running {
+                switch action {
+                case .turbo(let mask, true): toggledTurbo[port] ^= mask
+                case .macro(let id): if let macro = macros().first(where: { $0.id == id }) { processors[port].toggle(macro) }
+                default: break
+                }
             }
+            processors[port].setTurbo(turbo | toggledTurbo[port], hertz: turboHertz)
         }
-        processor.setTurbo(turbo | turboToggled, hertz: turboHertz)
-        if !runningMacros.isEmpty { runningMacros = processor.runningMacros }
+        if turboToggled != toggledTurbo[0] { turboToggled = toggledTurbo[0] }
+        let running = processors[0].runningMacros
+        if running != runningMacros { runningMacros = running }
     }
 
     /// One-shot app functions. Holds and the menu are handled in `applyActions`.
