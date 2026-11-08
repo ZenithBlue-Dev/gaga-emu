@@ -2,6 +2,26 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611082311), 2026-11-08
+
+Portrait play and menus are fixed. Hold your phone upright and check each screen.
+
+**Portrait layouts**
+- Fixed across the app: Library, Add, the filter picker, licences, cheats, the skin and screen editors, and every Settings tab.
+- Open each one upright and check nothing is cut off, overlapped or hard to tap.
+
+**Pause menu**
+- In portrait the pause menu is a bottom half-sheet. The picture stays visible and the sheet stays clear of the Dynamic Island.
+
+**Two-screen systems**
+- NDS and 3DS now fill the full width in portrait. L and R sit in the Select/Start row.
+
+**NES**
+- The pause row no longer covers the picture.
+
+**Known limits**
+- Games and BIOS files are not included. Add your own.
+
 ## 1.0.0 (202611081847), 2026-11-08
 
 SNES is here, and joining a Play Nearby game is more reliable.
