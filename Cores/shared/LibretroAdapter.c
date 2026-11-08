@@ -214,7 +214,7 @@ static void lr_video(const void* data, unsigned width, unsigned height, size_t p
     if (!a) return;
 #ifdef GAGA_LIBRETRO_VULKAN
     if (lr_vk_requested()) { // The frame goes to the layer. The host hears only its size.
-        if (lr_vk_present(width, height, data != RETRO_HW_FRAME_BUFFER_VALID) && a->video_cb) {
+        if (lr_vk_present(width, height, data != RETRO_HW_FRAME_BUFFER_VALID, a->inputs[0].skip_present) && a->video_cb) {
             GagaFrameDescriptor sized = { .width = width, .height = height, .pixel_format = GAGA_PIXEL_FORMAT_XRGB8888 };
             a->video_cb(&sized, a->video_userdata);
         }

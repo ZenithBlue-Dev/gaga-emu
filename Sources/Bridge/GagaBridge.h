@@ -53,7 +53,14 @@ typedef struct {
     // Keys held on a hardware keyboard, by USB HID usage (page 7, as GCKeyCode): usage u is bit (u & 7) of
     // keys[u >> 3]. Player 1 only, and only for a core that types (DOS); others get it zeroed.
     uint8_t  keys[32];
+    // Player 1's slot only: true when the host drops this frame's picture (fast-forward runs several frames
+    // per tick and shows the last). A layer-path core then renders but does not present. It sits in what was
+    // tail padding, so the size and every offset stay as ABI 5 shipped, and zero keeps the old behaviour.
+    bool     skip_present;
 } GagaInputState;
+#ifndef __cplusplus
+_Static_assert(sizeof(GagaInputState) == 72, "GagaInputState must keep its ABI 5 size");
+#endif
 
 // Pixel formats emitted by core
 typedef enum {

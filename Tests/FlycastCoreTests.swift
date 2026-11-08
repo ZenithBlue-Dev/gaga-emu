@@ -5,8 +5,7 @@ import XCTest
 
 /// Flycast through the real bridge (milestone 6.2): the SH-4, ARM7 and AICA DSP interpreters, and Flycast's
 /// Vulkan renderer on MoltenVK, presenting to a CAMetalLayer. Device pending: built, not yet run on a device
-/// (docs/07 6.2). No homebrew Dreamcast disc is generated yet, so the tests that need a running game skip;
-/// docs/07 6.2 says what a generator needs.
+/// (docs/07 6.2). The running-game test boots DreamcastTestDisc, a self-made GD-ROM image, through reios.
 @MainActor
 final class FlycastCoreTests: GagaTestCase {
     private var directory: URL!
@@ -74,15 +73,42 @@ final class FlycastCoreTests: GagaTestCase {
         XCTAssertEqual(CodeGenCheck.violations(), [])
     }
 
-    func testBenchmarkHasNoDreamcastTestFileYet() {
-        XCTAssertThrowsError(try BenchmarkRun.writeTestROM(platformID: "dreamcast", to: directory))
+    func testBenchmarkWritesTheDreamcastTestDisc() throws {
+        let url = try BenchmarkRun.writeTestROM(platformID: "dreamcast", to: directory)
+        XCTAssertEqual(url.pathExtension, "gdi")
+        XCTAssertEqual(CoreCatalog.platformID(forFile: url), "dreamcast")
+        for track in ["track01.iso", "track02.raw", "track03.iso"] {
+            XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent(track).path), track)
+        }
+        let track3 = try Data(contentsOf: directory.appendingPathComponent("track03.iso"))
+        XCTAssertEqual(track3.prefix(16), Data("SEGA SEGAKATANA ".utf8), "IP.BIN")
+        XCTAssertEqual(track3[16 * 2048 + 1..<16 * 2048 + 6], Data("CD001".utf8), "ISO 9660 volume descriptor")
     }
 
-    func testBootsAGameAndDrawsAPicture() throws {
-        throw XCTSkip("no free Dreamcast test disc yet (docs/07 6.2)")
+    /// Device pending: reios boots DreamcastTestDisc without a BIOS, and its program fills the framebuffer.
+    func testBootsTheTestDiscAndDrawsAPicture() async throws {
+        final class Capture {
+            var frames = 0
+            var fatal: String?
+        }
+        for file in DreamcastTestDisc.files() { _ = try write(file.data, name: file.name) }
+        let core = try makeCore()
+        let capture = Capture()
+        core.onVideoFrame = { _ in capture.frames += 1 }
+        core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
+        try await core.loadROM(path: directory.appendingPathComponent("GagaDreamcast.gdi").path)
+        for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
+        XCTAssertNil(capture.fatal)
+        XCTAssertGreaterThan(capture.frames, 0, "no frame presented")
+        let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented")
+        let i = ((frame.height / 2) * frame.width + frame.width / 2) * 4
+        let middle = Array(frame.pixels[i..<i + 4])
+        XCTAssertTrue(zip(middle, DreamcastTestDisc.colorBGRA).allSatisfy { abs(Int($0) - Int($1)) <= 8 }, "\(middle)")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("dc/dc_boot.bin").path))
+        core.stop()
     }
 
     func testInputAudioVMUSaveAndStateRoundTrip() throws {
-        throw XCTSkip("no free Dreamcast test disc yet (docs/07 6.2)")
+        throw XCTSkip("the Dreamcast test disc reads no input and plays no sound yet (docs/07 6.2)")
     }
 }
