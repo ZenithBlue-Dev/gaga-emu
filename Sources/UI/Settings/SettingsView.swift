@@ -9,11 +9,13 @@ struct SettingsView: View {
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.horizontalSizeClass) private var horizontalSize
     @State private var category: Category = .play
+    /// Four across fits every category on the narrowest phone, upright, with nothing past the edge.
+    private let uprightTabs = Array(repeating: GridItem(.flexible(), spacing: 0), count: 4)
     /// The category column widens with Dynamic Type so names do not break mid-word.
     @ScaledMetric(relativeTo: .body) private var columnScale: CGFloat = 1
 
     enum Category: String, CaseIterable, Identifiable {
-        case play = "Play", library = "Library", graphics = "Graphics", controls = "Controls",
+        case play = "Play", library = "Library", display = "Display", graphics = "Graphics", controls = "Controls",
              storage = "Storage", gagaPlus = "Gaga Plus", about = "About"
         var id: String { rawValue }
         /// Gaga Plus stays out of the app while the paywall gate is closed (docs/06 section 4.5).
@@ -28,8 +30,8 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
                         .padding(.horizontal, 16).padding(.top, 8)
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 0) { ForEach(Category.visible) { categoryRow($0, underline: true).fixedSize() } }
+                    LazyVGrid(columns: uprightTabs, spacing: 0) {
+                        ForEach(Category.visible) { categoryRow($0, underline: true) }
                     }
                 }
                 Rule()
@@ -63,8 +65,10 @@ struct SettingsView: View {
             Text(item.rawValue)
                 .fontWeight(selected ? .bold : .regular)
                 .foregroundStyle(selected ? AppTheme.accent : AppTheme.ink)
-                .padding(.horizontal, 16).padding(.vertical, 6)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .lineLimit(underline ? 1 : nil)
+                .minimumScaleFactor(underline ? 0.6 : 1)
+                .padding(.horizontal, underline ? 4 : 16).padding(.vertical, 6)
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: underline ? .center : .leading)
                 .contentShape(Rectangle())
                 .overlay(alignment: underline ? .bottom : .leading) {
                     if selected {
@@ -74,12 +78,14 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("settings.\(item.rawValue)")
     }
 
     @ViewBuilder private var detail: some View {
         switch category {
         case .play: PlayPane()
         case .library: LibraryPane()
+        case .display: DisplayPane()
         case .graphics: GraphicsPane()
         case .controls: ControlsPane()
         case .storage: StoragePane()
@@ -146,7 +152,7 @@ private struct LinkRow: View {
     }
 }
 
-private struct ToggleRow: View {
+struct ToggleRow: View {
     let title: String
     let note: String
     @Binding var isOn: Bool
@@ -581,6 +587,9 @@ struct TriggerProEditor: View {
 /// BIOS presence list. Checksums are shown once a file is imported into the BIOS folder.
 struct BIOSManagerView: View {
     @State private var files: [URL] = []
+    /// The name of the row whose Import button opened the file picker.
+    @State private var importing: String?
+    @State private var failure: String?
 
     /// The cores' system folder, so a file listed here is the file a core opens.
     private var biosDirectory: URL { GagaCoreWrapper.systemDirectory }
@@ -646,32 +655,12 @@ struct BIOSManagerView: View {
         PaperSheet(title: "BIOS Files", scrolls: false) {
             List {
                 Section("Required") {
-                    ForEach(Self.required, id: \.0) { name, system in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(name)
-                                Text(system).font(.meta).foregroundStyle(AppTheme.muted)
-                            }
-                            Spacer()
-                            Label(present(name) ? "Found" : "Missing",
-                                  systemImage: present(name) ? "checkmark.circle" : "xmark.circle")
-                                .font(.footnote).foregroundStyle(present(name) ? AppTheme.ink : AppTheme.muted)
-                        }
-                    }
+                    ForEach(Self.required, id: \.0) { name, system in row(name, note: system) }
                 }
                 .paperRows()
                 Section("SNES chip firmware (bsnes; Snes9x needs none)") {
                     ForEach(Self.snesFirmware, id: \.0) { name, part, bytes in
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(name)
-                                Text("\(part), \(bytes >> 10) KiB (\(bytes) bytes)").font(.meta).foregroundStyle(AppTheme.muted)
-                            }
-                            Spacer()
-                            Label(present(name) ? "Found" : "Missing",
-                                  systemImage: present(name) ? "checkmark.circle" : "xmark.circle")
-                                .font(.footnote).foregroundStyle(present(name) ? AppTheme.ink : AppTheme.muted)
-                        }
+                        row(name, note: "\(part), \(bytes >> 10) KiB (\(bytes) bytes)")
                     }
                 }
                 .paperRows()
@@ -691,9 +680,64 @@ struct BIOSManagerView: View {
             }
             .paperList()
         }
-        .onAppear {
-            try? FileManager.default.createDirectory(at: biosDirectory, withIntermediateDirectories: true)
-            files = (try? FileManager.default.contentsOfDirectory(at: biosDirectory, includingPropertiesForKeys: nil)) ?? []
+        .onAppear(perform: refresh)
+        .fileImporter(isPresented: Binding(get: { importing != nil }, set: { if !$0 { importing = nil } }),
+                      allowedContentTypes: [.data, .item]) { outcome in
+            defer { importing = nil }
+            guard let name = importing, case .success(let url) = outcome else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                try Self.install(url, as: name, in: biosDirectory)
+                failure = nil
+                refresh()
+            } catch {
+                failure = "\(name) was not imported: \(error.localizedDescription)"
+            }
+        }
+        .alert("BIOS Not Imported", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(failure ?? "")
+        }
+    }
+
+    private func refresh() {
+        try? FileManager.default.createDirectory(at: biosDirectory, withIntermediateDirectories: true)
+        files = (try? FileManager.default.contentsOfDirectory(at: biosDirectory, includingPropertiesForKeys: nil)) ?? []
+    }
+
+    private func row(_ name: String, note: String) -> some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(name)
+                Text(note).font(.meta).foregroundStyle(AppTheme.muted)
+            }
+            Spacer()
+            Label(present(name) ? "Found" : "Missing",
+                  systemImage: present(name) ? "checkmark.circle" : "xmark.circle")
+                .font(.footnote).foregroundStyle(present(name) ? AppTheme.ink : AppTheme.muted)
+            Button(present(name) ? "Replace" : "Import") { importing = name }
+                .buttonStyle(QuietButtonStyle())
+                .accessibilityLabel("\(present(name) ? "Replace" : "Import") \(name)")
+        }
+    }
+
+    /// Copies `file` in under the exact name its core opens, after the size check every other import route makes.
+    /// A wrong file never touches one already there: it is copied aside first.
+    static func install(_ file: URL, as name: String, in folder: URL) throws {
+        let size = try FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int
+        guard let size, sizes[name]?.contains(size) == true else {
+            throw CocoaError(.fileReadCorruptFile, userInfo: [NSLocalizedDescriptionKey: "Its size does not match this BIOS."])
+        }
+        let part = try ClipboardImporter.partFile(in: folder)
+        defer { try? FileManager.default.removeItem(at: part) }
+        try FileManager.default.copyItem(at: file, to: part)
+        let dest = folder.appendingPathComponent(name)
+        if FileManager.default.fileExists(atPath: dest.path) {
+            _ = try FileManager.default.replaceItemAt(dest, withItemAt: part)
+        } else {
+            try FileManager.default.moveItem(at: part, to: dest)
         }
     }
 

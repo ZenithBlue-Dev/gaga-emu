@@ -968,7 +968,7 @@ enum ShaderCatalog {
     static var all: [Shader] { builtIn + community }
 }
 
-/// Saved value only. The app follows the system appearance; this keeps old state.json files decoding.
+/// Settings > Display. `Snapshot.appearance` is an old field that held `dark` unread, so the choice has its own.
 enum AppearanceMode: String, Codable {
     case dark, light, system
 }
@@ -1033,6 +1033,10 @@ final class AppState: ObservableObject {
     @Published var joined: Date
     @Published var avatarIndex: Int { didSet { save() } }
     @Published var appearance: AppearanceMode { didSet { save() } }
+    @Published var appearanceChoice: AppearanceMode { didSet { save() } }
+    /// Nil is the standard vermilion.
+    @Published var accentHex: Int? { didSet { ThemeStore.shared.accentHex = accentHex; save() } }
+    @Published var libraryDisplay: LibraryDisplay { didSet { save() } }
     @Published var quickStart: Bool { didSet { save() } }
     @Published var autoSaveStates: Bool { didSet { save() } }
     /// Off by default: it keeps up to `RewindPolicy.budgetBytes` of snapshots while a game runs.
@@ -1111,6 +1115,9 @@ final class AppState: ObservableObject {
         var language: String
         var shaderID: String
         var defaultCores: [String: String]
+        var appearanceChoice: AppearanceMode?
+        var accentHex: Int?
+        var libraryDisplay: LibraryDisplay?
     }
 
     /// Test only: the folder that holds the Library (state.json), ROMs, System and the rest, in place of the app's
@@ -1141,6 +1148,10 @@ final class AppState: ObservableObject {
         joined = snapshot?.joined ?? Date()
         avatarIndex = snapshot?.avatarIndex ?? 0
         appearance = snapshot?.appearance ?? .dark
+        appearanceChoice = snapshot?.appearanceChoice ?? .system
+        accentHex = snapshot?.accentHex
+        libraryDisplay = snapshot?.libraryDisplay ?? LibraryDisplay()
+        ThemeStore.shared.accentHex = snapshot?.accentHex
         quickStart = snapshot?.quickStart ?? false
         autoSaveStates = snapshot?.autoSaveStates ?? false
         rewind = snapshot?.rewind ?? false
@@ -1848,7 +1859,8 @@ final class AppState: ObservableObject {
                                 airPlayFullscreen: airPlayFullscreen, iCloudSync: iCloudSync,
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
                                 rumble: rumble, rumbleStrength: rumbleStrength, skinSoundEffects: skinSoundEffects, language: language,
-                                shaderID: shaderID, defaultCores: defaultCores)
+                                shaderID: shaderID, defaultCores: defaultCores,
+                                appearanceChoice: appearanceChoice, accentHex: accentHex, libraryDisplay: libraryDisplay)
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? data.write(to: storeURL, options: .atomic)
     }

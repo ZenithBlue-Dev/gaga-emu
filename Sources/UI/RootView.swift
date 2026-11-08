@@ -50,6 +50,7 @@ struct RootView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: screen)
         .foregroundStyle(AppTheme.ink)
         .background(AppTheme.paper.ignoresSafeArea())
+        .preferredColorScheme(state.appearanceChoice == .system ? nil : state.appearanceChoice == .dark ? .dark : .light)
         .overlay {
             if state.launching {
                 ProgressView("Starting")

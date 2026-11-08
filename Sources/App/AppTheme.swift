@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 import UIKit
 
@@ -13,6 +14,50 @@ enum Palette {
     /// True vermilion, used only as a fill under `onAccent`.
     static let accentFill = 0xE4572E
     static let onAccent = 0x1C1A17
+}
+
+/// The chosen accent colour. Observable, so every view that reads an `AppTheme` accent redraws when it changes.
+@Observable final class ThemeStore {
+    static let shared = ThemeStore()
+    var accentHex: Int?
+}
+
+/// Any picked colour made safe: text and glyph tones reach AA on paper in each appearance, the fill under `onAccent`.
+struct ThemeAccent: Equatable {
+    let light, dark, fill: Int
+
+    init(_ hex: Int) {
+        light = Self.adjusted(hex, toward: 0x000000) { Self.contrast($0, Palette.paper.light) }
+        dark = Self.adjusted(hex, toward: 0xFFFFFF) { Self.contrast($0, Palette.surface.dark) }
+        fill = Self.adjusted(hex, toward: 0xFFFFFF) { Self.contrast($0, Palette.onAccent) }
+    }
+
+    private static func adjusted(_ hex: Int, toward target: Int, contrast: (Int) -> Double) -> Int {
+        for step in 0...20 {
+            let mixed = mix(hex, target, Double(step) / 20)
+            if contrast(mixed) >= 4.5 { return mixed }
+        }
+        return target
+    }
+
+    private static func mix(_ a: Int, _ b: Int, _ k: Double) -> Int {
+        [16, 8, 0].reduce(0) { sum, shift in
+            let from = Double(a >> shift & 0xFF), to = Double(b >> shift & 0xFF)
+            return sum | Int((from + (to - from) * k).rounded()) << shift
+        }
+    }
+
+    static func contrast(_ a: Int, _ b: Int) -> Double {
+        func luminance(_ hex: Int) -> Double {
+            let parts = [16, 8, 0].map { shift -> Double in
+                let c = Double(hex >> shift & 0xFF) / 255
+                return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+            }
+            return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2]
+        }
+        let (x, y) = (luminance(a), luminance(b))
+        return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+    }
 }
 
 private extension Color {
@@ -116,8 +161,9 @@ enum AppTheme {
     static let ink = Color(Palette.ink)
     static let muted = Color(Palette.muted)
     static let rule = Color(Palette.rule)
-    static let accent = Color(Palette.accent)
-    static let accentFill = Color(hex: Palette.accentFill)
+    private static var chosen: ThemeAccent? { ThemeStore.shared.accentHex.map(ThemeAccent.init) }
+    static var accent: Color { chosen.map { Color((light: $0.light, dark: $0.dark)) } ?? Color(Palette.accent) }
+    static var accentFill: Color { Color(hex: chosen?.fill ?? Palette.accentFill) }
     static let onAccent = Color(hex: Palette.onAccent)
     /// Around the game picture, in both appearances: a picture needs a dark surround.
     static let letterbox = Color(hex: Palette.ink.light)

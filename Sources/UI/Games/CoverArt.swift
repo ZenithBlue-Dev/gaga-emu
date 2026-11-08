@@ -6,7 +6,8 @@ struct CoverArt: View {
     let game: GameItem
     let width: CGFloat
 
-    private var height: CGFloat { width * 4 / 3 }
+    private var display: LibraryDisplay { state.libraryDisplay }
+    private var height: CGFloat { display.square ? width : width * 4 / 3 }
 
     var body: some View {
         ZStack(alignment: .leading) {
@@ -15,11 +16,17 @@ struct CoverArt: View {
             } else {
                 placeholder
             }
-            Rectangle().fill(AppTheme.spine(game.platformID)).frame(width: 3)
+            if display.coverStyle == .spine { Rectangle().fill(AppTheme.spine(game.platformID)).frame(width: 3) }
         }
         .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
-        .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: display.corner))
+        .overlay {
+            switch display.coverStyle {
+            case .spine: RoundedRectangle(cornerRadius: display.corner).stroke(AppTheme.rule, lineWidth: 1)
+            case .framed: RoundedRectangle(cornerRadius: display.corner).stroke(AppTheme.ink, lineWidth: 3)
+            case .plain: EmptyView()
+            }
+        }
         .accessibilityHidden(true)
     }
 

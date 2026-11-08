@@ -17,6 +17,13 @@ struct LibraryView: View {
     /// How far the Library could extend into the side safe areas: in landscape the trailing notch inset, with the
     /// rail on the leading side.
     @State private var sides = EdgeInsets()
+    /// The shelves' own width, under the side safe areas, for a chosen number of games per row.
+    @State private var shelfWidth: CGFloat = 0
+    private var display: LibraryDisplay { state.libraryDisplay }
+    private var gridTile: CGFloat {
+        let count = CGFloat(display.perRow)
+        return max(44, (shelfWidth - lead - trail - 12 * (count - 1)) / count)
+    }
     /// Shelf column gutters. The column runs under the side safe areas so covers scroll through them; at rest
     /// everything starts inside them.
     private var lead: CGFloat { 16 + sides.leading }
@@ -188,6 +195,19 @@ struct LibraryView: View {
                 }
                 .padding(.leading, lead)
             }
+            Menu {
+                Picker("Sort By", selection: $state.libraryDisplay.sort) {
+                    ForEach(LibraryDisplay.Sort.allCases) { Text($0.label).tag($0) }
+                }
+                Picker("Order", selection: $state.libraryDisplay.descending) {
+                    Text("Ascending").tag(false)
+                    Text("Descending").tag(true)
+                }
+            } label: {
+                Image(systemName: "arrow.up.arrow.down").foregroundStyle(AppTheme.accent)
+                    .frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Sort games")
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 TextField("Search", text: $state.search)
@@ -231,7 +251,7 @@ struct LibraryView: View {
         if state.platformFilter == "recent" { return games.isEmpty ? [] : [(id: "recent", title: "Recent", games: games)] }
         let groups = Dictionary(grouping: games, by: \.platformID)
         return platformIDs.compactMap { id in
-            groups[id].map { (id: id, title: CoreCatalog.platformName(id), games: $0) }
+            groups[id].map { (id: id, title: display.heading(id), games: display.sorted($0)) }
         }
     }
 
@@ -253,37 +273,53 @@ struct LibraryView: View {
             LazyVStack(alignment: .leading, spacing: 12) {
                 ForEach(list, id: \.id) { shelf in
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(shelf.title).font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
-                            Text("\(shelf.games.count)").font(.meta).foregroundStyle(AppTheme.muted)
-                                .accessibilityLabel("\(shelf.games.count) games")
+                        if !display.hideGroup {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text(shelf.title).font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+                                Text("\(shelf.games.count)").font(.meta).foregroundStyle(AppTheme.muted)
+                                    .accessibilityLabel("\(shelf.games.count) games")
+                            }
+                            .padding(.leading, lead).padding(.trailing, trail)
                         }
-                        .padding(.leading, lead).padding(.trailing, trail)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(alignment: .top, spacing: 12) {
+                        if display.perRow > 0 {
+                            LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridTile), spacing: 12, alignment: .top), count: display.perRow),
+                                      alignment: .leading, spacing: 12) {
                                 ForEach(shelf.games) { tile($0) }
                             }
                             .padding(.leading, lead).padding(.trailing, trail)
+                        } else {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(alignment: .top, spacing: 12) {
+                                    ForEach(shelf.games) { tile($0) }
+                                }
+                                .padding(.leading, lead).padding(.trailing, trail)
+                            }
                         }
                     }
                 }
             }
             .padding(.vertical, 12)
         }
+        .scrollIndicators(display.hideIndicators ? .hidden : .automatic)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { shelfWidth = $0 }
     }
 
     private func tile(_ game: GameItem) -> some View {
-        let width = (compact ? 120 : 140) * min(tileScale, 1.8)
+        let width = display.perRow > 0 ? gridTile : (compact ? 120 : 140) * min(tileScale, 1.8)
         return Button { state.launch(game) } label: {
             VStack(alignment: .leading, spacing: 4) {
                 CoverArt(game: game, width: width)
-                Text(game.title).font(.footnote.weight(.medium)).lineLimit(3)
-                    .multilineTextAlignment(.leading)
-                HStack(spacing: 4) {
-                    if game.isFavorite { Image(systemName: "star.fill").imageScale(.small) }
-                    Text(tileMeta(game)).font(.system(.caption2, design: .monospaced)).lineLimit(2)
+                if !display.hideTitle {
+                    Text(game.title).font(.footnote.weight(.medium)).lineLimit(3)
+                        .multilineTextAlignment(.leading)
                 }
-                .foregroundStyle(AppTheme.muted)
+                if !display.hideDetails {
+                    HStack(spacing: 4) {
+                        if game.isFavorite { Image(systemName: "star.fill").imageScale(.small) }
+                        Text(tileMeta(game)).font(.system(.caption2, design: .monospaced)).lineLimit(2)
+                    }
+                    .foregroundStyle(AppTheme.muted)
+                }
             }
             .frame(width: width, alignment: .leading)
             .contentShape(Rectangle())
