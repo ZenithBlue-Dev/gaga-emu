@@ -120,6 +120,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// A layer-path core presents to a CAMetalLayer itself (docs/05 section 2.3). The renderer, the ring
     /// and host shaders are unused.
     let drawsOwnPicture: Bool
+    /// A layer-path core whose frames go through the renderer and the filter chain instead (docs/05 section 2.4):
+    /// a filter is chosen and the core can render off-screen. Without a filter it presents directly, at no cost.
+    /// Turns false, and the layer picture takes over, if the core refuses.
+    @Published private(set) var filtersLayerCore: Bool
     /// The layer the core presents to, with its drawable size. Kept until the core exists.
     private var layerTarget: (layer: CAMetalLayer, width: Int, height: Int, scale: CGFloat)?
 
@@ -138,6 +142,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         }
         drawsOwnPicture = interface.capabilities & GAGA_CORE_CAP_METAL_LAYER.rawValue != 0
         guard !drawsOwnPicture || GPUFloor.supportsLayerPathCores(device) else { throw GameLaunchError.gpuBelowFloor }
+        filtersLayerCore = drawsOwnPicture && CoreCatalog.isFilter(shaderID)
+            && interface.capabilities & GAGA_CORE_CAP_OUTPUT_TEXTURE.rawValue != 0
         self.saves = saveDirectory.map(SaveStore.init(directory:)) ?? SaveStore(romPath: romPath)
         self.entitlements = entitlements
         self.game = game
@@ -201,6 +207,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             }
             core.enableRewind()
         }
+        if filtersLayerCore, !core.attachOutputTexture() { filtersLayerCore = false }
         if let target = layerTarget { attachLayer(target.layer, width: target.width, height: target.height, scale: target.scale) }
         cheats = saves.cheats()
         if core.supportsCheats {
@@ -214,6 +221,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         // Queue only. Stops a bad core from raising the same error every frame.
         var reportedBadFrame = false
         core.onVideoFrame = { [ring, renderer, weak self] frame in
+            if frame.pixelFormat == GAGA_PIXEL_FORMAT_METAL_TEXTURE, let shared = frame.pixelData {
+                renderer.receive(shared.load(as: GagaMetalTextureFrame.self), ring: ring)
+                return
+            }
             guard let pixels = frame.pixelData else {
                 // A layer-path core's size-only frame, sent for each presented frame. Its size places a finger on the picture.
                 if frame.width > 0, frame.height > 0 {

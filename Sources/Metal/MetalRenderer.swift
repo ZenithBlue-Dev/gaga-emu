@@ -315,6 +315,24 @@ public final class MetalRenderer: NSObject, MTKViewDelegate {
         lock.unlock()
     }
 
+    /// A layer-path core's off-screen frame (docs/05 section 2.4), copied into `ring` once the core's copy is done,
+    /// so the filter chain draws it as any ring frame. Signals the core's done event even for a dropped frame:
+    /// the core writes the texture again only after it. Runs on this queue, so draws come after the copy.
+    func receive(_ frame: GagaMetalTextureFrame, ring: MetalTextureRing) {
+        guard let texture = frame.texture.map({ Unmanaged<AnyObject>.fromOpaque($0).takeUnretainedValue() }) as? MTLTexture,
+              let ready = frame.ready_event.map({ Unmanaged<AnyObject>.fromOpaque($0).takeUnretainedValue() }) as? MTLSharedEvent,
+              let done = frame.done_event.map({ Unmanaged<AnyObject>.fromOpaque($0).takeUnretainedValue() }) as? MTLSharedEvent,
+              let cmdBuffer = commandQueue.makeCommandBuffer() else { return }
+        cmdBuffer.enqueue() // Its place on the queue comes before any draw that sees the new slot.
+        cmdBuffer.encodeWaitForEvent(ready, value: frame.ready_value)
+        if let blit = cmdBuffer.makeBlitCommandEncoder() {
+            if let slot = ring.copyFrame(texture, with: blit) { setTexture(slot) }
+            blit.endEncoding()
+        }
+        cmdBuffer.encodeSignalEvent(done, value: frame.done_value)
+        cmdBuffer.commit()
+    }
+
     /// A layer-path core's last presented frame size, from its size-only frame descriptor.
     private var presentedSize: CGSize?
 

@@ -198,6 +198,25 @@ public final class MetalTextureRing {
         return texture
     }
 
+    /// A layer-path core's off-screen frame (docs/05 section 2.4): a GPU copy into the next slot, encoded on
+    /// `blit`. Returns nil, dropping the frame, when no slot is free. One writer thread only.
+    public func copyFrame(_ source: MTLTexture, with blit: MTLBlitCommandEncoder) -> MTLTexture? {
+        reconfigureIfNeeded(width: source.width, height: source.height, pixelFormat: source.pixelFormat)
+        guard let (_, texture, _) = acquireWritableBuffer() else {
+            lock.lock()
+            framesDropped += 1
+            lock.unlock()
+            return nil
+        }
+        blit.copy(from: source, sourceSlice: 0, sourceLevel: 0, sourceOrigin: MTLOrigin(),
+                  sourceSize: MTLSize(width: source.width, height: source.height, depth: 1),
+                  to: texture, destinationSlice: 0, destinationLevel: 0, destinationOrigin: MTLOrigin())
+        lock.lock()
+        framesWritten += 1
+        lock.unlock()
+        return texture
+    }
+
     /// The newest frame as a PNG, for a save state's thumbnail. Reads shared memory, so it does no GPU
     /// work and is safe in the background. Call only between frames.
     public func latestFramePNG() -> Data? {

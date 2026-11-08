@@ -37,10 +37,10 @@ struct FilterPickerView: View {
         return state.games.first { $0.id == game.id }?.shaderID ?? game.shaderID
     }
 
-    /// A layer-path core draws its own picture, so no filter runs on this game.
+    /// A layer-path core that cannot hand its frames to the filter chain, so no filter runs on this game.
     private var filtersSkipped: Bool {
         guard let game else { return false }
-        return CoreCatalog.drawsOwnPicture((state.games.first { $0.id == game.id } ?? game).resolvedCoreID(defaults: state.defaultCores))
+        return !CoreCatalog.filtersAvailable((state.games.first { $0.id == game.id } ?? game).resolvedCoreID(defaults: state.defaultCores))
     }
 
     private var selectedName: String { filterName(selected) }
@@ -62,7 +62,7 @@ struct FilterPickerView: View {
                     Text("Filter").font(.screenTitle).accessibilityAddTraits(.isHeader)
                     if let game { Text(game.title).font(.meta).foregroundStyle(AppTheme.muted) }
                     if filtersSkipped {
-                        Text("This game's core draws its own 3D picture, so filters do not apply to it.")
+                        Text("Filters are not available for this system")
                             .font(.footnote).foregroundStyle(AppTheme.muted)
                             .padding(.top, 4)
                             .accessibilityIdentifier("filtersSkippedNote")
