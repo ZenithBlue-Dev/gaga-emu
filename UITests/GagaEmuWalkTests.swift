@@ -80,6 +80,39 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("Licences")
     }
 
+    /// Play, turn the phone upright and back: the touch controls lay out again for each orientation and stay on
+    /// screen, and the game keeps running, so its pause menu still opens and closes.
+    func testRotation() {
+        let app = launchApp()
+        importedGame(app, "The \(title) game").tap()
+        let pause = app.buttons["Pause game"]
+        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
+        sleep(2)
+        let control = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@",
+            ["A button", "B button", "Start", "D-pad right"])).firstMatch
+        XCTAssertTrue(control.waitForExistence(timeout: timeout), "No touch control")
+        let landscape = control.frame
+        snapshot("Rotation landscape")
+
+        XCUIDevice.shared.orientation = .portrait
+        sleep(2)
+        snapshot("Rotation portrait")
+        XCTAssertTrue(control.waitForExistence(timeout: timeout), "The touch control left after turning upright")
+        let portrait = control.frame
+        XCTAssertNotEqual(portrait, landscape, "The touch controls did not lay out again upright")
+        XCTAssertTrue(app.frame.contains(portrait), "The touch control is off screen upright: \(portrait) in \(app.frame)")
+
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        snapshot("Rotation landscape again")
+        XCTAssertTrue(control.waitForExistence(timeout: timeout), "The touch control left after turning back")
+        XCTAssertTrue(app.frame.contains(control.frame), "The touch control is off screen in landscape: \(control.frame) in \(app.frame)")
+
+        tap(pause, "Pause game after turning")
+        tap(button(app, "Resume"), "Resume after turning")
+        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not run again after turning")
+    }
+
     /// Play, press a touch control, pause, resume, save a state, load it, quit, relaunch, check the battery save.
     func testWalk() {
         var app = launchApp()
