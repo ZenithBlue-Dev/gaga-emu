@@ -149,7 +149,15 @@ final class GagaEmuWalkTests: XCTestCase {
         app.buttons["Settings"].tap()
         sleep(1)
         for category in ["Play", "Library", "Graphics", "Controls", "Storage", "About"] {
-            if open(app, category) { audit("06 Settings \(category)") }
+            // In a scroll view, as the rail has a Library button too.
+            let row = app.scrollViews.buttons[category].firstMatch
+            if !promptUp(), row.waitForExistence(timeout: 6) {
+                // The last tab is past the edge of the upright tab bar.
+                if category == "About" { app.scrollViews.firstMatch.swipeLeft() }
+                row.tap()
+                sleep(1)
+                audit("06 Settings \(category)")
+            }
             switch category {
             case "Library": auditPage(app, "BIOS Files", as: "07 BIOS")
             case "Graphics":
@@ -163,7 +171,7 @@ final class GagaEmuWalkTests: XCTestCase {
                         edit.tap()
                         sleep(2)
                         audit("07 Skin Editor")
-                        close(app)
+                        cancel(app)
                     }
                     close(app)
                 }
@@ -210,12 +218,33 @@ final class GagaEmuWalkTests: XCTestCase {
             if open(app, "Touch Layout") {
                 sleep(1)
                 audit("\(tag) Touch Editor")
-                close(app)
+                cancel(app)
             }
             close(app)
         }
         auditPage(app, "Cheats", as: "\(tag) Cheats")
         auditPage(app, "Play Nearby", as: "\(tag) Play Nearby")
+        // The Device skin style, on systems that have one.
+        guard open(app, "Controls") else { return }
+        let style = button(app, "Skin Style, This System")
+        guard !promptUp(), style.waitForExistence(timeout: 3) else {
+            close(app)
+            return
+        }
+        style.tap()
+        sleep(1)
+        open(app, "Device")
+        close(app)
+        open(app, "Resume")
+        sleep(3)
+        audit("\(tag) Device Skin")
+    }
+
+    /// Leaves an editor whose parent sheet also has a Close button.
+    private func cancel(_ app: XCUIApplication) {
+        if promptUp() { return }
+        app.buttons["Cancel"].firstMatch.tap()
+        sleep(1)
     }
 
     func testAuditGameGBA() { auditGame("mgba", platform: "Game Boy Advance", tag: "10 GBA") }
