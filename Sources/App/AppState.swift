@@ -1547,6 +1547,12 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Settings > Refresh Covers: asks again for every game still without a cover, with fresh listings.
+    func refetchCovers() {
+        coverFetcher.forgetMisses()
+        refreshCovers()
+    }
+
     /// Nil while the toggle is off, or until a cover has landed.
     func coverURL(for game: GameItem) -> URL? {
         coverArt ? coverFetcher.cachedCover(for: game) : nil

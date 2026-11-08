@@ -3,7 +3,8 @@
 <plist version="1.0">
 <dict>
     <!-- No tracking, analytics or crash upload. One item leaves the device, and only with the Cover Art
-         toggle on (off by default): game titles, in HTTPS request URLs to thumbnails.libretro.com
+         toggle on (off by default): which games you have, as the matched box art names in HTTPS request
+         URLs to thumbnails.libretro.com (the folder listings it also reads name only the platform)
          (CoverArtFetcher, an ephemeral session with no cookies), a third party whose server logs the app
          cannot control. Hence declared, not linked to identity, for app function. -->
     <key>NSPrivacyTracking</key>
