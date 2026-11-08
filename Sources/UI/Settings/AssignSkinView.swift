@@ -34,14 +34,18 @@ struct AssignSkinView: View {
     var body: some View {
         PaperSheet(title: "Assign Skin") {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(TouchSkinEngine.Layout.builtIn) { layout in
-                        VStack(alignment: .leading, spacing: 4) {
-                            SkinThumbnail(layout: layout)
-                            Text(layout.name).font(.footnote.weight(.semibold))
-                            Text(layout.note).font(.caption).foregroundStyle(AppTheme.muted)
+                // Scrolls sideways when the sheet is too narrow for all of them, as on a phone held upright.
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 12) {
+                        ForEach(TouchSkinEngine.Layout.builtIn) { layout in
+                            VStack(alignment: .leading, spacing: 4) {
+                                SkinThumbnail(layout: layout)
+                                Text(layout.name).font(.footnote.weight(.semibold))
+                                Text(layout.note).font(.caption).foregroundStyle(AppTheme.muted)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .frame(width: 150, alignment: .leading)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.bottom, 12)

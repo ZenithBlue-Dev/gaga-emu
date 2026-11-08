@@ -242,6 +242,18 @@ enum CoreCatalog {
 
     static func platformName(_ id: String) -> String { platform(id)?.name ?? "Other" }
 
+    /// Local players each system takes, up to the bridge's four ports (`step_frame`). Multitap stays off in the
+    /// cores' options (PCSX-ReARMed `pcsx_rearmed_multitap`), so two-player systems take two. Handhelds take one:
+    /// link play is not offered. Arcade and computer games vary, so they get all four. Unlisted is one. PC Engine and
+    /// SuperGrafx assume Beetle's multitap, not yet checked on a device.
+    static let maxPlayers: [String: Int] = [
+        "nes": 2, "snes": 2, "n64": 4, "ps1": 2, "saturn": 2, "dreamcast": 4, "megadrive": 2, "megacd": 2, "sega32x": 2,
+        "mastersystem": 2, "sg1000": 2, "pce": 4, "sgx": 4, "atari2600": 2, "atari7800": 2, "atari5200": 4, "atari8bit": 2,
+        "jaguar": 1, "arcade": 4, "c64": 2, "amiga": 2, "dos": 1
+    ]
+
+    static func maxPlayers(_ platformID: String) -> Int { min(maxPlayers[platformID] ?? 1, ControllerManager.slotCount) }
+
     /// Short label for chips and metadata.
     static func platformCode(_ id: String) -> String {
         let special = ["saturn": "SAT", "megacd": "MCD", "megadrive": "MD", "sega32x": "32X", "dreamcast": "DC", "n3ds": "3DS",
@@ -1053,6 +1065,9 @@ final class AppState: ObservableObject {
     /// Scaling and two-screen layouts per system and per game, in ScreenLayouts.json beside Skins.
     let screens: ScreenLayoutStore
     private var screensChanged: AnyCancellable?
+    /// Controller mappings, macros and control options, in Controls.json beside Skins.
+    let controls: ControlsStore
+    private var controlsChanged: AnyCancellable?
     private let storeURL: URL
 
     struct Snapshot: Codable {
@@ -1095,6 +1110,7 @@ final class AppState: ObservableObject {
         storeURL = root.appendingPathComponent("state.json")
         skinDirectory = root.appendingPathComponent("Skins", isDirectory: true)
         screens = ScreenLayoutStore(url: root.appendingPathComponent("ScreenLayouts.json"))
+        controls = ControlsStore(url: root.appendingPathComponent("Controls.json"))
         wifi = WiFiTransferServer(romDirectory: romDirectory)
         filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
         let documents = Self.rootOverride.map { $0.appendingPathComponent("Documents", isDirectory: true) }
@@ -1130,6 +1146,7 @@ final class AppState: ObservableObject {
         if migrated != nil { save() }
         // Views that read a layout through AppState redraw when one changes.
         screensChanged = screens.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        controlsChanged = controls.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         wifi.onUploaded = { [weak self] names in
             Task { @MainActor in await self?.addUploads(names) }
         }
@@ -1179,17 +1196,21 @@ final class AppState: ObservableObject {
 
     // MARK: Touch skins
 
-    func customSkinURL(_ platformID: String) -> URL {
-        skinDirectory.appendingPathComponent("\(platformID).json")
+    /// A platform's custom layout, or with `gameID` one game's own, which wins over every other choice.
+    func customSkinURL(_ platformID: String, gameID: UUID? = nil) -> URL {
+        skinDirectory.appendingPathComponent(gameID.map { "game-\($0.uuidString).json" } ?? "\(platformID).json")
     }
 
-    func hasCustomSkin(_ platformID: String) -> Bool {
-        FileManager.default.fileExists(atPath: customSkinURL(platformID).path)
+    func hasCustomSkin(_ platformID: String, gameID: UUID? = nil) -> Bool {
+        FileManager.default.fileExists(atPath: customSkinURL(platformID, gameID: gameID).path)
     }
 
-    /// The game's choice, then the platform's. Custom loads the saved layout; a missing or unreadable one falls
-    /// back to the platform's own built-in layout.
+    /// The game's own layout, then the game's choice, then the platform's. Custom loads the saved layout; a missing
+    /// or unreadable one falls back to the platform's own built-in layout.
     func applySkin(for game: GameItem) {
+        if hasCustomSkin(game.platformID, gameID: game.id), (try? skins.loadFlex(from: customSkinURL(game.platformID, gameID: game.id))) != nil {
+            return
+        }
         let platform = platformSkins[game.platformID]
         if (game.skinID ?? platform) == TouchSkinEngine.customID {
             do { return try skins.loadFlex(from: customSkinURL(game.platformID)) } catch {}
@@ -1200,18 +1221,41 @@ final class AppState: ObservableObject {
 
     /// Saves the skin editor's layout as the platform's custom skin and chooses it. Throws, saving nothing,
     /// when the layout fails `TouchSkinEngine.problems`.
-    func saveCustomSkin(_ buttons: [TouchSkinEngine.Button], opacity: Double, platformID: String) throws {
-        if let problem = TouchSkinEngine.problems(in: buttons).first { throw CustomSkinError(message: problem) }
-        let data = try TouchSkinEngine.encodeFlex(name: "Custom", buttons: buttons, opacity: opacity)
+    /// With `gameID`, the layout is that game's alone and the platform's choice is left as it was.
+    func saveCustomSkin(_ buttons: [TouchSkinEngine.Button], portraitButtons: [TouchSkinEngine.Button]? = nil, opacity: Double,
+                        overlay: Bool = false, platformID: String, gameID: UUID? = nil) throws {
+        let upright = portraitButtons ?? TouchSkinEngine.portrait(from: buttons)
+        if let problem = TouchSkinEngine.problems(in: buttons, overlay: overlay).first
+            ?? TouchSkinEngine.problems(in: upright, portrait: true, overlay: overlay).first.map({ "Upright: \($0)" }) {
+            throw CustomSkinError(message: problem)
+        }
+        let data = try TouchSkinEngine.encodeFlex(name: "Custom", buttons: buttons, portraitButtons: upright, opacity: opacity, overlay: overlay)
         try FileManager.default.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
-        try data.write(to: customSkinURL(platformID), options: .atomic)
-        platformSkins[platformID] = TouchSkinEngine.customID
+        try data.write(to: customSkinURL(platformID, gameID: gameID), options: .atomic)
+        if gameID == nil { platformSkins[platformID] = TouchSkinEngine.customID }
     }
 
-    /// Deletes the platform's custom skin and returns it to its default layout.
-    func resetCustomSkin(_ platformID: String) {
-        try? FileManager.default.removeItem(at: customSkinURL(platformID))
-        if platformSkins[platformID] == TouchSkinEngine.customID { platformSkins[platformID] = nil }
+    /// Deletes the platform's custom skin, or the game's own, and returns it to its default layout.
+    func resetCustomSkin(_ platformID: String, gameID: UUID? = nil) {
+        try? FileManager.default.removeItem(at: customSkinURL(platformID, gameID: gameID))
+        if gameID == nil, platformSkins[platformID] == TouchSkinEngine.customID { platformSkins[platformID] = nil }
+    }
+
+    /// Mappings, turbo, macros and the quick slot for one game. Each player's controller reads its own type's profile.
+    private func configureControls(_ session: GameSession, game: GameItem) {
+        let controls = self.controls
+        controllers.profile = { [id = game.id, platform = game.platformID] kind in
+            MainActor.assumeIsolated { controls.profile(kind: kind, platformID: platform, gameID: id) }
+        }
+        session.maxPlayers = CoreCatalog.maxPlayers(game.platformID)
+        session.turboHertz = controls.file.turboHertz
+        session.fastForwardChoice = controls.file.fastForwardSpeed
+        session.quickSlot = controls.file.quickSlot
+        session.macros = { controls.file.macros }
+        session.onQuickSlotChange = { controls.file.quickSlot = $0 }
+        session.onMacroRecorded = { steps in
+            controls.file.macros.append(Macro(name: "Recording \(controls.file.macros.count + 1)", steps: steps))
+        }
     }
 
     struct CustomSkinError: LocalizedError {
@@ -1513,8 +1557,9 @@ final class AppState: ObservableObject {
             throw GameLaunchError.romMissing(URL(fileURLWithPath: game.romPath).lastPathComponent)
         }
         applySkin(for: game)
-        skins.hapticsEnabled = rumble
+        skins.hapticStrength = controls.file.touchHaptics
         skins.soundEnabled = skinSoundEffects
+        skins.prepareHaptics()
         let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
         let session = try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,
                                       skins: skins, bindings: triggerPro.bindings, shaderID: shader,
@@ -1525,11 +1570,16 @@ final class AppState: ObservableObject {
         session.rewindEnabled = rewind
         session.renderer.apply(shaderParameters[shader] ?? ShaderParameterValues())
         session.screen = screens.settings(platformID: game.platformID, gameID: game.id)
-        // Saved where it came from: the game's own choice while it has one, else its system's.
-        session.onScreenChange = { [weak self, id = game.id, platform = game.platformID] settings in
-            guard let self else { return }
-            screens.save(settings, platformID: platform, gameID: screens.hasOverride(id) ? id : nil)
+        // Saved where it came from, for the orientation it was made in: the game's own choice while it has one, else its system's.
+        session.onScreenChange = { [weak self, weak session, id = game.id, platform = game.platformID] settings in
+            guard let self, let session else { return }
+            let upright = session.portrait
+            screens.save(settings, platformID: platform, gameID: screens.hasOverride(id, portrait: upright) ? id : nil, portrait: upright)
         }
+        session.screenForOrientation = { [weak self, id = game.id, platform = game.platformID] upright in
+            self?.screens.settings(platformID: platform, gameID: id, portrait: upright) ?? ScreenLayoutStore.defaults(portrait: upright)
+        }
+        configureControls(session, game: game)
         return session
     }
 

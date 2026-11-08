@@ -4,6 +4,7 @@ import SwiftUI
 struct LibraryView: View {
     @EnvironmentObject private var state: AppState
     @Environment(\.verticalSizeClass) private var verticalSize
+    @Environment(\.horizontalSizeClass) private var horizontalSize
     var onAdd: () -> Void
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
@@ -26,15 +27,22 @@ struct LibraryView: View {
     }
 
     private var compact: Bool { verticalSize == .compact }
+    /// A phone held upright: Continue sits above the shelves, which keep the full width.
+    private var upright: Bool { horizontalSize == .compact && verticalSize == .regular }
 
     var body: some View {
         Group {
             if state.games.isEmpty {
                 empty
             } else {
-                HStack(spacing: 0) {
-                    continuePanel.frame(width: compact ? 240 : 300)
-                    Rule().ignoresSafeArea(edges: .vertical)
+                AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
+                    if upright {
+                        continuePanel.frame(maxHeight: 200)
+                        Rule()
+                    } else {
+                        continuePanel.frame(width: compact ? 240 : 300)
+                        Rule().ignoresSafeArea(edges: .vertical)
+                    }
                     VStack(spacing: 0) {
                         ImportProgressRows().padding(.horizontal, 16)
                         TipLine(tip: .holdGame).padding(.horizontal, 16).padding(.top, 8)
@@ -150,7 +158,7 @@ struct LibraryView: View {
                     .accessibilityLabel("Search games")
             }
             .padding(.horizontal, 8)
-            .frame(width: compact ? 130 : 220)
+            .frame(width: compact || upright ? 130 : 220)
             .frame(minHeight: 34)
             .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
             .padding(.trailing, 16)

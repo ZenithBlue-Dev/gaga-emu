@@ -16,7 +16,7 @@ GagaEmu is a multi-system emulator for iPhone and iPad, built for App Store dist
 
 ## Positioning
 
-A quiet shelf for games you already own. Next to louder emulators, it is calm, honest and made for landscape.
+A quiet shelf for games you already own. Next to louder emulators, it is calm, honest and made for playing upright or in landscape.
 
 - **For:** people with homebrew or their own dumps, who want one tidy place to play them.
 - **Is not:** a game store, a ROM source, or a tool for bypassing copy protection.

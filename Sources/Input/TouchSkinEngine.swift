@@ -6,7 +6,7 @@ import CoreHaptics
 #endif
 
 /// Loads a `.deltaskin` (JSON layout + PNG assets) or a Manic flex skin (JSON + SVG)
-/// and turns touches into button masks. Haptics fire on press when enabled.
+/// and turns touches into button masks, stick positions and app actions. Haptics fire on press when enabled.
 public final class TouchSkinEngine: ObservableObject {
 
     public enum Format: String, Sendable { case delta, flex }
@@ -17,8 +17,17 @@ public final class TouchSkinEngine: ObservableObject {
         public var mask: UInt32
         public var asset: String?  // PNG name inside the skin, or nil for a drawn shape
         public var shape: Shape
-        /// `hidden` is a hit area with nothing drawn, such as a D-pad diagonal.
-        public enum Shape: String, Codable, Sendable { case rect, circle, dpup, dpdown, dpleft, dpright, hidden }
+        /// An app function, turbo or macro in place of `mask`. Nil presses `mask`.
+        var action: ControlAction? = nil
+        /// Multiplies the skin's opacity. Nil is 1.
+        var opacity: Double? = nil
+        var haptic = true
+        var showsLabel = true
+        /// A stick's centre zone, as a share of its radius. Nil is `defaultDeadzone`.
+        var deadzone: Double? = nil
+        /// `hidden` is a hit area with nothing drawn, such as a D-pad diagonal. `stick` is an analog stick: "lstick"
+        /// is the left one, any other id the right.
+        public enum Shape: String, Codable, Sendable { case rect, circle, dpup, dpdown, dpleft, dpright, hidden, stick }
     }
 
     public struct Skin: Identifiable, Equatable {
@@ -31,6 +40,10 @@ public final class TouchSkinEngine: ObservableObject {
         public var landscape: Bool
         public var assets: [String: Data] // PNG bytes, keyed by asset name
         public var svg: String?           // flex skins ship one SVG document
+        /// The layout used while the device is upright.
+        var portraitButtons: [Button] = []
+        /// Controls may sit over the picture.
+        var overlay = false
     }
 
     @Published public private(set) var skin: Skin?
@@ -38,20 +51,36 @@ public final class TouchSkinEngine: ObservableObject {
     @Published public var scale: Double = 1
     @Published public var hapticsEnabled = true
     @Published public var soundEnabled = true
+    @Published var hapticStrength = HapticStrength.light
+    /// The upright layout is in use.
+    @Published public var portrait = false {
+        didSet { if portrait != oldValue { releaseAll() } }
+    }
 
     @Published public private(set) var pressed: Set<String> = []
+    public struct Sticks: Equatable, Sendable {
+        public var lx: Int16 = 0, ly: Int16 = 0, rx: Int16 = 0, ry: Int16 = 0
+    }
+    /// Both sticks, in the same scale and direction as a controller's (`ControllerManager.InputState`).
+    @Published public private(set) var analog = Sticks()
+    /// The app actions of the elements held now.
+    private(set) var heldActions: Set<ControlAction> = []
+    private var stickZones: [String: Int] = [:]
 
-    #if canImport(CoreHaptics)
-    private var engine: CHHapticEngine?
+    #if canImport(UIKit)
+    private lazy var pressGenerator = UIImpactFeedbackGenerator(style: .rigid)
+    private lazy var releaseGenerator = UIImpactFeedbackGenerator(style: .soft)
+    private lazy var tickGenerator = UISelectionFeedbackGenerator()
+    private let deviceHasHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
     #endif
+    private var lastHaptic: CFTimeInterval = 0
 
-    public init() {
-        #if canImport(CoreHaptics)
-        if CHHapticEngine.capabilitiesForHardware().supportsHaptics {
-            engine = try? CHHapticEngine()
-            try? engine?.start()
-        }
-        #endif
+    public init() {}
+
+    /// The buttons of the layout for the current orientation.
+    public var buttons: [Button] {
+        guard let skin else { return [] }
+        return portrait && !skin.portraitButtons.isEmpty ? skin.portraitButtons : skin.buttons
     }
 
     // MARK: Loading
@@ -76,7 +105,7 @@ public final class TouchSkinEngine: ObservableObject {
         skin = Skin(id: directory.lastPathComponent, name: decoded.name ?? directory.lastPathComponent,
                     format: .delta, buttons: buttons, opacity: opacity, scale: scale,
                     landscape: decoded.representations.first?.orientation == "landscape",
-                    assets: assets, svg: nil)
+                    assets: assets, svg: nil, portraitButtons: Self.portrait(from: buttons))
     }
 
     /// Flex skin: one JSON document with normalized frames and an inline SVG. Its opacity, when it has one,
@@ -87,25 +116,46 @@ public final class TouchSkinEngine: ObservableObject {
         skin = loaded
     }
 
+    /// The flex skin format version the editor writes. 1 had landscape buttons only.
+    static let flexVersion = 2
+
     /// Reads a flex skin. `id` and `mask` are optional per button, so a skin that has only `input` names still
-    /// loads; the skin editor writes them so diagonals and second pads keep their combined masks.
+    /// loads; the skin editor writes them so diagonals and second pads keep their combined masks. A version 1
+    /// file has no portrait layout, so it gets one made from its landscape buttons, which keeps its edits.
     static func decodeFlex(_ data: Data, id: String) throws -> Skin {
         let decoded = try JSONDecoder().decode(FlexSkin.self, from: data)
-        let buttons = decoded.buttons.compactMap { item -> Button? in
-            guard let mask = item.mask ?? Self.mask(for: item.input) else { return nil }
-            return Button(id: item.id ?? item.input, frame: item.frame.rect, mask: mask,
-                          asset: nil, shape: Button.Shape(rawValue: item.shape ?? "circle") ?? .circle)
+        guard (decoded.version ?? 1) <= flexVersion else { throw CocoaError(.fileReadCorruptFile) }
+        func buttons(_ items: [FlexSkin.Button]) -> [Button] {
+            items.compactMap { item -> Button? in
+                let action = item.action
+                guard let mask = item.mask ?? Self.mask(for: item.input) ?? (action != nil || item.shape == "stick" ? 0 : nil) else { return nil }
+                return Button(id: item.id ?? item.input, frame: item.frame.rect, mask: mask, asset: nil,
+                              shape: Button.Shape(rawValue: item.shape ?? "circle") ?? .circle, action: action,
+                              opacity: item.opacity, haptic: item.haptic ?? true, showsLabel: item.label ?? true,
+                              deadzone: item.deadzone)
+            }
         }
-        return Skin(id: id, name: decoded.name, format: .flex, buttons: buttons,
+        let landscape = buttons(decoded.buttons)
+        let upright = decoded.portraitButtons.map(buttons) ?? portrait(from: landscape)
+        return Skin(id: id, name: decoded.name, format: .flex, buttons: landscape,
                     opacity: min(max(decoded.opacity ?? defaultOpacity, minimumOpacity), 1), scale: 1,
-                    landscape: decoded.landscape ?? true, assets: [:], svg: decoded.svg)
+                    landscape: decoded.landscape ?? true, assets: [:], svg: decoded.svg,
+                    portraitButtons: upright, overlay: decoded.overlay ?? false)
     }
 
-    /// Writes the flex skin the skin editor saves: landscape only, no SVG, so controls draw as on a built-in.
-    static func encodeFlex(name: String, buttons: [Button], opacity: Double) throws -> Data {
-        let skin = FlexSkin(name: name, landscape: true, svg: nil, opacity: opacity, buttons: buttons.map {
-            FlexSkin.Button(input: $0.id, frame: Frame($0.frame), shape: $0.shape.rawValue, id: $0.id, mask: $0.mask)
-        })
+    /// Writes the flex skin the skin editor saves: both orientations, no SVG, so controls draw as on a built-in.
+    static func encodeFlex(name: String, buttons: [Button], portraitButtons: [Button]? = nil, opacity: Double,
+                           overlay: Bool = false) throws -> Data {
+        func items(_ list: [Button]) -> [FlexSkin.Button] {
+            list.map {
+                FlexSkin.Button(input: $0.id, frame: Frame($0.frame), shape: $0.shape.rawValue, id: $0.id, mask: $0.mask,
+                                action: $0.action, opacity: $0.opacity, haptic: $0.haptic ? nil : false,
+                                label: $0.showsLabel ? nil : false, deadzone: $0.deadzone)
+            }
+        }
+        let skin = FlexSkin(version: flexVersion, name: name, landscape: true, svg: nil, opacity: opacity,
+                            overlay: overlay ? true : nil, buttons: items(buttons),
+                            portraitButtons: items(portraitButtons ?? portrait(from: buttons)))
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(skin)
@@ -114,6 +164,7 @@ public final class TouchSkinEngine: ObservableObject {
     public static let defaultOpacity = 0.85
     /// Below this the outlines are too faint to find on the letterbox.
     public static let minimumOpacity = 0.3
+    static let defaultDeadzone = 0.15
     /// The Assign Skin choice that loads the platform's saved custom layout.
     public static let customID = "custom"
 
@@ -125,34 +176,56 @@ public final class TouchSkinEngine: ObservableObject {
     public func loadBuiltIn(_ id: String, platformID: String = "") {
         let layout = Layout.builtIn.first { $0.id == id } ?? .standard
         opacity = Self.defaultOpacity
-        skin = Skin(id: layout.id, name: layout.name, format: .flex, buttons: layout.buttons(for: platformID),
-                    opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil)
+        let buttons = layout.buttons(for: platformID)
+        skin = Skin(id: layout.id, name: layout.name, format: .flex, buttons: buttons,
+                    opacity: opacity, scale: scale, landscape: true, assets: [:], svg: nil,
+                    portraitButtons: Self.portrait(from: buttons))
     }
 
     /// The smallest landscape phone's safe canvas in points (iPhone 17e), which sizes the 44pt check.
     public static let smallestCanvas = CGSize(width: 750, height: 369)
+    /// The same phone upright.
+    static let smallestPortraitCanvas = CGSize(width: smallestCanvas.height, height: smallestCanvas.width)
+    /// Upright, the picture keeps the top of the screen and the controls everything below this share of the height.
+    static let portraitControlTop: CGFloat = 0.5
 
-    /// Why a touch layout cannot be used, empty when it can: every button inside the canvas and inside the left
-    /// or right `controlBand`, at least 44pt on `smallestCanvas`, ids unique, and no two buttons overlapping.
-    static func problems(in buttons: [Button]) -> [String] {
+    /// The upright layout made from a landscape one: each band keeps its side and every button its size in points
+    /// on the smallest phone, so a layout that passes `problems` in landscape passes upright too.
+    static func portrait(from landscape: [Button]) -> [Button] {
+        let land = smallestCanvas, upright = smallestPortraitCanvas
+        let kx = land.width / upright.width, ky = land.height / upright.height
+        return landscape.map { button in
+            var moved = button
+            let f = button.frame
+            let x = f.midX < 0.5 ? f.minX * kx : 1 - (1 - f.minX) * kx
+            moved.frame = CGRect(x: x, y: portraitControlTop + f.minY * ky, width: f.width * kx, height: f.height * ky)
+            return moved
+        }
+    }
+
+    /// Why a touch layout cannot be used, empty when it can: every button inside the canvas and, unless `overlay`,
+    /// outside the picture (the left and right `controlBand`, or below `portraitControlTop` upright), at least 44pt on
+    /// the smallest phone, ids unique, and no two buttons overlapping.
+    static func problems(in buttons: [Button], portrait: Bool = false, overlay: Bool = false) -> [String] {
         var found: [String] = []
         let band = controlBand
+        let canvas = portrait ? smallestPortraitCanvas : smallestCanvas
         for button in buttons {
-            let name = label(for: button.id).spoken
+            let name = label(for: button).spoken
             let frame = button.frame
             if frame.minX < 0 || frame.minY < 0 || frame.maxX > 1 || frame.maxY > 1 {
                 found.append("\(name) is off the screen.")
-            } else if !(frame.maxX <= band || frame.minX >= 1 - band) {
+            } else if !overlay, portrait ? frame.minY < portraitControlTop - 0.0001 : !(frame.maxX <= band || frame.minX >= 1 - band) {
                 found.append("\(name) covers the picture.")
             }
-            if frame.width * smallestCanvas.width < 44 || frame.height * smallestCanvas.height < 44 {
+            if frame.width * canvas.width < 44 || frame.height * canvas.height < 44 {
                 found.append("\(name) is smaller than 44 points.")
             }
         }
         if Set(buttons.map(\.id)).count != buttons.count { found.append("Two buttons share a name.") }
         for (index, a) in buttons.enumerated() {
             for b in buttons[(index + 1)...] where a.frame.insetBy(dx: 0.0001, dy: 0.0001).intersects(b.frame) {
-                found.append("\(label(for: a.id).spoken) overlaps \(label(for: b.id).spoken).")
+                found.append("\(label(for: a).spoken) overlaps \(label(for: b).spoken).")
             }
         }
         return found
@@ -172,7 +245,8 @@ public final class TouchSkinEngine: ObservableObject {
     public func touchDown(at point: CGPoint) -> UInt32 {
         guard let hit = button(at: point), !pressed.contains(hit.id) else { return currentMask() }
         pressed.insert(hit.id)
-        feedback()
+        if hit.haptic { haptic(.press) }
+        click()
         return currentMask()
     }
 
@@ -180,13 +254,66 @@ public final class TouchSkinEngine: ObservableObject {
     /// between buttons and two fingers on one button release correctly. Returns the mask now held.
     @discardableResult
     public func setTouches(_ points: [CGPoint]) -> UInt32 {
-        guard let skin else { return 0 }
-        let held = Set(skin.buttons.filter { button in
-            points.contains { scaled(button.frame).contains($0) }
-        }.map(\.id))
-        if !held.subtracting(pressed).isEmpty { feedback() }
+        guard skin != nil else { return 0 }
+        let list = buttons
+        var held = Set<String>()
+        var sticks: [Bool: (Int16, Int16)] = [:]
+        for button in list {
+            if button.shape == .stick {
+                // A finger keeps the stick a little past its rim, so a hard push does not drop it.
+                let reach = scaled(button.frame).insetBy(dx: -button.frame.width * 0.25, dy: -button.frame.height * 0.25)
+                guard let point = points.first(where: { reach.contains($0) }) else { stickZones[button.id] = 0; continue }
+                held.insert(button.id)
+                let value = Self.stickValue(point, in: button.frame, deadzone: button.deadzone ?? Self.defaultDeadzone)
+                sticks[button.id != "lstick"] = (value.x, value.y)
+                let zone = value.zone
+                if zone != stickZones[button.id], button.haptic { haptic(.tick) }
+                stickZones[button.id] = zone
+            } else if points.contains(where: { scaled(button.frame).contains($0) }) {
+                held.insert(button.id)
+            }
+        }
+        // C buttons push the right stick all the way, the way the N64 core reads them.
+        // shortcut: one C button at a time; two held push toward the first by name. Sum them if a game needs both.
+        let cPush = held.sorted().lazy.compactMap(Self.cPush).first
+        let moved = Sticks(lx: sticks[false]?.0 ?? 0, ly: sticks[false]?.1 ?? 0,
+                           rx: sticks[true]?.0 ?? cPush?.0 ?? 0, ry: sticks[true]?.1 ?? cPush?.1 ?? 0)
+        if moved != analog { analog = moved }
+        let added = held.subtracting(pressed), removed = pressed.subtracting(held)
+        let pads: Set<String> = ["up", "down", "left", "right", "upleft", "upright", "downleft", "downright"]
+        let byID = Dictionary(list.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        if added.contains(where: { byID[$0]?.haptic == true && byID[$0]?.shape != .stick }) {
+            // A thumb rolling round the pad ticks on each new direction instead of a full press.
+            haptic(!pressed.isDisjoint(with: pads) && added.isSubset(of: pads) ? .tick : .press)
+            click()
+        } else if removed.contains(where: { byID[$0]?.haptic == true && byID[$0]?.shape != .stick }) {
+            haptic(.release)
+        }
         if held != pressed { pressed = held }
+        heldActions = Set(list.filter { held.contains($0.id) }.compactMap(\.action))
         return currentMask()
+    }
+
+    /// The direction a C button pushes the right stick, or nil for any other id.
+    static func cPush(_ id: String) -> (Int16, Int16)? {
+        switch id {
+        case "cup": return (0, 32767)
+        case "cdown": return (0, -32768)
+        case "cleft": return (-32768, 0)
+        case "cright": return (32767, 0)
+        default: return nil
+        }
+    }
+
+    /// A finger's place on a stick as stick values, up positive, and its zone: 0 inside the deadzone, 1 between,
+    /// 2 at the rim.
+    static func stickValue(_ point: CGPoint, in frame: CGRect, deadzone: Double) -> (x: Int16, y: Int16, zone: Int) {
+        var dx = (point.x - frame.midX) / (frame.width / 2), dy = -(point.y - frame.midY) / (frame.height / 2)
+        let length = (dx * dx + dy * dy).squareRoot()
+        if length > 1 { dx /= length; dy /= length }
+        let zone = length < deadzone ? 0 : length >= 0.95 ? 2 : 1
+        guard zone > 0 else { return (0, 0, 0) }
+        return (PadMapper.axis(Float(dx)), PadMapper.axis(Float(dy)), zone)
     }
 
     @discardableResult
@@ -195,23 +322,30 @@ public final class TouchSkinEngine: ObservableObject {
         return currentMask()
     }
 
-    public func releaseAll() { pressed.removeAll() }
+    public func releaseAll() {
+        pressed.removeAll()
+        heldActions = []
+        if analog != Sticks() { analog = Sticks() }
+        stickZones = [:]
+    }
 
     public func currentMask() -> UInt32 {
-        guard let skin else { return 0 }
-        return skin.buttons.reduce(0) { pressed.contains($1.id) ? $0 | $1.mask : $0 }
+        buttons.reduce(0) { pressed.contains($1.id) && $1.action == nil ? $0 | $1.mask : $0 }
     }
 
     /// Moves a button. Used by the skin customizer.
     public func move(_ id: String, to frame: CGRect) {
-        guard var skin, let index = skin.buttons.firstIndex(where: { $0.id == id }) else { return }
-        skin.buttons[index].frame = frame
+        guard var skin else { return }
+        if portrait, let index = skin.portraitButtons.firstIndex(where: { $0.id == id }) {
+            skin.portraitButtons[index].frame = frame
+        } else if let index = skin.buttons.firstIndex(where: { $0.id == id }) {
+            skin.buttons[index].frame = frame
+        } else { return }
         self.skin = skin
     }
 
     private func button(at point: CGPoint) -> Button? {
-        guard let skin else { return nil }
-        return skin.buttons.first { scaled($0.frame).contains(point) }
+        buttons.first { scaled($0.frame).contains(point) }
     }
 
     private func scaled(_ frame: CGRect) -> CGRect {
@@ -222,19 +356,37 @@ public final class TouchSkinEngine: ObservableObject {
         return grown
     }
 
-    private func feedback() {
-        if hapticsEnabled { tap() }
-        // Keyboard click. System sounds obey the silent switch.
+    // MARK: Feedback
+
+    enum HapticKind { case press, release, tick }
+
+    /// Keyboard click. System sounds obey the silent switch.
+    private func click() {
         if soundEnabled { AudioServicesPlaySystemSound(1104) }
     }
 
-    private func tap() {
-        #if canImport(CoreHaptics)
-        guard let engine else { return }
-        let event = CHHapticEvent(eventType: .hapticTransient, parameters: [], relativeTime: 0)
-        guard let pattern = try? CHHapticPattern(events: [event], parameters: []),
-              let player = try? engine.makePlayer(with: pattern) else { return }
-        try? player.start(atTime: 0)
+    /// A press is firm, a release soft, a tick the lightest. Throttled, so a finger sliding over many buttons does
+    /// not buzz, and nothing on a device without haptics. Turbo and macros never come through here.
+    func haptic(_ kind: HapticKind) {
+        #if canImport(UIKit)
+        guard hapticsEnabled, hapticStrength != .off, deviceHasHaptics else { return }
+        let now = CACurrentMediaTime()
+        guard now - lastHaptic > 0.03 else { return }
+        lastHaptic = now
+        let intensity: CGFloat = hapticStrength == .light ? 0.4 : hapticStrength == .medium ? 0.7 : 1
+        switch kind {
+        case .press: pressGenerator.impactOccurred(intensity: intensity); pressGenerator.prepare()
+        case .release: releaseGenerator.impactOccurred(intensity: intensity * 0.5); releaseGenerator.prepare()
+        case .tick: tickGenerator.selectionChanged(); tickGenerator.prepare()
+        }
+        #endif
+    }
+
+    /// Wakes the generators before the first touch, so it has no lag.
+    func prepareHaptics() {
+        #if canImport(UIKit)
+        guard hapticsEnabled, hapticStrength != .off, deviceHasHaptics else { return }
+        pressGenerator.prepare(); releaseGenerator.prepare(); tickGenerator.prepare()
         #endif
     }
 
@@ -281,7 +433,30 @@ public final class TouchSkinEngine: ObservableObject {
         case "start": return ("Start", "Start")
         case "select": return ("Select", "Select")
         case "l3": return ("Keyboard", "Keyboard")
+        case "lstick": return ("Left stick", nil)
+        case "rstick": return ("Right stick", nil)
+        case "cup": return ("C up", "C▲")
+        case "cdown": return ("C down", "C▼")
+        case "cleft": return ("C left", "C◀")
+        case "cright": return ("C right", "C▶")
         default: return (id, id.uppercased())
+        }
+    }
+
+    /// An element's name, from its action when it has one.
+    static func label(for button: Button, macros: [Macro] = []) -> (spoken: String, glyph: String?) {
+        switch button.action {
+        case .app(let function): return (function.title, function.glyph)
+        case .turbo(let mask, let toggle):
+            let names = ControlAction.buttonNames(mask)
+            return ("Turbo \(names)\(toggle ? ", toggle" : "")", "T\(names)")
+        case .macro(let id):
+            let name = macros.first { $0.id == id }?.name ?? "Macro"
+            return ("Macro \(name)", String(name.prefix(6)))
+        case .buttons(let mask):
+            let names = ControlAction.buttonNames(mask)
+            return (names, names)
+        case nil: return label(for: button.id)
         }
     }
 
@@ -303,18 +478,24 @@ public final class TouchSkinEngine: ObservableObject {
             Button(id: id, frame: CGRect(x: x, y: y, width: width, height: height), mask: mask, asset: nil, shape: shape)
         }
 
-        private static func pad(topY: CGFloat) -> [Button] {
+        static func pad(topY: CGFloat, padX: CGFloat = 0.0025) -> [Button] {
             let b = ControllerManager.Button.self
-            let padX: CGFloat = 0.0025
             return [
                 button("up", padX + w, topY, w, h, b.up, .dpup),
                 button("down", padX + w, topY + 2 * h, w, h, b.down, .dpdown),
                 button("left", padX, topY + h, w, h, b.left, .dpleft),
-                button("right", padX + 2 * w, topY + h, w, h, b.right, .dpright),
-                button("upleft", padX, topY, w, h, b.up | b.left, .hidden),
-                button("upright", padX + 2 * w, topY, w, h, b.up | b.right, .hidden),
-                button("downleft", padX, topY + 2 * h, w, h, b.down | b.left, .hidden),
-                button("downright", padX + 2 * w, topY + 2 * h, w, h, b.down | b.right, .hidden)
+                button("right", padX + 2 * w, topY + h, w, h, b.right, .dpright)
+            ] + diagonals(topY: topY, padX: padX)
+        }
+
+        /// The D-pad's hidden corner areas, which press two directions at once.
+        static func diagonals(topY: CGFloat, padX: CGFloat, width: CGFloat = w, height: CGFloat = h) -> [Button] {
+            let b = ControllerManager.Button.self
+            return [
+                button("upleft", padX, topY, width, height, b.up | b.left, .hidden),
+                button("upright", padX + 2 * width, topY, width, height, b.up | b.right, .hidden),
+                button("downleft", padX, topY + 2 * height, width, height, b.down | b.left, .hidden),
+                button("downright", padX + 2 * width, topY + 2 * height, width, height, b.down | b.right, .hidden)
             ]
         }
 
@@ -398,9 +579,33 @@ public final class TouchSkinEngine: ObservableObject {
         /// typing platform can choose leaves free.
         static let keyboard = button("l3", 0.03, 0.2, 0.14, 0.12, ControllerManager.Button.l3, .rect)
 
-        /// The layout's buttons, plus the keyboard key on a platform that types (`GameSession.typingPlatforms`).
+        /// Square on the smallest phone: 0.11 of its width is 0.2236 of its height.
+        private static let stickSize = CGSize(width: 0.11, height: 0.11 * 750 / 369)
+
+        /// Systems with a left analog stick (N64, PSP, PlayStation analog, 3DS circle pad). It sits between L and the
+        /// D-pad, which every layout these systems can choose leaves free.
+        static let leftStickPlatforms: Set<String> = ["n64", "psp", "ps1", "n3ds"]
+        static let leftStick = button("lstick", 0.045, 0.165, stickSize.width, stickSize.height, 0, .stick)
+        /// The PlayStation's right stick, between R and the face buttons.
+        static let rightStick = button("rstick", 0.845, 0.165, stickSize.width, stickSize.height, 0, .stick)
+
+        /// The N64's C buttons, between R and the face buttons: C up above C left, C down and C right.
+        static let cButtons: [Button] = [
+            button("cup", 0.8675, 0.155, w, 0.12, 0, .rect),
+            button("cleft", 0.8025, 0.28, w, 0.12, 0, .rect),
+            button("cdown", 0.8675, 0.28, w, 0.12, 0, .rect),
+            button("cright", 0.9325, 0.28, w, 0.12, 0, .rect)
+        ]
+
+        /// The layout's buttons, plus the keyboard key on a platform that types (`GameSession.typingPlatforms`),
+        /// and the sticks and C buttons of the systems that have them.
         public func buttons(for platformID: String) -> [Button] {
-            GameSession.typingPlatforms.contains(platformID) ? buttons + [Self.keyboard] : buttons
+            var list = buttons
+            if GameSession.typingPlatforms.contains(platformID) { list.append(Self.keyboard) }
+            if Self.leftStickPlatforms.contains(platformID) { list.append(Self.leftStick) }
+            if platformID == "ps1" { list.append(Self.rightStick) }
+            if platformID == "n64" { list += Self.cButtons }
+            return list
         }
 
         public static let builtIn: [Layout] = [.standard, .lowReach, .twoButton, .twinPad, .xyPad]
@@ -432,18 +637,27 @@ private struct DeltaInfo: Decodable {
     }
 }
 
+/// Version 2 adds `portraitButtons`, `overlay` and the per-button fields after `mask`. Version 1 files still read.
 private struct FlexSkin: Codable {
+    var version: Int?
     let name: String
     let landscape: Bool?
     let svg: String?
     var opacity: Double?
+    var overlay: Bool?
     let buttons: [Button]
+    var portraitButtons: [Button]?
     struct Button: Codable {
         let input: String
         let frame: Frame
         let shape: String?
         var id: String?
         var mask: UInt32?
+        var action: ControlAction?
+        var opacity: Double?
+        var haptic: Bool?
+        var label: Bool?
+        var deadzone: Double?
     }
 }
 
@@ -462,6 +676,8 @@ private extension Frame {
 enum TouchSkinEngineChecks {
     static func run() {
         let engine = TouchSkinEngine()
+        engine.hapticsEnabled = false
+        engine.soundEnabled = false
         engine.loadDefault()
         let mask = engine.touchDown(at: CGPoint(x: 0.90, y: 0.72))
         assert(mask & ControllerManager.Button.south != 0)

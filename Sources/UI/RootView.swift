@@ -23,11 +23,17 @@ struct RootView: View {
     @EnvironmentObject private var state: AppState
     @State private var screen: AppScreen = .library
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.verticalSizeClass) private var verticalSize
 
     var body: some View {
-        HStack(spacing: 0) {
-            LeftRail(selection: $screen)
-            Rule().ignoresSafeArea(edges: .vertical)
+        // Upright on a phone the rail becomes a bar along the bottom, where the width is short and the height long.
+        let upright = horizontalSize == .compact && verticalSize == .regular
+        AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
+            if !upright {
+                LeftRail(selection: $screen)
+                Rule().ignoresSafeArea(edges: .vertical)
+            }
             Group {
                 switch screen {
                 case .library: LibraryView { screen = .add }
@@ -36,6 +42,10 @@ struct RootView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if upright {
+                Rule()
+                LeftRail(selection: $screen, horizontal: true)
+            }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: screen)
         .foregroundStyle(AppTheme.ink)
@@ -73,12 +83,14 @@ struct RootView: View {
     }
 }
 
-/// Replaces a tab bar: persistent chrome costs width, which landscape has, not height.
+/// Replaces a tab bar: persistent chrome costs width, which landscape has, not height. Upright it runs along the
+/// bottom instead.
 private struct LeftRail: View {
     @Binding var selection: AppScreen
+    var horizontal = false
 
     var body: some View {
-        VStack(spacing: 4) {
+        AnyLayout(horizontal ? AnyLayout(HStackLayout(spacing: 4)) : AnyLayout(VStackLayout(spacing: 4))) {
             ForEach(AppScreen.allCases) { item in
                 let selected = selection == item
                 Button { selection = item } label: {
@@ -100,10 +112,10 @@ private struct LeftRail: View {
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .accessibilityShowsLargeContentViewer()
             }
-            Spacer(minLength: 0)
+            if !horizontal { Spacer(minLength: 0) }
         }
-        .padding(.top, 8)
-        .frame(width: 72)
+        .padding(horizontal ? .bottom : .top, horizontal ? 0 : 8)
+        .frame(width: horizontal ? nil : 72)
         // The rail stays one fixed width; the large content viewer covers larger text sizes.
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .background(AppTheme.surface.ignoresSafeArea())

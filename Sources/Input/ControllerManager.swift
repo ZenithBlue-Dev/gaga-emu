@@ -49,18 +49,14 @@ public final class ControllerManager: ObservableObject {
         public var rightY: Int16 = 0
         public var triggerL: Float = 0
         public var triggerR: Float = 0
-        /// Menu and Options together, or Home where the system passes it on. Never reaches a core.
-        public var openMenu = false
-        /// Options and L1 held together: rewind, on a core that has it. Never reaches a core either.
-        public var rewind = false
-        /// Options and R1 held together: swap a two-screen system's screens. Never reaches a core either.
-        public var swapScreens = false
+        /// App functions, turbo and macros held this frame through the mapping (`PadProfile`). Never reach a core.
+        var actions: Set<ControlAction> = []
         public static let zero = InputState()
 
         /// Past stick and trigger drift, which a pad nobody is holding can report.
         var isDeliberate: Bool {
             let half: Int32 = 16384
-            return buttons != 0 || openMenu || rewind || swapScreens || triggerL > 0.5 || triggerR > 0.5
+            return buttons != 0 || !actions.isEmpty || triggerL > 0.5 || triggerR > 0.5
                 || [leftX, leftY, rightX, rightY].contains { abs(Int32($0)) > half }
         }
     }
@@ -255,47 +251,33 @@ public final class ControllerManager: ObservableObject {
         return .unknown
     }
 
+    /// The mapping for a controller type. The running game sets it from its Controls.json profiles; the
+    /// defaults keep Menu and Options for the menu, Options and L1 for rewind and Options and R1 for swap.
+    var profile: (Kind) -> PadProfile = { .standard(for: $0) }
+
     private func read(_ controller: GCController) -> InputState {
         guard let pad = controller.extendedGamepad else { return .zero }
-        var state = InputState()
-        func set(_ mask: UInt32, _ pressed: Bool) { if pressed { state.buttons |= mask } }
-        set(Button.up, pad.dpad.up.isPressed)
-        set(Button.down, pad.dpad.down.isPressed)
-        set(Button.left, pad.dpad.left.isPressed)
-        set(Button.right, pad.dpad.right.isPressed)
-        set(Button.south, pad.buttonA.isPressed)
-        set(Button.east, pad.buttonB.isPressed)
-        set(Button.west, pad.buttonX.isPressed)
-        set(Button.north, pad.buttonY.isPressed)
-        set(Button.l1, pad.leftShoulder.isPressed)
-        set(Button.r1, pad.rightShoulder.isPressed)
-        set(Button.l2, pad.leftTrigger.isPressed)
-        set(Button.r2, pad.rightTrigger.isPressed)
-        set(Button.start, pad.buttonMenu.isPressed)
-        set(Button.select, pad.buttonOptions?.isPressed ?? false)
-        set(Button.l3, pad.leftThumbstickButton?.isPressed ?? false)
-        set(Button.r3, pad.rightThumbstickButton?.isPressed ?? false)
-        // Menu and Options are Start and Select, and a game needs both, so only the pair means the app.
-        let pair = pad.buttonMenu.isPressed && pad.buttonOptions?.isPressed == true
-        state.openMenu = pair || pad.buttonHome?.isPressed == true
-        if pair { state.buttons &= ~(Button.start | Button.select) }
-        // Select and L1 alone still reach the game; only the pair means rewind.
-        state.rewind = !pair && pad.buttonOptions?.isPressed == true && pad.leftShoulder.isPressed
-        if state.rewind { state.buttons &= ~(Button.select | Button.l1) }
-        state.swapScreens = !pair && pad.buttonOptions?.isPressed == true && pad.rightShoulder.isPressed
-        if state.swapScreens { state.buttons &= ~(Button.select | Button.r1) }
-        state.leftX = axis(pad.leftThumbstick.xAxis.value)
-        state.leftY = axis(pad.leftThumbstick.yAxis.value)
-        state.rightX = axis(pad.rightThumbstick.xAxis.value)
-        state.rightY = axis(pad.rightThumbstick.yAxis.value)
+        let kind = devices.first { $0.id == stableID(controller) }?.kind ?? .mfi
+        return PadMapper.resolve(Self.padState(pad), profile: profile(kind))
+    }
+
+    static func padState(_ pad: GCExtendedGamepad) -> PadState {
+        var state = PadState()
+        let elements: [(PadInput, GCControllerButtonInput?)] = [
+            (.a, pad.buttonA), (.b, pad.buttonB), (.x, pad.buttonX), (.y, pad.buttonY),
+            (.l1, pad.leftShoulder), (.r1, pad.rightShoulder), (.l2, pad.leftTrigger), (.r2, pad.rightTrigger),
+            (.l3, pad.leftThumbstickButton), (.r3, pad.rightThumbstickButton),
+            (.up, pad.dpad.up), (.down, pad.dpad.down), (.left, pad.dpad.left), (.right, pad.dpad.right),
+            (.menu, pad.buttonMenu), (.options, pad.buttonOptions), (.home, pad.buttonHome)
+        ]
+        state.held = Set(elements.compactMap { $0.1?.isPressed == true ? $0.0 : nil })
+        state.leftX = pad.leftThumbstick.xAxis.value
+        state.leftY = pad.leftThumbstick.yAxis.value
+        state.rightX = pad.rightThumbstick.xAxis.value
+        state.rightY = pad.rightThumbstick.yAxis.value
         state.triggerL = pad.leftTrigger.value
         state.triggerR = pad.rightTrigger.value
         return state
-    }
-
-    private func axis(_ value: Float) -> Int16 {
-        let clamped = min(max(value, -1), 1)
-        return Int16(clamped * (clamped < 0 ? 32768 : 32767))
     }
 }
 

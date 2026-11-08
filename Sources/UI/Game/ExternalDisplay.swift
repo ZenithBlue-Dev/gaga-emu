@@ -76,4 +76,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         }
         return configuration
     }
+
+    /// A game's orientation lock, within Info.plist's orientations.
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        MainActor.assumeIsolated { OrientationLock.mask }
+    }
 }

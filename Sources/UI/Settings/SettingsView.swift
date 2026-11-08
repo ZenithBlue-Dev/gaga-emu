@@ -7,6 +7,7 @@ import SwiftUI
 /// Saved values for hidden rows stay in state.json.
 struct SettingsView: View {
     @Environment(\.verticalSizeClass) private var verticalSize
+    @Environment(\.horizontalSizeClass) private var horizontalSize
     @State private var category: Category = .play
     /// The category column widens with Dynamic Type so names do not break mid-word.
     @ScaledMetric(relativeTo: .body) private var columnScale: CGFloat = 1
@@ -20,16 +21,29 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            ScrollView {
+        // Upright on a phone the categories run along the top, so the detail keeps the full width.
+        let upright = horizontalSize == .compact && verticalSize == .regular
+        AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
+            if upright {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                        .padding(.horizontal, 16).padding(.vertical, 8)
-                    ForEach(Category.visible) { categoryRow($0) }
+                        .padding(.horizontal, 16).padding(.top, 8)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 0) { ForEach(Category.visible) { categoryRow($0).fixedSize() } }
+                    }
                 }
+                Rule()
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
+                            .padding(.horizontal, 16).padding(.vertical, 8)
+                        ForEach(Category.visible) { categoryRow($0) }
+                    }
+                }
+                .frame(width: (verticalSize == .compact ? 170 : 240) * min(columnScale, 1.5))
+                Rule().ignoresSafeArea(edges: .vertical)
             }
-            .frame(width: (verticalSize == .compact ? 170 : 240) * min(columnScale, 1.5))
-            Rule().ignoresSafeArea(edges: .vertical)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(category.rawValue).font(.gameTitle).accessibilityAddTraits(.isHeader)
@@ -261,8 +275,8 @@ private struct GraphicsPane: View {
 private struct ControlsPane: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var controllers: ControllerManager
-    @State private var showTriggerPro = false
     @State private var showSkins = false
+    @State private var page: ControlsSheet.Page?
 
     var body: some View {
         ValueRow(title: "Touch Control", value: controllers.touchOwnsPlayerOne ? "Player 1" : "Unassigned")
@@ -288,13 +302,26 @@ private struct ControlsPane: View {
             }
             Rule()
         }
-        ActionRow(title: "Assign Skin") { showSkins = true }
+        ActionRow(title: "Touch Layout", value: "Skins and editor") { showSkins = true }
             .sheet(isPresented: $showSkins) { AssignSkinView() }
         Rule()
-        ActionRow(title: "TriggerPro") { showTriggerPro = true }
-            .sheet(isPresented: $showTriggerPro) { TriggerProEditor() }
+        ActionRow(title: "Controller Mapping") { page = .mapping }
         Rule()
-        ToggleRow(title: "Rumble", note: "The device vibrates when you press a touch control, and when a game rumbles while you play on touch.", isOn: $state.rumble)
+        ActionRow(title: "Macros", value: "\(state.controls.file.macros.count)") { page = .macros }
+        Rule()
+        ActionRow(title: "Turbo", value: "\(Int(state.controls.file.turboHertz)) per second") { page = .turbo }
+            .sheet(item: $page) { page in
+                switch page {
+                case .mapping: ControllerMappingView(platformID: nil, game: nil)
+                case .macros: MacrosView()
+                case .turbo: TurboView()
+                case .players: PlayersView(platformID: nil)
+                }
+            }
+        Rule()
+        ControlOptions().padding(.vertical, 6)
+        Rule()
+        ToggleRow(title: "Rumble", note: "The device vibrates when a game rumbles while you play on touch.", isOn: $state.rumble)
         Rule()
         VStack(alignment: .leading, spacing: 2) {
             HStack {

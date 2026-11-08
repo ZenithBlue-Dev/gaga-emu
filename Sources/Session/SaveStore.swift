@@ -133,14 +133,21 @@ struct SaveStore {
     var manualCount: Int { slots().filter { !$0.isAuto }.count }
 
     /// The file goes in last, so no slot appears without a whole file behind it. A lost thumbnail costs only a picture.
+    /// A quick slot's file name. Writing to it again replaces it.
+    static func quickName(_ slot: Int) -> String { "quick-\(slot)" }
+
+    func quickSlot(_ slot: Int) -> SaveSlot? {
+        slots().first { $0.url.deletingPathExtension().lastPathComponent == Self.quickName(slot) }
+    }
+
     @discardableResult
-    func writeState(_ file: Data, thumbnail: Data?, auto: Bool) throws -> SaveSlot {
+    func writeState(_ file: Data, thumbnail: Data?, auto: Bool = false, quick: Int? = nil) throws -> SaveSlot {
         try FileManager.default.createDirectory(at: states, withIntermediateDirectories: true)
         for leftover in (try? FileManager.default.contentsOfDirectory(at: states, includingPropertiesForKeys: nil)) ?? []
         where leftover.lastPathComponent.contains(".tmp-") {
             try? FileManager.default.removeItem(at: leftover)
         }
-        let name = auto ? Self.autoName : "state-\(UUID().uuidString)"
+        let name = auto ? Self.autoName : quick.map(Self.quickName) ?? "state-\(UUID().uuidString)"
         let url = states.appendingPathComponent(name).appendingPathExtension(Self.stateExtension)
         let slot = SaveSlot(url: url, date: Date())
         if let thumbnail { try? AtomicFile.write(thumbnail, to: slot.thumbnailURL) }

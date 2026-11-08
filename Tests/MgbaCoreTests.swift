@@ -987,12 +987,12 @@ final class MgbaCoreTests: GagaTestCase {
         let gamepad = try XCTUnwrap(pad.extendedGamepad)
         gamepad.buttonMenu.setValue(1)
         var state = manager.sample()[0]
-        XCTAssertFalse(state.openMenu, "Menu alone is Start")
+        XCTAssertFalse(state.actions.contains(.app(.pauseMenu)), "Menu alone is Start")
         XCTAssertEqual(state.buttons, ControllerManager.Button.start)
         if let options = gamepad.buttonOptions {
             options.setValue(1)
             state = manager.sample()[0]
-            XCTAssertTrue(state.openMenu)
+            XCTAssertTrue(state.actions.contains(.app(.pauseMenu)))
             XCTAssertEqual(state.buttons, 0, "the pair never reaches the game")
         }
 
