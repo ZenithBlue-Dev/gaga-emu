@@ -55,17 +55,27 @@ public struct MultiDiscHelper: Sendable {
         return (title, disc, platform)
     }
 
-    /// Scans a directory (non-recursive) and returns groups of two or more discs.
-    public static func scan(_ directory: URL) -> [Group] {
+    private static func candidates(in directory: URL) -> [URL] {
         // A disc set in its own folder counts by its descriptor.
         let urls = ((try? FileManager.default.contentsOfDirectory(
             at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? [])
             + DiscSet.folders(in: directory).compactMap(DiscSet.primary(in:))
-        var buckets: [String: [(disc: Int, url: URL, platform: Platform?)]] = [:]
         // A cue sheet is the disc. Its track file beside it, under the same name, is not a disc of its own.
         let sheets = Set(urls.filter { ["cue", "ccd", "toc"].contains($0.pathExtension.lowercased()) }.map { $0.deletingPathExtension().lastPathComponent })
-        for url in urls {
-            if ["bin", "img"].contains(url.pathExtension.lowercased()), sheets.contains(url.deletingPathExtension().lastPathComponent) { continue }
+        return urls.filter { !["bin", "img"].contains($0.pathExtension.lowercased()) || !sheets.contains($0.deletingPathExtension().lastPathComponent) }
+    }
+
+    /// Every disc file a playlist could list, for picking by hand.
+    static func discFiles(in directory: URL) -> [URL] {
+        candidates(in: directory)
+            .filter { discExtensions.contains($0.pathExtension.lowercased()) }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+    }
+
+    /// Scans a directory (non-recursive) and returns groups of two or more discs.
+    public static func scan(_ directory: URL) -> [Group] {
+        var buckets: [String: [(disc: Int, url: URL, platform: Platform?)]] = [:]
+        for url in candidates(in: directory) {
             guard let parsed = parse(url) else { continue }
             let key = parsed.platform.map { "\($0.rawValue)|\(parsed.title.lowercased())" } ?? parsed.title.lowercased()
             buckets[key, default: []].append((parsed.disc, url, parsed.platform))

@@ -1406,10 +1406,11 @@ final class AppState: ObservableObject {
 
     var activeGame: GameItem? { games.first { $0.id == activeGameID } }
 
-    /// `platformFilter` is "all", "recent" or a platform ID.
+    /// `platformFilter` is "all", "recent", "maker:" and a maker's name, or a platform ID.
     var filteredGames: [GameItem] {
         (platformFilter == "recent" ? recentGames : games).filter { game in
-            (platformFilter == "all" || platformFilter == "recent" || game.platformID == platformFilter)
+            (platformFilter == "all" || platformFilter == "recent" || game.platformID == platformFilter
+                || platformFilter == "maker:" + (CoreCatalog.platform(game.platformID)?.manufacturer ?? ""))
                 && (search.isEmpty || game.title.localizedCaseInsensitiveContains(search))
         }
     }
@@ -1568,6 +1569,12 @@ final class AppState: ObservableObject {
     /// `-GagaImportTestROM <core-id>`: adds that core's generated test ROM (the benchmark's) to the Library,
     /// set to play on that core, so a device walk (UITests) has a game with a touch layout and no file to copy.
     func importTestROMIfRequested() async {
+        // `-GagaSeedDiscs YES`: two empty disc files whose names do not group, for the Multi-Disc walk.
+        if UserDefaults.standard.bool(forKey: "GagaSeedDiscs") {
+            for name in ["Odd Start.chd", "Odd End.chd"] {
+                FileManager.default.createFile(atPath: romDirectory.appendingPathComponent(name).path, contents: Data())
+            }
+        }
         guard let coreID = UserDefaults.standard.string(forKey: "GagaImportTestROM") else { return }
         do {
             guard let platformID = CoreCatalog.platforms.first(where: { $0.cores.contains { $0.id == coreID } })?.id else {

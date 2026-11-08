@@ -8,6 +8,7 @@ struct LibraryView: View {
     var onAdd: () -> Void
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
+    @State private var showControllers = false
     @State private var pendingLoad: (GameItem, SaveSlot)?
     @State private var dropTargeted = false
     /// Tiles widen with Dynamic Type so titles do not break mid-word.
@@ -90,6 +91,7 @@ struct LibraryView: View {
             }
         }
         .fullScreenCover(item: $filterGame) { FilterPickerView(game: $0) }
+        .sheet(isPresented: $showControllers) { PlayersView(platformID: nil) }
     }
 
     /// A game view cannot present until the sheet has gone.
@@ -183,6 +185,10 @@ struct LibraryView: View {
         return known.filter(present.contains) + present.subtracting(known).sorted()
     }
 
+    private var makers: [String] {
+        Array(Set(platformIDs.compactMap { CoreCatalog.platform($0)?.manufacturer })).sorted()
+    }
+
     private var filterRow: some View {
         HStack(spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
@@ -203,11 +209,16 @@ struct LibraryView: View {
                     Text("Ascending").tag(false)
                     Text("Descending").tag(true)
                 }
+                Picker("Maker", selection: $state.platformFilter) {
+                    Text("All Makers").tag("all")
+                    ForEach(makers, id: \.self) { Text(verbatim: $0).tag("maker:" + $0) }
+                }
+                Button { showControllers = true } label: { Label("Controllers", systemImage: "gamecontroller") }
             } label: {
                 Image(systemName: "arrow.up.arrow.down").foregroundStyle(AppTheme.accent)
                     .frame(width: 44, height: 44).contentShape(Rectangle())
             }
-            .accessibilityLabel("Sort games")
+            .accessibilityLabel("Sort games, filter by maker, controllers")
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 TextField("Search", text: $state.search)

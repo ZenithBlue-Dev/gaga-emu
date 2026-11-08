@@ -8,6 +8,7 @@ struct AddView: View {
     @State private var showFiles = false
     @State private var showMultiDisc = false
     @State private var showPatcher = false
+    @State private var showWebDAV = false
     @State private var notice: String?
     @State private var isTargeted = false
     @Environment(\.horizontalSizeClass) private var horizontalSize
@@ -40,6 +41,7 @@ struct AddView: View {
         }
         .sheet(isPresented: $showMultiDisc) { MultiDiscSheet() }
         .sheet(isPresented: $showPatcher) { RomPatcherSheet() }
+        .sheet(isPresented: $showWebDAV) { WebDAVSheet() }
         .gameFileDrop(isTargeted: $isTargeted) { line, _ in notice = line }
     }
 
@@ -63,6 +65,10 @@ struct AddView: View {
             wifiRow
             Rule()
             sourceRow("Read Clipboard", "doc.on.clipboard", "Reads the clipboard only when you tap here.", readClipboard)
+            Rule()
+            sourceRow("WebDAV Server", "externaldrive.connected.to.line.below", "Browse your own server and copy games in.") { showWebDAV = true }
+            Rule()
+            sourceRow("SMB Share", "server.rack", "Connect to it in the Files app first, then pick your games here.") { showFiles = true }
             Rule()
             sourceRow("Multi-Disc Helper", "opticaldisc", "Joins disc files into one playlist.") { showMultiDisc = true }
             Rule()
@@ -103,8 +109,8 @@ struct AddView: View {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: symbol).frame(width: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                    Text(detail).font(.footnote).foregroundStyle(AppTheme.muted).multilineTextAlignment(.leading)
+                    Text(LocalizedStringKey(title))
+                    Text(LocalizedStringKey(detail)).font(.footnote).foregroundStyle(AppTheme.muted).multilineTextAlignment(.leading)
                 }
                 Spacer(minLength: 0)
             }
@@ -200,6 +206,10 @@ struct MultiDiscSheet: View {
     @EnvironmentObject private var state: AppState
     @State private var groups: [MultiDiscHelper.Group] = []
     @State private var written: [String] = []
+    @State private var discs: [URL] = []
+    @State private var picked: [URL] = []
+    @State private var manualTitle = ""
+    @State private var manualPlatform = MultiDiscHelper.Platform.ps1
 
     var body: some View {
         PaperSheet(title: "Multi-Disc Helper") {
@@ -231,9 +241,61 @@ struct MultiDiscSheet: View {
                 if !written.isEmpty {
                     Text("Wrote \(written.joined(separator: ", "))").font(.footnote).padding(.top, 8)
                 }
+                manualPicker.padding(.top, 24)
             }
         }
-        .onAppear { groups = MultiDiscHelper.scan(state.romDirectory) }
+        .onAppear {
+            groups = MultiDiscHelper.scan(state.romDirectory)
+            discs = MultiDiscHelper.discFiles(in: state.romDirectory)
+        }
+    }
+
+    /// For discs whose names do not group: tap them in play order.
+    private var manualPicker: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Pick Discs Yourself").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            Text("Tap the discs in the order they play.").font(.footnote).foregroundStyle(AppTheme.muted).padding(.bottom, 4)
+            Rule()
+            if discs.isEmpty {
+                Text("No disc files in the ROM folder.").font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
+            }
+            ForEach(discs, id: \.path) { disc in
+                let order = picked.firstIndex(of: disc)
+                Button {
+                    if let order { picked.remove(at: order) } else { picked.append(disc) }
+                } label: {
+                    HStack {
+                        Text(verbatim: disc.lastPathComponent).multilineTextAlignment(.leading)
+                        Spacer(minLength: 12)
+                        if let order { Text(verbatim: "\(order + 1)").font(.meta.bold()).foregroundStyle(AppTheme.accent) }
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityValue(order.map { "Disc \($0 + 1)" } ?? "Not picked")
+                Rule()
+            }
+            TextField("Game title", text: $manualTitle).frame(minHeight: 44).accessibilityLabel("Game title")
+            Rule()
+            Picker("System", selection: $manualPlatform) {
+                ForEach(MultiDiscHelper.Platform.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            }
+            .frame(minHeight: 44)
+            Rule()
+            Button("Create Playlist") {
+                let title = manualTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                let group = MultiDiscHelper.Group(id: title, title: title, platform: manualPlatform, discs: picked)
+                guard let playlist = try? MultiDiscHelper.writePlaylist(for: group, into: state.romDirectory) else { return }
+                written = [playlist.lastPathComponent]
+                _ = state.importROM(at: playlist, title: title, platformID: manualPlatform.platformID)
+                picked = []
+                manualTitle = ""
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(picked.count < 2 || manualTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .padding(.top, 16)
+        }
     }
 }
 
