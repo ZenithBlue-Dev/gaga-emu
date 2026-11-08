@@ -642,10 +642,12 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
         return false;
     }
 
-    lr_multitap_devices(gaga_libretro_core.multitap, false);
     // Nestopia fixes its state size on the first call, and its state is longer in the first frames after
-    // power on. Asking before any frame runs gives every session of a game the same size.
+    // power on. Asking before any frame runs gives every session of a game the same size. The multitap is in
+    // for that call, so the size holds its ports too (Nestopia takes a shorter state padded; device run 17).
+    lr_multitap_devices(gaga_libretro_core.multitap, true);
     (void)retro_serialize_size();
+    lr_multitap_devices(gaga_libretro_core.multitap, false);
 
     struct retro_system_av_info av = { 0 };
     retro_get_system_av_info(&av);

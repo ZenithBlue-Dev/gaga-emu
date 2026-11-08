@@ -115,6 +115,9 @@ const GagaLibretroCore gaga_libretro_core = {
     .is_rom = nestopia_is_rom,
     .is_cheat = nestopia_is_cheat,
     .multitap = &s_multitap,
+    // The size now holds the Four Score's ports, so states saved before it are shorter. Nestopia finds its
+    // stream's own length, so those still load.
+    .state_size_varies = true,
 };
 
 const GagaCoreInterface* Nestopia_GetInterface(void) {
