@@ -11,12 +11,13 @@ noncommercial='snes9x genesis_plus_gx picodrive fbneo'
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$tmp/scripts" "$tmp/Cores/free" "$tmp/Cores/nc" "$tmp/Free.app/Frameworks/FreeCore.framework" \
+mkdir -p "$tmp/scripts" "$tmp/Cores/free" "$tmp/Cores/nc" "$tmp/Cores/vktest" "$tmp/Free.app/Frameworks/FreeCore.framework" \
     "$tmp/Mixed.app/Frameworks/FreeCore.framework" "$tmp/Mixed.app/Frameworks/NcCore.framework" \
-    "$tmp/Debug.app/Frameworks/VkTestCore.framework"
+    "$tmp/Debug.app/Frameworks/VkTestCore.framework" "$tmp/Snes.app/Frameworks/Snes9xCore.framework"
 cp "$root/scripts/nojit-gate.sh" "$tmp/scripts/"
 printf 'CORE_FRAMEWORK=FreeCore\n' >"$tmp/Cores/free/core.env"
 printf 'CORE_FRAMEWORK=NcCore\nCORE_NONCOMMERCIAL=1\n' >"$tmp/Cores/nc/core.env"
+printf 'CORE_FRAMEWORK=VkTestCore\n' >"$tmp/Cores/vktest/core.env"
 
 failures=0
 expect() { # pass|fail, then the gate's arguments
@@ -37,6 +38,19 @@ expect fail --release-set ""
 expect pass --release-app "$tmp/Free.app"
 expect fail --release-app "$tmp/Mixed.app"
 expect fail --release-app "$tmp/Debug.app"
+expect fail --release-app "$tmp/Snes.app" # named non-commercial framework, no core.env flag
+expect fail --release-set "snes9x"
+
+# Default release set: every core except the non-commercial ones and vktest.
+unset GAGA_RELEASE_SET
+got=$("$tmp/scripts/nojit-gate.sh" --default-release-set)
+if [ "$got" != free ]; then
+    echo "FAIL: --default-release-set gave '$got', expected 'free'" >&2
+    failures=$((failures + 1))
+fi
+expect pass --archive-set "free"
+expect fail --archive-set "free nc"
+expect fail --archive-set "free vktest"
 
 export GAGA_RELEASE_SET=free
 expect pass --archive-set "free"

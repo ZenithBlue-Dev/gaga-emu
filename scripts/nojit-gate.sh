@@ -10,7 +10,8 @@
 #   nojit-gate.sh --release-app <App.app>                        refuses an app that embeds a non-commercial core
 #   nojit-gate.sh --release-ipa <App.ipa>                        unzips an exported IPA: signed entitlements (no
 #                                                                get-task-allow, no JIT key), release cores, imports
-#   nojit-gate.sh --archive-set "<core ids>"                     release set that is inside GAGA_RELEASE_SET (mgba)
+#   nojit-gate.sh --archive-set "<core ids>"                     release set that is inside GAGA_RELEASE_SET
+#   nojit-gate.sh --default-release-set                          prints the default GAGA_RELEASE_SET
 #   nojit-gate.sh --sideload-app <App.app>                       refuses a sideload app that links StoreKit
 set -euo pipefail
 
@@ -96,6 +97,13 @@ check_signed_entitlements() {
 # forbid commercial use, and GagaEmu is a paid app, so they never enter an App Store or TestFlight build.
 noncommercial_framework() { # framework name -> core id, or nothing
     local env
+    # Named here too, so a dropped CORE_NONCOMMERCIAL=1 or a stale framework with no core.env still fails.
+    case "$1" in
+        Snes9xCore) echo snes9x; return ;;
+        GenesisPlusGXCore) echo genesis_plus_gx; return ;;
+        PicodriveCore) echo picodrive; return ;;
+        FbneoCore) echo fbneo; return ;;
+    esac
     for env in "$root"/Cores/*/core.env; do
         if grep -qx "CORE_FRAMEWORK=$1" "$env" && grep -qx 'CORE_NONCOMMERCIAL=1' "$env"; then
             basename "$(dirname "$env")"
@@ -112,6 +120,8 @@ check_release_set() {
         case "$core" in
             sideload) echo "release gate: GAGA_CORE_SET=sideload is for free personal builds, never a release" >&2; return 1 ;;
             vktest) echo "release gate: GAGA_CORE_SET must not include vktest in a release" >&2; return 1 ;;
+            snes9x | genesis_plus_gx | picodrive | fbneo)
+                echo "release gate: $core has a non-commercial licence and must not be in a release core set" >&2; return 1 ;;
         esac
         if grep -qx 'CORE_NONCOMMERCIAL=1' "$root/Cores/$core/core.env" 2>/dev/null; then
             echo "release gate: $core has a non-commercial licence and must not be in a release core set" >&2
@@ -121,10 +131,22 @@ check_release_set() {
     echo "release gate: pass $1"
 }
 
+# The cores cleared for an App Store or TestFlight build (owner decision 2026-11-08, docs/03 section 5): every
+# core in Cores/ except the non-commercial ones and the vktest debug core. GPL cores are in it.
+default_release_set() {
+    local env core set=''
+    for env in "$root"/Cores/*/core.env; do
+        core=$(basename "$(dirname "$env")")
+        [ "$core" != vktest ] || continue
+        grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || set+="${set:+ }$core"
+    done
+    echo "$set"
+}
+
 # An archive's core set: a valid release set that stays inside the cores cleared for release (GAGA_RELEASE_SET,
-# default mgba, the MPL-only set). Run by the app build step on any Release archive, Organizer ones included.
+# default default_release_set). Run by the app build step on any Release archive, Organizer ones included.
 check_archive_set() {
-    local core release=${GAGA_RELEASE_SET:-mgba}
+    local core release=${GAGA_RELEASE_SET:-$(default_release_set)}
     check_release_set "$1" || return 1
     for core in $1; do
         if [[ " $release " != *" $core "* ]]; then
@@ -284,6 +306,7 @@ case "${1:-}" in
     --release-app) check_release_app "${2:?usage: nojit-gate.sh --release-app <App.app>}" ;;
     --release-ipa) check_release_ipa "${2:?usage: nojit-gate.sh --release-ipa <App.ipa>}" ;;
     --archive-set) check_archive_set "${2:-}" ;;
+    --default-release-set) default_release_set ;;
     --sideload-app) check_sideload_app "${2:?usage: nojit-gate.sh --sideload-app <App.app>}" ;;
     "") echo "usage: nojit-gate.sh <binary> [strings-regex]" >&2; exit 2 ;;
     *) check_binary "$1" "${2:-$default_strings}" "${3:-}" "${4:-}" ;;
