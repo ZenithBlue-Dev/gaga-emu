@@ -22,7 +22,11 @@
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
     <string>202611072314</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.games</string>
     <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>LSSupportsGameMode</key>
     <true/>
     <key>LSSupportsOpeningDocumentsInPlace</key>
     <true/>
