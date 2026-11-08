@@ -409,6 +409,29 @@ final class NetplayTests: XCTestCase {
         XCTAssertEqual(NetplaySession.refusal(ours: ours, theirs: theirs), .game)
     }
 
+    /// A joiner whose host never accepts ends with the unconfirmed message instead of waiting forever.
+    @MainActor
+    func testJoinerGivesUpWhenTheHostNeverConfirms() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("netplay-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let rom = directory.appendingPathComponent("game.mock")
+        try Data([1, 2, 3]).write(to: rom)
+        let game = GameItem(id: UUID(), title: "Demo", platformID: "unknown", romPath: rom.path, coverPath: nil,
+                            coreOverride: "mock", playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
+        let session = try GameSession(game: game, interface: MockCore_GetInterface()!.pointee, romPath: rom.path,
+                                      audio: AudioEngineManager(), controllers: ControllerManager(), skins: TouchSkinEngine(),
+                                      bindings: [], shaderID: "original", respectSilentMode: false, saveDirectory: directory)
+        let netplay = NetplaySession.session(for: session, romPath: rom.path)
+        defer { netplay.leave() }
+        XCTAssertEqual(NetplaySession.confirmTimeout, 60)
+        NetplaySession.confirmTimeout = 0.2
+        defer { NetplaySession.confirmTimeout = 60 }
+        netplay.debugWaitForHost()
+        XCTAssertEqual(netplay.phase, .waiting(peer: "Test", code: "000000"))
+        try await Task.sleep(for: .milliseconds(600))
+        XCTAssertEqual(netplay.phase, .ended("The other player didn't confirm the code."))
+    }
+
     func testEligibilityList() {
         for (platform, core) in [("nes", "nestopia"), ("snes", "bsnes"), ("megadrive", "jgenesis"), ("mastersystem", "gearsystem"),
                                  ("pce", "beetle_pce_fast"), ("n64", "mupen64plus_next"), ("ps1", "pcsx_rearmed")] {

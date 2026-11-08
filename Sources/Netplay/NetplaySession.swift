@@ -37,6 +37,9 @@ final class NetplaySession: ObservableObject {
     static var openOnStart: UUID?
     static let lostMessage = "Connection lost. The game goes on here on its own."
     static let timeout: TimeInterval = 10
+    static let unconfirmedMessage = "The other player didn't confirm the code."
+    /// How long a joiner waits for the host to accept. Var so a test can shorten it.
+    static var confirmTimeout: TimeInterval = 60
 
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var peers: [Peer] = []
@@ -58,6 +61,7 @@ final class NetplaySession: ObservableObject {
     private var pinger: Timer?
     private var phaseWatch: AnyCancellable?
     private var applyingRemote = false
+    private var confirmWatch: Task<Void, Never>?
 
     /// The driver, read on the network queue as messages arrive.
     private final class DriverSlot: @unchecked Sendable {
@@ -251,9 +255,25 @@ final class NetplaySession: ObservableObject {
         } else {
             // The link worked out the keys before passing the host's hello on.
             guard let code = link?.code else { return end("Could not pair with that phone.") }
-            phase = .waiting(peer: theirs.name, code: code)
+            waitForHost(peer: theirs.name, code: code)
         }
     }
+
+    /// Joiner: show the code, and give up if the host never accepts.
+    private func waitForHost(peer: String, code: String) {
+        phase = .waiting(peer: peer, code: code)
+        confirmWatch?.cancel()
+        confirmWatch = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(Self.confirmTimeout))
+            guard !Task.isCancelled, let self, case .waiting = self.phase else { return }
+            self.end(Self.unconfirmedMessage)
+        }
+    }
+
+    #if DEBUG
+    /// Puts the session in the joiner's waiting phase, for tests.
+    func debugWaitForHost() { isHost = false; waitForHost(peer: "Test", code: "000000") }
+    #endif
 
     /// Host: the joiner revealed its key, so both phones now show the same code.
     private func revealed() {
@@ -404,6 +424,8 @@ final class NetplaySession: ObservableObject {
     private func end(_ message: String?, notify: Bool = true) {
         if slot.driver != nil, let core = game.netplayCore { core.betweenFrames { core.lockstep = nil } }
         slot.driver = nil
+        confirmWatch?.cancel()
+        confirmWatch = nil
         pinger?.invalidate()
         pinger = nil
         listener?.cancel()
