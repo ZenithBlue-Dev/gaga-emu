@@ -66,6 +66,15 @@ typedef struct {
     VkExtent2D shot_extent;
     LrVkImage described; // The core image last logged: a new size, format or layout is logged once.
 
+    // Output-texture path (docs/05 section 2.4): attached with no layer, each shown frame stays in shot and
+    // goes to the host as its MTLTexture. ready counts the copies into shot, done the host's reads of it.
+    bool can_output;         // The device has VK_EXT_metal_objects and timeline semaphores.
+    bool output;
+    VkSemaphore ready, done; // Timeline semaphores, each an MTLSharedEvent underneath.
+    uint64_t ready_value;    // Signalled by the last shown frame's submit.
+    bool output_pending;     // The last present made a frame lr_vk_output_frame has not handed out.
+    uint64_t done_owed;      // The done value the host owes before shot is written again. 0 for none.
+
     void* layer;
     uint32_t layer_width, layer_height; // Asked for before the device existed, or for a rebuild.
     VkSurfaceKHR surface;
@@ -314,7 +323,8 @@ static bool lr_vk_create_instance(char* error, size_t capacity) {
     return true;
 }
 
-// Swapchain, plus portability_subset where the driver lists it: Vulkan requires enabling it then.
+// Swapchain, plus portability_subset where the driver lists it: Vulkan requires enabling it then. The
+// output-texture path adds Metal object export and timeline semaphores where both are offered.
 static uint32_t lr_vk_device_extensions(const char** names) {
     VkExtensionProperties available[256];
     uint32_t count = 256;
@@ -322,11 +332,17 @@ static uint32_t lr_vk_device_extensions(const char** names) {
     uint32_t used = 0;
     names[used++] = VK_KHR_SWAPCHAIN_EXTENSION_NAME;
     if (lr_vk_has(available, count, "VK_KHR_portability_subset")) names[used++] = "VK_KHR_portability_subset";
+    s_vk.can_output = lr_vk_has(available, count, VK_EXT_METAL_OBJECTS_EXTENSION_NAME) &&
+                      lr_vk_has(available, count, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+    if (s_vk.can_output) {
+        names[used++] = VK_EXT_METAL_OBJECTS_EXTENSION_NAME;
+        names[used++] = VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME;
+    }
     return used;
 }
 
 static bool lr_vk_create_device(char* error, size_t capacity) {
-    const char* extensions[2];
+    const char* extensions[4];
     uint32_t extension_count = lr_vk_device_extensions(extensions);
     const struct retro_hw_render_context_negotiation_interface_vulkan* negotiation = s_vk.negotiation;
     if (negotiation && negotiation->create_device) {
@@ -356,7 +372,12 @@ static bool lr_vk_create_device(char* error, size_t capacity) {
     float priority = 1.0f;
     VkDeviceQueueCreateInfo queue = { .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, .queueFamilyIndex = family,
                                       .queueCount = 1, .pQueuePriorities = &priority };
-    VkDeviceCreateInfo info = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .queueCreateInfoCount = 1, .pQueueCreateInfos = &queue,
+    // shortcut: a core that makes the device gets the extensions but cannot be given this feature; MoltenVK
+    // makes timeline semaphores without checking it. Pass it through create_device2 if a driver ever checks.
+    VkPhysicalDeviceTimelineSemaphoreFeatures timeline = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
+                                                           .timelineSemaphore = VK_TRUE };
+    VkDeviceCreateInfo info = { .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .pNext = s_vk.can_output ? &timeline : NULL,
+                                .queueCreateInfoCount = 1, .pQueueCreateInfos = &queue,
                                 .enabledExtensionCount = extension_count, .ppEnabledExtensionNames = extensions };
     if (family == UINT32_MAX || vkCreateDevice(s_vk.gpu, &info, NULL, &s_vk.device) != VK_SUCCESS) {
         s_vk.device = VK_NULL_HANDLE;
@@ -386,6 +407,7 @@ static bool lr_vk_create_sync(void) {
 
 static bool lr_vk_build_swapchain(void);
 static void lr_vk_destroy_shot(void);
+static void lr_vk_wait_host(void);
 
 bool lr_vk_create_context(char* error, size_t capacity) {
     if (!lr_vk_create_instance(error, capacity) || !lr_vk_create_device(error, capacity)) return false;
@@ -458,7 +480,10 @@ void lr_vk_release(void) {
         lr_vk_wait_idle();
         if (s_vk.core_made_device && s_vk.negotiation && s_vk.negotiation->destroy_device) s_vk.negotiation->destroy_device();
         lr_vk_destroy_surface();
+        lr_vk_wait_host();
         lr_vk_destroy_shot();
+        if (s_vk.ready) vkDestroySemaphore(s_vk.device, s_vk.ready, NULL);
+        if (s_vk.done) vkDestroySemaphore(s_vk.device, s_vk.done, NULL);
         for (int i = 0; i < LR_VK_FRAMES; ++i) {
             vkDestroyFence(s_vk.device, s_vk.fence[i], NULL);
             vkDestroySemaphore(s_vk.device, s_vk.acquired[i], NULL);
@@ -519,9 +544,73 @@ static bool lr_vk_build_swapchain(void) {
     return s_vk.image_count == images;
 }
 
+// MARK: - Output texture
+
+// shortcut: the core thread waits on the CPU, bounded so a host that never signals costs 50 ms a frame and
+// a log line rather than a hang. The host signals within its own copy, well before the next frame.
+static void lr_vk_wait_host(void) {
+    if (!s_vk.done_owed) return;
+    VkSemaphoreWaitInfo wait = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, .semaphoreCount = 1, .pSemaphores = &s_vk.done,
+                                 .pValues = &s_vk.done_owed };
+    VkResult result = vkWaitSemaphores(s_vk.device, &wait, 50ull * 1000 * 1000);
+    if (result != VK_SUCCESS) {
+        lr_vk_log("[gaga-vk] output: no done signal for frame %llu, VkResult %d\n", (unsigned long long)s_vk.done_owed, (int)result);
+    }
+    s_vk.done_owed = 0;
+}
+
+static bool lr_vk_create_timeline(VkSemaphore* semaphore) {
+    VkExportMetalObjectCreateInfoEXT shared = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT,
+                                                .exportObjectType = VK_EXPORT_METAL_OBJECT_TYPE_METAL_SHARED_EVENT_BIT_EXT };
+    VkSemaphoreTypeCreateInfo type = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO, .pNext = &shared,
+                                       .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE };
+    VkSemaphoreCreateInfo info = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = &type };
+    if (vkCreateSemaphore(s_vk.device, &info, NULL, semaphore) == VK_SUCCESS) return true;
+    *semaphore = VK_NULL_HANDLE;
+    return false;
+}
+
+// The host's NULL layer: no swapchain, and each shown frame goes to the host through shot.
+static bool lr_vk_attach_output(void) {
+    if (!s_vk.device || !s_vk.can_output) return false;
+    if (!s_vk.ready && !lr_vk_create_timeline(&s_vk.ready)) return false;
+    if (!s_vk.done && !lr_vk_create_timeline(&s_vk.done)) return false;
+    lr_vk_destroy_surface();
+    s_vk.layer = NULL;
+    s_vk.output = true;
+    return true;
+}
+
+bool lr_vk_output_frame(GagaMetalTextureFrame* frame) {
+    if (!s_vk.output_pending) return false;
+    s_vk.output_pending = false;
+    VkExportMetalTextureInfoEXT texture = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT, .image = s_vk.shot,
+                                            .plane = VK_IMAGE_ASPECT_COLOR_BIT };
+    VkExportMetalSharedEventInfoEXT done = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT, .pNext = &texture,
+                                             .semaphore = s_vk.done };
+    VkExportMetalSharedEventInfoEXT ready = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT, .pNext = &done,
+                                              .semaphore = s_vk.ready };
+    VkExportMetalObjectsInfoEXT info = { .sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECTS_INFO_EXT, .pNext = &ready };
+    vkExportMetalObjectsEXT(s_vk.device, &info);
+    if (!texture.mtlTexture || !ready.mtlSharedEvent || !done.mtlSharedEvent) {
+        lr_vk_log("[gaga-vk] output: MoltenVK exported no Metal objects\n");
+        return false;
+    }
+    *frame = (GagaMetalTextureFrame){ .texture = texture.mtlTexture, .ready_event = ready.mtlSharedEvent, .ready_value = s_vk.ready_value,
+                                      .done_event = done.mtlSharedEvent, .done_value = s_vk.ready_value };
+    s_vk.done_owed = s_vk.ready_value;
+    return true;
+}
+
+// MARK: - Attach
+
 bool gaga_lr_attach_metal_layer(GagaInstance* inst, void* layer, uint32_t width_px, uint32_t height_px, float content_scale) {
     (void)content_scale; // The host sets the layer's contentsScale. MoltenVK sizes drawables from the extent.
-    if (!inst || !layer || width_px == 0 || height_px == 0) return false;
+    if (!inst) return false;
+    lr_vk_wait_host(); // The host may still be reading shot from the output-texture path.
+    if (!layer) return lr_vk_attach_output();
+    if (width_px == 0 || height_px == 0) return false;
+    s_vk.output = false;
     if (layer != s_vk.layer) {
         lr_vk_destroy_surface();
         s_vk.layer = layer;
@@ -536,8 +625,10 @@ bool gaga_lr_attach_metal_layer(GagaInstance* inst, void* layer, uint32_t width_
 
 void gaga_lr_detach_metal_layer(GagaInstance* inst) {
     if (!inst) return;
+    lr_vk_wait_host();
     lr_vk_destroy_surface();
     s_vk.layer = NULL;
+    s_vk.output = false;
 }
 
 // MARK: - Frames
@@ -651,7 +742,9 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
     // A dupe waits on no semaphore (libretro), and one with nothing to run or signal is a no-op.
     if (!fresh && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
     // A skipped fast-forward frame leaves the shot holding the last shown frame.
+    if (show) lr_vk_wait_host();
     bool shot = show && lr_vk_ensure_shot(width, height);
+    bool hand = shot && s_vk.output; // The output-texture path: shot is the frame the host gets.
     LrVkImage shot_image = { .image = s_vk.shot, .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .format = VK_FORMAT_B8G8R8A8_UNORM,
                              .range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }, .queue_family = VK_QUEUE_FAMILY_IGNORED,
                              .width = width, .height = height };
@@ -702,11 +795,19 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
     uint32_t cmd_count = 0;
     for (uint32_t i = 0; i < s_vk.core_cmd_count; ++i) cmds[cmd_count++] = s_vk.core_cmds[i];
     cmds[cmd_count++] = cmd;
-    VkSemaphore signals[2];
+    VkSemaphore signals[3];
+    uint64_t signal_values[3] = { 0 }; // Read only for the timeline semaphore.
     uint32_t signal_count = 0;
     if (target != UINT32_MAX) signals[signal_count++] = s_vk.rendered[target];
     if (s_vk.signal) signals[signal_count++] = s_vk.signal;
-    VkSubmitInfo submit = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .waitSemaphoreCount = wait_count, .pWaitSemaphores = waits,
+    if (hand) {
+        signal_values[signal_count] = s_vk.ready_value + 1;
+        signals[signal_count++] = s_vk.ready;
+    }
+    VkTimelineSemaphoreSubmitInfo timeline = { .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+                                               .signalSemaphoreValueCount = signal_count, .pSignalSemaphoreValues = signal_values };
+    VkSubmitInfo submit = { .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO, .pNext = hand ? &timeline : NULL,
+                            .waitSemaphoreCount = wait_count, .pWaitSemaphores = waits,
                             .pWaitDstStageMask = stages, .commandBufferCount = cmd_count, .pCommandBuffers = cmds,
                             .signalSemaphoreCount = signal_count, .pSignalSemaphores = signals };
 
@@ -738,6 +839,8 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
         s_vk.last = shot_image;
         s_vk.presented = true;
     }
+    if (hand) s_vk.ready_value += 1;
+    s_vk.output_pending = hand;
     return show;
 }
 
