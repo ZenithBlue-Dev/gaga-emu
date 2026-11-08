@@ -45,6 +45,7 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Sources
+      - path: Resources/Localizable.xcstrings
       # Device skins (docs/06 section 3.8): a folder reference, so the app keeps Device/<platform>/ and reads the PDFs
       # with CGPDFDocument at runtime.
       - path: Resources/Skins/Device

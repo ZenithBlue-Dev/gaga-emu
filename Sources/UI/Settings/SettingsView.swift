@@ -48,7 +48,7 @@ struct SettingsView: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(category.rawValue).font(.gameTitle).accessibilityAddTraits(.isHeader)
+                    Text(LocalizedStringKey(category.rawValue)).font(.gameTitle).accessibilityAddTraits(.isHeader)
                         .padding(.bottom, 8)
                     detail
                 }
@@ -62,7 +62,7 @@ struct SettingsView: View {
     private func categoryRow(_ item: Category, underline: Bool = false) -> some View {
         let selected = category == item
         return Button { category = item } label: {
-            Text(item.rawValue)
+            Text(LocalizedStringKey(item.rawValue))
                 .fontWeight(selected ? .bold : .regular)
                 .foregroundStyle(selected ? AppTheme.accent : AppTheme.ink)
                 .lineLimit(underline ? 1 : nil)
@@ -107,7 +107,7 @@ struct ValueRow: View {
 
     var body: some View {
         HStack {
-            Text(title)
+            Text(LocalizedStringKey(title))
             Spacer(minLength: 12)
             Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing)
         }
@@ -126,7 +126,7 @@ private struct ActionRow: View {
     var body: some View {
         Button(action: action) {
             HStack {
-                Text(title)
+                Text(LocalizedStringKey(title))
                 Spacer(minLength: 12)
                 if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted) }
                 Image(systemName: symbol).font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
@@ -160,8 +160,8 @@ struct ToggleRow: View {
     var body: some View {
         Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                Text(note).font(.footnote).foregroundStyle(AppTheme.muted)
+                Text(LocalizedStringKey(title))
+                Text(LocalizedStringKey(note)).font(.footnote).foregroundStyle(AppTheme.muted)
             }
         }
         .tint(AppTheme.accentFill)
@@ -273,8 +273,11 @@ private struct GraphicsPane: View {
         ActionRow(title: "Screen", value: "Scaling and layouts") { showScreen = true }
             .sheet(isPresented: $showScreen) { ScreenSettingsView(store: state.screens) }
         Rule()
-        // AirPlay Fullscreen (ExternalDisplay.swift) stays hidden until it is checked on a real second screen:
-        // this Xcode has no Simulator app, so no external display could be attached (docs/07 milestone 3.11).
+        // shortcut: not yet checked on a real second screen, so it stays off by default; tick docs/manic-todo.md once it is.
+        ToggleRow(title: "AirPlay Full Screen",
+                  note: "With a TV or display connected by AirPlay or cable, the game fills that screen and this device keeps the controls.",
+                  isOn: $state.airPlayFullscreen)
+        Rule()
         PaneNote(text: "New games start with this filter. Touch and hold a game to choose one for that game.")
             .fullScreenCover(isPresented: $showFilters) { FilterPickerView() }
     }
@@ -417,6 +420,7 @@ private struct AboutPane: View {
     #endif
     @State private var showLicences = false
     @State private var showAboutUs = false
+    @State private var showGuides = false
     @State private var tipsReset = false
     #if DEBUG
     @EnvironmentObject private var state: AppState
@@ -459,6 +463,9 @@ private struct AboutPane: View {
             LinkRow(title: "Language", url: UIApplication.openSettingsURLString)
             Rule()
         }
+        ActionRow(title: "Guides") { showGuides = true }
+            .sheet(isPresented: $showGuides) { GuidesView() }
+        Rule()
         LinkRow(title: "Support and FAQ", url: SiteLinks.support)
         Rule()
         LinkRow(title: "Feedback", url: SiteLinks.support)
@@ -655,7 +662,11 @@ struct BIOSManagerView: View {
         PaperSheet(title: "BIOS Files", scrolls: false) {
             List {
                 Section("Required") {
-                    ForEach(Self.required, id: \.0) { name, system in row(name, note: system) }
+                    ForEach(Self.required.filter { !$0.1.contains("optional") }, id: \.0) { name, system in row(name, note: system) }
+                }
+                .paperRows()
+                Section("Optional") {
+                    ForEach(Self.required.filter { $0.1.contains("optional") }, id: \.0) { name, system in row(name, note: system) }
                 }
                 .paperRows()
                 Section("SNES chip firmware (bsnes; Snes9x needs none)") {

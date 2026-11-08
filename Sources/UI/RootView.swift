@@ -106,7 +106,7 @@ private struct LeftRail: View {
                 Button { selection = item } label: {
                     VStack(spacing: 4) {
                         Image(systemName: item.symbol).font(.title3.weight(selected ? .semibold : .regular))
-                        Text(item.title)
+                        Text(LocalizedStringKey(item.title))
                             .font(.caption2.weight(selected ? .bold : .regular))
                             .lineLimit(1).minimumScaleFactor(0.7)
                     }
@@ -120,7 +120,7 @@ private struct LeftRail: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(item.title)
+                .accessibilityLabel(LocalizedStringKey(item.title))
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .accessibilityShowsLargeContentViewer()
             }
