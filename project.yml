@@ -76,6 +76,8 @@ targets:
         basedOnDependencyAnalysis: false
       # The declared output makes CodeSign wait for this file and sign it again when it changes, so a build
       # where only the commit moved still has a valid signature. Rewritten only when the commit differs.
+      # It lands inside the app, <derived data>/Build/Products/<configuration>-iphoneos/GagaEmu.app/build-commit.txt,
+      # not at the derived data root, and benchmark records carry it as buildCommit.
       - name: Record build commit
         script: |
           commit=$(git -C "$SRCROOT" describe --always --dirty --exclude "*")
