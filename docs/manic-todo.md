@@ -2,7 +2,7 @@
 
 GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so nothing here asks to copy its layout, labels or art.
 
-Items: 47 open, 45 done (92 total).
+Items: 41 open, 51 done (92 total).
 
 The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
 
@@ -21,9 +21,9 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Cover display: Spine, Plain and Framed styles, corner radius, square covers, hide game title, hide details (Settings > Display).
 - [x] Hide scroll indicators toggle.
 - [x] Shelf title style (full name, short code, maker) and hide shelf title.
-- [ ] Manufacturer filter. GagaEmu filters by platform chip only. (P3, S)
+- [x] Manufacturer filter, in the Library's sort menu.
 - [ ] Console order. Recorded as not planned in `docs/02` 2.5. (P3, S, blocked: not planned)
-- [ ] Reach the controllers panel from the library. Partial: it lives in Settings > Controls only. (P3, S)
+- [x] Reach the controllers panel from the library, through the sort menu.
 - [ ] Community link on the empty library. Deliberate: no Discord or QQ channel. (P3, S, blocked: no community channel)
 
 ## Import
@@ -39,7 +39,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Drag and drop on Add, Library and game view (`Sources/UI/Import/GameDrop.swift`).
 - [x] MultiDisc helper: builds `.m3u` playlists by scanning the ROM folder and grouping by disc naming.
 - [ ] Import games from other emulators (five targets in Manic). Value is migrating from emulators covering the same systems. (P3, M, blocked: depends on those apps exposing files)
-- [ ] MultiDisc helper: hand-pick discs whose names do not group. (P3, S)
+- [x] MultiDisc helper: hand-pick discs whose names do not group.
 - [ ] Download queue for active transfers. Only useful together with cloud sources or add-by-link. (P3, M)
 - [ ] Add game by link. GagaEmu rejects web links on purpose. (P3, M, blocked: App Store rule)
 
@@ -49,8 +49,8 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 ![Settings, Advanced (iCloud Sync row)](../maniac-emu-reference-images/walk/11-settings-2.png)
 
 - [ ] iCloud sync of saves and library across devices. No CloudKit or ubiquity code. (P1, L, blocked: App ID capability)
-- [ ] WebDAV as a game source. Needs no vendor account, the cheapest slice. (P2, M)
-- [ ] SMB network share as a game source. (P2, M)
+- [ ] WebDAV as a game source. Built (`Sources/Hub/WebDAVClient.swift`, Add > WebDAV Server). Sign-in, browse, download and refusal of unsafe paths pass on the iPhone against a loopback server only; not yet run against a real server over Wi-Fi. (P2, M)
+- [ ] SMB network share as a game source. Partial: through the Files app's Connect to Server, then Choose from Files (Add > SMB Share, guide written). Not run against a share. An in-app client needs libsmb2 (LGPL), so it was not added. (P2, M)
 - [ ] Google Drive, Dropbox and OneDrive browse and import. Each needs an OAuth client and a file browser. Confirm against App Review 4.7 first. (P2, L, blocked: owner account)
 - [ ] RomM server as a game source (self-hosted library). (P3, M)
 - [ ] Baidu Cloud and AliCloud browse and import. (P3, L, blocked: owner account)
@@ -82,7 +82,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Skin editor (`Sources/UI/Settings/SkinEditorView.swift`).
 - [x] `.deltaskin` support (`Sources/Input/TouchSkinEngine.swift`).
 - [x] Skin sound effects toggle.
-- [ ] Read `.manicskin` skins. Format must be studied before estimating; compatibility unverified. (P2, M)
+- [ ] Read `.manicskin` skins. Partial: the skin editor's Import reads button positions from a `.manicskin` or `.deltaskin` (`Sources/Input/SkinPackageImport.swift`); the art is not used. Passes on the iPhone with generated files only; no real skin file tried, and the file picker step cannot be automated. (P2, M)
 
 ## Controllers
 
@@ -143,9 +143,9 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Reset tips.
 - [x] Terms and Privacy links.
 - [x] Rate card, via the system review prompt.
-- [ ] Language selection. Hidden row at `SettingsView.swift:453`; no localisation calls, English only. (P2, M)
-- [ ] Auto Save States as a free-standing toggle. Partial: tied to a lock and hidden until the entitlement lands. (P2, S)
-- [ ] AirPlay fullscreen. Partial: built in `Sources/UI/Game/ExternalDisplay.swift`, hidden, awaiting a second-screen check. (P2, S)
+- [x] Auto Save State toggle in Settings > Play. Quit then play offers Resume. It becomes a Plus item only if the paywall gate opens (`docs/06` section 4).
+- [ ] Language selection. Partial: `Resources/Localizable.xcstrings` with about 30 Settings and navigation strings in Spanish and French, none reviewed by a native speaker; the rest is English. Spanish passes on the iPhone, French not run. (P2, M)
+- [ ] AirPlay fullscreen. Partial: toggle now in Settings > Graphics, off by default, awaiting a second-screen check. (P2, S)
 - [ ] Profile card with nickname, play time and join date. Removed by the redesign (`docs/02` 2.1). Screenshot not embedded, see the end. (P3, S, blocked: not planned)
 - [ ] Featured items and sister-app promotion. Deliberate, no player value. (P3, S, blocked: not planned)
 - [ ] Discord and QQ links. Deliberate. (P3, S, blocked: no community channel)
@@ -156,7 +156,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 - [x] Required BIOS list with Found or Missing state; import validates name and size (`Sources/App/AppState.swift:1384`).
 - [x] Import button on every BIOS file row. The button opens the file picker on the device; choosing a file there cannot be automated, and the copy and size check pass their tests.
-- [ ] Optional files listed per system with Required or Optional labels. Partial: depends on core coverage. (P3, S)
+- [x] Files listed under Required and Optional sections in the BIOS list.
 
 ## Emulator cores
 
@@ -177,7 +177,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 ![About](../maniac-emu-reference-images/walk/29-settings-about.png)
 
 - [x] About page with project and legal links.
-- [ ] Inline guides inside the app (import, controllers, cheats, skins). Partial: FAQ link and short tips in `Sources/UI/TipLine.swift` only. (P2, S)
+- [x] Inline guides inside the app (import, network folders, controllers, cheats, skins), Settings > About > Guides.
 
 ## Membership
 
