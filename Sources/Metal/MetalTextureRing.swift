@@ -234,19 +234,28 @@ public final class MetalTextureRing {
         switch pixelFormat {
         case .rgba8Unorm: bitmap = [.byteOrder32Big, CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)]
         case .bgra8Unorm: bitmap = [.byteOrder32Little, CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue)]
-        case .b5g6r5Unorm: bitmap = [.byteOrder16Little, CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)]
+        case .b5g6r5Unorm:
+            // CGImage has no 5-6-5 format, so RGB565 cores such as PCSX-ReARMed got no PNG (device run 13).
+            guard bytes.count >= bytesPerRow * height, bytesPerRow >= width * 2 else { return nil }
+            var wide = Data(count: width * height * 4)
+            bytes.withUnsafeBytes { source in
+                wide.withUnsafeMutableBytes { destination in
+                    for row in 0..<height {
+                        expand565(source.baseAddress! + row * bytesPerRow, to: destination.baseAddress! + row * width * 4, pixels: width)
+                    }
+                }
+            }
+            return png(wide, width: width, height: height, bytesPerRow: width * 4, pixelFormat: .bgra8Unorm)
         default: return nil
         }
-        let wide = pixelFormat != .b5g6r5Unorm
         guard let provider = CGDataProvider(data: bytes as CFData),
-              let image = CGImage(width: width, height: height, bitsPerComponent: wide ? 8 : 5,
-                                  bitsPerPixel: wide ? 32 : 16, bytesPerRow: bytesPerRow,
+              let image = CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: bytesPerRow,
                                   space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: bitmap, provider: provider,
                                   decode: nil, shouldInterpolate: false, intent: .defaultIntent) else { return nil }
         return UIImage(cgImage: image).pngData()
     }
 
-    #if targetEnvironment(simulator)
+    /// RGB565 to BGRA8, opaque.
     static func expand565(_ source: UnsafeRawPointer, to destination: UnsafeMutableRawPointer, pixels: Int) {
         let input = source.assumingMemoryBound(to: UInt16.self)
         let output = destination.assumingMemoryBound(to: UInt32.self)
@@ -256,7 +265,6 @@ public final class MetalTextureRing {
             output[index] = 0xFF00_0000 | (r << 3 | r >> 2) << 16 | (g << 2 | g >> 4) << 8 | (b << 3 | b >> 2)
         }
     }
-    #endif
 
     /// Called by the Metal render submitter. Each acquire pairs with exactly one completion signal,
     /// so redrawing the same frame attaches nothing and returns false.
