@@ -10,10 +10,12 @@
 
 #include <math.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define LR_VK_FRAMES 2     // Frames in flight: the sync index is 0 or 1.
 #define LR_VK_MAX_IMAGES 4 // Swapchain images. MoltenVK gives at most 3, CAMetalLayer's drawable limit.
@@ -123,6 +125,117 @@ __attribute__((constructor)) static void lr_vk_configure_moltenvk(void) {
     setenv("MVK_CONFIG_SYNCHRONOUS_QUEUE_SUBMITS", "0", 0);
 }
 
+// MARK: - Pacing log
+
+// Debug only: the benchmark of a Debug host sets GAGA_PACE_LOG. A frame over 25 ms then logs where its wall time
+// went: retro_run's thread CPU, before_present, the present's own waits, and the core's Vulkan waits and pipeline
+// builds, split into the core thread and the core's other threads (PPSSPP's render thread, Azahar's VulkanWorker).
+// Without it no wait is wrapped, so a shipping game calls the driver directly.
+enum { LR_PACE_PIPELINES, LR_PACE_FENCES, LR_PACE_SEMAPHORES, LR_PACE_IDLE, LR_PACE_SUBMIT, LR_PACE_KINDS };
+static const char* const s_pace_names[LR_PACE_KINDS] = { "pipelines", "fences", "semaphores", "idle", "submit" };
+static int s_pace = -1;
+static pthread_t s_pace_thread;
+static _Atomic uint64_t s_pace_ns[2][LR_PACE_KINDS]; // [0] the core thread, [1] the others.
+static _Atomic uint32_t s_pace_count[2][LR_PACE_KINDS];
+static uint64_t s_pace_wall, s_pace_cpu, s_pace_before, s_pace_fence, s_pace_host; // The core thread's only.
+
+static bool lr_vk_pace_on(void) {
+    if (s_pace < 0) s_pace = getenv("GAGA_PACE_LOG") != NULL;
+    return s_pace > 0;
+}
+
+static uint64_t lr_vk_now(void) { return clock_gettime_nsec_np(CLOCK_UPTIME_RAW); }
+
+static void lr_vk_pace_add(int kind, uint64_t start) {
+    int other = !pthread_equal(pthread_self(), s_pace_thread);
+    atomic_fetch_add(&s_pace_ns[other][kind], lr_vk_now() - start);
+    atomic_fetch_add(&s_pace_count[other][kind], 1);
+}
+
+void lr_vk_pace_begin(void) {
+    if (!lr_vk_pace_on()) return;
+    s_pace_thread = pthread_self();
+    s_pace_before = s_pace_fence = s_pace_host = 0;
+    for (int side = 0; side < 2; ++side) {
+        for (int kind = 0; kind < LR_PACE_KINDS; ++kind) {
+            atomic_store(&s_pace_ns[side][kind], 0);
+            atomic_store(&s_pace_count[side][kind], 0);
+        }
+    }
+    s_pace_cpu = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID);
+    s_pace_wall = lr_vk_now();
+}
+
+void lr_vk_pace_end(void) {
+    if (!lr_vk_pace_on()) return;
+    uint64_t wall = lr_vk_now() - s_pace_wall;
+    if (wall < 25000000) return;
+    uint64_t cpu = clock_gettime_nsec_np(CLOCK_THREAD_CPUTIME_ID) - s_pace_cpu;
+    char waits[400];
+    size_t used = 0;
+    for (int side = 0; side < 2; ++side) {
+        for (int kind = 0; kind < LR_PACE_KINDS; ++kind) {
+            uint32_t count = atomic_load(&s_pace_count[side][kind]);
+            if (count == 0 || used >= sizeof(waits)) continue;
+            used += snprintf(waits + used, sizeof(waits) - used, ", %s %s %.1f ms/%u", side ? "other" : "core",
+                             s_pace_names[kind], atomic_load(&s_pace_ns[side][kind]) / 1e6, count);
+        }
+    }
+    waits[used < sizeof(waits) ? used : sizeof(waits) - 1] = '\0';
+    lr_vk_log("[gaga-pace] frame at %.3f s: wall %.1f ms, cpu %.1f, before_present %.1f, present fence %.1f, host %.1f%s\n",
+              s_pace_wall / 1e9, wall / 1e6, cpu / 1e6, s_pace_before / 1e6, s_pace_fence / 1e6, s_pace_host / 1e6, waits);
+}
+
+void lr_vk_pace_before_present(uint64_t start) {
+    if (lr_vk_pace_on()) s_pace_before += lr_vk_now() - start;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_pace_wait_fences(VkDevice device, uint32_t count, const VkFence* fences, VkBool32 all,
+                                                             uint64_t timeout) {
+    uint64_t start = lr_vk_now();
+    VkResult result = vkWaitForFences(device, count, fences, all, timeout);
+    lr_vk_pace_add(LR_PACE_FENCES, start);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_pace_wait_semaphores(VkDevice device, const VkSemaphoreWaitInfo* info, uint64_t timeout) {
+    uint64_t start = lr_vk_now();
+    VkResult result = vkWaitSemaphores(device, info, timeout);
+    lr_vk_pace_add(LR_PACE_SEMAPHORES, start);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_pace_queue_idle(VkQueue queue) {
+    uint64_t start = lr_vk_now();
+    VkResult result = vkQueueWaitIdle(queue);
+    lr_vk_pace_add(LR_PACE_IDLE, start);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_pace_device_idle(VkDevice device) {
+    uint64_t start = lr_vk_now();
+    VkResult result = vkDeviceWaitIdle(device);
+    lr_vk_pace_add(LR_PACE_IDLE, start);
+    return result;
+}
+
+static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_pace_submit(VkQueue queue, uint32_t count, const VkSubmitInfo* submits, VkFence fence) {
+    uint64_t start = lr_vk_now();
+    VkResult result = vkQueueSubmit(queue, count, submits, fence);
+    lr_vk_pace_add(LR_PACE_SUBMIT, start);
+    return result;
+}
+
+static PFN_vkVoidFunction lr_vk_paced(const char* name) {
+    if (!lr_vk_pace_on()) return NULL;
+    if (strcmp(name, "vkWaitForFences") == 0) return (PFN_vkVoidFunction)lr_vk_pace_wait_fences;
+    if (strcmp(name, "vkWaitSemaphores") == 0 || strcmp(name, "vkWaitSemaphoresKHR") == 0) return (PFN_vkVoidFunction)lr_vk_pace_wait_semaphores;
+    if (strcmp(name, "vkQueueWaitIdle") == 0) return (PFN_vkVoidFunction)lr_vk_pace_queue_idle;
+    if (strcmp(name, "vkDeviceWaitIdle") == 0) return (PFN_vkVoidFunction)lr_vk_pace_device_idle;
+    if (strcmp(name, "vkQueueSubmit") == 0) return (PFN_vkVoidFunction)lr_vk_pace_submit;
+    return NULL;
+}
+
 // MARK: - Checked creation
 
 // A pipeline, render pass or shader the driver refuses draws nothing, and cores rarely say so. The core's
@@ -135,7 +248,9 @@ static void lr_vk_check(const char* call, VkResult result) {
 static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_graphics_pipelines(VkDevice device, VkPipelineCache cache, uint32_t count,
                                                                       const VkGraphicsPipelineCreateInfo* infos,
                                                                       const VkAllocationCallbacks* allocator, VkPipeline* pipelines) {
+    uint64_t start = lr_vk_now();
     VkResult result = vkCreateGraphicsPipelines(device, cache, count, infos, allocator, pipelines);
+    if (s_pace > 0) lr_vk_pace_add(LR_PACE_PIPELINES, start);
     lr_vk_check("vkCreateGraphicsPipelines", result);
     return result;
 }
@@ -143,7 +258,9 @@ static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_graphics_pipelines(VkDevice d
 static VKAPI_ATTR VkResult VKAPI_CALL lr_vk_create_compute_pipelines(VkDevice device, VkPipelineCache cache, uint32_t count,
                                                                      const VkComputePipelineCreateInfo* infos,
                                                                      const VkAllocationCallbacks* allocator, VkPipeline* pipelines) {
+    uint64_t start = lr_vk_now();
     VkResult result = vkCreateComputePipelines(device, cache, count, infos, allocator, pipelines);
+    if (s_pace > 0) lr_vk_pace_add(LR_PACE_PIPELINES, start);
     lr_vk_check("vkCreateComputePipelines", result);
     return result;
 }
@@ -190,7 +307,7 @@ static PFN_vkVoidFunction lr_vk_checked(const char* name) {
     if (strcmp(name, "vkCreateComputePipelines") == 0) return (PFN_vkVoidFunction)lr_vk_create_compute_pipelines;
     if (strcmp(name, "vkCreateRenderPass") == 0) return (PFN_vkVoidFunction)lr_vk_create_render_pass;
     if (strcmp(name, "vkCreateShaderModule") == 0) return (PFN_vkVoidFunction)lr_vk_create_shader_module;
-    return NULL;
+    return lr_vk_paced(name);
 }
 
 static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL lr_vk_device_proc(VkDevice device, const char* name) {
@@ -759,14 +876,18 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip) {
     if (!fresh && s_vk.core_cmd_count == 0 && !s_vk.signal) return false;
     // A skipped fast-forward frame leaves the shot holding the last shown frame.
     uint32_t next = s_vk.output ? (s_vk.shot_index + 1) % LR_VK_SHOTS : 0;
+    uint64_t waited = lr_vk_now();
     if (show) lr_vk_wait_host_for(next); // The host read this shot two frames ago, so this rarely waits.
+    s_pace_host += lr_vk_now() - waited;
     bool shot = show && lr_vk_ensure_shot(next, width, height);
     bool hand = shot && s_vk.output; // The output-texture path: shot is the frame the host gets.
     LrVkImage shot_image = { .image = s_vk.shot[next], .layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .format = VK_FORMAT_B8G8R8A8_UNORM,
                              .range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }, .queue_family = VK_QUEUE_FAMILY_IGNORED,
                              .width = width, .height = height };
     uint32_t slot = s_vk.index;
+    waited = lr_vk_now();
     vkWaitForFences(s_vk.device, 1, &s_vk.fence[slot], VK_TRUE, UINT64_MAX);
+    s_pace_fence += lr_vk_now() - waited;
 
     uint32_t target = UINT32_MAX;
     if (show && s_vk.swapchain) {

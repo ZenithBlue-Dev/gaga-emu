@@ -49,6 +49,11 @@ bool lr_vk_present(unsigned width, unsigned height, bool dupe, bool skip);
 bool lr_vk_output_frame(GagaMetalTextureFrame* frame);
 // Returns with no GPU work in flight, so nothing runs after the host pauses for the background.
 void lr_vk_wait_idle(void);
+// Debug pacing log, only with GAGA_PACE_LOG in the environment: begin and end bracket retro_run, and a frame over
+// 25 ms logs its waits. before_present takes the uptime its wait started at.
+void lr_vk_pace_begin(void);
+void lr_vk_pace_end(void);
+void lr_vk_pace_before_present(uint64_t start);
 // Defined by LibretroAdapter.c: a FATAL event for the running game, such as a lost device.
 void gaga_lr_report_fatal(const char* message);
 

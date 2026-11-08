@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 enum { LR_EVENT_BAD_ROM = 1, LR_EVENT_BAD_SAVE = 2, LR_EVENT_CORE_STOPPED = 3, LR_EVENT_BAD_VIDEO = 4 };
@@ -258,7 +259,11 @@ static void lr_video(const void* data, unsigned width, unsigned height, size_t p
 #ifdef GAGA_LIBRETRO_VULKAN
     // The frame goes to the layer and the host hears only its size, or on the output-texture path the host gets its texture.
     if (lr_vk_requested()) {
-        if (data == RETRO_HW_FRAME_BUFFER_VALID && gaga_libretro_core.before_present) gaga_libretro_core.before_present();
+        if (data == RETRO_HW_FRAME_BUFFER_VALID && gaga_libretro_core.before_present) {
+            uint64_t start = clock_gettime_nsec_np(CLOCK_UPTIME_RAW);
+            gaga_libretro_core.before_present();
+            lr_vk_pace_before_present(start);
+        }
         if (lr_vk_present(width, height, data != RETRO_HW_FRAME_BUFFER_VALID, a->inputs[0].skip_present) && a->video_cb) {
             GagaMetalTextureFrame texture;
             bool output = lr_vk_output_frame(&texture);
@@ -691,7 +696,13 @@ void gaga_lr_step_frame(GagaInstance* inst, const GagaInputState inputs[4], uint
         lr_multitap_devices(tap, want);
     }
     lr_send_keys(a);
+#ifdef GAGA_LIBRETRO_VULKAN
+    lr_vk_pace_begin();
+#endif
     retro_run();
+#ifdef GAGA_LIBRETRO_VULKAN
+    lr_vk_pace_end();
+#endif
     lr_send_rumble(a);
     if (++a->frames_since_flush >= LR_FLUSH_INTERVAL_FRAMES) {
         a->frames_since_flush = 0;
