@@ -2,7 +2,7 @@
 
 Multi-system emulator for iOS and iPadOS, designed for App Store distribution with no JIT in any shipped core.
 
-**Status: early. 35 real cores are merged and build, and 11 systems have run owner-supplied games on a device (iPhone 17) with benchmarks. Release builds ship no GPL core until the legal gate closes** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md) and the device figures in [docs/04](./docs/04-no-jit-interpreter-architecture.md) section 7.1). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
+**Status: early. 35 real cores are merged and build, and 11 systems have run owner-supplied games on a device (iPhone 17) with benchmarks. Release builds ship every core except the non-commercial ones and bsnes (owner decision, 2026-11-08)** (see [docs/07](./docs/07-roadmap-and-implementation-plan.md) and the device figures in [docs/04](./docs/04-no-jit-interpreter-architecture.md) section 7.1). The design uses no-JIT interpreter cores, Metal with MoltenVK for 3D cores, and an original, **landscape-only SwiftUI** interface. **Manic EMU** is a feature reference only; its UI is not copied and no feature parity is claimed.
 
 ---
 

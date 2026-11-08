@@ -69,7 +69,7 @@ Gaga-Emu reuses interpreter patterns and the MoltenVK-on-`CAMetalLayer` pattern 
  └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-The diagram shows default cores by design; each is merged and builds (`docs/07`), gated out of release builds by the legal gate. Tier is expected CPU load, not delivery order. `docs/03` is canonical for cores and alternates, and `docs/07` for scheduling. Java ME (J2meJS) and Symbian (EKA2L1) are excluded: J2meJS ships no corresponding source and EKA2L1 has no accepted renderer on iOS (`docs/07` 6.4 and 6.6).
+The diagram shows default cores by design; each is merged and builds (`docs/07`), and in release builds except the non-commercial cores and bsnes (`docs/03` section 5). Tier is expected CPU load, not delivery order. `docs/03` is canonical for cores and alternates, and `docs/07` for scheduling. Java ME (J2meJS) and Symbian (EKA2L1) are excluded: J2meJS ships no corresponding source and EKA2L1 has no accepted renderer on iOS (`docs/07` 6.4 and 6.6).
 
 ---
 
