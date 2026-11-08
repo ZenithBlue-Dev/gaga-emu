@@ -59,7 +59,16 @@ struct RootView: View {
             }
         }
         .unplacedQuestion()
-        .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) { GameView(session: $0) }
+        .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) {
+            // Passed again: on a Mac (Designed for iPad) the cover did not inherit them, and GameView trapped.
+            GameView(session: $0)
+                .environmentObject(state)
+                .environmentObject(state.controllers)
+                .environmentObject(state.triggerPro)
+                .environmentObject(state.skins)
+                .environmentObject(state.store)
+                .environmentObject(state.wifi)
+        }
         .alert(state.launchFailure?.heading ?? "Could not play this game",
                isPresented: Binding(get: { state.launchFailure != nil }, set: { if !$0 { state.launchFailure = nil } }),
                presenting: state.launchFailure) { _ in
