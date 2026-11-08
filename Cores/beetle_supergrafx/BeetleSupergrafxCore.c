@@ -15,6 +15,9 @@ static const GagaLibretroVariable s_variables[] = {
     { "sgx_forcesgx", "disabled" },    // The .sgx extension and upstream's CRC list choose the mode.
     { "sgx_turbo_toggle", "disabled" },
     { "sgx_cdimagecache", "disabled" },
+    // Upstream's own default, which an unset key does not reach: without the multitap only port 1 is read, so player 2
+    // had no pad. Beetle PCE Fast hard-wires it on.
+    { "sgx_multitap", "enabled" },
     { NULL, NULL },
 };
 

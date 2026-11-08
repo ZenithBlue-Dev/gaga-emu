@@ -5,6 +5,7 @@
 // own BIOS (bios_CD_U.bin, bios_CD_E.bin or bios_CD_J.bin in the system folder); none is bundled.
 #include "LibretroAdapter.h"
 
+#include <libretro.h>
 #include <string.h>
 
 // Option values are upstream's spelling. Per-game BRAM keeps one Mega-CD game from filling another's memory.
@@ -44,11 +45,22 @@ static bool gpgx_is_cheat(const char* line) {
 
 // No is_rom: the core loads by path, and a disc image is far larger than anything worth reading twice.
 // Upstream refuses what it cannot load, and the adapter turns that into a message.
+// Players 3 to 5: Sega's Team Player in port 2, 3-button pads, after the pad in port 1 (upstream's
+// RETRO_DEVICE_MDPAD_3B_TEAMPLAYER). shortcut: EA's 4 Way Play is not offered; add a choice if its games matter.
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .in = { { 1, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 5) } },
+    .in_count = 1,
+    .out = { { 1, RETRO_DEVICE_JOYPAD } },
+    .out_count = 1,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Genesis Plus GX",
     .game_kind = "a Mega Drive, Mega-CD, Master System or Game Gear game",
     .variables = s_variables,
     .is_cheat = gpgx_is_cheat,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* GenesisPlusGX_GetInterface(void) {

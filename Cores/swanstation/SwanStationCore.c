@@ -5,6 +5,7 @@
 // save; card 2 is off.
 #include "LibretroAdapter.h"
 
+#include <libretro.h>
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -68,6 +69,7 @@ static const GagaLibretroVariable s_variables[] = {
     { "swanstation_Display_ShowOSDMessages", "false" },
     { "swanstation_Controller_EnableRumble", "false" },
     { "swanstation_Main_RunaheadFrameCount", "0" },
+    { "swanstation_ControllerPorts_MultitapMode", "Disabled" }, // s_multitap_port1 replaces it for players 3 to 5.
     { NULL, NULL },
 };
 
@@ -91,11 +93,28 @@ static bool ss_is_cheat(const char* line) {
     return false;
 }
 
+// Players 3 to 5: a Multitap in port 1 takes libretro ports 0 to 3, and port 2 moves to libretro port 4. Upstream
+// starts every pad but the first unplugged (host_interface.h), so player 2's goes in after load.
+static const GagaLibretroVariable s_multitap_port1[] = {
+    { "swanstation_ControllerPorts_MultitapMode", "Port1Only" },
+    { NULL, NULL },
+};
+
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .variables = s_multitap_port1,
+    .in = { { 1, RETRO_DEVICE_JOYPAD }, { 2, RETRO_DEVICE_JOYPAD }, { 3, RETRO_DEVICE_JOYPAD }, { 4, RETRO_DEVICE_JOYPAD } },
+    .in_count = 4,
+    .out = { { 1, RETRO_DEVICE_JOYPAD } },
+    .out_count = 1,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "SwanStation",
     .game_kind = "a PlayStation game",
     .variables = s_variables,
     .is_cheat = ss_is_cheat,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* SwanStation_GetInterface(void) {

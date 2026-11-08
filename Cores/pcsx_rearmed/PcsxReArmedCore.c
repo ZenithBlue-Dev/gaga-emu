@@ -3,6 +3,7 @@
 // runs its own high-level BIOS. Memory card 1 is the battery save; card 2 is off.
 #include "LibretroAdapter.h"
 
+#include <libretro.h>
 #include <string.h>
 
 // Option values are upstream's spelling. A key not listed reads as unset, which upstream treats as its default.
@@ -18,7 +19,7 @@ static const GagaLibretroVariable s_variables[] = {
     { "pcsx_rearmed_display_fps_v2", "disabled" },
     { "pcsx_rearmed_display_info", "disabled" },
     { "pcsx_rearmed_vibration", "disabled" },
-    { "pcsx_rearmed_multitap", "disabled" },
+    { "pcsx_rearmed_multitap", "disabled" }, // s_multitap_port1 replaces it while players 3 to 5 play.
     { NULL, NULL },
 };
 
@@ -42,11 +43,26 @@ static bool pcsx_is_cheat(const char* line) {
     return false;
 }
 
+// Players 3 to 5: a Multitap in port 1 takes libretro ports 0 to 3, and port 2 moves to libretro port 4
+// (libpcsxcore/pad.c). Pads past the first two start unplugged, so they are plugged in with it.
+static const GagaLibretroVariable s_multitap_port1[] = {
+    { "pcsx_rearmed_multitap", "port 1" },
+    { NULL, NULL },
+};
+
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .variables = s_multitap_port1,
+    .in = { { 2, RETRO_DEVICE_JOYPAD }, { 3, RETRO_DEVICE_JOYPAD }, { 4, RETRO_DEVICE_JOYPAD } },
+    .in_count = 3,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "PCSX-ReARMed",
     .game_kind = "a PlayStation game",
     .variables = s_variables,
     .is_cheat = pcsx_is_cheat,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* PcsxReArmed_GetInterface(void) {

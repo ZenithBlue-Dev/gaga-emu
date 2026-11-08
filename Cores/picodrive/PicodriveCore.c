@@ -58,11 +58,23 @@ static bool pd_is_cheat(const char* line) {
 }
 
 // No is_rom: the core loads by path, and a disc image is far larger than anything worth reading twice.
+// Players 3 and 4: Sega's Team Player in port 1, which upstream reads as four pads on libretro ports 0 to 3.
+static const GagaLibretroVariable s_team_player[] = {
+    { "picodrive_input1", "team player" },
+    { NULL, NULL },
+};
+
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .variables = s_team_player,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "PicoDrive",
     .game_kind = "a 32X, Mega Drive, Mega-CD, Master System or Game Gear game",
     .variables = s_variables,
     .is_cheat = pd_is_cheat,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* Picodrive_GetInterface(void) {

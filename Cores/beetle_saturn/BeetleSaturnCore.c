@@ -29,6 +29,7 @@ static const GagaLibretroVariable s_variables[] = {
     { "beetle_saturn_initial_scanline_pal", "16" },
     { "beetle_saturn_last_scanline_pal", "271" },
     { "beetle_saturn_horizontal_overscan", "0" },
+    { "beetle_saturn_multitap_port1", "disabled" }, // s_six_player replaces it while players 3 to 5 play.
     { NULL, NULL },
 };
 
@@ -95,6 +96,18 @@ static bool saturn_is_cheat(const char* line) {
     return strlen(line) == 13 && line[8] == ' ' && saturn_is_hex(line, 8) && saturn_is_hex(line + 9, 4);
 }
 
+// Players 3 to 5: the 6Player adaptor in port 1, which takes libretro ports 0 to 5 and moves port 2 to port 6.
+// The host has five ports, so players 6 and 7 are not offered.
+static const GagaLibretroVariable s_six_player[] = {
+    { "beetle_saturn_multitap_port1", "enabled" },
+    { NULL, NULL },
+};
+
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .variables = s_six_player,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Beetle Saturn",
     .game_kind = "a Saturn game",
@@ -103,6 +116,8 @@ const GagaLibretroCore gaga_libretro_core = {
     .save_battery = saturn_save_battery,
     .refuse_load = saturn_refuse_load,
     .finish_load = saturn_finish_load,
+    .multitap = &s_multitap,
+    .state_size_varies = true, // The adaptor's pads grow the state (upstream's libretro.c says so too).
 };
 
 const GagaCoreInterface* BeetleSaturn_GetInterface(void) {

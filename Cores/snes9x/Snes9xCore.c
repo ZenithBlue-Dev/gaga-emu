@@ -4,6 +4,7 @@
 // Turbo or Super Game Boy firmware is read.
 #include "LibretroAdapter.h"
 
+#include <libretro.h>
 #include <string.h>
 
 // Option values are upstream's spelling. MSU-1 enhanced audio would change the output rate mid-game.
@@ -55,12 +56,22 @@ static bool snes9x_is_cheat(const char* line) {
     return length == 9 && line[6] == ':' && snes9x_is_hex(line, 6) && snes9x_is_hex(line + 7, 2);
 }
 
+// Players 3 to 5: the Super Multitap in port 2 (upstream's RETRO_DEVICE_JOYPAD_MULTITAP), reading libretro ports 1 to 4.
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .in = { { 1, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) } },
+    .in_count = 1,
+    .out = { { 1, RETRO_DEVICE_JOYPAD } },
+    .out_count = 1,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Snes9x",
     .game_kind = "a Super Famicom or Super NES game",
     .variables = s_variables,
     .is_rom = snes9x_is_rom,
     .is_cheat = snes9x_is_cheat,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* Snes9x_GetInterface(void) {

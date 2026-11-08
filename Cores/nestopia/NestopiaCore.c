@@ -4,6 +4,7 @@
 // is there. Upstream's own palette and database are compiled in; nothing is downloaded.
 #include "LibretroAdapter.h"
 
+#include <libretro.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
@@ -23,6 +24,7 @@ static const GagaLibretroVariable s_variables[] = {
     { "nestopia_fds_auto_insert", "enabled" }, // Side A goes in at power-on; GagaEmu has no disk menu.
     { "nestopia_genie_distortion", "disabled" },
     { "nestopia_ram_power_state", "0x00" },
+    { "nestopia_select_adapter", "auto" }, // s_four_score replaces it while players 3 and 4 play.
     { NULL, NULL },
 };
 
@@ -89,6 +91,22 @@ static bool nestopia_is_cheat(const char* line) {
     return (length == 8) == ((nestopia_genie_value(line[2]) & 8) != 0);
 }
 
+// Players 3 and 4: the NES Four Score, with pads 3 and 4 plugged in. Out, upstream picks the adapter and the pads
+// from its game database (RETRO_DEVICE_JOYPAD is its "Auto").
+static const GagaLibretroVariable s_four_score[] = {
+    { "nestopia_select_adapter", "ntsc" },
+    { NULL, NULL },
+};
+
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .variables = s_four_score,
+    .in = { { 2, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) }, { 3, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) } },
+    .in_count = 2,
+    .out = { { 2, RETRO_DEVICE_JOYPAD }, { 3, RETRO_DEVICE_JOYPAD } },
+    .out_count = 2,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Nestopia",
     .game_kind = "an NES cartridge image",
@@ -96,6 +114,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .refuse_load = nestopia_refuse_load,
     .is_rom = nestopia_is_rom,
     .is_cheat = nestopia_is_cheat,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* Nestopia_GetInterface(void) {

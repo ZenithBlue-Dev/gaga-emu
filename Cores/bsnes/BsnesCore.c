@@ -3,6 +3,7 @@
 // firmware, coprocessor games use bsnes's HLE where it has one.
 #include "LibretroAdapter.h"
 
+#include <libretro.h>
 #include <string.h>
 
 bool gaga_bsnes_save_battery(void); // BsnesSupport.cpp
@@ -60,6 +61,15 @@ static bool bsnes_is_cheat(const char* line) {
     return length == 9 && line[4] == '-' && bsnes_is_hex(line, 4) && bsnes_is_hex(line + 5, 4);
 }
 
+// Players 3 to 5: the Super Multitap in port 2, which reads libretro ports 1 to 4 (upstream's program.cpp).
+static const GagaLibretroMultitap s_multitap = {
+    .base_players = 2,
+    .in = { { 1, RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) } },
+    .in_count = 1,
+    .out = { { 1, RETRO_DEVICE_JOYPAD } },
+    .out_count = 1,
+};
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "bsnes",
     .game_kind = "a Super Famicom or Super NES game",
@@ -68,6 +78,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .is_cheat = bsnes_is_cheat,
     .save_battery = gaga_bsnes_save_battery,
     .unapply_cheats = gaga_bsnes_unapply_cheats,
+    .multitap = &s_multitap,
 };
 
 const GagaCoreInterface* Bsnes_GetInterface(void) {
