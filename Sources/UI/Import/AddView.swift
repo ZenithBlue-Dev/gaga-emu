@@ -11,10 +11,13 @@ struct AddView: View {
     @State private var notice: String?
     @State private var isTargeted = false
     @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.verticalSizeClass) private var verticalSize
 
     var body: some View {
-        // Upright on a phone the two columns stack.
-        AnyLayout(horizontalSize == .compact ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
+        // Upright on a phone the two columns stack. A landscape phone other than a Max also has a compact width, so
+        // the height class decides: compact width alone stacked them in landscape too.
+        let upright = horizontalSize == .compact && verticalSize == .regular
+        AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Add Games").font(.screenTitle).accessibilityAddTraits(.isHeader)
@@ -30,7 +33,7 @@ struct AddView: View {
                 .padding(16)
             }
             .frame(maxWidth: .infinity)
-            Rule().ignoresSafeArea(edges: .vertical)
+            if upright { Rule() } else { Rule().ignoresSafeArea(edges: .vertical) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     wifiRow

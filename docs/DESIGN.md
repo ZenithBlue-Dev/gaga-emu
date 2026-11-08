@@ -92,8 +92,8 @@ The app runs upright and in landscape (`docs/06` section 3): iPhone upright, lan
 | Screen | Layout | Sizes |
 |---|---|---|
 | Root | Rail, rule, content | Rail 72pt |
-| Library | Continue panel on the left, chips and shelves on the right | Panel 240pt compact, else 300pt. Panel cover 84pt or 150pt wide. Shelf cover 90pt or 140pt wide, times the tile scale up to 1.8. |
-| Add | Two columns: Choose from Files and drop target, then the other sources and the legal notice | Choose from Files is 72pt high |
+| Library | Continue panel on the left, chips and shelves on the right | Panel 27% of the Library width, 180pt to 300pt compact, else 220pt to 300pt. Search 20%, 130pt to 260pt (`LibraryMetrics`). Panel cover 84pt or 150pt wide. Shelf cover 90pt or 140pt wide, times the tile scale up to 1.8. |
+| Add | Two columns: Choose from Files and drop target, then the other sources and the legal notice. A landscape phone has a compact width too, so only upright stacks them. | Choose from Files is 72pt high |
 | Settings | Two panes: categories, then the selected category | Only working rows appear |
 | Filter picker | List on the left, live preview and its controls on the right | List 240pt compact, else 320pt. Controls 190pt compact, else 240pt: Upscale chips in two columns, sliders, Reset. |
 | Game | Picture aspect fit on `letterbox`, a touch band on each side | Pause side sheet 280pt |
@@ -117,6 +117,8 @@ iPhone height in landscape is about 375 to 440pt, so persistent chrome stays sma
 ## Safe areas
 
 Backgrounds extend under the notch, Dynamic Island and home indicator. Content stays inside the safe area on whichever side the hardware sits, because landscape left and right put it on opposite sides. Check both, and upright. The game view hides the status bar and home indicator.
+
+The Library's shelf column (tip, chips and search, rules, shelves) runs under the side safe areas, so its rules reach the edge and covers scroll through the notch band. Its gutters are 16pt plus the side inset, so at rest nothing sits under the notch. The rail and Continue panel stay inside the safe area.
 
 ## Accessibility
 

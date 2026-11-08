@@ -47,7 +47,10 @@ struct AssignSkinView: View {
                             .frame(width: 150, alignment: .leading)
                         }
                     }
+                    .padding(.horizontal, 20)
                 }
+                // Scrolls through the sheet's 20pt gutters instead of stopping short of them; at rest it lines up.
+                .padding(.horizontal, -20)
                 .padding(.bottom, 12)
                 Text("Touch and hold a game in the library to choose a skin for that game only.")
                     .font(.footnote).foregroundStyle(AppTheme.muted).padding(.bottom, 8)
