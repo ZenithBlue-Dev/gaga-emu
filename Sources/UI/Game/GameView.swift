@@ -650,23 +650,27 @@ private struct PauseMenu: View {
     private var offersPlus: Bool { PaywallGate.isOpen && !store.entitlements.premium && store.entitlements.showsSubscribePrompts }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Lighter on the Screen page, so changes show on the picture.
-            AppTheme.letterbox.opacity(showScreen ? 0.15 : 0.5)
-                .contentShape(Rectangle())
-                .onTapGesture(perform: resume)
-                .accessibilityHidden(true)
-            Rule()
-            ScrollView {
-                if showScreen { screenPage } else { mainPage }
+        // Upright the sheet takes the controls' half, so the picture stays in view; both stay inside the safe area.
+        GeometryReader { geometry in
+            let upright = geometry.size.height > geometry.size.width
+            AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
+                // Lighter on the Screen page, so changes show on the picture.
+                AppTheme.letterbox.opacity(showScreen ? 0.15 : 0.5)
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: resume)
+                    .accessibilityHidden(true)
+                Rule(vertical: !upright)
+                ScrollView {
+                    if showScreen { screenPage } else { mainPage }
+                }
+                .frame(width: upright ? nil : 280, height: upright ? geometry.size.height * (1 - TouchSkinEngine.portraitControlTop) : nil)
+                .foregroundStyle(AppTheme.ink)
+                .background(AppTheme.paper.ignoresSafeArea())
+                .accessibilityAddTraits(.isModal)
+                .accessibilityAction(.escape) { if showScreen { showScreen = false } else { resume() } }
             }
-            .frame(width: 280)
-            .foregroundStyle(AppTheme.ink)
-            .background(AppTheme.paper)
-            .accessibilityAddTraits(.isModal)
-            .accessibilityAction(.escape) { if showScreen { showScreen = false } else { resume() } }
         }
-        .ignoresSafeArea(edges: .vertical)
         .sheet(isPresented: $showSaves) {
             ManageSavesSheet(title: session.game.title, store: session.saves) { slot in
                 try session.loadState(slot)
