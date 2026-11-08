@@ -1,1 +1,1 @@
-classic,homebrew,emulation,game player,controller,metal,gaming,touch controls,gamepad
+homebrew,retro,classic,controller,gamepad,save states,rewind,landscape,crt filter,rom patch

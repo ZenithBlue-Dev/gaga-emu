@@ -1,22 +1,29 @@
-GagaEmu is a retro game emulator for iPhone.
+GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, on iPhone and iPad, in landscape.
 
-It runs software that you provide yourself: homebrew, and games that you have legally dumped from cartridges, discs and consoles you own. The app does not include any games, ROMs or BIOS, and it does not sell, link to or help you obtain them. You may load only legally owned backups of software you already own.
+You provide every game and every BIOS file yourself, and they must be legally obtained. GagaEmu does not include any games, ROMs or BIOS, and it does not sell, link to or help you obtain them.
 
-YOUR LIBRARY
-- Import a game file through the Files app, or copy files into GagaEmu with the Files app or Finder on a Mac
-- See your games in one library
-- Pull to refresh after adding files
+YOUR SHELF
+- Your games sit on shelves by system, with search and filter chips.
+- Continue keeps the last game you played one tap away.
+- Cover art is optional and off by default.
 
-PLAY
-- Full screen, with graphics drawn through Metal
-- On-screen touch controls
-- Game controllers supported by iOS, over Bluetooth or USB; the touch controls hide when one connects
-- Pause, resume or stop from the in-game menu
+ADDING FILES
+- Choose from Files, or drop files onto the Add screen.
+- WiFi Transfer sends files from a browser on your network. It is off by default, and its traffic is unencrypted.
+- Zip archives are unpacked on import.
+- Multi-Disc Helper joins disc files into one playlist.
+- Patch a ROM applies an IPS, UPS or BPS patch to a copy. The original is left untouched.
+
+PLAYING
+- Touch controls, or a game controller supported by iOS.
+- Save states and fast forward from the pause menu. Rewind where the system supports it.
+- Picture filters, from Original to CRT.
+- Custom skins for the touch controls.
 
 EARLY RELEASE
 GagaEmu is in early development. Speed depends on your device and the software you load. We make no promise that any particular title will run.
 
 PRIVACY
-The app collects no data. It has no accounts, analytics, advertising or tracking. Your games and saves stay on your device unless you choose to share a file.
+GagaEmu has no accounts, analytics, advertising or tracking. Your games and saves stay on your device unless you share a file. With Cover Art turned on, game titles are sent to a cover art service to find box art.
 
 GagaEmu is an independent project. It is not affiliated with, endorsed by or sponsored by any console maker. All trademarks belong to their owners.
