@@ -2,6 +2,29 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611081435), 2026-11-08
+
+More control options, plus a rotation fix. Load a Game Boy Advance game and try these.
+
+**Keyboard**
+- Remap keys for a game or for all games. Try it with a Bluetooth keyboard.
+- Keyboard Pass-Through: turn it on and check keys go to the game, not the app.
+
+**Turbo and macros**
+- Turbo is now set per player. Switch it on for one player and check the others are not affected.
+- Macros: record one, assign it to a button, play it back.
+
+**Multitap**
+- A new Multitap setting adds extra player ports. It applies to systems that are not in this build, so a GBA game will not show a change. You only need to see the setting is there and does not break anything.
+
+**Fixes**
+- Rotation: turning the phone during play now lays out the touch controls again and the game keeps running. A new test covers this. Turn the phone back and forth a few times, with and without the menu open.
+- Hold Start: holding Start to open the menu works again. Check it opens each time and does not open by accident.
+
+**Known limits**
+- Only the Game Boy Advance core is in this build.
+- Multitap cannot be tried here, because no system in this build uses it.
+
 ## 1.0.0 (202611081354), 2026-11-08
 
 This build plays Game Boy Advance games with mGBA. Load a game, then poke at everything below.
