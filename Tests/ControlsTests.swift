@@ -85,6 +85,16 @@ final class ControlsTests: GagaTestCase {
         XCTAssertGreaterThanOrEqual(skin.portraitButtons[0].frame.minY, TouchSkinEngine.portraitControlTop)
     }
 
+    func testCompactUprightPutsTheShouldersInTheBottomRowAndStaysUsable() {
+        let upright = TouchSkinEngine.portrait(from: TouchSkinEngine.Layout.standard.buttons(for: "nds"))
+        let compact = TouchSkinEngine.compact(upright)
+        let frame = { (id: String) in compact.first { $0.id == id }!.frame }
+        XCTAssertEqual(frame("l").minY, frame("select").minY)
+        XCTAssertEqual(frame("r").minY, frame("start").minY)
+        XCTAssertTrue(TouchSkinEngine.problems(in: compact, portrait: true).isEmpty)
+        XCTAssertGreaterThan(compact.map(\.frame.minY).min()!, upright.map(\.frame.minY).min()!)
+    }
+
     func testVersionTwoRoundTripKeepsEveryField() throws {
         var buttons = TouchSkinEngine.Layout.standard.buttons(for: "n64")
         buttons[0].opacity = 0.5

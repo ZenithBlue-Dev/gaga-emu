@@ -33,7 +33,10 @@ struct GameView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if upright && reserve {
                     GamePicture(session: session, takesTouch: true)
-                        .frame(width: geometry.size.width, height: geometry.size.height * TouchSkinEngine.portraitControlTop)
+                        // Two screens stacked are tall: they take the height down to the controls' top.
+                        .frame(width: geometry.size.width, height: geometry.size.height * (session.isDualScreen
+                            ? max(TouchSkinEngine.portraitControlTop, skins.buttons.filter { $0.shape != .hidden }.map(\.frame.minY).min() ?? 0)
+                            : TouchSkinEngine.portraitControlTop))
                         .ignoresSafeArea(edges: .horizontal)
                         .accessibilityElement()
                         .accessibilityLabel("\(session.game.title), game picture")
@@ -57,6 +60,9 @@ struct GameView: View {
                     if session.rewindStatus == .ready { rewindButton }
                     fastForwardButton
                 }
+                // Upright the row moves up beside the notch, so it leaves the top of the picture clear.
+                .padding(.horizontal, upright ? 8 : 0)
+                .offset(y: upright ? -min(44, geometry.safeAreaInsets.top) : 0)
                 if let flash = session.flash {
                     Text(flash)
                         .font(.footnote)
@@ -79,7 +85,10 @@ struct GameView: View {
                         .allowsHitTesting(false)
                 }
             }
-            .onChange(of: upright, initial: true) { session.setPortrait(upright) }
+            .onChange(of: upright, initial: true) {
+                skins.compactPortrait = session.isDualScreen
+                session.setPortrait(upright)
+            }
         }
         .overlay {
             if session.menuOpen {

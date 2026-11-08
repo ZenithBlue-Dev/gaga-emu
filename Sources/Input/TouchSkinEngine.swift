@@ -219,7 +219,26 @@ public final class TouchSkinEngine: ObservableObject {
     /// The buttons of the layout for the current orientation.
     public var buttons: [Button] {
         guard let skin else { return [] }
-        return portrait && !skin.portraitButtons.isEmpty ? skin.portraitButtons : skin.buttons
+        guard portrait && !skin.portraitButtons.isEmpty else { return skin.buttons }
+        // Only a layout nobody edited: a saved upright layout stays where its owner put it.
+        return compactPortrait && skin.portraitButtons == Self.portrait(from: skin.buttons)
+            ? Self.compact(skin.portraitButtons) : skin.portraitButtons
+    }
+
+    /// Two-screen games upright: the shoulders join the bottom row, so the picture can take their height.
+    @Published var compactPortrait = false
+
+    /// `upright` with L and R moved into the Select and Start row, four across. Unchanged without exactly that row.
+    static func compact(_ upright: [Button]) -> [Button] {
+        let row = ["l", "select", "start", "r"]
+        guard Set(upright.map(\.id)).isSuperset(of: row), !upright.contains(where: { ["zl", "zr", "l2", "r2"].contains($0.id) }),
+              let select = upright.first(where: { $0.id == "select" })?.frame else { return upright }
+        return upright.map { button in
+            guard let index = row.firstIndex(of: button.id) else { return button }
+            var moved = button
+            moved.frame = CGRect(x: 0.02 + CGFloat(index) * 0.245, y: select.minY, width: 0.225, height: select.height)
+            return moved
+        }
     }
 
     // MARK: Loading
