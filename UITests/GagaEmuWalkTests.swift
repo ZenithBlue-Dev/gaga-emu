@@ -148,12 +148,11 @@ final class GagaEmuWalkTests: XCTestCase {
         guard !promptUp() else { return }
         app.buttons["Settings"].tap()
         sleep(1)
-        for category in ["Play", "Library", "Graphics", "Controls", "Storage", "About"] {
-            // In a scroll view, as the rail has a Library button too.
-            let row = app.scrollViews.buttons[category].firstMatch
+        for category in ["Play", "Library", "Display", "Graphics", "Controls", "Storage", "About"] {
+            // By identifier, as the rail has a Library button too.
+            let row = app.buttons["settings.\(category)"].firstMatch
             if !promptUp(), row.waitForExistence(timeout: 6) {
-                // The last tab is past the edge of the upright tab bar.
-                if category == "About" { app.scrollViews.firstMatch.swipeLeft() }
+                XCTAssertTrue(row.isHittable, "The \(category) tab is off the screen")
                 row.tap()
                 sleep(1)
                 audit("06 Settings \(category)")
@@ -183,6 +182,78 @@ final class GagaEmuWalkTests: XCTestCase {
                 auditPage(app, "Licences", as: "07 Licences")
             default: break
             }
+        }
+    }
+
+    private func flip(_ app: XCUIApplication, _ toggle: String) {
+        let row = app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", toggle)).firstMatch
+        if row.waitForExistence(timeout: 6) { row.switches.firstMatch.tap() }
+        sleep(1)
+    }
+
+    /// Settings > Display with non-default choices, then the Library that draws them, and the filter search.
+    func testAuditDisplay() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        _ = importedGame(app, "The \(title) game")
+        // The system's Game Center banner sits over the tabs just after launch: a tap there opened its dashboard.
+        sleep(10)
+        guard !promptUp() else { return }
+        app.buttons["Settings"].tap()
+        sleep(1)
+        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
+        sleep(1)
+        guard app.buttons["settings.Display"].firstMatch.isSelected else {
+            snapshot("STOPPED Display tab not selected")
+            return
+        }
+        audit("20 Display default")
+        for choice in ["Light", "Teal", "3", "Framed"] where !promptUp() {
+            app.buttons[choice].firstMatch.tap()
+            sleep(1)
+        }
+        for toggle in ["Square Covers", "Hide Details"] where !promptUp() { flip(app, toggle) }
+        if open(app, "Shelf Title") { open(app, "Maker") }
+        audit("21 Display changed")
+        guard !promptUp() else { return }
+        app.buttons["Library"].firstMatch.tap()
+        sleep(1)
+        audit("22 Library three per row")
+        if open(app, "Sort games") {
+            snapshot("23 Sort menu portrait")
+            open(app, "Title")
+        }
+        guard !promptUp() else { return }
+        app.buttons["Settings"].tap()
+        sleep(1)
+        // Leaving Settings put it back on its first tab.
+        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
+        sleep(1)
+        for choice in ["5", "Plain"] where !promptUp() {
+            app.buttons[choice].firstMatch.tap()
+            sleep(1)
+        }
+        for toggle in ["Hide Game Titles", "Hide Shelf Titles", "Hide Scroll Indicators"] where !promptUp() { flip(app, toggle) }
+        guard !promptUp() else { return }
+        app.buttons["Library"].firstMatch.tap()
+        sleep(1)
+        audit("25 Library five per row")
+        guard !promptUp() else { return }
+        app.buttons["Settings"].tap()
+        sleep(1)
+        tap(app.buttons["settings.Graphics"].firstMatch, "The Graphics tab")
+        sleep(1)
+        guard open(app, "Default Filter") else { return }
+        let search = app.textFields["Search filters"].firstMatch
+        if search.waitForExistence(timeout: 6) {
+            search.tap()
+            search.typeText("zzz")
+            sleep(1)
+            snapshot("24 Filter search no match")
+            search.typeText(XCUIKeyboardKey.delete.rawValue + XCUIKeyboardKey.delete.rawValue + XCUIKeyboardKey.delete.rawValue + "cr")
+            sleep(1)
+            snapshot("24 Filter search")
         }
     }
 
