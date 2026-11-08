@@ -336,6 +336,8 @@ final class StubCoverProtocol: URLProtocol {
     }
 
     static var reply = Reply()
+    /// Answers a folder listing (a URL ending in a slash); `reply` answers everything else.
+    static var listing = Reply()
     static var requests: [URLRequest] = []
     private static let lock = NSLock()
 
@@ -345,7 +347,7 @@ final class StubCoverProtocol: URLProtocol {
     override func startLoading() {
         Self.lock.lock()
         Self.requests.append(request)
-        let reply = Self.reply
+        let reply = request.url!.absoluteString.hasSuffix("/") ? Self.listing : Self.reply
         Self.lock.unlock()
         let response = HTTPURLResponse(url: request.url!, statusCode: reply.status, httpVersion: "HTTP/1.1", headerFields: reply.headers)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -366,11 +368,22 @@ final class CoverArtTests: GagaTestCase {
         directory = FileManager.default.temporaryDirectory.appendingPathComponent("covers-\(UUID().uuidString)")
         StubCoverProtocol.requests = []
         StubCoverProtocol.reply = .init()
+        StubCoverProtocol.listing = .init(data: Self.listing(["Some Game (Europe)", "Some Game (USA)", "Some Game (USA) (Demo)"]))
         fetcher = CoverArtFetcher(session: CoverArtFetcher.makeSession(protocolClasses: [StubCoverProtocol.self]), directory: directory)
     }
 
     override func tearDownWithError() throws {
         try? FileManager.default.removeItem(at: directory)
+    }
+
+    /// The shape of the server's Apache index page.
+    static func listing(_ names: [String]) -> Data {
+        let rows = names.map { name in
+            let href = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
+            return "<tr><td><a href=\"\(href).png\">\(name).png</a></td><td>2025-04-09 11:54</td></tr>"
+        }
+        return Data(("<html><a href=\"?C=N;O=D\">Name</a><a href=\"/Sega%20-%20Saturn/\">Parent Directory</a>"
+                     + rows.joined(separator: "\n") + "</html>").utf8)
     }
 
     private func png(width: Int = 32, height: Int = 32) -> Data {
@@ -399,8 +412,9 @@ final class CoverArtTests: GagaTestCase {
 
     func testAValidImageIsCachedAndShrunk() async throws {
         StubCoverProtocol.reply.data = png(width: 1200, height: 1600)
-        let file = await fetcher.fetch(game)
+        let file = await fetcher.fetch(game).file
         let cached = try XCTUnwrap(file)
+        XCTAssertEqual(StubCoverProtocol.requests.last?.url?.lastPathComponent, "Some Game (USA).png")
         XCTAssertEqual(fetcher.cachedCover(for: game), cached)
         let image = try XCTUnwrap(UIImage(contentsOfFile: cached.path))
         XCTAssertLessThanOrEqual(max(image.size.width, image.size.height) * image.scale, CGFloat(CoverArtFetcher.storedPixels))
@@ -418,8 +432,8 @@ final class CoverArtTests: GagaTestCase {
         ]
         for reply in cases {
             StubCoverProtocol.reply = reply
-            let file = await fetcher.fetch(game)
-            XCTAssertNil(file, "status \(reply.status), \(reply.data.count) bytes")
+            let file = await fetcher.fetch(game).file
+            XCTAssertNil(file,"status \(reply.status), \(reply.data.count) bytes")
             XCTAssertNil(fetcher.cachedCover(for: game))
         }
     }
@@ -451,14 +465,103 @@ final class CoverArtTests: GagaTestCase {
         StubCoverProtocol.reply = .init(status: 404)
         await fetcher.fetchMissing(games: [game], isEnabled: { true }, onCover: {})
         await fetcher.fetchMissing(games: [game], isEnabled: { true }, onCover: {})
-        XCTAssertEqual(StubCoverProtocol.requests.count, 1)
+        // The listing, then the art; the second walk uses the saved listing and remembers the miss.
+        XCTAssertEqual(StubCoverProtocol.requests.count, 2)
 
         var other = game
         other.title = "Another"
         var calls = 0
         StubCoverProtocol.reply = .init(data: png())
         await fetcher.fetchMissing(games: [other], isEnabled: { calls += 1; return calls == 0 }, onCover: {})
+        XCTAssertEqual(StubCoverProtocol.requests.count, 2)
+    }
+
+    @MainActor
+    func testANetworkFailureIsNotRememberedAndRefreshRetriesAMiss() async {
+        StubCoverProtocol.listing = .init(status: 503)
+        await fetcher.fetchMissing(games: [game], isEnabled: { true }, onCover: {})
         XCTAssertEqual(StubCoverProtocol.requests.count, 1)
+
+        // The server is back: the failure was not a miss, so the next walk finds the cover.
+        StubCoverProtocol.listing = .init(data: Self.listing(["Some Game (USA)"]))
+        StubCoverProtocol.reply = .init(status: 404)
+        await fetcher.fetchMissing(games: [game], isEnabled: { true }, onCover: {})
+        XCTAssertEqual(StubCoverProtocol.requests.count, 3)
+        await fetcher.fetchMissing(games: [game], isEnabled: { true }, onCover: {})
+        XCTAssertEqual(StubCoverProtocol.requests.count, 3, "A 404 is remembered")
+
+        StubCoverProtocol.reply = .init(data: png())
+        var covers = 0
+        fetcher.forgetMisses()
+        await fetcher.fetchMissing(games: [game], isEnabled: { true }, onCover: { covers += 1 })
+        XCTAssertEqual(StubCoverProtocol.requests.count, 5, "Refresh fetches a new listing and asks again")
+        XCTAssertEqual(covers, 1)
+        XCTAssertNotNil(fetcher.cachedCover(for: game))
+    }
+
+    @MainActor
+    func testAPlatformWithoutThumbnailsNeverAsks() async {
+        var homebrew = game
+        homebrew.platformID = "vktest"
+        await fetcher.fetchMissing(games: [homebrew], isEnabled: { true }, onCover: {})
+        XCTAssertTrue(StubCoverProtocol.requests.isEmpty)
+        XCTAssertNil(LibretroThumbnails.url(platformID: "arcade", title: "Some Game"))
+    }
+
+    func testNamesCleanToOneKey() {
+        let key = LibretroThumbnails.key("Zorbo Quest - The Lost Gem (USA, Europe)")
+        XCTAssertEqual(key, "zorboquestthelostgem")
+        for name in ["0042 - Zorbo Quest - The Lost Gem (U)(Grp)", "Zorbo_Quest_The_Lost_Gem", "ZORBO QUEST: The Lost Gem [!]",
+                     "Zorbo Quest - The Lost Gem (UE) (V1.1) [C][!]", "Zorbö Quest - The Lost Gem (E)"] {
+            XCTAssertEqual(LibretroThumbnails.key(name), key, name)
+        }
+        XCTAssertEqual(LibretroThumbnails.regions(in: "Zorbo (UE) [!]"), ["USA", "Europe"])
+        XCTAssertEqual(LibretroThumbnails.regions(in: "Zorbo E"), [], "Only bracketed tags name a region")
+    }
+
+    func testBestMatchPrefersTheRegionAndSkipsDemos() {
+        let index = LibretroThumbnails.index([
+            "Zorbo Quest (USA) (Demo) (Kiosk)", "Zorbo Quest (Europe) (En,Fr,De)", "Zorbo Quest (USA, Australia)",
+            "Zorbo Quest (Japan)", "Pixel Pal - Red Version (USA, Europe)", "Pixel Pal - Red Version Deluxe (USA)",
+            "Mega Blaster V (USA)"
+        ])
+        XCTAssertEqual(LibretroThumbnails.bestMatch(for: ["0168 - Zorbo Quest (U)(Grp)"], in: index), "Zorbo Quest (USA, Australia)")
+        XCTAssertEqual(LibretroThumbnails.bestMatch(for: ["Zorbo Quest (E)"], in: index), "Zorbo Quest (Europe) (En,Fr,De)")
+        XCTAssertEqual(LibretroThumbnails.bestMatch(for: ["Zorbo Quest [J]"], in: index), "Zorbo Quest (Japan)")
+        XCTAssertEqual(LibretroThumbnails.bestMatch(for: ["Megablaster V (USA)"], in: index), "Mega Blaster V (USA)")
+        // No equal key: the shortest longer name.
+        XCTAssertEqual(LibretroThumbnails.bestMatch(for: ["Pixel Pal Red (UE) [S][!]"], in: index), "Pixel Pal - Red Version (USA, Europe)")
+        XCTAssertNil(LibretroThumbnails.bestMatch(for: ["Zorb"], in: index), "Too short to guess")
+        XCTAssertNil(LibretroThumbnails.bestMatch(for: ["Unrelated Thing"], in: index))
+        // A disc set: the sheet's name finds nothing, the folder's name does.
+        XCTAssertEqual(LibretroThumbnails.bestMatch(for: ["track01", "Zorbo Quest [U]"], in: index), "Zorbo Quest (USA, Australia)")
+    }
+
+    func testDiscSetsAlsoQueryTheirFolder() {
+        var disc = game
+        disc.romPath = "/ROMs/Zorbo Quest (USA)/zq.cue"
+        disc.title = "zq"
+        XCTAssertEqual(CoverArtFetcher.queries(for: disc), ["zq", "Zorbo Quest (USA)"])
+        XCTAssertEqual(CoverArtFetcher.queries(for: game), [game.title])
+    }
+
+    func testListingParsesOnlyArtNames() {
+        let html = String(decoding: Self.listing(["Zorbo Quest (USA)", "Pixel Pal _ Friends (Europe) (En,Fr)"]), as: UTF8.self)
+        XCTAssertEqual(LibretroThumbnails.names(fromListing: html), ["Zorbo Quest (USA)", "Pixel Pal _ Friends (Europe) (En,Fr)"])
+    }
+
+    func testEveryThumbnailPlatformBuildsAnHTTPSURL() throws {
+        for (platformID, system) in LibretroThumbnails.systems {
+            let art = try XCTUnwrap(LibretroThumbnails.url(platformID: platformID, title: "Zorbo Quest (USA)"))
+            XCTAssertEqual(art.scheme, "https")
+            XCTAssertEqual(art.host, LibretroThumbnails.host)
+            XCTAssertEqual(art.path, "/\(system)/Named_Boxarts/Zorbo Quest (USA).png")
+            let listing = try XCTUnwrap(LibretroThumbnails.listingURL(platformID: platformID))
+            XCTAssertTrue(listing.absoluteString.hasSuffix("/Named_Boxarts/"), platformID)
+        }
+        // Every catalog platform has a folder, except those whose art is not named by title.
+        let without = Set(CoreCatalog.platforms.map(\.id)).subtracting(LibretroThumbnails.systems.keys)
+        XCTAssertTrue(without.isSubset(of: ["arcade", "vktest"]), "\(without)")
     }
 
     /// Older state.json files say coverScraping true, because it defaulted to on. That must not turn fetching on.
