@@ -1,1 +1,1 @@
-GagaEmu - Retro Game Emulator
+GagaEmu - Game Emulator
