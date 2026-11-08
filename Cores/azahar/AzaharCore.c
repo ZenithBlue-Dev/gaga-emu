@@ -40,8 +40,14 @@ static const GagaLibretroVariable s_variables[] = {
     { "citra_dump_textures", "disabled" },
     // Saves, the virtual SD card and the shader cache live in <save dir>/Azahar.
     { "citra_use_libretro_save_path", "LibRetro Default" },
+    // Upstream's defaults, listed so they stay: the disk cache keeps compiled pipelines across launches, and 1x
+    // is the 3DS's own 400x240. citra_cpu_clock_percentage is left at upstream's 100.
+    { "citra_use_disk_shader_cache", "enabled" },
+    { "citra_resolution_factor", "1" },
     { NULL, NULL },
 };
+
+const char* gaga_azahar_finish_load(void); // AzaharSupport.cpp: asynchronous shader compilation.
 
 // Citra picks a loader by the file's magic and falls back to the extension, so a .3dsx with no 3DSX header reached
 // the 3DSX loader and stopped the app in an assert (SetupMainThread, device run 5). Only files that carry one of
@@ -65,6 +71,7 @@ const GagaLibretroCore gaga_libretro_core = {
     // retro_serialize_size returns the size of a fresh, compressed state each time.
     .state_size_varies = true,
     .save_battery = azahar_save_battery,
+    .finish_load = gaga_azahar_finish_load,
 };
 
 const GagaCoreInterface* Azahar_GetInterface(void) {
