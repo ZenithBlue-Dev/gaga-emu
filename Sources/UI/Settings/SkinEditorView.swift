@@ -166,7 +166,10 @@ struct SkinEditorView: View {
                       defaultFilename: "\(CoreCatalog.platformName(platformID)) layout") { result in
             if case .failure(let error) = result { saveError = error.localizedDescription }
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in importLayout(result) }
+        .fileImporter(isPresented: $importing,
+                      allowedContentTypes: [.json] + ["manicskin", "deltaskin"].compactMap { UTType(filenameExtension: $0) }) { result in
+            importLayout(result)
+        }
     }
 
     /// The edited orientation's shape, fitted in the view, so a portrait layout can be edited on a landscape screen.
@@ -206,6 +209,16 @@ struct SkinEditorView: View {
             let url = try result.get()
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if ["manicskin", "deltaskin"].contains(url.pathExtension.lowercased()) {
+                let layout = try TouchSkinEngine.skinPackageLayout(at: url)
+                landscape = layout.landscape ?? landscape
+                upright = layout.portrait ?? TouchSkinEngine.portrait(from: landscape)
+                // These skins lay controls over the picture.
+                overlay = true
+                selected = nil
+                saveError = nil
+                return
+            }
             let data = try Data(contentsOf: url)
             guard data.count < 1_000_000 else { throw CocoaError(.fileReadTooLarge) }
             let skin = try TouchSkinEngine.decodeFlex(data, id: platformID)
@@ -280,6 +293,8 @@ struct SkinEditorView: View {
                 Spacer(minLength: 0)
                 Button("Reset to Default") { confirmReset = true }.buttonStyle(QuietButtonStyle())
             }
+            Text("Import reads a GagaEmu layout, or the button positions of your own .manicskin or .deltaskin file. Its art is not used.")
+                .font(.footnote).foregroundStyle(AppTheme.muted).fixedSize(horizontal: false, vertical: true)
         }
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
