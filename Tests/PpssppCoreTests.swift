@@ -264,9 +264,10 @@ final class PpssppCoreTests: GagaTestCase {
             var address = base + 0x10000
             if vm_allocate(mach_task_self_, &address, 0x4000, VM_FLAGS_FIXED) == KERN_SUCCESS { taken.append(address) }
         }
-        for _ in 0..<2 { // The second boot reuses the block the first released.
+        for boot in 1...2 { // The second boot reuses the block the first released.
             let (core, capture) = try await loaded()
-            try assertPicture(core)
+            // The program counts its boots on the memory stick, so the second boot shows 2 (device run 14).
+            try assertPicture(core, counter: boot)
             XCTAssertNil(capture.fatal)
             core.stop()
         }
