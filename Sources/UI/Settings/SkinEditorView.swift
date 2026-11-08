@@ -225,6 +225,15 @@ struct SkinEditorView: View {
             : CGRect(x: canvas.minX + canvas.width * TouchSkinEngine.controlBand, y: canvas.minY,
                      width: canvas.width * (1 - 2 * TouchSkinEngine.controlBand), height: canvas.height)
         return ScrollView { panelContent.padding(12) }
+            // Pinned: upright the panel has half the screen, and these were below its fold.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                HStack(spacing: 12) {
+                    Button("Cancel") { dismiss() }.buttonStyle(QuietButtonStyle())
+                    Button("Save", action: save).buttonStyle(PrimaryButtonStyle()).disabled(!problems.isEmpty)
+                }
+                .padding(.horizontal, 12).padding(.vertical, 4)
+                .background(AppTheme.paper)
+            }
             .foregroundStyle(AppTheme.ink)
             .background(AppTheme.paper, in: RoundedRectangle(cornerRadius: AppTheme.corner))
             .padding(8)
@@ -261,13 +270,9 @@ struct SkinEditorView: View {
                 .font(.footnote).foregroundStyle(problems.isEmpty && saveError == nil ? AppTheme.muted : AppTheme.accent)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.updatesFrequently)
-            Button("Save", action: save).buttonStyle(PrimaryButtonStyle()).disabled(!problems.isEmpty)
             HStack(spacing: 12) {
                 Button("Import") { importing = true }.buttonStyle(QuietButtonStyle())
                 Button("Export") { exporting = true }.buttonStyle(QuietButtonStyle())
-            }
-            HStack(spacing: 16) {
-                Button("Cancel") { dismiss() }.buttonStyle(QuietButtonStyle())
                 Spacer(minLength: 0)
                 Button("Reset to Default") { confirmReset = true }.buttonStyle(QuietButtonStyle())
             }

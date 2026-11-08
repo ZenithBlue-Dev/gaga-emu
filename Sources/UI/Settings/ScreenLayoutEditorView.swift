@@ -43,18 +43,24 @@ struct ScreenLayoutEditorView: View {
     @State private var loaded = false
 
     var body: some View {
-        GeometryReader { geometry in
-            let canvas = geometry.size
-            ZStack(alignment: panelAtTop ? .top : .bottom) {
-                Color.clear
-                ForEach([ScreenID.top, .bottom], id: \.self) { id in
-                    if shows(id), let rect = ScreenLayout.customRect(draft, for: id) { box(id, rect: rect, canvas: canvas) }
+        // The canvas is the whole display; the panel keeps clear of the notch and home indicator, read outside it.
+        GeometryReader { outer in
+            let insets = outer.safeAreaInsets
+            GeometryReader { geometry in
+                let canvas = geometry.size
+                ZStack(alignment: panelAtTop ? .top : .bottom) {
+                    Color.clear
+                    ForEach([ScreenID.top, .bottom], id: \.self) { id in
+                        if shows(id), let rect = ScreenLayout.customRect(draft, for: id) { box(id, rect: rect, canvas: canvas) }
+                    }
+                    panel(canvas)
+                        .padding(EdgeInsets(top: panelAtTop ? insets.top : 0, leading: insets.leading,
+                                            bottom: panelAtTop ? 0 : insets.bottom, trailing: insets.trailing))
                 }
-                panel(canvas)
+                .onAppear { if !loaded { load(canvas) } }
             }
-            .onAppear { if !loaded { load(canvas) } }
+            .ignoresSafeArea()
         }
-        .ignoresSafeArea()
         .background(AppTheme.letterbox.ignoresSafeArea())
         .statusBarHidden(true)
     }
@@ -193,20 +199,25 @@ struct ScreenLayoutEditorView: View {
                     Button(panelAtTop ? "Panel Down" : "Panel Up") { panelAtTop.toggle() }
                         .buttonStyle(QuietButtonStyle())
                         .accessibilityLabel("Move this panel to the \(panelAtTop ? "bottom" : "top")")
-                    Button("Cancel") { dismiss() }.buttonStyle(QuietButtonStyle())
-                    Button("Save") {
-                        settings = draft
-                        dismiss()
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(!problems.isEmpty)
                 }
                 .frame(minHeight: 44)
             }
-            Text(problems.first ?? (draft.showBottom ? "Ready to save." : "Ready to save. With the bottom screen hidden, touch input is off."))
-                .font(.footnote)
-                .foregroundStyle(problems.isEmpty ? AppTheme.muted : AppTheme.accent)
-                .accessibilityAddTraits(.updatesFrequently)
+            // Outside the scrolling row, so Save is always in reach on a narrow screen.
+            HStack(spacing: 8) {
+                Text(problems.first ?? (draft.showBottom ? "Ready to save." : "Ready to save. With the bottom screen hidden, touch input is off."))
+                    .font(.footnote)
+                    .foregroundStyle(problems.isEmpty ? AppTheme.muted : AppTheme.accent)
+                    .accessibilityAddTraits(.updatesFrequently)
+                Spacer(minLength: 0)
+                Button("Cancel") { dismiss() }.buttonStyle(QuietButtonStyle())
+                Button("Save") {
+                    settings = draft
+                    dismiss()
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .fixedSize()
+                .disabled(!problems.isEmpty)
+            }
         }
         .padding(.horizontal, 12).padding(.vertical, 6)
         .foregroundStyle(AppTheme.ink)
