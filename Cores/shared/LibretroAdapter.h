@@ -58,6 +58,10 @@ typedef struct {
     // save failure the last game left behind. Returns NULL, or a message for the player when the core is stuck
     // and cannot be unloaded: the load fails with that message and the instance is leaked, not destroyed.
     const char* (*finish_load)(void);
+    // Optional, Vulkan layer path. Called on the core's thread as it hands over a frame, before the host copies it.
+    // Azahar records the frame's draw and leaves the submit to its own worker thread, with no semaphore, so it
+    // waits for that submit here and the copy queues after the draw.
+    void (*before_present)(void);
 } GagaLibretroCore;
 
 extern const GagaLibretroCore gaga_libretro_core;

@@ -197,9 +197,12 @@ def main():
             shutil.copy(os.path.join(build, rel), dst)
 
         with open(os.path.join(here, "sources.txt"), "w") as out:
+            # AzaharSupport.cpp reaches the Vulkan renderer's scheduler, so it takes that file's include paths.
+            renderer = "upstream/src/video_core/renderer_vulkan/renderer_vulkan.cpp"
             for name in ("AzaharCore.c", "AzaharSupport.cpp", "../shared/LibretroAdapter.c",
                          "../shared/LibretroVulkan.c"):
-                out.write(name + "\n")
+                flags = extra_flags(by_name[renderer], base) if name == "AzaharSupport.cpp" else []
+                out.write(" ".join([name] + [shlex.quote(f) for f in flags]) + "\n")
             for name in sorted(files):
                 # xargs splits these lines, so a quoted define such as -DOPENSSLDIR="/etc/ssl" is quoted again.
                 out.write(" ".join([name] + [shlex.quote(f) for f in extra_flags(by_name[name], base)]) + "\n")

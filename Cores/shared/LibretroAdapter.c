@@ -237,6 +237,7 @@ static void lr_video(const void* data, unsigned width, unsigned height, size_t p
 #ifdef GAGA_LIBRETRO_VULKAN
     // The frame goes to the layer and the host hears only its size, or on the output-texture path the host gets its texture.
     if (lr_vk_requested()) {
+        if (data == RETRO_HW_FRAME_BUFFER_VALID && gaga_libretro_core.before_present) gaga_libretro_core.before_present();
         if (lr_vk_present(width, height, data != RETRO_HW_FRAME_BUFFER_VALID, a->inputs[0].skip_present) && a->video_cb) {
             GagaMetalTextureFrame texture;
             bool output = lr_vk_output_frame(&texture);

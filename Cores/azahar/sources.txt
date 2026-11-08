@@ -1,5 +1,5 @@
 AzaharCore.c
-AzaharSupport.cpp
+AzaharSupport.cpp -Iupstream/src -Igenerated/src/video_core/host_shaders/include -Iupstream/externals/vulkan-headers/include -Iupstream/externals/vma/include -Iupstream/externals/sirit/sirit/include -Iupstream/externals/spirv-headers/include -Iupstream/externals/glslang -Igenerated/include -Igenerated/src -Iupstream/externals/fmt/include -Iupstream/externals/library-headers/ffmpeg/include -Iupstream/externals/microprofile -Iupstream/externals/boost -Iupstream/externals/xxHash -Iupstream/externals/dds-ktx -Iupstream/externals/json -Iupstream/externals/nihstro/include -Iupstream/externals/libretro-common/libretro-common/include -Ideps/robin-map/include
 ../shared/LibretroAdapter.c
 ../shared/LibretroVulkan.c
 generated/src/common/scm_rev.cpp -Iupstream/src -Igenerated/src -Iupstream/externals/fmt/include -Iupstream/externals/library-headers/ffmpeg/include -Iupstream/externals/microprofile -Iupstream/externals/boost -Iupstream/externals/cryptopp/include -Iupstream/externals/zstd/lib -Iupstream/externals/zstd/lib/common -Iupstream/externals/zstd/contrib/seekable_format -Iupstream/externals/xxHash -Iupstream/externals/libretro-common/libretro-common/include

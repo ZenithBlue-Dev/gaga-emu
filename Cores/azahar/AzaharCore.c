@@ -48,6 +48,7 @@ static const GagaLibretroVariable s_variables[] = {
 };
 
 const char* gaga_azahar_finish_load(void); // AzaharSupport.cpp: asynchronous shader compilation.
+void gaga_azahar_before_present(void);     // AzaharSupport.cpp: the frame's draw is submitted before the copy.
 
 // Citra picks a loader by the file's magic and falls back to the extension, so a .3dsx with no 3DSX header reached
 // the 3DSX loader and stopped the app in an assert (SetupMainThread, device run 5). Only files that carry one of
@@ -94,6 +95,7 @@ const GagaLibretroCore gaga_libretro_core = {
     .state_size_varies = true,
     .save_battery = azahar_save_battery,
     .finish_load = gaga_azahar_finish_load,
+    .before_present = gaga_azahar_before_present,
 };
 
 const GagaCoreInterface* Azahar_GetInterface(void) {

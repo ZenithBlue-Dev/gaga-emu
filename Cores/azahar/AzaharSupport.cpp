@@ -5,6 +5,32 @@
 #include <sys/socket.h>
 
 #include "common/settings.h"
+#include "core/core.h"
+#include "video_core/gpu.h"
+#include "video_core/renderer_vulkan/renderer_vulkan.h"
+
+// MARK: - Frame order
+
+// RendererVulkan::RenderToWindow records the frame's draw, hands it to the VulkanWorker thread (Scheduler::Flush),
+// then presents at once: set_image with no semaphore, then the video callback. The worker may submit the draw after
+// the adapter's copy, which then reads an image the frame has not drawn yet (device runs 14 and 15: an all-black 3DS
+// picture in the second session). The scheduler is private, so its address comes from an explicit instantiation,
+// which skips access checks ([temp.spec.general]); upstream stays unpatched.
+namespace {
+Vulkan::Scheduler Vulkan::RendererVulkan::* gaga_scheduler_member();
+template <Vulkan::Scheduler Vulkan::RendererVulkan::* Member>
+struct GagaSchedulerAccess {
+    friend Vulkan::Scheduler Vulkan::RendererVulkan::* gaga_scheduler_member() { return Member; }
+};
+template struct GagaSchedulerAccess<&Vulkan::RendererVulkan::scheduler>;
+} // namespace
+
+extern "C" void gaga_azahar_before_present(void) {
+    Core::System& system = Core::System::GetInstance();
+    if (!system.IsPoweredOn() || Settings::values.graphics_api.GetValue() != Settings::GraphicsAPI::Vulkan) return;
+    auto& renderer = static_cast<Vulkan::RendererVulkan&>(system.GPU().Renderer());
+    (renderer.*gaga_scheduler_member()).WaitWorker();
+}
 
 // MARK: - Settings
 
