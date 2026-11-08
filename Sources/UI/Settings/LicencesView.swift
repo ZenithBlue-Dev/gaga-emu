@@ -40,20 +40,24 @@ struct LicenceNotice: Decodable, Identifiable, Equatable {
 /// Settings > About > Licences: components on the left, the chosen one's texts on the right.
 struct LicencesView: View {
     @Environment(\.verticalSizeClass) private var verticalSize
+    @Environment(\.horizontalSizeClass) private var horizontalSize
     @ScaledMetric(relativeTo: .body) private var columnScale: CGFloat = 1
     private let notices = LicenceNotice.linked()
     @State private var selected: LicenceNotice.ID?
 
     var body: some View {
+        // Upright on a phone the list sits above the text, so the text keeps the full width.
+        let upright = horizontalSize == .compact && verticalSize == .regular
         PaperSheet(title: "Licences", subtitle: "Parts this build includes", scrolls: false) {
-            HStack(spacing: 0) {
+            AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(notices) { row($0) }
                     }
                 }
-                .frame(width: (verticalSize == .compact ? 190 : 260) * min(columnScale, 1.5))
-                Rule()
+                .frame(width: upright ? nil : (verticalSize == .compact ? 190 : 260) * min(columnScale, 1.5),
+                       height: upright ? 200 : nil)
+                Rule(vertical: !upright)
                 ScrollView {
                     if let notice = notices.first(where: { $0.id == (selected ?? notices.first?.id) }) {
                         detail(notice)

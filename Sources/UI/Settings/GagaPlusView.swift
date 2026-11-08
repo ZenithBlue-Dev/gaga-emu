@@ -7,6 +7,8 @@ import SwiftUI
 struct GagaPlusView: View {
     @EnvironmentObject private var store: StoreKitManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.verticalSizeClass) private var verticalSize
     @State private var selected: StoreKitManager.ProductID = .annual
     @State private var buying = false
     @State private var showRedeem = false
@@ -28,8 +30,40 @@ struct GagaPlusView: View {
     ]
 
     var body: some View {
-        HStack(spacing: 0) {
-            ScrollView {
+        // Upright on a phone the columns share one scroll, with Close above it.
+        let upright = horizontalSize == .compact && verticalSize == .regular
+        Group {
+            if upright {
+                VStack(spacing: 0) {
+                    HStack {
+                        Spacer(minLength: 0)
+                        Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+                    }
+                    .padding(.horizontal, 16)
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            benefitsColumn
+                            planColumn(showsClose: false)
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 0) {
+                    ScrollView { benefitsColumn }.frame(maxWidth: .infinity)
+                    Rule().ignoresSafeArea(edges: .vertical)
+                    ScrollView { planColumn(showsClose: true) }.frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .foregroundStyle(AppTheme.ink)
+        .background(AppTheme.paper.ignoresSafeArea())
+        .task { await store.refresh() }
+        .offerCodeRedemption(isPresented: $showRedeem) { _ in
+            Task { await store.refresh() }
+        }
+    }
+
+    private var benefitsColumn: some View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Gaga Plus").font(.screenTitle).accessibilityAddTraits(.isHeader)
                     Text("Every core and platform stays free. Plus adds:").foregroundStyle(AppTheme.muted)
@@ -46,14 +80,15 @@ struct GagaPlusView: View {
                         .font(.footnote).foregroundStyle(AppTheme.muted)
                 }
                 .padding(16)
-            }
-            .frame(maxWidth: .infinity)
-            Rule().ignoresSafeArea(edges: .vertical)
-            ScrollView {
+    }
+
+    private func planColumn(showsClose: Bool) -> some View {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Spacer(minLength: 0)
-                        Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+                    if showsClose {
+                        HStack {
+                            Spacer(minLength: 0)
+                            Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+                        }
                     }
                     if store.entitlements.showsSubscribePrompts {
                         plans
@@ -77,15 +112,6 @@ struct GagaPlusView: View {
                     }
                 }
                 .padding(.horizontal, 16).padding(.bottom, 16)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .foregroundStyle(AppTheme.ink)
-        .background(AppTheme.paper.ignoresSafeArea())
-        .task { await store.refresh() }
-        .offerCodeRedemption(isPresented: $showRedeem) { _ in
-            Task { await store.refresh() }
-        }
     }
 
     @ViewBuilder private var plans: some View {

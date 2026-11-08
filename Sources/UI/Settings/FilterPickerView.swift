@@ -8,6 +8,7 @@ struct FilterPickerView: View {
     @EnvironmentObject private var store: StoreKitManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSize
+    @Environment(\.horizontalSizeClass) private var horizontalSize
     var game: GameItem?
     @State private var showPlans = false
     @State private var showImporter = false
@@ -55,59 +56,84 @@ struct FilterPickerView: View {
         showNaming = true
     }
 
+    /// The filter list. Its own padding, so it can share a scroll with the controls upright.
+    private var filterList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Filter").font(.screenTitle).accessibilityAddTraits(.isHeader)
+            if let game { Text(game.title).font(.meta).foregroundStyle(AppTheme.muted) }
+            if filtersSkipped {
+                Text("Filters are not available for this system")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("filtersSkippedNote")
+            }
+            Rule().padding(.top, 8)
+            Group {
+                ForEach(ShaderCatalog.builtIn) { shader in
+                    row(shader)
+                    Rule()
+                }
+                sectionHeader("Community")
+                Rule()
+                ForEach(ShaderCatalog.community) { shader in
+                    row(shader)
+                    Rule()
+                }
+                savedSection
+                importedSection
+            }
+            .disabled(filtersSkipped)
+        }
+        .padding(16)
+    }
+
+    private var previewHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(selectedName).font(.gameTitle)
+            Spacer(minLength: 0)
+            Button("Save Preset") { startNaming(nil) }
+                .buttonStyle(QuietButtonStyle())
+                .disabled(filtersSkipped)
+            Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+        }
+    }
+
+    private var preview: some View {
+        MetalPreviewCanvas(shaderManager: shaderManager)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
+            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
+            .accessibilityLabel("Filter preview, \(selectedName)")
+    }
+
     var body: some View {
-        HStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Filter").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                    if let game { Text(game.title).font(.meta).foregroundStyle(AppTheme.muted) }
-                    if filtersSkipped {
-                        Text("Filters are not available for this system")
-                            .font(.footnote).foregroundStyle(AppTheme.muted)
-                            .padding(.top, 4)
-                            .accessibilityIdentifier("filtersSkippedNote")
-                    }
-                    Rule().padding(.top, 8)
-                    Group {
-                        ForEach(ShaderCatalog.builtIn) { shader in
-                            row(shader)
-                            Rule()
-                        }
-                        sectionHeader("Community")
-                        Rule()
-                        ForEach(ShaderCatalog.community) { shader in
-                            row(shader)
-                            Rule()
-                        }
-                        savedSection
-                        importedSection
-                    }
-                    .disabled(filtersSkipped)
-                }
-                .padding(16)
-            }
-            .frame(width: verticalSize == .compact ? 240 : 320)
-            Rule().ignoresSafeArea(edges: .vertical)
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(selectedName).font(.gameTitle)
-                    Spacer(minLength: 0)
-                    Button("Save Preset") { startNaming(nil) }
-                        .buttonStyle(QuietButtonStyle())
-                        .disabled(filtersSkipped)
-                    Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
-                }
-                HStack(alignment: .top, spacing: 12) {
-                    MetalPreviewCanvas(shaderManager: shaderManager)
-                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
-                        .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
-                        .accessibilityLabel("Filter preview, \(selectedName)")
+        Group {
+            // Upright on a phone: preview on top, then the controls (they scroll themselves), then the list.
+            if horizontalSize == .compact && verticalSize == .regular {
+                VStack(alignment: .leading, spacing: 8) {
+                    previewHeader.padding(.horizontal, 16).padding(.top, 8)
+                    preview.frame(height: 190).padding(.horizontal, 16)
                     FilterControls(shaderID: selected, shaderManager: shaderManager)
-                        .frame(width: verticalSize == .compact ? 190 : 240)
+                        .frame(height: 120).padding(.horizontal, 16)
+                    Rule()
+                    ScrollView { filterList }
+                }
+            } else {
+                HStack(spacing: 0) {
+                    ScrollView { filterList }
+                        .frame(width: verticalSize == .compact ? 240 : 320)
+                    Rule().ignoresSafeArea(edges: .vertical)
+                    VStack(alignment: .leading, spacing: 8) {
+                        previewHeader
+                        HStack(alignment: .top, spacing: 12) {
+                            preview
+                            FilterControls(shaderID: selected, shaderManager: shaderManager)
+                                .frame(width: verticalSize == .compact ? 190 : 240)
+                        }
+                    }
+                    .padding(.horizontal, 16).padding(.bottom, 16).padding(.top, 8)
+                    .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 16).padding(.bottom, 16).padding(.top, 8)
-            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(AppTheme.ink)
         .background(AppTheme.paper.ignoresSafeArea())

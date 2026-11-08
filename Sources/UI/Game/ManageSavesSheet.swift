@@ -118,6 +118,8 @@ struct ManageSavesSheet: View {
 /// Add, enable and remove one game's cheats. The core decides whether a code is valid.
 struct CheatsSheet: View {
     @ObservedObject var session: GameSession
+    @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.verticalSizeClass) private var verticalSize
     @State private var name = ""
     @State private var code = ""
     @State private var failure: String?
@@ -126,8 +128,10 @@ struct CheatsSheet: View {
     private var trimmedCode: String { code.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
+        // Upright on a phone the two columns stack.
+        let upright = horizontalSize == .compact && verticalSize == .regular
         PaperSheet(title: "Cheats", subtitle: session.game.title) {
-            HStack(alignment: .top, spacing: 20) {
+            AnyLayout(upright ? AnyLayout(VStackLayout(alignment: .leading, spacing: 20)) : AnyLayout(HStackLayout(alignment: .top, spacing: 20))) {
                 VStack(alignment: .leading, spacing: 8) {
                     // The button and any error sit above the fields: the landscape keyboard covers everything
                     // below them, and an error in its own row would push the field being edited under it.
