@@ -1,3 +1,4 @@
+import Metal
 import QuartzCore
 import UIKit
 import XCTest
@@ -223,6 +224,90 @@ final class VkTestCoreTests: GagaTestCase {
         XCTAssertEqual(capture.rumble, [.init(port: 1, motor: .strong, strength: 0), .init(port: 1, motor: .weak, strength: 0)])
         XCTAssertNil(capture.fatal)
         core.stop()
+    }
+
+    // MARK: - Output texture (docs/05 section 2.4)
+
+    /// Inverts the frame, so the expected bytes are 255 minus the core's.
+    private let invertFilter = """
+    #include <metal_stdlib>
+    using namespace metal;
+    struct VertexOut { float4 position [[position]]; float2 uv; };
+    struct ShaderParameters { float curvature; float scanlineWeight; float phosphorGlow; float colorTemp; float time;
+                              uint viewportW; uint viewportH; uint sourceW; uint sourceH; };
+    fragment float4 gaga_fragment(VertexOut in [[stage_in]], texture2d<float> core_texture [[texture(0)]],
+                                  sampler tex_sampler [[sampler(0)]], constant ShaderParameters& params [[buffer(0)]]) {
+        return float4(1.0 - core_texture.sample(tex_sampler, in.uv).rgb, 1.0);
+    }
+    """
+
+    /// A filter on a layer-path core: frames come as Metal textures, through the ring and the filter chain.
+    /// Device pending: built, not run on a device yet.
+    func testAFilterDrawsTheCoreFramesOnTheOutputTexturePath() async throws {
+        XCTAssertNotEqual(interface.capabilities & GAGA_CORE_CAP_OUTPUT_TEXTURE.rawValue, 0)
+        let (core, capture) = try await loaded(attach: false)
+        let renderer = try XCTUnwrap(MetalRenderer(device: try XCTUnwrap(MTLCreateSystemDefaultDevice())))
+        let ring = MetalTextureRing(device: renderer.device, width: 1, height: 1)
+        renderer.textureRing = ring
+        var textures = 0
+        core.onVideoFrame = { frame in
+            guard frame.pixelFormat == GAGA_PIXEL_FORMAT_METAL_TEXTURE, let shared = frame.pixelData else { return }
+            textures += 1
+            renderer.receive(shared.load(as: GagaMetalTextureFrame.self), ring: ring)
+        }
+        XCTAssertTrue(core.attachOutputTexture())
+        renderer.setImported(try ImportedFilter.pipeline(source: invertFilter, device: renderer.device))
+        run(core, frames: 3)
+        XCTAssertEqual(textures, 3, "a texture frame for each one shown")
+        XCTAssertEqual(ring.stats.width, VkTestROM.width)
+        XCTAssertEqual(ring.stats.pixelFormat, .bgra8Unorm)
+
+        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: VkTestROM.width,
+                                                            height: VkTestROM.height, mipmapped: false)
+        desc.usage = [.renderTarget, .shaderRead]
+        desc.storageMode = .shared
+        let target = try XCTUnwrap(renderer.device.makeTexture(descriptor: desc))
+        renderer.render(into: target)
+        var bytes = [UInt8](repeating: 0, count: target.width * target.height * 4)
+        target.getBytes(&bytes, bytesPerRow: target.width * 4, from: MTLRegionMake2D(0, 0, target.width, target.height), mipmapLevel: 0)
+        let drawn = (pixels: Data(bytes), width: target.width, height: target.height)
+        let inverted = { (bgra: [UInt8]) in bgra.prefix(3).map { 255 - $0 } + [255] }
+        assertColor(pixel(drawn, x: 5, y: 5), inverted(VkTestROM.clearBGRA), "filtered corner")
+        assertColor(pixel(drawn, x: 160, y: 140), inverted(VkTestROM.triangleBGRA), "filtered triangle")
+        try assertPicture(core) // Read back still works: the frame is still copied once.
+
+        // Back to the layer: the core presents again and sends size-only frames.
+        XCTAssertTrue(core.attachMetalLayer(layer, width: 800, height: 600, scale: 2))
+        run(core, frames: 2)
+        XCTAssertEqual(textures, 3)
+        try assertPicture(core)
+        XCTAssertNil(capture.fatal)
+        core.stop()
+    }
+
+    /// A session with a filter on a layer-path core draws through the renderer; Original keeps the layer.
+    func testASessionWithAFilterUsesTheOutputTexture() async throws {
+        for (shader, filtered) in [("crt-v1", true), ("original", false)] {
+            let game = GameItem(id: UUID(), title: "Triangle", platformID: "vktest", romPath: romPath, coverPath: nil,
+                                coreOverride: "vktest", playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: shader)
+            let controllers = ControllerManager()
+            controllers.devices = []
+            let skins = TouchSkinEngine()
+            skins.loadDefault()
+            let session = try GameSession(game: game, interface: interface, romPath: romPath, audio: AudioEngineManager(),
+                                          controllers: controllers, skins: skins, bindings: [], shaderID: shader,
+                                          respectSilentMode: false, saveDirectory: directory)
+            XCTAssertEqual(session.filtersLayerCore, filtered, shader)
+            guard filtered else { continue }
+            try await session.prepare()
+            XCTAssertTrue(session.filtersLayerCore, "the core took the output texture")
+            session.run()
+            let deadline = Date().addingTimeInterval(5)
+            while session.renderer.contentSize == nil, Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+            XCTAssertEqual(session.renderer.contentSize, CGSize(width: VkTestROM.width, height: VkTestROM.height))
+            XCTAssertGreaterThan(session.stats.videoWritten, 0)
+            session.stop()
+        }
     }
 
     // MARK: - Layer
