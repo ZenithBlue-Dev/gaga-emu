@@ -154,6 +154,39 @@
     "width" : 852
   },
   "fill" : "#2A2A2D",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "RUN",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17.664000000000001,
+      "text" : "II",
+      "x" : 0.79110000000000003,
+      "y" : 0.50129999999999997
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "I",
+      "x" : 0.88029999999999997,
+      "y" : 0.50129999999999997
+    }
+  ],
   "landscape" : true,
   "name" : "Compact Card Pad Dark",
   "opacity" : 1,
@@ -178,11 +211,13 @@
     {
       "background" : "landscape-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "landscape-shell-ocean.pdf",
       "fill" : "#2F6C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     }
   ]

@@ -274,6 +274,53 @@
     "width" : 852
   },
   "fill" : "#1C1C1E",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "L",
+      "x" : 0.12559999999999999,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "R",
+      "x" : 0.87439999999999996,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "B",
+      "x" : 0.7923,
+      "y" : 0.81679999999999997
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.87909999999999999,
+      "y" : 0.73029999999999995
+    }
+  ],
   "landscape" : true,
   "name" : "Twin Grip Visor Pad",
   "opacity" : 1,
@@ -298,11 +345,13 @@
     {
       "background" : "landscape-shell-mint.pdf",
       "fill" : "#8CC4AC",
+      "ink" : "#26262BBF",
       "name" : "Mint"
     },
     {
       "background" : "landscape-shell-coral.pdf",
       "fill" : "#D9735F",
+      "ink" : "#26262BBF",
       "name" : "Coral"
     }
   ]

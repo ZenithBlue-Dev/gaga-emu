@@ -13,7 +13,7 @@
       },
       "id" : "l3",
       "input" : "l3",
-      "mask" : 16384,
+      "mask" : 8192,
       "shape" : "rect"
     },
     {
@@ -142,6 +142,31 @@
     "width" : 393
   },
   "fill" : "#0B0B0E",
+  "ink" : "#26262BBF",
+  "labels" : [
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "KEYS",
+      "x" : 0.50129999999999997,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 25.171200000000002,
+      "text" : "1",
+      "x" : 0.64380000000000004,
+      "y" : 0.71240000000000003
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 22.374400000000001,
+      "text" : "2",
+      "x" : 0.83720000000000006,
+      "y" : 0.67249999999999999
+    }
+  ],
   "landscape" : false,
   "name" : "Breadbox Computer",
   "opacity" : 1,
@@ -166,11 +191,13 @@
     {
       "background" : "portrait-shell-ocean.pdf",
       "fill" : "#0B0B0E",
+      "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     },
     {
       "background" : "portrait-shell-mint.pdf",
       "fill" : "#0B0B0E",
+      "ink" : "#26262BBF",
       "name" : "Mint"
     }
   ]

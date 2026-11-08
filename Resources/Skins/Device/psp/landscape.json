@@ -211,6 +211,39 @@
     "width" : 852
   },
   "fill" : "#1B1C1F",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "L",
+      "x" : 0.12559999999999999,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "R",
+      "x" : 0.87439999999999996,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    }
+  ],
   "landscape" : true,
   "name" : "Portable Widescreen",
   "opacity" : 1,
@@ -235,11 +268,13 @@
     {
       "background" : "landscape-shell-light-grey.pdf",
       "fill" : "#C6C7CB",
+      "ink" : "#26262BBF",
       "name" : "Light Grey"
     },
     {
       "background" : "landscape-shell-grape.pdf",
       "fill" : "#6A4C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Grape"
     }
   ]

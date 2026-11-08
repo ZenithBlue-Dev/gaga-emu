@@ -202,6 +202,67 @@
     "width" : 852
   },
   "fill" : "#1E1E21",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "MODE",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "X",
+      "x" : 0.77700000000000002,
+      "y" : 0.4249
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "Y",
+      "x" : 0.84040000000000004,
+      "y" : 0.4249
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "Z",
+      "x" : 0.90380000000000005,
+      "y" : 0.4249
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "A",
+      "x" : 0.76759999999999995,
+      "y" : 0.5776
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "B",
+      "x" : 0.83099999999999996,
+      "y" : 0.5776
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "C",
+      "x" : 0.89439999999999997,
+      "y" : 0.5776
+    }
+  ],
   "landscape" : true,
   "name" : "Six Button Pad Disc",
   "opacity" : 1,
@@ -226,11 +287,13 @@
     {
       "background" : "landscape-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "landscape-shell-ocean.pdf",
       "fill" : "#2F6C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     }
   ]

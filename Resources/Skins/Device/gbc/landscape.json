@@ -154,6 +154,39 @@
     "width" : 852
   },
   "fill" : "#5B3E8E",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "B",
+      "x" : 0.7923,
+      "y" : 0.54449999999999998
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.87909999999999999,
+      "y" : 0.45800000000000002
+    }
+  ],
   "landscape" : true,
   "name" : "Handheld Color",
   "opacity" : 1,
@@ -178,11 +211,13 @@
     {
       "background" : "landscape-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "landscape-shell-mint.pdf",
       "fill" : "#8CC4AC",
+      "ink" : "#26262BBF",
       "name" : "Mint"
     }
   ]

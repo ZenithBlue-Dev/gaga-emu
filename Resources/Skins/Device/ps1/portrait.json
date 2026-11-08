@@ -226,6 +226,53 @@
     "width" : 393
   },
   "fill" : "#0B0B0E",
+  "ink" : "#26262BBF",
+  "labels" : [
+    {
+      "color" : "#26262BE6",
+      "size" : 17,
+      "text" : "L2",
+      "x" : 0.14760000000000001,
+      "y" : 0.46710000000000002
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 17,
+      "text" : "L1",
+      "x" : 0.38169999999999998,
+      "y" : 0.46710000000000002
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 17,
+      "text" : "R1",
+      "x" : 0.61829999999999996,
+      "y" : 0.46710000000000002
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 17,
+      "text" : "R2",
+      "x" : 0.85240000000000005,
+      "y" : 0.46710000000000002
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.39950000000000002,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.60309999999999997,
+      "y" : 0.94950000000000001
+    }
+  ],
   "landscape" : false,
   "name" : "Disc Console Pad",
   "opacity" : 1,
@@ -250,11 +297,13 @@
     {
       "background" : "portrait-shell-coral.pdf",
       "fill" : "#0B0B0E",
+      "ink" : "#26262BBF",
       "name" : "Coral"
     },
     {
       "background" : "portrait-shell-charcoal.pdf",
       "fill" : "#0B0B0E",
+      "ink" : "#F1F0ECBF",
       "name" : "Charcoal"
     }
   ]

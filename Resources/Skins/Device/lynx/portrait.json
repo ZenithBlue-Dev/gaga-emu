@@ -166,6 +166,45 @@
     "width" : 393
   },
   "fill" : "#252527",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "1",
+      "x" : 0.16789999999999999,
+      "y" : 0.40849999999999997
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "2",
+      "x" : 0.83209999999999995,
+      "y" : 0.40849999999999997
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "PAUSE",
+      "x" : 0.50129999999999997,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "B",
+      "x" : 0.64119999999999999,
+      "y" : 0.69010000000000005
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.82950000000000002,
+      "y" : 0.6502
+    }
+  ],
   "landscape" : false,
   "name" : "Wide Handheld Color",
   "opacity" : 1,
@@ -190,11 +229,13 @@
     {
       "background" : "portrait-shell-coral.pdf",
       "fill" : "#D9735F",
+      "ink" : "#26262BBF",
       "name" : "Coral"
     },
     {
       "background" : "portrait-shell-light-grey.pdf",
       "fill" : "#C6C7CB",
+      "ink" : "#26262BBF",
       "name" : "Light Grey"
     }
   ]

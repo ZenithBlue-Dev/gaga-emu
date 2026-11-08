@@ -165,7 +165,8 @@
         "y" : 0.24429999999999999
       },
       "id" : "cup",
-      "input" : "rstick-up",
+      "input" : "cup",
+      "mask" : 0,
       "shape" : "circle"
     },
     {
@@ -176,7 +177,8 @@
         "y" : 0.3715
       },
       "id" : "cright",
-      "input" : "rstick-right",
+      "input" : "cright",
+      "mask" : 0,
       "shape" : "circle"
     },
     {
@@ -187,7 +189,8 @@
         "y" : 0.49869999999999998
       },
       "id" : "cdown",
-      "input" : "rstick-down",
+      "input" : "cdown",
+      "mask" : 0,
       "shape" : "circle"
     },
     {
@@ -198,7 +201,8 @@
         "y" : 0.3715
       },
       "id" : "cleft",
-      "input" : "rstick-left",
+      "input" : "cleft",
+      "mask" : 0,
       "shape" : "circle"
     },
     {
@@ -231,6 +235,52 @@
     "width" : 852
   },
   "fill" : "#5C5E66",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "L",
+      "x" : 0.1103,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "Z",
+      "x" : 0.21829999999999999,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "R",
+      "x" : 0.87439999999999996,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.1643,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 20.976000000000003,
+      "text" : "B",
+      "x" : 0.79339999999999999,
+      "y" : 0.71760000000000002
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.87560000000000004,
+      "y" : 0.82440000000000002
+    }
+  ],
   "landscape" : true,
   "name" : "Home Console 64",
   "opacity" : 1,
@@ -255,11 +305,13 @@
     {
       "background" : "landscape-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "landscape-shell-mint.pdf",
       "fill" : "#8CC4AC",
+      "ink" : "#26262BBF",
       "name" : "Mint"
     }
   ]

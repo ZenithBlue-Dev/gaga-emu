@@ -143,9 +143,9 @@
         "x" : 0.84509999999999996,
         "y" : 0.3715
       },
-      "id" : "east",
-      "input" : "east",
-      "mask" : 32,
+      "id" : "north",
+      "input" : "north",
+      "mask" : 128,
       "shape" : "circle"
     }
   ],
@@ -154,6 +154,39 @@
     "width" : 852
   },
   "fill" : "#1C1C1E",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "#",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 25.171200000000002,
+      "text" : "1",
+      "x" : 0.79339999999999999,
+      "y" : 0.53939999999999999
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 22.374400000000001,
+      "text" : "2",
+      "x" : 0.88260000000000005,
+      "y" : 0.45290000000000002
+    }
+  ],
   "landscape" : true,
   "name" : "Keypad Stick",
   "opacity" : 1,
@@ -178,11 +211,13 @@
     {
       "background" : "landscape-shell-light-grey.pdf",
       "fill" : "#C6C7CB",
+      "ink" : "#26262BBF",
       "name" : "Light Grey"
     },
     {
       "background" : "landscape-shell-grape.pdf",
       "fill" : "#6A4C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Grape"
     }
   ]

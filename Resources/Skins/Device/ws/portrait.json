@@ -250,6 +250,39 @@
     "width" : 393
   },
   "fill" : "#E4E2DA",
+  "ink" : "#26262BBF",
+  "labels" : [
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "TURN",
+      "x" : 0.39950000000000002,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.60309999999999997,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "B",
+      "x" : 0.64119999999999999,
+      "y" : 0.74880000000000002
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.82950000000000002,
+      "y" : 0.70889999999999997
+    }
+  ],
   "landscape" : false,
   "name" : "Pocket Vertical",
   "opacity" : 1,
@@ -274,11 +307,13 @@
     {
       "background" : "portrait-shell-grape.pdf",
       "fill" : "#6A4C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Grape"
     },
     {
       "background" : "portrait-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     }
   ]

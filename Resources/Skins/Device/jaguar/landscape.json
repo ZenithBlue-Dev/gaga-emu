@@ -131,9 +131,9 @@
         "x" : 0.73829999999999996,
         "y" : 0.47070000000000001
       },
-      "id" : "west",
-      "input" : "west",
-      "mask" : 64,
+      "id" : "east",
+      "input" : "east",
+      "mask" : 32,
       "shape" : "circle"
     },
     {
@@ -155,9 +155,9 @@
         "x" : 0.86970000000000003,
         "y" : 0.39439999999999997
       },
-      "id" : "east",
-      "input" : "east",
-      "mask" : 32,
+      "id" : "west",
+      "input" : "west",
+      "mask" : 64,
       "shape" : "circle"
     }
   ],
@@ -166,6 +166,46 @@
     "width" : 852
   },
   "fill" : "#161618",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "PAUSE",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "OPTION",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "A",
+      "x" : 0.77000000000000002,
+      "y" : 0.53939999999999999
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "B",
+      "x" : 0.8357,
+      "y" : 0.50129999999999997
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "C",
+      "x" : 0.90139999999999998,
+      "y" : 0.46310000000000001
+    }
+  ],
   "landscape" : true,
   "name" : "Keypad Console Pad",
   "opacity" : 1,
@@ -190,11 +230,13 @@
     {
       "background" : "landscape-shell-light-grey.pdf",
       "fill" : "#C6C7CB",
+      "ink" : "#26262BBF",
       "name" : "Light Grey"
     },
     {
       "background" : "landscape-shell-grape.pdf",
       "fill" : "#6A4C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Grape"
     }
   ]

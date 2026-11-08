@@ -202,6 +202,67 @@
     "width" : 852
   },
   "fill" : "#C9C8CF",
+  "ink" : "#26262BBF",
+  "labels" : [
+    {
+      "color" : "#26262BE6",
+      "size" : 17,
+      "text" : "L",
+      "x" : 0.12559999999999999,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 17,
+      "text" : "R",
+      "x" : 0.87439999999999996,
+      "y" : 0.094100000000000003
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 18.878399999999999,
+      "text" : "X",
+      "x" : 0.8357,
+      "y" : 0.43769999999999998
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "A",
+      "x" : 0.89910000000000001,
+      "y" : 0.57509999999999994
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 18.878399999999999,
+      "text" : "B",
+      "x" : 0.8357,
+      "y" : 0.71250000000000002
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 18.878399999999999,
+      "text" : "Y",
+      "x" : 0.77229999999999999,
+      "y" : 0.57509999999999994
+    }
+  ],
   "landscape" : true,
   "name" : "Home Console 16-bit",
   "opacity" : 1,
@@ -226,11 +287,13 @@
     {
       "background" : "landscape-shell-grape.pdf",
       "fill" : "#6A4C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Grape"
     },
     {
       "background" : "landscape-shell-ocean.pdf",
       "fill" : "#2F6C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     }
   ]

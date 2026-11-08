@@ -202,6 +202,25 @@
     "width" : 393
   },
   "fill" : "#0B0B0E",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "COIN",
+      "x" : 0.39950000000000002,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "1P",
+      "x" : 0.60309999999999997,
+      "y" : 0.94950000000000001
+    }
+  ],
   "landscape" : false,
   "name" : "Arcade Panel",
   "opacity" : 1,
@@ -226,11 +245,13 @@
     {
       "background" : "portrait-shell-mint.pdf",
       "fill" : "#0B0B0E",
+      "ink" : "#26262BBF",
       "name" : "Mint"
     },
     {
       "background" : "portrait-shell-coral.pdf",
       "fill" : "#0B0B0E",
+      "ink" : "#26262BBF",
       "name" : "Coral"
     }
   ]

@@ -142,6 +142,25 @@
     "width" : 852
   },
   "fill" : "#1A1A1A",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "RESET",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    }
+  ],
   "landscape" : true,
   "name" : "Woodgrain Stick",
   "opacity" : 1,
@@ -166,11 +185,13 @@
     {
       "background" : "landscape-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "landscape-shell-ocean.pdf",
       "fill" : "#2F6C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     }
   ]

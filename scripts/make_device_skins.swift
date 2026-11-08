@@ -11,8 +11,9 @@
 //   <orientation>-pressed.pdf          every button drawn pressed on a clear page; clip it to a held button's frame
 //
 // All art is drawn here from shapes and gradients. No photo, trace, logo, wordmark or model name is used, and
-// no text from a device is copied. Labels are button letters and generic captions only. Text is drawn as glyph
-// outlines, so the PDFs embed no font.
+// no text from a device is copied. Labels are button letters and generic captions only. No text is drawn into the
+// PDFs: each label is data in the JSON (`labels`), and the app draws it at runtime with the system font, so no
+// PDF holds a font or a glyph outline from one.
 import AppKit
 import CoreText
 import ImageIO
@@ -152,13 +153,25 @@ func row3(_ t: Theme, _ ids: [(String, UInt32, String)]) -> Item {
     .cluster((0..<3).map { CBtn(id: ids[$0].0, mask: ids[$0].1, rect: r(CGFloat($0) * 56, CGFloat(2 - $0) * 15, 54, 54), color: fc(t, $0), glyph: ids[$0].2) },
              CGSize(width: 166, height: 84))
 }
-/// Right-stick buttons. The engine has no right analog yet, so these carry no mask (docs/06 section 3.8).
+/// C buttons. Mask 0: the engine pushes the right stick for the ids cup, cdown, cleft and cright (`TouchSkinEngine.cPush`),
+/// which is how Mupen64Plus-Next reads C by default.
 func cdiamond(_ t: Theme) -> Item {
     let c: CGFloat = 50
-    let p = [("cup", "rstick-up", c, CGFloat(0), "up"), ("cright", "rstick-right", 2 * c, c, "rt"),
-             ("cdown", "rstick-down", c, 2 * c, "dn"), ("cleft", "rstick-left", 0, c, "lf")]
-    return .cluster(p.map { CBtn(id: $0.0, mask: nil, rect: r($0.2, $0.3, c, c), color: fc(t, 2), glyph: $0.4, input: $0.1) },
+    let p = [("cup", c, CGFloat(0), "up"), ("cright", 2 * c, c, "rt"), ("cdown", c, 2 * c, "dn"), ("cleft", 0, c, "lf")]
+    return .cluster(p.map { CBtn(id: $0.0, mask: 0, rect: r($0.1, $0.2, c, c), color: fc(t, 2), glyph: $0.3) },
                     CGSize(width: 3 * c, height: 3 * c))
+}
+/// Beetle Saturn's Control Pad (input.c `input_map_pad`): X on RetroPad Y, Y on X, Z on L, A on B, B on A, C on R.
+func sixSaturn(_ t: Theme) -> Item {
+    let c: CGFloat = 54
+    return .cluster([
+        CBtn(id: "west", mask: WEST, rect: r(8, 0, c, c), color: fc(t, 1), glyph: "X"),
+        CBtn(id: "north", mask: NORTH, rect: r(8 + c, 0, c, c), color: fc(t, 1), glyph: "Y"),
+        CBtn(id: "l", mask: L1, rect: r(8 + 2 * c, 0, c, c), color: fc(t, 1), glyph: "Z"),
+        CBtn(id: "south", mask: SOUTH, rect: r(0, 60, c, c), color: fc(t, 0), glyph: "A"),
+        CBtn(id: "east", mask: EAST, rect: r(c, 60, c, c), color: fc(t, 0), glyph: "B"),
+        CBtn(id: "r", mask: R1, rect: r(2 * c, 60, c, c), color: fc(t, 0), glyph: "C")
+    ], CGSize(width: 170, height: 114))
 }
 func n64ab(_ t: Theme) -> Item {
     .cluster([CBtn(id: "west", mask: WEST, rect: r(0, 0, 60, 60), color: fc(t, 1), glyph: "B"),
@@ -167,13 +180,16 @@ func n64ab(_ t: Theme) -> Item {
 func fire(_ t: Theme) -> Item {
     .cluster([CBtn(id: "south", mask: SOUTH, rect: r(0, 0, 80, 80), color: fc(t, 0), glyph: "")], CGSize(width: 80, height: 80))
 }
-func fire2(_ t: Theme) -> Item {
+/// `second` is the RetroPad bit of fire 2: A on most cores, X on Atari800's default joystick device.
+func fire2(_ t: Theme, second: (String, UInt32) = ("east", EAST)) -> Item {
     .cluster([CBtn(id: "south", mask: SOUTH, rect: r(0, 30, 72, 72), color: fc(t, 0), glyph: "1"),
-              CBtn(id: "east", mask: EAST, rect: r(80, 0, 64, 64), color: fc(t, 1), glyph: "2")], CGSize(width: 144, height: 102))
+              CBtn(id: second.0, mask: second.1, rect: r(80, 0, 64, 64), color: fc(t, 1), glyph: "2")], CGSize(width: 144, height: 102))
 }
 
 let selectKey = Key(id: "select", mask: SELECT, caption: "SELECT"), startKey = Key(id: "start", mask: START, caption: "START")
 let keysKey = Key(id: "l3", mask: L3, caption: "KEYS")
+/// VICE and PUAE open their virtual keyboard on Select (`vice_mapper_select`, `puae_mapper_select`); L3 does nothing.
+let keysOnSelect = Key(id: "l3", mask: SELECT, caption: "KEYS")
 func k(_ id: String, _ m: UInt32, _ c: String) -> Key { Key(id: id, mask: m, caption: c) }
 
 // MARK: Platforms. Names are generic; colours evoke an era without copying any product or edition.
@@ -233,7 +249,7 @@ func specs() -> [Spec] {
              right: [row2(t, "1", "2")], menu: [k("start", START, "PAUSE")]))
     t = Theme(body: 0x3A3A40, trim: 0x2A2A2F, dpad: 0x2A2A2F, face: [0x5A5A62, 0x6E6E76], pill: 0x2A2A2F, accent: 0x6E9AD8)
     add(Spec(id: "saturn", name: "Disc Console Six", family: .pad, pad: .grips, aspects: [4 / 3], theme: t, left: [dpad(t)],
-             right: [six(t)], shL: [k("l2", L2, "L")], shR: [k("r2", R2, "R")], menu: [startKey]))
+             right: [sixSaturn(t)], shL: [k("l2", L2, "L")], shR: [k("r2", R2, "R")], menu: [startKey]))
     t = Theme(body: 0xE6E3DC, trim: 0xCFCBC2, dpad: 0x3A3A3E, face: [0x5AA06A, 0x4E7CC0, 0xC25A52, 0xD8B84A], pill: 0x8E8A82, accent: 0xE07B39)
     add(Spec(id: "dreamcast", name: "Disc Console Trigger Pad", family: .pad, pad: .grips, aspects: [4 / 3], theme: t,
              left: [.stick(90), dpad(t)], right: [diamond(t, ["Y", "B", "A", "X"])], shL: [k("l2", L2, "L")], shR: [k("r2", R2, "R")],
@@ -261,7 +277,8 @@ func specs() -> [Spec] {
              right: [diag2(t, "B", "A")], shL: [k("l", L1, "1")], shR: [k("r", R1, "2")], menu: [k("start", START, "PAUSE")]))
     t = Theme(body: 0x161618, trim: 0x26262A, dpad: 0x2E2E33, face: [0x3A3A40], pill: 0x3A3A40, accent: 0xC03030)
     add(Spec(id: "jaguar", name: "Keypad Console Pad", family: .pad, pad: .grips, aspects: [4 / 3], theme: t, left: [dpad(t)],
-             right: [row3(t, [("west", WEST, "A"), ("south", SOUTH, "B"), ("east", EAST, "C")])],
+             // Virtual Jaguar: RetroPad A is Jaguar A, B is B, Y is C (libretro.c).
+             right: [row3(t, [("east", EAST, "A"), ("south", SOUTH, "B"), ("west", WEST, "C")])],
              menu: [k("select", SELECT, "PAUSE"), k("start", START, "OPTION")]))
     t = Theme(body: 0x1A1A1A, trim: 0x6B4A2E, dpad: 0x111111, face: [0xC0392B], pill: 0x55565C, accent: 0xC0392B)
     add(Spec(id: "atari2600", name: "Woodgrain Stick", family: .pad, aspects: [4 / 3], theme: t, left: [dpad(t, .ball, cell: 52)],
@@ -270,17 +287,18 @@ func specs() -> [Spec] {
     add(Spec(id: "atari7800", name: "Two Fire Stick", family: .pad, aspects: [4 / 3], theme: t, left: [dpad(t, .ball, cell: 52)],
              right: [fire2(t)], menu: [k("select", SELECT, "SELECT"), k("start", START, "PAUSE")]))
     t = Theme(body: 0x1C1C1E, trim: 0x3A3A3E, dpad: 0x111111, face: [0xC8952A], pill: 0x55565C, accent: 0xC8952A)
+    // Atari800 runs the 5200 on its joystick device: fire 2 is RetroPad X and Select is the # key (platform.c).
     add(Spec(id: "atari5200", name: "Keypad Stick", family: .pad, pad: .grips, aspects: [4 / 3], theme: t, left: [dpad(t, .ball, cell: 52)],
-             right: [fire2(t)], menu: [k("select", SELECT, "PAUSE"), startKey]))
+             right: [fire2(t, second: ("north", NORTH))], menu: [k("select", SELECT, "#"), startKey]))
     t = Theme(body: 0xD9CFBD, trim: 0x5A4E3E, dpad: 0x1A1A1A, face: [0xC0392B], pill: 0x7A6E5E, accent: 0xC0392B)
     add(Spec(id: "atari8bit", name: "Home Computer 8-bit", family: .computer, aspects: [4 / 3], theme: t, left: [dpad(t, .ball, cell: 52)],
              right: [fire(t)], menu: [selectKey, startKey, keysKey]))
     t = Theme(body: 0x9C917E, trim: 0x4E3F35, dpad: 0x1A1A1A, face: [0xC0392B, 0xD8B23A], pill: 0x4E3F35, accent: 0xC0392B)
     add(Spec(id: "c64", name: "Breadbox Computer", family: .computer, aspects: [4 / 3], theme: t, left: [dpad(t, .ball, cell: 52)],
-             right: [fire2(t)], menu: [keysKey]))
+             right: [fire2(t)], menu: [keysOnSelect]))
     t = Theme(body: 0xE6E1D6, trim: 0xCFC8B8, dpad: 0x1A1A1A, face: [0xC0392B, 0x3E7FC8], pill: 0xB8B0A0, accent: 0xC0392B)
     add(Spec(id: "amiga", name: "Desktop Computer 16-bit", family: .computer, aspects: [4 / 3], theme: t, left: [dpad(t, .ball, cell: 52)],
-             right: [fire2(t)], menu: [keysKey]))
+             right: [fire2(t)], menu: [keysOnSelect]))
     t = Theme(body: 0xD8D2C2, trim: 0xEDE8DC, dpad: 0x3A3A3E, face: [0x5A5A62], pill: 0x8A8478, accent: 0x5BC06A)
     add(Spec(id: "dos", name: "PC Keyboard", family: .computer, aspects: [4 / 3], theme: t, left: [dpad(t)],
              right: [diamond(t, ["X", "A", "B", "Y"])], shL: [k("l", L1, "L")], shR: [k("r", R1, "R")], menu: [selectKey, startKey, keysKey]))
@@ -498,33 +516,31 @@ func bodyPath(_ rect: CGRect, _ rad: CGFloat, br: CGFloat) -> CGPath {
     return p
 }
 
-func textPath(_ s: String, size: CGFloat) -> CGPath {
-    let base = NSFont.systemFont(ofSize: size, weight: .heavy)
-    let font = (base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: size) } ?? base) as CTFont
-    let line = CTLineCreateWithAttributedString(NSAttributedString(string: s, attributes: [.font: font]))
-    let path = CGMutablePath()
-    for run in CTLineGetGlyphRuns(line) as! [CTRun] {
-        let n = CTRunGetGlyphCount(run)
-        var glyphs = [CGGlyph](repeating: 0, count: n), pos = [CGPoint](repeating: .zero, count: n)
-        CTRunGetGlyphs(run, CFRange(location: 0, length: 0), &glyphs)
-        CTRunGetPositions(run, CFRange(location: 0, length: 0), &pos)
-        let runFont = (CTRunGetAttributes(run) as NSDictionary)[kCTFontAttributeName] as! CTFont
-        for i in 0..<n {
-            if let g = CTFontCreatePathForGlyph(runFont, glyphs[i], nil) { path.addPath(g, transform: CGAffineTransform(translationX: pos[i].x, y: pos[i].y)) }
+/// A text label the app draws at runtime with the system font: centre and size in canvas points. `onBody` labels
+/// sit on the shell, so they take the colourway's `ink` instead of `color`.
+struct Label { var text: String; var center: CGPoint; var size: CGFloat; var color: String; var onBody = false }
+let shapeGlyphs: Set<String> = ["tri", "cir", "crs", "sq", "up", "dn", "lf", "rt"]
+func hexA(_ v: UInt32, _ a: CGFloat) -> String { hex(v) + String(format: "%02X", Int((a * 255).rounded())) }
+/// The labels of a layout's parts, where the art used to draw text. `under` is the colour pills sit on.
+func labels(_ L: Layout, under: UInt32) -> [Label] {
+    L.parts.compactMap { part -> Label? in
+        switch part {
+        case let .round(rect, color, g) where !g.isEmpty && !shapeGlyphs.contains(g):
+            let d = min(rect.width, rect.height) * 0.92
+            return Label(text: g, center: CGPoint(x: rect.midX, y: rect.midY), size: d * (g.count > 1 ? 0.3 : 0.38), color: hexA(ink(on: color), 0.9))
+        case let .pill(rect, caption, _, _):
+            return Label(text: caption, center: CGPoint(x: rect.midX, y: rect.maxY - 9), size: 9, color: hexA(ink(on: under), 0.75), onBody: under != L.spec.theme.trim)
+        case let .shoulder(rect, caption, color):
+            let s = rect.insetBy(dx: 2, dy: 3)
+            return Label(text: caption, center: CGPoint(x: s.midX, y: s.midY), size: 17, color: hexA(ink(on: color), 0.9))
+        default: return nil
         }
     }
-    return path
-}
-func text(_ ctx: CGContext, _ s: String, _ c: CGPoint, _ size: CGFloat, _ color: CGColor) {
-    let p = textPath(s, size: size), b = p.boundingBoxOfPath
-    var t = CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: c.x - b.midX, ty: c.y + b.midY)
-    guard let flipped = p.copy(using: &t) else { return }
-    ctx.addPath(flipped); ctx.setFillColor(color); ctx.fillPath()
 }
 
-/// Button face glyph: a letter, a plain neutral shape (tri, cir, crs, sq) or a small arrow (up, dn, lf, rt).
+/// Button face glyph: a plain neutral shape (tri, cir, crs, sq) or a small arrow (up, dn, lf, rt). Letters are labels.
 func glyph(_ ctx: CGContext, _ g: String, _ rect: CGRect, _ color: CGColor) {
-    guard !g.isEmpty else { return }
+    guard shapeGlyphs.contains(g) else { return }
     let c = CGPoint(x: rect.midX, y: rect.midY), s = rect.width * 0.2
     ctx.saveGState()
     ctx.setStrokeColor(color); ctx.setFillColor(color); ctx.setLineWidth(max(2, rect.width * 0.045)); ctx.setLineJoin(.round)
@@ -542,7 +558,7 @@ func glyph(_ ctx: CGContext, _ g: String, _ rect: CGRect, _ color: CGColor) {
         ctx.translateBy(x: c.x, y: c.y); ctx.rotate(by: a)
         ctx.move(to: CGPoint(x: s * 0.8, y: 0)); ctx.addLine(to: CGPoint(x: -s * 0.5, y: -s * 0.7)); ctx.addLine(to: CGPoint(x: -s * 0.5, y: s * 0.7))
         ctx.closePath(); ctx.fillPath()
-    default: text(ctx, g, c, rect.width * (g.count > 1 ? 0.3 : 0.38), color)
+    default: break
     }
     ctx.restoreGState()
 }
@@ -628,7 +644,7 @@ func drawPart(_ ctx: CGContext, _ part: Part, pressed: Bool, body: UInt32) {
             ctx.setStrokeColor(col(0, 0.3)); ctx.setLineWidth(1); ctx.strokeEllipse(in: e)
             glyph(ctx, g, e, col(ink(on: color), 0.9))
         }
-    case let .pill(rect, caption, color, slant):
+    case let .pill(rect, _, color, slant):
         let cap = r(rect.midX - 26, rect.midY - 15, 52, 16)
         ctx.saveGState()
         ctx.translateBy(x: cap.midX, y: cap.midY); if slant { ctx.rotate(by: -0.35) }
@@ -639,23 +655,23 @@ func drawPart(_ ctx: CGContext, _ part: Part, pressed: Bool, body: UInt32) {
             linear(ctx, p, mix(color, 0.2), mix(color, -0.15), r(-26, -8, 52, 16))
         }
         ctx.restoreGState()
-        if !pressed { text(ctx, caption, CGPoint(x: rect.midX, y: rect.maxY - 9), 9, col(ink(on: body), 0.75)) }
-    case let .shoulder(rect, caption, color):
+    case let .shoulder(rect, _, color):
         let s = rect.insetBy(dx: 2, dy: 3), p = rounded(s, 16)
         if pressed {
             ctx.addPath(p); ctx.setFillColor(col(mix(color, -0.35))); ctx.fillPath()
-            text(ctx, caption, CGPoint(x: s.midX, y: s.midY + 1), 17, col(ink(on: color), 0.6))
         } else {
             ctx.saveGState(); shadow(ctx); ctx.addPath(p); ctx.setFillColor(col(color)); ctx.fillPath(); ctx.restoreGState()
             linear(ctx, p, mix(color, 0.2), mix(color, -0.2), s)
             ctx.addPath(p); ctx.setStrokeColor(col(0, 0.3)); ctx.setLineWidth(1); ctx.strokePath()
-            text(ctx, caption, CGPoint(x: s.midX, y: s.midY), 17, col(ink(on: color), 0.9))
         }
     case let .stick(rect, color):
-        guard !pressed else { return }
-        let well = rect.insetBy(dx: 2, dy: 2)
-        radialFill(ctx, well, mix(body, -0.45), light: -0.2, dark: 0.1)
-        ctx.setStrokeColor(col(0, 0.4)); ctx.setLineWidth(1.5); ctx.strokeEllipse(in: well)
+        // The well is on the shell; the cap is on the pressed page, which the app draws moved with the stick.
+        if !pressed {
+            let well = rect.insetBy(dx: 2, dy: 2)
+            radialFill(ctx, well, mix(body, -0.45), light: -0.2, dark: 0.1)
+            ctx.setStrokeColor(col(0, 0.4)); ctx.setLineWidth(1.5); ctx.strokeEllipse(in: well)
+            return
+        }
         let cap = rect.insetBy(dx: rect.width * 0.2, dy: rect.width * 0.2)
         ctx.saveGState(); shadow(ctx, 4, 7, 0.5); ctx.setFillColor(col(color)); ctx.fillEllipse(in: cap); ctx.restoreGState()
         radialFill(ctx, cap, color, light: 0.22)
@@ -837,6 +853,13 @@ func json(_ L: Layout, prefix: String) -> [String: Any] {
     // The colour at the canvas edge, for filling a taller or wider screen than the canvas.
     let handheld = L.landscape || [.tall, .wide, .clam].contains(s.family)
     func edge(_ body: UInt32) -> String { hex(handheld ? body : 0x0B0B0E) }
+    let under = !L.landscape && s.family == .pad && s.pad == .rect ? s.theme.trim : s.theme.body
+    let texts = labels(L, under: under).map { l -> [String: Any] in
+        var o: [String: Any] = ["text": l.text, "x": round4(l.center.x / L.size.width), "y": round4(l.center.y / L.size.height),
+                                "size": Double(l.size), "color": l.color]
+        if l.onBody { o["onBody"] = true }
+        return o
+    }
     var buttons: [[String: Any]] = []
     for b in L.buttons {
         var o: [String: Any] = ["id": b.id, "input": b.input, "frame": norm(b.frame, L.size), "shape": b.shape]
@@ -846,9 +869,11 @@ func json(_ L: Layout, prefix: String) -> [String: Any] {
     return [
         "name": s.name, "platform": s.id, "theme": "device", "landscape": L.landscape, "opacity": 1,
         "canvas": ["width": L.size.width, "height": L.size.height],
-        "fill": edge(s.theme.body),
+        "fill": edge(s.theme.body), "ink": hexA(ink(on: s.theme.body), 0.75),
         "background": "\(prefix)-shell.pdf", "pressed": "\(prefix)-pressed.pdf",
-        "variants": s.variants.map { ["name": $0.name, "background": "\(prefix)-shell-\(slug($0.name)).pdf", "fill": edge($0.body)] },
+        "variants": s.variants.map { ["name": $0.name, "background": "\(prefix)-shell-\(slug($0.name)).pdf", "fill": edge($0.body),
+                                      "ink": hexA(ink(on: $0.body), 0.75)] },
+        "labels": texts,
         "screens": L.screens.map { norm($0, L.size) },
         "pictureArea": norm(L.picture, L.size),
         "buttons": buttons,
@@ -882,7 +907,8 @@ func previewPNG(_ url: URL, _ L: Layout, scale: CGFloat, held: [String]) {
     }
     ctx.restoreGState()
     // Pressed layer clipped to the held buttons' frames, the way the engine should show presses.
-    let frames = L.buttons.filter { held.contains($0.id) }.map(\.frame)
+    // Stick caps are on the pressed page too, and always show.
+    let frames = L.buttons.filter { held.contains($0.id) }.map(\.frame) + L.analog.map(\.1)
     if !frames.isEmpty {
         ctx.saveGState()
         ctx.translateBy(x: 0, y: L.size.height); ctx.scaleBy(x: 1, y: -1)
@@ -890,6 +916,18 @@ func previewPNG(_ url: URL, _ L: Layout, scale: CGFloat, held: [String]) {
         ctx.scaleBy(x: 1, y: -1); ctx.translateBy(x: 0, y: -L.size.height)
         draw(ctx, L, .pressed, body: L.spec.theme.body)
         ctx.restoreGState()
+    }
+    // Labels as the app draws them. Previews stay in build/ and are never shipped.
+    let s = L.spec, under = !L.landscape && s.family == .pad && s.pad == .rect ? s.theme.trim : s.theme.body
+    for l in labels(L, under: under) {
+        let v = UInt32(l.color.dropFirst().prefix(6), radix: 16)!, a = CGFloat(UInt32(l.color.suffix(2), radix: 16)!) / 255
+        let base = NSFont.systemFont(ofSize: l.size, weight: .heavy)
+        let font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: l.size) } ?? base
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: l.text, attributes: [.font: font, .foregroundColor: NSColor(cgColor: col(v, a))!]))
+        ctx.textMatrix = .identity; ctx.textPosition = .zero
+        let b = CTLineGetImageBounds(line, ctx)
+        ctx.textPosition = CGPoint(x: l.center.x - b.midX, y: L.size.height - l.center.y - b.midY)
+        CTLineDraw(line, ctx)
     }
     let image = ctx.makeImage()!
     savePNG(image, url)

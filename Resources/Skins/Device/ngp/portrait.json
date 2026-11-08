@@ -142,6 +142,31 @@
     "width" : 393
   },
   "fill" : "#8FA6C8",
+  "ink" : "#26262BBF",
+  "labels" : [
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "OPTION",
+      "x" : 0.50129999999999997,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.63870000000000005,
+      "y" : 0.69130000000000003
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 22.374400000000001,
+      "text" : "B",
+      "x" : 0.83209999999999995,
+      "y" : 0.69130000000000003
+    }
+  ],
   "landscape" : false,
   "name" : "Pocket Clicky Stick",
   "opacity" : 1,
@@ -166,11 +191,13 @@
     {
       "background" : "portrait-shell-charcoal.pdf",
       "fill" : "#2F3034",
+      "ink" : "#F1F0ECBF",
       "name" : "Charcoal"
     },
     {
       "background" : "portrait-shell-light-grey.pdf",
       "fill" : "#C6C7CB",
+      "ink" : "#26262BBF",
       "name" : "Light Grey"
     }
   ]

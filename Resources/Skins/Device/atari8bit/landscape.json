@@ -154,6 +154,33 @@
     "width" : 852
   },
   "fill" : "#D9CFBD",
+  "ink" : "#26262BBF",
+  "labels" : [
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.1174,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.21129999999999999,
+      "y" : 0.9466
+    },
+    {
+      "color" : "#26262BBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "KEYS",
+      "x" : 0.8357,
+      "y" : 0.9466
+    }
+  ],
   "landscape" : true,
   "name" : "Home Computer 8-bit",
   "opacity" : 1,
@@ -178,11 +205,13 @@
     {
       "background" : "landscape-shell-grape.pdf",
       "fill" : "#6A4C9C",
+      "ink" : "#F1F0ECBF",
       "name" : "Grape"
     },
     {
       "background" : "landscape-shell-sunflower.pdf",
       "fill" : "#E3B23C",
+      "ink" : "#26262BBF",
       "name" : "Sunflower"
     }
   ]

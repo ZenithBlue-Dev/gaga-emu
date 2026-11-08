@@ -178,6 +178,53 @@
     "width" : 393
   },
   "fill" : "#4C4F9E",
+  "ink" : "#F1F0ECBF",
+  "labels" : [
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "L",
+      "x" : 0.16789999999999999,
+      "y" : 0.41899999999999998
+    },
+    {
+      "color" : "#F1F0ECE6",
+      "size" : 17,
+      "text" : "R",
+      "x" : 0.83209999999999995,
+      "y" : 0.41899999999999998
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "SELECT",
+      "x" : 0.39950000000000002,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#F1F0ECBF",
+      "onBody" : true,
+      "size" : 9,
+      "text" : "START",
+      "x" : 0.60309999999999997,
+      "y" : 0.94950000000000001
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 22.374400000000001,
+      "text" : "B",
+      "x" : 0.64119999999999999,
+      "y" : 0.69479999999999997
+    },
+    {
+      "color" : "#26262BE6",
+      "size" : 22.374400000000001,
+      "text" : "A",
+      "x" : 0.82950000000000002,
+      "y" : 0.65490000000000004
+    }
+  ],
   "landscape" : false,
   "name" : "Handheld Wide",
   "opacity" : 1,
@@ -202,11 +249,13 @@
     {
       "background" : "portrait-shell-mint.pdf",
       "fill" : "#8CC4AC",
+      "ink" : "#26262BBF",
       "name" : "Mint"
     },
     {
       "background" : "portrait-shell-coral.pdf",
       "fill" : "#D9735F",
+      "ink" : "#26262BBF",
       "name" : "Coral"
     }
   ]
