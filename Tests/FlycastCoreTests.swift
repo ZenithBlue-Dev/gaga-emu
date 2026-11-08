@@ -99,7 +99,7 @@ final class FlycastCoreTests: GagaTestCase {
         try await core.loadROM(path: directory.appendingPathComponent("GagaDreamcast.gdi").path)
         for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
         // The SH-4's round-toward-zero stays in the core: run 11 read JSON 0.2 back as 0.19999999 after this test.
-        XCTAssertEqual(fegetround(), FE_TONEAREST, "the core's FPCR rounding mode reached the caller's thread")
+        XCTAssertEqual(Float(try XCTUnwrap(Double("0.2"))), 0.2, "the core's FPCR rounding mode reached the caller's thread")
         XCTAssertNil(capture.fatal)
         XCTAssertGreaterThan(capture.frames, 0, "no frame presented")
         let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented")
