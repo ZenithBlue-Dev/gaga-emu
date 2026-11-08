@@ -1,6 +1,6 @@
 StellaCore.c
 ../shared/LibretroAdapter.c
-upstream/src/os/libretro/libretro.cxx
+StellaLibretroGaga.cxx
 upstream/src/os/libretro/FSNodeLIBRETRO.cxx
 upstream/src/os/libretro/StellaLIBRETRO.cxx
 upstream/src/common/AudioQueue.cxx
