@@ -17,39 +17,23 @@ struct AddView: View {
         // Upright on a phone the two columns stack. A landscape phone other than a Max also has a compact width, so
         // the height class decides: compact width alone stacked them in landscape too.
         let upright = horizontalSize == .compact && verticalSize == .regular
-        AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Add Games").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                    Button { showFiles = true } label: {
-                        Label("Choose from Files", systemImage: "folder").frame(minHeight: 72)
+        Group {
+            if upright {
+                // One scroll: two half-height scrolls left each cramped.
+                ScrollView {
+                    VStack(spacing: 0) {
+                        filesColumn
+                        Rule()
+                        sourcesColumn
                     }
-                    .buttonStyle(PrimaryButtonStyle())
-                    dropTarget
-                    TipLine(tip: .dropFiles)
-                    ImportProgressRows()
-                    if let notice { Text(notice).font(.footnote).foregroundStyle(AppTheme.muted) }
                 }
-                .padding(16)
-            }
-            .frame(maxWidth: .infinity)
-            if upright { Rule() } else { Rule(vertical: true).ignoresSafeArea(edges: .vertical) }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    wifiRow
-                    Rule()
-                    sourceRow("Read Clipboard", "doc.on.clipboard", "Reads the clipboard only when you tap here.", readClipboard)
-                    Rule()
-                    sourceRow("Multi-Disc Helper", "opticaldisc", "Joins disc files into one playlist.") { showMultiDisc = true }
-                    Rule()
-                    sourceRow("Patch a ROM", "bandage", "Applies an IPS, UPS or BPS patch to a copy.") { showPatcher = true }
-                    Rule()
-                    Text("Add only games you have the right to use. GagaEmu comes with no games.")
-                        .font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 12)
+            } else {
+                HStack(spacing: 0) {
+                    ScrollView { filesColumn }.frame(maxWidth: .infinity)
+                    Rule(vertical: true).ignoresSafeArea(edges: .vertical)
+                    ScrollView { sourcesColumn }.frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 16).padding(.vertical, 8)
             }
-            .frame(maxWidth: .infinity)
         }
         .fileImporter(isPresented: $showFiles, allowedContentTypes: GameFileTypes.all, allowsMultipleSelection: true) { result in
             importFiles(result)
@@ -57,6 +41,37 @@ struct AddView: View {
         .sheet(isPresented: $showMultiDisc) { MultiDiscSheet() }
         .sheet(isPresented: $showPatcher) { RomPatcherSheet() }
         .gameFileDrop(isTargeted: $isTargeted) { line, _ in notice = line }
+    }
+
+    private var filesColumn: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add Games").font(.screenTitle).accessibilityAddTraits(.isHeader)
+            Button { showFiles = true } label: {
+                Label("Choose from Files", systemImage: "folder").frame(minHeight: 72)
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            dropTarget
+            TipLine(tip: .dropFiles)
+            ImportProgressRows()
+            if let notice { Text(notice).font(.footnote).foregroundStyle(AppTheme.muted) }
+        }
+        .padding(16)
+    }
+
+    private var sourcesColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            wifiRow
+            Rule()
+            sourceRow("Read Clipboard", "doc.on.clipboard", "Reads the clipboard only when you tap here.", readClipboard)
+            Rule()
+            sourceRow("Multi-Disc Helper", "opticaldisc", "Joins disc files into one playlist.") { showMultiDisc = true }
+            Rule()
+            sourceRow("Patch a ROM", "bandage", "Applies an IPS, UPS or BPS patch to a copy.") { showPatcher = true }
+            Rule()
+            Text("Add only games you have the right to use. GagaEmu comes with no games.")
+                .font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 12)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 8)
     }
 
     private var dropTarget: some View {
