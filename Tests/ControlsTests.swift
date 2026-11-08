@@ -134,18 +134,31 @@ final class ControlsTests: GagaTestCase {
         XCTAssertEqual(ControlsStore.profile(in: file, kind: .xbox, platformID: "snes", gameID: UUID()), platform)
     }
 
-    func testDefaultCombosTakeTheirButtons() {
+    func testDefaultsLeaveEveryGameInputToTheGame() {
         let standard = PadProfile.standard()
-        let menu = PadMapper.resolve(PadState(held: [.menu, .options]), profile: standard)
-        XCTAssertEqual(menu.actions, [.app(.pauseMenu)])
-        XCTAssertEqual(menu.buttons, 0, "The pair is not Start and Select")
-        let rewind = PadMapper.resolve(PadState(held: [.options, .l1]), profile: standard)
-        XCTAssertEqual(rewind.actions, [.app(.rewindHold)])
-        XCTAssertEqual(rewind.buttons, 0)
-        let swap = PadMapper.resolve(PadState(held: [.options, .r1, .a]), profile: standard)
+        // Start+Select (soft resets), Select+L and Select+R reach the game whole.
+        let reset = PadMapper.resolve(PadState(held: [.menu, .options, .a, .b]), profile: standard)
+        XCTAssertEqual(reset.actions, [])
+        XCTAssertEqual(reset.buttons, b.start | b.select | b.south | b.east)
+        XCTAssertEqual(PadMapper.resolve(PadState(held: [.options, .l1]), profile: standard).buttons, b.select | b.l1)
+        XCTAssertEqual(PadMapper.resolve(PadState(held: [.options, .r1]), profile: standard).buttons, b.select | b.r1)
+        // Only Home, which no core reads, is an app function.
+        let game = Set(PadInput.allCases).subtracting([.home])
+        XCTAssertEqual(PadMapper.resolve(PadState(held: game), profile: standard).actions, [])
+        XCTAssertEqual(PadMapper.resolve(PadState(held: [.home]), profile: standard).actions, [.app(.pauseMenu)])
+        for kind in ControllerManager.Kind.allKinds {
+            XCTAssertEqual(PadProfile.standard(for: kind).bindings.compactMap(\.action.app), [.pauseMenu], "\(kind)")
+        }
+    }
+
+    func testAComboTakesItsButtons() {
+        let profile = PadProfile(bindings: PadProfile.standard().bindings + [
+            PadBinding(inputs: [.options, .r1], action: .app(.swapScreens))
+        ])
+        let swap = PadMapper.resolve(PadState(held: [.options, .r1, .a]), profile: profile)
         XCTAssertEqual(swap.actions, [.app(.swapScreens)])
         XCTAssertEqual(swap.buttons, b.south, "Buttons outside the combo still reach the game")
-        XCTAssertEqual(PadMapper.resolve(PadState(held: [.options]), profile: standard).buttons, b.select)
+        XCTAssertEqual(PadMapper.resolve(PadState(held: [.options]), profile: profile).buttons, b.select)
     }
 
     func testRemappedInputsAndStickOptions() {

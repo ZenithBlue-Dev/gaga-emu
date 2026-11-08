@@ -252,7 +252,7 @@ public final class ControllerManager: ObservableObject {
     }
 
     /// The mapping for a controller type. The running game sets it from its Controls.json profiles; the
-    /// defaults keep Menu and Options for the menu, Options and L1 for rewind and Options and R1 for swap.
+    /// defaults are the RetroPad by position, with Home for the menu.
     var profile: (Kind) -> PadProfile = { .standard(for: $0) }
 
     private func read(_ controller: GCController) -> InputState {

@@ -165,17 +165,15 @@ struct PadProfile: Codable, Equatable, Sendable {
     static let deadzoneRange = 0.0...0.5
     static let sensitivityRange = 0.5...2.0
 
-    /// RetroPad by position, plus the app's combos: Menu and Options open the menu, Options and L1 rewind,
-    /// Options and R1 swap screens, Home opens the menu.
+    /// RetroPad by position, and Home opens the menu. No default combo: a combo takes its buttons from the game,
+    /// so Menu and Options (Start and Select) would eat soft resets, and Options with L1 or R1 game combos.
+    /// Players add combos in Controls.
     static func standard(for kind: ControllerManager.Kind = .mfi) -> PadProfile {
         let b = ControllerManager.Button.self
         let single: [(PadInput, UInt32)] = [(.a, b.south), (.b, b.east), (.x, b.west), (.y, b.north), (.l1, b.l1), (.r1, b.r1),
                                             (.l2, b.l2), (.r2, b.r2), (.l3, b.l3), (.r3, b.r3), (.up, b.up), (.down, b.down),
                                             (.left, b.left), (.right, b.right), (.menu, b.start), (.options, b.select)]
         return PadProfile(bindings: single.map { PadBinding(inputs: [$0.0], action: .buttons($0.1)) } + [
-            PadBinding(inputs: [.menu, .options], action: .app(.pauseMenu)),
-            PadBinding(inputs: [.options, .l1], action: .app(.rewindHold)),
-            PadBinding(inputs: [.options, .r1], action: .app(.swapScreens)),
             PadBinding(inputs: [.home], action: .app(.pauseMenu))
         ])
     }
