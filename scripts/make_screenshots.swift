@@ -194,7 +194,7 @@ func game(held: Int? = 0) {
                onLetterbox, corner: 4, width: 1.5)
     }
     let fx = (right + pw - safe) / 2 - 2
-    for (label, x, y, on) in [("A", fx + 18, 270.0, held == 0), ("B", fx - 22, 310.0, false)] {
+    for (label, x, y, on) in [("A", fx + 22, 270.0, held == 0), ("B", fx - 16, 310.0, false)] {
         let r = CGRect(x: x - 21, y: y - 21, width: 42, height: 42)
         if on { fill(r, accentFill, corner: 21) }
         stroke(r, onLetterbox, corner: 21, width: 1.5)
