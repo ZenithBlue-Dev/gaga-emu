@@ -38,6 +38,58 @@ expect pass --release-app "$tmp/Free.app"
 expect fail --release-app "$tmp/Mixed.app"
 expect fail --release-app "$tmp/Debug.app"
 
+export GAGA_RELEASE_SET=free
+expect pass --archive-set "free"
+expect fail --archive-set ""
+expect fail --archive-set "free nc"
+expect fail --archive-set "free vktest"
+expect fail --archive-set "free other" # a core outside the release set
+
+# Banned imports, from tiny objects built here. Empty strings argument = the default list.
+fx="$tmp/fx"
+mkdir -p "$fx"
+cc() { xcrun clang -arch arm64 "$@"; }
+printf 'int main(void){return 0;}\n' >"$fx/clean.c"
+printf 'void pthread_jit_write_protect_np(int);\nint main(void){pthread_jit_write_protect_np(0);return 0;}\n' >"$fx/jit.c"
+printf 'void sys_dcache_flush(void*,unsigned long);\nint main(void){sys_dcache_flush(0,0);return 0;}\n' >"$fx/dcache.c"
+printf 'int vm_remap();\nint main(void){return vm_remap();}\n' >"$fx/remap.c"
+printf 'void *dlopen(const char*,int);\nint main(void){return dlopen("x",0)!=0;}\n' >"$fx/dlopen.c"
+for name in clean jit dcache remap dlopen; do cc -c "$fx/$name.c" -o "$fx/$name.o"; done
+expect pass "$fx/clean.o"
+expect fail "$fx/jit.o"
+expect fail "$fx/dcache.o"
+expect fail "$fx/remap.o"
+expect pass "$fx/remap.o" asmjit::JitRuntime '' '(^|[[:space:]])_vm_remap$' # a reviewed per-core exception
+expect pass "$fx/dlopen.o"
+expect fail "$fx/dlopen.o" asmjit::JitRuntime '_dlopen$' # a core.env FORBIDDEN_IMPORTS
+
+# JIT and get-task-allow entitlements, in the source plist and in a signed product.
+plist() { printf '<?xml version="1.0"?>\n<plist version="1.0"><dict>\n%s\n</dict></plist>\n' "$2" >"$1"; }
+plist "$fx/good.plist" '<key>com.apple.developer.game-center</key><true/>'
+plist "$fx/jit.plist" '<key>com.apple.security.cs.allow-jit</key><true/>'
+plist "$fx/gta.plist" '<key>get-task-allow</key><true/>'
+expect pass --entitlements "$fx/good.plist"
+expect fail --entitlements "$fx/jit.plist"
+expect fail --entitlements "$fx/gta.plist"
+
+ipa() { # name, entitlements plist -> $fx/<name>.ipa with a signed Free.app
+    local app="$fx/$1/Payload/Free.app"
+    mkdir -p "$app/Frameworks/FreeCore.framework"
+    cc "$fx/clean.c" -o "$app/Free"
+    cc -dynamiclib "$fx/clean.c" -o "$app/Frameworks/FreeCore.framework/FreeCore" 2>/dev/null ||
+        cc "$fx/clean.c" -o "$app/Frameworks/FreeCore.framework/FreeCore"
+    plist "$app/Info.plist" '<key>CFBundleExecutable</key><string>Free</string><key>CFBundleIdentifier</key><string>test.free</string>'
+    codesign -s - -f --entitlements "$2" "$app" 2>/dev/null
+    (cd "$fx/$1" && zip -qr "$fx/$1.ipa" Payload)
+}
+ipa good "$fx/good.plist"
+ipa gta "$fx/gta.plist"
+ipa jit "$fx/jit.plist"
+expect pass --release-ipa "$fx/good.ipa"
+expect fail --release-ipa "$fx/gta.ipa"
+expect fail --release-ipa "$fx/jit.ipa"
+expect fail --release-ipa "$fx/missing.ipa"
+
 for core in $noncommercial; do
     env="$root/Cores/$core/core.env"
     if [ -f "$env" ] && ! grep -qx 'CORE_NONCOMMERCIAL=1' "$env"; then
