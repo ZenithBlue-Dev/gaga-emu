@@ -12,7 +12,8 @@ noncommercial='snes9x genesis_plus_gx picodrive fbneo'
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/scripts" "$tmp/Cores/free" "$tmp/Cores/nc" "$tmp/Free.app/Frameworks/FreeCore.framework" \
-    "$tmp/Mixed.app/Frameworks/FreeCore.framework" "$tmp/Mixed.app/Frameworks/NcCore.framework"
+    "$tmp/Mixed.app/Frameworks/FreeCore.framework" "$tmp/Mixed.app/Frameworks/NcCore.framework" \
+    "$tmp/Debug.app/Frameworks/VkTestCore.framework"
 cp "$root/scripts/nojit-gate.sh" "$tmp/scripts/"
 printf 'CORE_FRAMEWORK=FreeCore\n' >"$tmp/Cores/free/core.env"
 printf 'CORE_FRAMEWORK=NcCore\nCORE_NONCOMMERCIAL=1\n' >"$tmp/Cores/nc/core.env"
@@ -35,6 +36,7 @@ expect fail --release-set "vktest"
 expect fail --release-set ""
 expect pass --release-app "$tmp/Free.app"
 expect fail --release-app "$tmp/Mixed.app"
+expect fail --release-app "$tmp/Debug.app"
 
 for core in $noncommercial; do
     env="$root/Cores/$core/core.env"

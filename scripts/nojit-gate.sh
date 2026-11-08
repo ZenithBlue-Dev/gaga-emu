@@ -86,11 +86,15 @@ check_release_set() {
     echo "release gate: pass $1"
 }
 
-# A built release app (an archive's): no non-commercial core framework inside it.
+# A built release app (an archive's): no non-commercial core framework and no debug core inside it.
 check_release_app() {
     local framework core
     for framework in "$1"/Frameworks/*.framework; do
         [ -d "$framework" ] || continue
+        if [ "$(basename "$framework")" = VkTestCore.framework ]; then
+            echo "release gate: $1 embeds vktest, a debug and test core" >&2
+            return 1
+        fi
         core=$(noncommercial_framework "$(basename "$framework" .framework)")
         if [ -n "$core" ]; then
             echo "release gate: $1 embeds $core, which has a non-commercial licence" >&2
