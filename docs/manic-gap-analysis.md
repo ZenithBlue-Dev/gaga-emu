@@ -16,7 +16,7 @@ Manic's library was empty, so everything that needs a game was not reachable. Se
 | :-- | :--- | :--- | :-- | :--- | :--- |
 | 1 | Cross-device save and library sync through iCloud | Missing | L | Yes: needs the iCloud capability on the App ID | [Settings, Advanced](#settings-general-and-advanced) |
 | 2 | Connect cloud drives and network shares as game sources (Google Drive, Dropbox, OneDrive, Baidu, AliCloud, WebDAV, SMB, RomM) | Missing | L | Partly: OAuth client registration per provider; see the 4.7 note | [Add Service](#add-service) |
-| 3 | RetroAchievements sign-in and achievements | Missing | M | Yes: owner account and approval (`docs/02` 2.7) | [RetroAchievements](#retroachievements) |
+| 3 | RetroAchievements sign-in and achievements | Present | M | Owner approval for hardcore | [RetroAchievements](#retroachievements) |
 | 4 | Internet play services: DS Wi-Fi Connection servers, PSP networking, 3DS Artic Base and Pretendo | Missing | L | Partly: third-party services and terms; review needed | [Online Play](#online-play-settings) |
 | 5 | Library display controls: games per row, cover style and corner radius, square covers, hide title, group title style, sort field and order, manufacturer filter, console order | Missing | M | No | [Theme](#theme) |
 | 6 | Appearance choice (dark, light, automatic), theme colours, alternate app icons | Missing | M | No, but `docs/02` 2.7 marks them not planned | [Theme](#theme) |
@@ -282,7 +282,7 @@ With no games, Manic only shows a "No compatible games" toast, so its page was n
 
 **Offers:** username and password sign-in, create account link. Not filled in.
 
-**GagaEmu:** none; `rcheevos` appears only in the licence list. **Missing, Blocked** on an owner account and approval.
+**GagaEmu:** `Sources/Session/RetroAchievements.swift` on rcheevos v12.5.0: Settings sign-in with a Keychain token, in-game list, unlock toast, hardcore gates. **Present.** Real server sign-in unverified; hardcore needs RetroAchievements approval of GagaEmu, an owner step.
 
 ## TriggerPro
 

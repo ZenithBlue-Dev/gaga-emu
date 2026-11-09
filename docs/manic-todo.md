@@ -72,7 +72,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ![RetroAchievements sign-in](../maniac-emu-reference-images/walk/23-settings-retroachievements.png)
 
-- [ ] RetroAchievements sign-in and in-game achievements. `rcheevos` appears only in the licence list. The player signs in with their own account; see "Owner requests, 2026-11-09". (P1, M)
+- [x] RetroAchievements sign-in and in-game achievements. The player signs in with their own account; see "Owner requests, 2026-11-09". (P1, M) Built on rcheevos v12.5.0: settings sign-in, token in Keychain, unlock toast, list with progress, hardcore gates. Unit tests with a fake server and a synthetic set pass on iPhone; a real server sign-in is unverified, and hardcore needs RetroAchievements approval of GagaEmu.
 
 ## Skins
 
@@ -212,7 +212,7 @@ Sources and plans for cheats: `docs/cheats-sources.md`.
 - [ ] Shaders are a must: a large catalogue, a proper visual preview UI, and every core that supports shaders. (P1, L)
 - [ ] RetroArch shader catalogue and GPL shaders (xBRZ, CRT-Royale and similar). Owner accepts GPL. Where a licence forbids use, write a clean engineered replacement. Add to the licences screen. (P1, M)
 - [x] xdelta patches, including secondary compression (djw, lzma), clean engineered. Licence tag removed. (P2, M)
-- [ ] RetroAchievements: a real implementation on rcheevos. The player signs in with their own account in the app; no shared credentials. (P1, M)
+- [x] RetroAchievements: a real implementation on rcheevos. The player signs in with their own account in the app; no shared credentials. (P1, M) Built on rcheevos v12.5.0: settings sign-in, token in Keychain, unlock toast, list with progress, hardcore gates. Unit tests with a fake server and a synthetic set pass on iPhone; a real server sign-in is unverified, and hardcore needs RetroAchievements approval of GagaEmu.
 - [ ] iCloud sync of saves and library. Owner will supply access; the owner enters credentials themselves. (P1, L, needs owner: client IDs and capability)
 - [ ] Google Drive, Dropbox and OneDrive browse and import. Owner will supply access; the owner enters credentials themselves. Check App Review 4.7 first. (P2, L, needs owner: client IDs and capability)
 - [ ] JIT mode per core as an option, development build only. NEVER in App Store or TestFlight builds: gate it at compile time so release targets cannot contain it. (P2, L)
