@@ -5,7 +5,7 @@ import XCTest
 /// real client, TLS rules aside, runs without the Local Network prompt.
 final class Manic2Tests: GagaTestCase {
     /// Answers each request from `reply`, one request per connection.
-    private final class LoopbackServer: @unchecked Sendable {
+    final class LoopbackServer: @unchecked Sendable {
         let port: UInt16
         private let socketFD: Int32
 
