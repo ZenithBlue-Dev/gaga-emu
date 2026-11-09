@@ -123,6 +123,8 @@ struct CheatsSheet: View {
     @State private var name = ""
     @State private var code = ""
     @State private var failure: String?
+    @State private var importing = false
+    @State private var imported: [CheatFormat.Block]?
     @FocusState private var editing: Bool
 
     private var trimmedCode: String { code.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -167,15 +169,72 @@ struct CheatsSheet: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("This game").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
-                        .frame(minHeight: 44) // Level with the other heading, which shares a row with its button.
+                    HStack {
+                        Text("This game").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+                        Spacer(minLength: 12)
+                        Button("Import .cht File") { importing = true }
+                            .buttonStyle(QuietButtonStyle())
+                    }
+                    .frame(minHeight: 44) // Level with the other heading, which shares a row with its button.
                     if session.cheats.isEmpty {
                         Text("No cheats yet.").foregroundStyle(AppTheme.muted).padding(.vertical, 12)
                     }
                     ForEach(session.cheats) { row($0) }
+                    if let imported {
+                        Text("In this file").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+                            .padding(.top, 16)
+                            .frame(minHeight: 44)
+                        if imported.isEmpty {
+                            Text("This file has no cheats that can be used here.")
+                                .foregroundStyle(AppTheme.muted).padding(.vertical, 12)
+                                .accessibilityIdentifier("chtEmpty")
+                        }
+                        LazyVStack(spacing: 0) { // A file can hold thousands.
+                            ForEach(Array(imported.enumerated()), id: \.offset) { importedRow($0.element) }
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.data, .item]) { outcome in
+            if case .success(let url) = outcome { load(url) }
+        }
+        #if DEBUG
+        .onAppear { // Device walks: Files cannot be driven, so a file put in Documents stands in for the pick.
+            guard imported == nil, let path = UserDefaults.standard.string(forKey: "GagaCheatFile"),
+                  let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+            load(documents.appendingPathComponent(path))
+        }
+        #endif
+    }
+
+    /// The file's cheats are listed, not added: the player picks them, and each goes in off.
+    private func load(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            imported = try CheatFormat.readCht(url, coreID: session.coreID)
+            failure = nil
+        } catch {
+            imported = nil
+            failure = error.localizedDescription
+            UIAccessibility.post(notification: .announcement, argument: error.localizedDescription)
+        }
+    }
+
+    private func importedRow(_ block: CheatFormat.Block) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(block.name).frame(maxWidth: .infinity, alignment: .leading)
+                Button("Add") {
+                    attempt { try session.addCheat(name: block.name, code: block.code, enabled: false) }
+                }
+                .buttonStyle(QuietButtonStyle())
+                .accessibilityLabel("Add \(block.name)")
+            }
+            .frame(minHeight: 44)
+            Rule()
         }
     }
 

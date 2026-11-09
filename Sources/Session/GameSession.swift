@@ -604,6 +604,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     var canAddCheat: Bool { entitlements().canAddCheat(current: cheats.count) }
     /// The formats this core reads, for the cheat sheet, or why it has none, for the pause menu.
     var cheatHint: String { CheatFormat.hint(coreID: core?.coreID ?? "") }
+    var coreID: String { core?.coreID ?? "" }
     var noCheatsNote: String? {
         guard let core, !core.supportsCheats else { return nil }
         return CheatFormat.unsupported(coreName: core.name)

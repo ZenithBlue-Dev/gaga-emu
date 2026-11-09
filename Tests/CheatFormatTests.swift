@@ -36,6 +36,32 @@ final class CheatFormatTests: GagaTestCase {
         ], "headings with no lines drop out, a nameless one gets a number")
     }
 
+    func testAChtFileBecomesCheatsAllOff() {
+        let file = """
+            cheats = 4
+            cheat0_desc = "Infinite Lives"
+            cheat0_code = "0200A1B2+0063"
+            cheat0_enable = true
+            cheat1_code = "ABCDEF012345"
+            cheat2_desc = "Memory search"
+            cheat2_code = ""
+            cheat2_handler = 1
+            cheat3_desc = "Two codes"
+            cheat3_code = "01020304+AABBCCDD+11223344+55667788"
+            nonsense
+            cheat99999999_code = "00000000"
+            """
+        XCTAssertEqual(CheatFormat.chtBlocks(file, coreID: "mgba"), [
+            .init(name: "Infinite Lives", code: "0200A1B2 0063", enabled: false),
+            .init(name: "Cheat 2", code: "ABCDEF01 2345", enabled: false),
+            .init(name: "Two codes", code: "01020304 AABBCCDD\n11223344 55667788", enabled: false),
+        ])
+        XCTAssertEqual(CheatFormat.chtBlocks(file, coreID: "bsnes").last?.code, "01020304\nAABBCCDD\n11223344\n55667788",
+                       "a core with whole-code tokens gets one per line")
+        XCTAssertEqual(CheatFormat.chtBlocks("", coreID: "mgba"), [])
+        XCTAssertEqual(CheatFormat.chtBlocks(String(repeating: "\u{0}cheat=\n", count: 1000), coreID: "mgba"), [], "junk is skipped")
+    }
+
     func testPlainCodesAreNotABlock() {
         XCTAssertEqual(CheatFormat.cwCheatBlocks("_L 0x20000000 0x00000001"), [], "no _C line: one cheat, as typed")
         XCTAssertEqual(CheatFormat.cwCheatBlocks("01FF34C2\nGameShark"), [])

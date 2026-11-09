@@ -37,6 +37,62 @@ enum CheatFormat {
         var enabled: Bool
     }
 
+    /// Largest .cht accepted. The biggest in the libretro collection is about 3 MB.
+    static let maxChtBytes = 4 * 1024 * 1024
+    private static let maxChtEntries = 20_000
+    private static let maxChtCodeLength = 8 * 1024
+    private static let maxChtNameLength = 200
+
+    /// Cores whose cheat lines are "ADDRESS VALUE", which a .cht writes as "ADDRESS+VALUE".
+    private static let pairedCores: Set<String> = ["mgba", "melonds_ds", "pcsx_rearmed", "swanstation", "beetle_psx", "beetle_saturn"]
+
+    /// The usable cheats in a RetroArch .cht file, in file order and all off. Bad lines are skipped. Entries with
+    /// no code (RetroArch's memory-search cheats) are dropped, because `retro_cheat_set` cannot run them.
+    static func chtBlocks(_ text: String, coreID: String) -> [Block] {
+        var names: [Int: String] = [:]
+        var codes: [Int: String] = [:]
+        for raw in text.split(whereSeparator: \.isNewline) {
+            guard raw.hasPrefix("cheat"), let equals = raw.firstIndex(of: "=") else { continue }
+            let key = raw[raw.index(raw.startIndex, offsetBy: 5)..<equals].trimmingCharacters(in: .whitespaces)
+            let digits = key.prefix(while: \.isNumber)
+            guard digits.count <= 6, let index = Int(digits), index < maxChtEntries else { continue }
+            let value = raw[raw.index(after: equals)...].trimmingCharacters(in: CharacterSet.whitespaces.union(["\""]))
+            switch key.dropFirst(digits.count) {
+            case "_desc": names[index] = String(value.prefix(maxChtNameLength))
+            case "_code": if value.count <= maxChtCodeLength { codes[index] = chtCode(value, coreID: coreID) }
+            default: break
+            }
+        }
+        return codes.keys.sorted().compactMap { index in
+            guard let code = codes[index], !code.isEmpty else { return nil }
+            let name = names[index].flatMap { $0.isEmpty ? nil : $0 } ?? "Cheat \(index + 1)"
+            return Block(name: name, code: code, enabled: false)
+        }
+    }
+
+    /// A .cht code as this app's lines: `+` separates lines, or the two halves of one line on `pairedCores`.
+    static func chtCode(_ code: String, coreID: String) -> String {
+        var parts = code.split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        if pairedCores.contains(coreID) {
+            parts = parts.map { isHex($0) && $0.count == 12 ? "\($0.prefix(8)) \($0.suffix(4))" : $0 }
+            let pairs = parts.count.isMultiple(of: 2) && stride(from: 0, to: parts.count, by: 2).allSatisfy {
+                isHex(parts[$0]) && parts[$0].count == 8 && isHex(parts[$0 + 1]) && [4, 8].contains(parts[$0 + 1].count)
+            }
+            if pairs { parts = stride(from: 0, to: parts.count, by: 2).map { parts[$0] + " " + parts[$0 + 1] } }
+        }
+        return parts.joined(separator: "\n")
+    }
+
+    private static func isHex(_ text: String) -> Bool { text.allSatisfy(\.isHexDigit) }
+
+    /// Reads a player's .cht. Untrusted: the size is checked before the bytes are read.
+    static func readCht(_ url: URL, coreID: String) throws -> [Block] {
+        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard size <= maxChtBytes else { throw EmulatorCoreError.cheatRejected("This file is too large to be a cheat file.") }
+        let data = try Data(contentsOf: url)
+        return chtBlocks(String(decoding: data, as: UTF8.self), coreID: coreID)
+    }
+
     /// The cheats in a pasted CWCheat .ini block: each `_C0 Name` (off) or `_C1 Name` (on) line starts one, and
     /// the `_L` lines under it are its code. `_S` and `_G` lines and anything before the first `_C` are skipped.
     /// Empty when the text has no `_C` line, so a plain code goes through as one cheat.
