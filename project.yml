@@ -11,18 +11,9 @@ options:
   groupSortPosition: top
 
 configs:
-  Debug:
-    type: debug
-    settings:
-      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
-      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
-      GCC_OPTIMIZATION_LEVEL: "0"
-  Release:
-    type: release
-    settings:
-      SWIFT_OPTIMIZATION_LEVEL: "-O"
-      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
-      GCC_OPTIMIZATION_LEVEL: "s"
+  Debug: debug
+  DevJIT: debug
+  Release: release
 
 settings:
   # Paywall release gate: stays out until milestone 7.2 opens it (docs/06 section 4.5).
@@ -57,6 +48,9 @@ targets:
     dependencies:
       - target: GagaSlang
       - target: GagaCheevos
+    # Only the DevJIT configuration gets the development JIT option. scripts/nojit-gate.sh refuses it in any other.
+    configFiles:
+      DevJIT: DevJIT.xcconfig
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.gagaemu
       # GagaSlang is C++.

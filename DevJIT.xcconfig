@@ -1,0 +1,3 @@
+// The DevJIT configuration only (project.yml): compiles the not-yet-functional per-game JIT option.
+// Never set this for Debug, Release or any TestFlight or App Store build. scripts/nojit-gate.sh refuses it.
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) GAGA_DEV_JIT

@@ -38,6 +38,12 @@ struct CorePickerSheet: View {
                     .accessibilityAddTraits(isSelected ? .isSelected : [])
                     Rule()
                 }
+                #if GAGA_DEV_JIT
+                if DevJITOption.cores.contains(selected) {
+                    DevJITToggle(gameID: game.id)
+                    Rule()
+                }
+                #endif
                 if let platform {
                     Button("Use for All \(platform.name) Games") {
                         state.setCore(selected, for: game.id, global: true)
