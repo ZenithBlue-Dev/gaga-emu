@@ -59,6 +59,7 @@ targets:
       OTHER_LDFLAGS: $(inherited) -lc++
       INFOPLIST_FILE: Sources/App/Info.plist
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIconTwoBeats AppIconFolio AppIconShelf AppIconWell AppIconPhosphor
       CODE_SIGN_ENTITLEMENTS: Sources/App/GagaEmu.entitlements
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:

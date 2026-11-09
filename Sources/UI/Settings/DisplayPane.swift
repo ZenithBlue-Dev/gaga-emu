@@ -1,5 +1,58 @@
 import SwiftUI
 
+/// GagaEmu's own alternate icons, from `design/icons`. iOS shows its own notice after a change.
+struct AppIconPicker: View {
+    /// `icon` is the asset catalog's alternate name; nil is the primary icon.
+    static let choices: [(name: String, icon: String?, preview: String)] = [
+        ("Steps", nil, "IconPreviewSteps"), ("Two Beats", "AppIconTwoBeats", "IconPreviewTwoBeats"), ("Folio", "AppIconFolio", "IconPreviewFolio"),
+        ("Shelf", "AppIconShelf", "IconPreviewShelf"), ("Well", "AppIconWell", "IconPreviewWell"), ("Phosphor", "AppIconPhosphor", "IconPreviewPhosphor")
+    ]
+
+    @State private var current = UIApplication.shared.alternateIconName
+    @State private var failure: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("App Icon")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 8, alignment: .top)], alignment: .leading, spacing: 8) {
+                ForEach(Self.choices, id: \.name) { choice in
+                    let selected = current == choice.icon
+                    Button { set(choice.icon) } label: {
+                        VStack(spacing: 2) {
+                            Image(choice.preview).resizable().frame(width: 56, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
+                            Text(LocalizedStringKey(choice.name))
+                                .font(.caption2.weight(selected ? .bold : .regular))
+                                .lineLimit(1).minimumScaleFactor(0.7)
+                        }
+                        .frame(minWidth: 64, minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("App icon, \(choice.name)")
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            if let failure { Text(failure).font(.footnote).foregroundStyle(AppTheme.accent) }
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func set(_ icon: String?) {
+        guard icon != current else { return }
+        failure = nil
+        Task {
+            do {
+                try await UIApplication.shared.setAlternateIconName(icon)
+                current = icon
+            } catch {
+                failure = error.localizedDescription
+            }
+        }
+    }
+}
+
 /// Settings > Display: the app's appearance and accent, and how the Library draws its shelves.
 struct DisplayPane: View {
     @EnvironmentObject private var state: AppState
@@ -40,6 +93,8 @@ struct DisplayPane: View {
             }
         }
         .padding(.vertical, 6)
+        Rule()
+        AppIconPicker()
         Rule()
         sectionTitle("Shelves")
         rowPicker("Games per Row", selection: $state.libraryDisplay.perRow) {
