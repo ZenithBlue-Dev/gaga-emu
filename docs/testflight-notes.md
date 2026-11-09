@@ -2,6 +2,12 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611100201), 2026-11-10
+
+New: Cheats now work on more systems. Atari 2600, 5200, 7800 and 8-bit, Atari Lynx, Jaguar, Virtual Boy, Neo Geo Pocket, Dreamcast and Doom have bundled cheats. Commodore 64, Amiga, Pokemon Mini and 3DS take codes you enter yourself. Cheats stay off until you switch them on, and hardcore RetroAchievements still blocks them.
+
+To test: open a game, pause, then Cheats, and switch one on. Tell us which game and cheat if it does nothing. Doom cheats stay on until you reload the game.
+
 ## 1.0.0 (202611092335), 2026-11-09
 
 New: iCloud Sync, off by default, in Settings, Storage. It keeps saves and save states the same on your devices, and can include game files. It syncs when you quit a game or leave the app.
