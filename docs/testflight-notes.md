@@ -2,6 +2,34 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611091030), 2026-11-09
+
+Add games from your own WebDAV server, import skin layouts, and new Library tools.
+
+**Adding games**
+- Add games from your own WebDAV server.
+- A guide explains how to reach SMB shares through the Files app.
+- Check both paths import a game and it appears in the Library.
+
+**Skins**
+- Import button layouts from your own skin files. Positions only, no art.
+- Import one and check the buttons land where expected.
+
+**Library**
+- Filter the Library by maker.
+- Open the Controllers panel from the Library menu.
+- Pick discs by hand when you build a playlist.
+
+**Settings**
+- Guides are now in Settings > About.
+- Spanish and French are available. They are partial and unreviewed, so expect gaps and rough wording.
+- Settings > Graphics has an AirPlay Full Screen toggle. Try it with an AirPlay screen.
+- The BIOS list splits into Required and Optional.
+- Auto Save State has its own toggle.
+
+**Known limits**
+- Games and BIOS files are not included. Add your own.
+
 ## 1.0.0 (202611090020), 2026-11-09
 
 Settings has a new Display tab, the Library sorts, and ROM patching reads more formats.
