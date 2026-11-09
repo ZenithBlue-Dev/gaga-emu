@@ -222,6 +222,9 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             .appendingPathComponent("GagaEmu")
     }
 
+    /// The folder that holds every game's save folder, which iCloud Sync mirrors.
+    public static var savesDirectory: URL { baseDirectory.appendingPathComponent("Saves", isDirectory: true) }
+
     /// The folder every core gets as `system_dir`, and the one Settings > BIOS Files lists.
     public static var systemDirectory: URL {
         migrateBIOSFolder(base: baseDirectory)

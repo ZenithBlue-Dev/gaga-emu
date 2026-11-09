@@ -20,12 +20,16 @@ struct GagaEmuApp: App {
                     RetroAchievements.shared.restoreSession()
                     state.refreshCovers()
                     await state.finishInterruptedImports()
+                    state.syncCloud()
                     #if DEBUG
                     await state.importROMIfRequested()
                     await state.importTestROMIfRequested()
                     state.runBenchmarkIfRequested()
                     NetplayHarness.runIfRequested(state)
                     #endif
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                    state.syncCloud()
                 }
         }
     }

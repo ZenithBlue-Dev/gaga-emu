@@ -840,6 +840,26 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("RetroAchievements sign-in")
     }
 
+    /// Settings > Storage: iCloud Sync is off by default, shows a clear state when turned on, and turns off again.
+    /// A fresh install has no saves, so this uploads nothing.
+    func testAuditICloudSync() throws {
+        let app = launchApp()
+        try guardedTap(button(app, "Settings"), "Settings in the rail")
+        try guardedTap(app.buttons["settings.Storage"].firstMatch, "Storage")
+        let toggle = app.switches["icloudSyncToggle"].firstMatch
+        try arrive(toggle, "iCloud Sync switch")
+        XCTAssertEqual(toggle.value as? String, "0", "iCloud Sync must be off by default")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let status = app.descendants(matching: .any)["icloudSyncStatus"]
+        try arrive(status, "iCloud status row")
+        sleep(3)
+        try stopIfPrompt()
+        snapshot("iCloud Sync on")
+        print("iCloud status: \(status.label)")
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        XCTAssertTrue(status.waitForNonExistence(timeout: timeout), "The status row must go with the switch")
+    }
+
     /// Ends the test as skipped, with a screenshot, while a system prompt is up, so nothing taps or waits under it.
     private func stopIfPrompt() throws {
         if promptUp() { throw XCTSkip("A system prompt is up") }

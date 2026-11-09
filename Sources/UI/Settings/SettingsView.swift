@@ -364,6 +364,14 @@ private struct ControlsPane: View {
     }
 }
 
+private struct CloudStatusRow: View {
+    @ObservedObject var cloud: CloudSync
+
+    var body: some View {
+        ValueRow(title: "iCloud", value: cloud.status.text).accessibilityIdentifier("icloudSyncStatus")
+    }
+}
+
 private struct StoragePane: View {
     @EnvironmentObject private var state: AppState
     @State private var romBytes: Int64 = 0
@@ -374,6 +382,15 @@ private struct StoragePane: View {
         ValueRow(title: "Game files", value: romBytes.formatted(.byteCount(style: .file)))
             .task { romBytes = folderSize(state.romDirectory) }
         Rule()
+        ToggleRow(title: "iCloud Sync", note: "Keeps saves and save states the same on your devices, when you quit a game or leave the app. If two devices changed a save, the newest is used and the older stays as a copy. Deleting a save on one device does not delete it on another.", isOn: $state.iCloudSync)
+            .accessibilityIdentifier("icloudSyncToggle")
+        Rule()
+        if state.iCloudSync {
+            ToggleRow(title: "Include Game Files", note: "Game files are large and count against your iCloud storage.", isOn: $state.iCloudSyncROMs)
+            Rule()
+            CloudStatusRow(cloud: state.cloud)
+            Rule()
+        }
         ActionRow(title: "Clear Cache", value: cleared ? "Cleared" : nil, symbol: "trash") { showClearConfirm = true }
             .confirmationDialog("Clear cached files?", isPresented: $showClearConfirm, titleVisibility: .visible) {
                 Button("Clear Cache", role: .destructive) {

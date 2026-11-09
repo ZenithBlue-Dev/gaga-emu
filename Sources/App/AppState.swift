@@ -1076,7 +1076,20 @@ final class AppState: ObservableObject {
     /// Touch layout per platform ID. A platform with no entry uses the standard layout.
     @Published var platformSkins: [String: String] { didSet { save() } }
     @Published var airPlayFullscreen: Bool { didSet { save() } }
-    @Published var iCloudSync: Bool { didSet { save() } }
+    @Published var iCloudSync: Bool {
+        didSet {
+            save()
+            if iCloudSync { syncCloud() } else { cloud.turnOff() }
+        }
+    }
+    /// Off by default: game files are large.
+    @Published var iCloudSyncROMs: Bool {
+        didSet {
+            save()
+            syncCloud()
+        }
+    }
+    let cloud = CloudSync()
     @Published var autoFullScreen: Bool { didSet { save() } }
     @Published var respectSilentMode: Bool { didSet { save() } }
     @Published var rumble: Bool { didSet { save() } }
@@ -1128,6 +1141,7 @@ final class AppState: ObservableObject {
         var platformSkins: [String: String]?
         var airPlayFullscreen: Bool
         var iCloudSync: Bool
+        var iCloudSyncROMs: Bool?
         var autoFullScreen: Bool
         var respectSilentMode: Bool
         var rumble: Bool
@@ -1185,6 +1199,7 @@ final class AppState: ObservableObject {
         platformSkins = snapshot?.platformSkins ?? [:]
         airPlayFullscreen = snapshot?.airPlayFullscreen ?? false
         iCloudSync = snapshot?.iCloudSync ?? false
+        iCloudSyncROMs = snapshot?.iCloudSyncROMs ?? false
         autoFullScreen = snapshot?.autoFullScreen ?? true
         respectSilentMode = snapshot?.respectSilentMode ?? false
         rumble = snapshot?.rumble ?? false
@@ -1198,6 +1213,7 @@ final class AppState: ObservableObject {
         if migrated != nil { save() }
         // Views that read a layout through AppState redraw when one changes.
         screensChanged = screens.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        cloud.rerun = { [weak self] in self?.syncCloud() }
         controlsChanged = controls.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         wifi.onUploaded = { [weak self] names in
             Task { @MainActor in await self?.addUploads(names) }
@@ -1478,6 +1494,7 @@ final class AppState: ObservableObject {
         launching = true
         Task {
             defer { launching = false }
+            await cloud.finish() // The core opens its save files from here on.
             do {
                 let next = try makeSession(for: game)
                 try await next.prepare()
@@ -1508,6 +1525,7 @@ final class AppState: ObservableObject {
         launching = true
         Task {
             defer { launching = false }
+            await cloud.finish()
             do {
                 // CoreCatalog has no row for a core this build left out, so that is "not part of this build".
                 guard let platformID = CoreCatalog.platforms.first(where: { $0.cores.contains { $0.id == coreID } })?.id,
@@ -1712,6 +1730,22 @@ final class AppState: ObservableObject {
         pendingFailure = message.map { LaunchFailure(title: game.title, message: $0) }
         activeGameID = nil
         session = nil
+        syncCloud()
+    }
+
+    /// Runs on launch, game exit, leaving the app and iCloud changes. Never while a game holds its save files, so a
+    /// game left running in the background waits for its exit.
+    func syncCloud() {
+        guard iCloudSync, session == nil, !launching else { return }
+        let romDirectory = romDirectory
+        cloud.sync(saves: GagaCoreWrapper.savesDirectory, roms: romDirectory, includingROMs: iCloudSyncROMs,
+                   manifest: GagaCoreWrapper.savesDirectory.deletingLastPathComponent().appendingPathComponent("CloudSync.json")) { [weak self] names in
+            // shortcut: archives are left out, as an import unpacks them; a disc set enters by its descriptor.
+            let games = names.filter { name in
+                !["zip", "7z"].contains((name as NSString).pathExtension.lowercased()) && (!name.contains("/") || DiscSet.isDescriptor(name))
+            }
+            Task { await self?.addUploads(games) }
+        }
     }
 
     func showPendingFailure() {
@@ -1890,7 +1924,7 @@ final class AppState: ObservableObject {
                                 avatarIndex: avatarIndex, appearance: appearance, quickStart: quickStart,
                                 autoSaveStates: autoSaveStates, coverArt: coverArt,
                                 shaderParameters: shaderParameters, rewind: rewind, platformSkins: platformSkins,
-                                airPlayFullscreen: airPlayFullscreen, iCloudSync: iCloudSync,
+                                airPlayFullscreen: airPlayFullscreen, iCloudSync: iCloudSync, iCloudSyncROMs: iCloudSyncROMs,
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
                                 rumble: rumble, rumbleStrength: rumbleStrength, skinSoundEffects: skinSoundEffects, language: language,
                                 shaderID: shaderID, defaultCores: defaultCores,
