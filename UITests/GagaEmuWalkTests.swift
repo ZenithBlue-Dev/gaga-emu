@@ -31,7 +31,15 @@ final class GagaEmuWalkTests: XCTestCase {
         return app
     }
 
+    /// Never shoots another app: a notification can bring one forward, and the result bundle would keep its screen.
     private func snapshot(_ name: String) {
+        guard XCUIApplication().state == .runningForeground else {
+            let skipped = XCTAttachment(string: "GagaEmu was not in front")
+            skipped.name = "SKIPPED \(name)"
+            skipped.lifetime = .keepAlways
+            add(skipped)
+            return
+        }
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
@@ -115,6 +123,24 @@ final class GagaEmuWalkTests: XCTestCase {
         }
         app.swipeDown(velocity: .fast)
         sleep(1)
+    }
+
+    /// Selects a Settings tab and checks it took. The tabs sit under where a notification banner drops: a tap
+    /// on the banner opens its app (seen on the iPhone), so GagaEmu is brought back and the tap made again.
+    @discardableResult private func selectTab(_ app: XCUIApplication, _ name: String) -> Bool {
+        let tab = app.buttons["settings.\(name)"].firstMatch
+        for _ in 0..<3 where !promptUp() {
+            if app.state != .runningForeground {
+                app.activate()
+                sleep(6) // Lets the banner leave.
+            }
+            guard tab.waitForExistence(timeout: 6) else { continue }
+            tab.tap()
+            sleep(1)
+            if app.state == .runningForeground, tab.isSelected { return true }
+        }
+        XCTFail("The \(name) tab could not be selected")
+        return false
     }
 
     private func auditPage(_ app: XCUIApplication, _ prefix: String, as name: String) {
@@ -274,8 +300,7 @@ final class GagaEmuWalkTests: XCTestCase {
         guard !promptUp() else { return }
         app.buttons["Settings"].tap()
         sleep(1)
-        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
-        sleep(1)
+        guard selectTab(app, "Display") else { return }
         let well = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Custom accent colour")).firstMatch
         if well.waitForExistence(timeout: 6) {
             well.tap()
@@ -292,10 +317,10 @@ final class GagaEmuWalkTests: XCTestCase {
             snapshot("29 Custom accent portrait")
         } else {
             snapshot("MISSING colour well")
+            XCTFail("No custom colour well on the Display tab")
         }
-        guard !promptUp() else { return }
-        tap(app.buttons["settings.Library"].firstMatch, "The Library tab")
-        sleep(1)
+        guard !promptUp(), selectTab(app, "Library") else { return }
+        XCTAssertTrue(button(app, "BIOS Files").waitForExistence(timeout: 6), "No BIOS Files row on the Library tab")
         if open(app, "BIOS Files") {
             if open(app, "Import scph5500") {
                 sleep(2)
@@ -308,9 +333,7 @@ final class GagaEmuWalkTests: XCTestCase {
             }
             close(app)
         }
-        guard !promptUp() else { return }
-        tap(app.buttons["settings.Graphics"].firstMatch, "The Graphics tab")
-        sleep(1)
+        guard !promptUp(), selectTab(app, "Graphics") else { return }
         guard open(app, "Default Filter") else { return }
         let search = app.textFields["Search filters"].firstMatch
         if search.waitForExistence(timeout: 6) {
@@ -434,6 +457,73 @@ final class GagaEmuWalkTests: XCTestCase {
         sleep(1)
         audit("48 About")
         auditPage(app, "Guides", as: "49 Guides")
+    }
+
+    /// Batch 3: RomM sign-in, the download rows, patch creation, the filter preview picture and the app icons, each
+    /// upright and in landscape. An icon is never tapped: changing it raises a system notice this walk must not answer.
+    func testAuditManic3() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaImportTestROM", core, "-GagaSeedDownloads", "YES", "-GagaPreviewImage", "YES"]
+        app.launch()
+        _ = importedGame(app, "The \(title) game")
+        sleep(10)
+        guard !promptUp() else { return }
+        app.buttons["Add"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(app.staticTexts["Sample One.gba"].waitForExistence(timeout: 6), "No download row")
+        XCTAssertTrue(app.staticTexts["Downloading"].exists, "The first download is not running")
+        XCTAssertTrue(app.staticTexts["Waiting"].exists, "The second download is not waiting")
+        audit("60 Add with downloads")
+        XCTAssertTrue(open(app, "RomM Server"), "No RomM row")
+        audit("61 RomM sign in")
+        let field = app.textFields["Server address"].firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 4), "No RomM address field")
+        if !promptUp() {
+            field.tap()
+            field.typeText("http://example.test")
+            app.keyboards.buttons["return"].firstMatch.tap()
+            sleep(1)
+            open(app, "Connect")
+            XCTAssertTrue(app.staticTexts["This address is not encrypted. Turn on Allow Unencrypted HTTP to use it."].waitForExistence(timeout: 6),
+                          "Plain HTTP was not refused")
+            snapshot("61 RomM plain HTTP refused")
+        }
+        close(app)
+        guard !promptUp() else { return }
+        // A download row's Cancel removes it; the queue rows are shared, so this is the sheet's too.
+        let cancelRow = app.buttons["Cancel Sample Two.gba"].firstMatch
+        XCTAssertTrue(cancelRow.waitForExistence(timeout: 4), "No Cancel on the waiting download")
+        cancelRow.tap()
+        sleep(1)
+        XCTAssertFalse(app.staticTexts["Sample Two.gba"].exists, "Cancel left the waiting download")
+        XCTAssertTrue(open(app, "Patch a ROM"), "No Patch row")
+        let create = app.buttons["Create"].firstMatch
+        XCTAssertTrue(create.waitForExistence(timeout: 4), "No Create mode")
+        create.tap()
+        sleep(1)
+        XCTAssertTrue(button(app, "Create UPS Patch").exists, "Create mode did not switch")
+        audit("62 Patch create")
+        close(app)
+        guard !promptUp() else { return }
+        app.buttons["Settings"].firstMatch.tap()
+        sleep(1)
+        guard selectTab(app, "Graphics") else { return }
+        XCTAssertTrue(open(app, "Default Filter"), "No Default Filter row")
+        XCTAssertTrue(app.buttons["Choose preview image"].firstMatch.waitForExistence(timeout: 6), "No preview picture button")
+        XCTAssertTrue(app.buttons["Use built-in preview image"].firstMatch.exists, "The seeded picture was not taken")
+        audit("63 Filter preview picture")
+        app.buttons["Use built-in preview image"].firstMatch.tap()
+        sleep(1)
+        XCTAssertFalse(app.buttons["Use built-in preview image"].firstMatch.exists, "The built-in picture did not come back")
+        snapshot("63 Filter preview built in")
+        close(app)
+        guard !promptUp(), selectTab(app, "Display") else { return }
+        let icon = app.buttons["App icon, Phosphor"].firstMatch
+        XCTAssertTrue(icon.waitForExistence(timeout: 6), "No app icon choices")
+        XCTAssertTrue(app.buttons["App icon, Steps"].firstMatch.isSelected, "The primary icon is not marked")
+        audit("64 Display app icons")
     }
 
     /// The maker filter, picking discs by hand, and the BIOS list's Optional section.
