@@ -786,6 +786,7 @@ final class GagaEmuWalkTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = (environment["GAGA_WALK_ROM"].map { ["-GagaImportROM", $0] } ?? ["-GagaImportTestROM", core])
             + (environment["GAGA_WALK_CHEATS"].map { ["-GagaCheatFile", $0] } ?? [])
+            + (environment["GAGA_WALK_CHEAT_TITLE"].map { ["-GagaCheatTitle", $0] } ?? [])
         app.launch()
         try guardedTap(importedGame(app, "The \(title) game"), "The game")
         let pause = app.buttons["Pause game"]
@@ -801,6 +802,21 @@ final class GagaEmuWalkTests: XCTestCase {
         try arrive(app.buttons["Import .cht File"], "Import .cht File upright")
         XCUIDevice.shared.orientation = .landscapeLeft
         sleep(2)
+        if environment["GAGA_WALK_CHEAT_TITLE"] != nil {
+            try arrive(app.staticTexts["Available cheats"], "The bundled cheats")
+            let bundled = app.switches.firstMatch
+            try arrive(bundled, "A bundled cheat's switch")
+            bundled.switches.firstMatch.tap()
+            sleep(1)
+            XCTAssertTrue(app.staticTexts["Add a code"].exists, "The core refused the bundled cheat")
+            snapshot("Bundled cheat on")
+            try guardedTap(app.buttons["Close"], "Close")
+            try guardedTap(button(app, "Resume"), "Resume")
+            sleep(5)
+            try arrive(pause, "The running game with the bundled cheat on")
+            snapshot("Running with the bundled cheat")
+            return
+        }
         guard environment["GAGA_WALK_CHEATS"] != nil else { return }
         let add = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add ' AND NOT label == 'Add Cheat'")).firstMatch
         try guardedTap(add, "Add on the first cheat in the file")

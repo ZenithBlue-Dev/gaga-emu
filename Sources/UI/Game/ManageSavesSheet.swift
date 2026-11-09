@@ -212,9 +212,13 @@ struct CheatsSheet: View {
             if case .success(let url) = outcome { load(url) }
         }
         .task {
-            let (title, platformID, coreID) = (session.game.title, session.game.platformID, session.coreID)
+            var title = session.game.title
+            #if DEBUG
+            title = UserDefaults.standard.string(forKey: "GagaCheatTitle") ?? title // Device walks: homebrew has no entry of its own.
+            #endif
+            let (lookup, platformID, coreID) = (title, session.game.platformID, session.coreID)
             bundled = await Task.detached(priority: .userInitiated) {
-                CheatDatabase.blocks(title: title, platformID: platformID, coreID: coreID)
+                CheatDatabase.blocks(title: lookup, platformID: platformID, coreID: coreID)
             }.value
         }
         #if DEBUG
