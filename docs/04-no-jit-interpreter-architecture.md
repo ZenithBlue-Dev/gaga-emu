@@ -707,6 +707,14 @@ Limits of the static check:
 
 Because RWX `mmap` becomes `rw-` silently, also run each core under test with crash reports collected. An `EXC_BAD_ACCESS` at a jump into a heap address is a gate failure.
 
+### 8.1 Development JIT option
+
+Owner request, 2026-11-09: a per-game JIT mode, for future development, that never reaches the App Store. Only the option exists. It stores a preference that nothing reads, so no JIT runs, and no entitlement, executable mapping or core flag changed. The core picker labels it "JIT mode (not functional)". `Sources/UI/Games/DevJITOption.swift` is compiled under `GAGA_DEV_JIT`, set only by `DevJIT.xcconfig` for the `DevJIT` configuration, not by Debug, TestFlight or Release builds.
+
+It appears for the cores whose upstream has an arm64 recompiler: azahar, beetle_psx, dosbox_pure, flycast, melonds_ds, mupen64plus_next, pcsx_rearmed, picodrive, ppsspp and swanstation. Left out: beetle_saturn (its arm64 emitter is Linux only and covers the DSPs), puae (32-bit ARM only) and mame (no machine in our set has a recompiling CPU).
+
+`scripts/nojit-gate.sh` fails any app holding the string `GAGA_DEV_JIT_OPTION_MARKER`, or built with the flag, unless it is a non-archive `DevJIT` build. `--release-app` and `--release-ipa` have no exception. `scripts/test-release-gate.sh` proves each case.
+
 ---
 
 ## 9. Threading, memory and thermal

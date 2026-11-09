@@ -169,7 +169,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ![JIT status](../maniac-emu-reference-images/walk/25-settings-jit.png)
 
-- [ ] JIT mode per core, development build only; see "Owner requests, 2026-11-09". Never in App Store or TestFlight builds, and no sideload link in them. (P2, L)
+- [ ] JIT mode per core, development build only; see "Owner requests, 2026-11-09". Never in App Store or TestFlight builds, and no sideload link in them. The option exists in the DevJIT configuration; no JIT does. (P2, L)
 
 ## Help and about
 
@@ -215,7 +215,7 @@ Sources and plans for cheats: `docs/cheats-sources.md`.
 - [x] RetroAchievements: a real implementation on rcheevos. The player signs in with their own account in the app; no shared credentials. (P1, M) Built on rcheevos v12.5.0: settings sign-in, token in Keychain, unlock toast, list with progress, hardcore gates. Unit tests with a fake server and a synthetic set pass on iPhone; a real server sign-in is unverified, and hardcore needs RetroAchievements approval of GagaEmu.
 - [ ] iCloud sync of saves and library. Owner will supply access; the owner enters credentials themselves. (P1, L, needs owner: client IDs and capability)
 - [ ] Google Drive, Dropbox and OneDrive browse and import. Owner will supply access; the owner enters credentials themselves. Check App Review 4.7 first. (P2, L, needs owner: client IDs and capability)
-- [ ] JIT mode per core as an option, development build only. NEVER in App Store or TestFlight builds: gate it at compile time so release targets cannot contain it. (P2, L)
+- [ ] JIT mode per core as an option, development build only. NEVER in App Store or TestFlight builds: gate it at compile time so release targets cannot contain it. (P2, L) Option only so far: a per-game "JIT mode (not functional)" toggle in the core picker, compiled only in the DevJIT configuration, for the 10 cores with an arm64 recompiler upstream (`docs/04` section 8.1). It stores a preference and enables nothing; `scripts/nojit-gate.sh` fails any Release, archive or IPA holding it. The JIT itself is future work.
 
 ## Screenshots not embedded
 
