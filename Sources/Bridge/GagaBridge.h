@@ -203,7 +203,8 @@ typedef struct GagaCoreInterface {
 
     // Guest memory for RetroAchievements. NULL means this core exposes none. region is a libretro RETRO_MEMORY_*
     // value, and the pointer stays valid until destroy. memory_map returns a struct retro_memory_map* the core set
-    // with RETRO_ENVIRONMENT_SET_MEMORY_MAPS, or NULL when it set none. Both are read-only for the host.
+    // with RETRO_ENVIRONMENT_SET_MEMORY_MAPS, or NULL when it set none. The host only reads them, except raw cheats,
+    // which write through memory_data (Sources/Bridge/PokeEngine.swift).
     void*       (*memory_data)(GagaInstance* inst, uint32_t region, size_t* size);
     const void* (*memory_map)(GagaInstance* inst);
 } GagaCoreInterface;

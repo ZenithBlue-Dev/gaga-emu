@@ -98,6 +98,12 @@ final class FlycastCoreTests: GagaTestCase {
         core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
         try await core.loadROM(path: directory.appendingPathComponent("GagaDreamcast.gdi").path)
         for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
+        // A raw cheat lands in main RAM: past the disc's program, in the 16 MB the libretro codes index.
+        let before = try XCTUnwrap(core.pokeReadForTest(address: 0xC00000))
+        try core.addCheat(id: 1, code: "C00000:\(String(format: "%02X", before ^ 0x5A))", enabled: true)
+        for _ in 0..<5 { core.step(inputs: [GagaInputState()]) }
+        XCTAssertEqual(core.pokeReadForTest(address: 0xC00000), before ^ 0x5A)
+        core.removeCheat(id: 1)
         // The SH-4's round-toward-zero stays in the core: run 11 read JSON 0.2 back as 0.19999999 after this test.
         XCTAssertEqual(Float(try XCTUnwrap(Double("0.2"))), 0.2, "the core's FPCR rounding mode reached the caller's thread")
         XCTAssertNil(capture.fatal)

@@ -21,7 +21,9 @@ enum CheatFormat {
         case "ppsspp": "CWCheat _L 0xAAAAAAAA 0xVVVVVVVV lines. A pasted _C block from a cheat .ini adds each cheat in it."
         case "mame": "A cheat's name from your System/mame/cheat/<set>.xml or cheat.7z, or Name = Setting."
         case "fbneo": "A cheat's name from your System/fbneo/cheats/<set>.ini or .dat, or Name = Option."
-        default: "Codes in a format this core reads."
+        case "azahar": "Gateway XXXXXXXX YYYYYYYY, one code line per line."
+        case "prboom": "A Doom cheat word such as iddqd. Once on, it stays on until the game is reloaded."
+        default: PokeEngine.base(coreID: coreID) == nil ? "Codes in a format this core reads." : PokeEngine.hint
         }
     }
 

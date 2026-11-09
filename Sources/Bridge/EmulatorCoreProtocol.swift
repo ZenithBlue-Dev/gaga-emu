@@ -206,7 +206,40 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
 
     public var stateVersion: UInt32 { coreInterface.state_version }
     public var supportsSaveStates: Bool { coreInterface.state_size != nil }
-    public var supportsCheats: Bool { coreInterface.cheat_add != nil }
+    public var supportsCheats: Bool {
+        coreInterface.cheat_add != nil || (pokeBase != nil && executionQueue.sync { !pokeRegions().isEmpty })
+    }
+
+    /// Non-nil when this core's cheats are raw writes from the host (`PokeEngine`).
+    private var pokeBase: UInt64? { coreInterface.cheat_add == nil ? PokeEngine.base(coreID: coreID) : nil }
+
+    private func pokeRegions() -> [GagaPokeRegion] {
+        guard let instance, let base = pokeBase else { return [] }
+        var region = GagaPokeRegion()
+        return withUnsafePointer(to: coreInterface) { gaga_poke_region($0, instance, base, &region) } ? [region] : []
+    }
+
+    private func applyPokes() {
+        if pokes.hasEnabled { pokes.apply(to: pokeRegions()) }
+    }
+
+    #if DEBUG
+    /// One byte of the game's memory through the same address map the cheats use, for tests.
+    func pokeReadForTest(address: UInt64) -> UInt8? {
+        executionQueue.sync {
+            let code = PokeEngine.Code(address: address, value: 0, compare: nil, width: 1)
+            guard PokeEngine.fits(code, in: pokeRegions()), let region = pokeRegions().first(where: { address >= $0.start }) else { return nil }
+            return region.data[Int(address - region.start)]
+        }
+    }
+
+    func pokeWriteForTest(address: UInt64, value: UInt8) {
+        executionQueue.sync {
+            guard let region = pokeRegions().first, address >= region.start, address - region.start < region.length else { return }
+            region.data[Int(address - region.start)] = value
+        }
+    }
+    #endif
 
     /// Frames stepped so far and the player 1 buttons the core last saw, after any filter.
     public var stats: (frames: Int, buttons: UInt32) {
@@ -474,6 +507,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             }
             recordRewind(inst)
             stepFn(inst, inArray, UInt32(count))
+            applyPokes()
             onFrameStepped?()
         }
     }
@@ -538,6 +572,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         #else
         stepFn(inst, currentInputs, players)
         #endif
+        applyPokes()
         onFrameStepped?()
 
         inputLock.lock()
@@ -697,8 +732,20 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
 
     // MARK: - Cheats & Metal Layer
 
+    private var pokes = PokeEngine()
+
     public func addCheat(id: UInt32, code: String, enabled: Bool) throws {
         try executionQueue.sync {
+            if pokeBase != nil {
+                let regions = pokeRegions()
+                guard !regions.isEmpty else { throw EmulatorCoreError.cheatRejected("This core has no cheats.") }
+                guard let codes = PokeEngine.parse(code) else { throw EmulatorCoreError.cheatRejected(PokeEngine.hint) }
+                guard codes.allSatisfy({ PokeEngine.fits($0, in: regions) }) else {
+                    throw EmulatorCoreError.cheatRejected("This code points outside the game's memory.")
+                }
+                pokes.set(id: id, codes: codes, enabled: enabled)
+                return
+            }
             guard let inst = instance, let addFn = coreInterface.cheat_add else {
                 throw EmulatorCoreError.cheatRejected("This core has no cheats.")
             }
@@ -712,12 +759,14 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
 
     public func removeCheat(id: UInt32) {
         executionQueue.sync {
+            pokes.remove(id: id)
             if let inst = instance { coreInterface.cheat_remove?(inst, id) }
         }
     }
 
     public func setCheat(id: UInt32, enabled: Bool) {
         executionQueue.sync {
+            pokes.setEnabled(id: id, enabled)
             if let inst = instance { coreInterface.cheat_set_enabled?(inst, id, enabled) }
         }
     }

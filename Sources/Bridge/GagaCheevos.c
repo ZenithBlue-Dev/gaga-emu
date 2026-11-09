@@ -32,3 +32,11 @@ uint32_t gaga_cheevos_read_memory(uint32_t address, uint8_t* buffer, uint32_t nu
     (void)client;
     return s_ready ? rc_libretro_memory_read(&s_regions, address, buffer, num_bytes) : 0;
 }
+
+bool gaga_poke_region(const GagaCoreInterface* core, GagaInstance* instance, uint64_t base, GagaPokeRegion* out) {
+    size_t size = 0;
+    void* data = core->memory_data ? core->memory_data(instance, RETRO_MEMORY_SYSTEM_RAM, &size) : NULL;
+    if (!data || !size) return false;
+    *out = (GagaPokeRegion){ data, base, size };
+    return true;
+}
