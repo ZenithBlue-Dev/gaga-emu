@@ -28,6 +28,21 @@ struct FilterPickerView: View {
     @State private var previewPick: PhotosPickerItem?
     @State private var customPreview = false
     @StateObject private var shaderManager = ShaderManager.shared
+    /// nil is every filter.
+    @State private var browse: Browse = .all
+    @State private var scope: Scope = .defaults
+    @State private var comparing = false
+    @State private var split: CGFloat = 0.5
+    @State private var tiles: [String: UIImage] = [:]
+
+    private enum Browse: Hashable {
+        case all, favourites, category(ShaderCategory)
+    }
+
+    /// What a pick applies to.
+    private enum Scope: Hashable {
+        case defaults, game, system(String)
+    }
 
     private struct ImportFailure: Identifiable {
         let id = UUID()
@@ -39,8 +54,32 @@ struct FilterPickerView: View {
     private enum ImportKind { case metal, slang }
 
     private var selected: String {
-        guard let game else { return state.shaderID }
-        return state.games.first { $0.id == game.id }?.shaderID ?? game.shaderID
+        switch scope {
+        case .defaults: return state.shaderID
+        case .system(let platform): return state.systemShaders[platform] ?? state.shaderID
+        case .game:
+            guard let game else { return state.shaderID }
+            return state.effectiveShaderID(state.games.first { $0.id == game.id } ?? game)
+        }
+    }
+
+    private var shown: [ShaderCatalog.Shader] {
+        ShaderCatalog.all.filter { shader in
+            guard matches(shader.name) else { return false }
+            switch browse {
+            case .all: return true
+            case .favourites: return state.favouriteShaders.contains(shader.id)
+            case .category(let category): return shader.category == category
+            }
+        }
+    }
+
+    private func toggleFavourite(_ id: String) {
+        if let index = state.favouriteShaders.firstIndex(of: id) {
+            state.favouriteShaders.remove(at: index)
+        } else {
+            state.favouriteShaders.append(id)
+        }
     }
 
     /// A layer-path core that cannot hand its frames to the filter chain, so no filter runs on this game.
@@ -83,28 +122,129 @@ struct FilterPickerView: View {
             .frame(minHeight: 44)
             .disabled(filtersSkipped)
             Rule()
+            scopePicker
+            categoryStrip
             Group {
-                ForEach(ShaderCatalog.builtIn.filter { matches($0.name) }) { shader in
-                    row(shader)
-                    Rule()
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 10) {
+                    ForEach(shown) { tile($0) }
                 }
-                if ShaderCatalog.community.contains(where: { matches($0.name) }) {
-                    sectionHeader("Community")
-                    Rule()
-                    ForEach(ShaderCatalog.community.filter { matches($0.name) }) { shader in
-                        row(shader)
-                        Rule()
+                .padding(.top, 8)
+                if browse == .favourites && shown.isEmpty {
+                    Text("Tap a star to keep a filter here.").font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
+                }
+                if browse == .all {
+                    if query.isEmpty || presets.contains(where: { matches($0.name) }) { savedSection }
+                    if query.isEmpty || imported.contains(where: { matches($0.name) }) { importedSection }
+                    if noMatches {
+                        Text("No filters match.").font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
                     }
-                }
-                if query.isEmpty || presets.contains(where: { matches($0.name) }) { savedSection }
-                if query.isEmpty || imported.contains(where: { matches($0.name) }) { importedSection }
-                if noMatches {
-                    Text("No filters match.").font(.footnote).foregroundStyle(AppTheme.muted).padding(.vertical, 8)
                 }
             }
             .disabled(filtersSkipped)
         }
         .padding(16)
+    }
+
+    private var scopePicker: some View {
+        Picker("Applies to", selection: $scope) {
+            if let game {
+                Text("This Game").tag(Scope.game)
+                Text("System").tag(Scope.system(game.platformID))
+            } else {
+                Text("All Games").tag(Scope.defaults)
+                ForEach(CoreCatalog.platforms) { Text($0.name).tag(Scope.system($0.id)) }
+            }
+        }
+        .modifier(ScopeStyle(segmented: game != nil))
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("filterScope")
+    }
+
+    private var categoryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                chip("All", .all)
+                chip("Favourites", .favourites)
+                ForEach(ShaderCategory.allCases) { chip($0.rawValue, .category($0)) }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func chip(_ title: String, _ value: Browse) -> some View {
+        let isOn = browse == value
+        return Button { browse = value } label: {
+            Text(title)
+                .font(.footnote.weight(isOn ? .bold : .regular))
+                .foregroundStyle(isOn ? AppTheme.onAccent : AppTheme.ink)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                .background(isOn ? AppTheme.accentFill : Color.clear, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(isOn ? Color.clear : AppTheme.rule, lineWidth: 1))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Show \(title)")
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+    }
+
+    private func tile(_ shader: ShaderCatalog.Shader) -> some View {
+        let locked = shader.premium && !store.canUseShader(shader.id)
+        let isSelected = selected == shader.id
+        let favourite = state.favouriteShaders.contains(shader.id)
+        let pick = { if locked { showPlans = true } else { select(shader.id) } }
+        return VStack(alignment: .leading, spacing: 0) {
+            Button(action: pick) {
+                Group {
+                    if let image = tiles[shader.id] {
+                        Image(uiImage: image).interpolation(.none).resizable()
+                    } else {
+                        AppTheme.surface
+                    }
+                }
+                .aspectRatio(4.0 / 3.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
+                .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(isSelected ? AppTheme.ink : AppTheme.rule, lineWidth: isSelected ? 2 : 1))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(locked ? "\(shader.name), needs Gaga Plus" : shader.name)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
+            // Beside the name, not over the picture: a star on the tile took taps meant for the tile.
+            HStack(alignment: .top, spacing: 0) {
+                Button(action: pick) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 2) {
+                            if isSelected { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
+                            Text(shader.name).font(.caption).fontWeight(isSelected ? .bold : .regular).lineLimit(2)
+                        }
+                        if let credit = shader.credit { Text(credit).font(.caption2).foregroundStyle(AppTheme.muted).lineLimit(1) }
+                        if shader.premium && PaywallGate.isOpen {
+                            Label("Plus", systemImage: locked ? "lock" : "checkmark.seal").font(.caption2).foregroundStyle(AppTheme.muted)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
+                    .padding(.top, 3)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHidden(true)
+                Button { toggleFavourite(shader.id) } label: {
+                    Image(systemName: favourite ? "star.fill" : "star")
+                        .font(.caption)
+                        .foregroundStyle(favourite ? AppTheme.ink : AppTheme.muted)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(favourite ? "Remove \(shader.name) from favourites" : "Add \(shader.name) to favourites")
+            }
+        }
+        .task(id: shaderManager.previewSource.map(ObjectIdentifier.init)) {
+            guard tiles[shader.id] == nil else { return }
+            await Task.yield()
+            tiles[shader.id] = shaderManager.tile(presetID: shader.id)
+        }
     }
 
     private func matches(_ name: String) -> Bool { query.isEmpty || name.localizedCaseInsensitiveContains(query) }
@@ -129,6 +269,17 @@ struct FilterPickerView: View {
                     previewPick = nil
                 }
             }
+            Button { comparing.toggle() } label: {
+                Image(systemName: "rectangle.split.2x1").foregroundStyle(comparing ? AppTheme.ink : AppTheme.muted).frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Compare before and after")
+            .accessibilityAddTraits(comparing ? .isSelected : [])
+            if case .system(let platform) = scope, state.systemShaders[platform] != nil {
+                Button("Clear") { state.setSystemFilter(nil, platformID: platform) }
+                    .buttonStyle(QuietButtonStyle())
+                    .accessibilityLabel("Clear this system's filter")
+            }
             Button("Save Preset") { startNaming(nil) }
                 .buttonStyle(QuietButtonStyle())
                 .disabled(filtersSkipped)
@@ -137,10 +288,31 @@ struct FilterPickerView: View {
     }
 
     private var preview: some View {
-        MetalPreviewCanvas(shaderManager: shaderManager)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
-            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
-            .accessibilityLabel("Filter preview, \(selectedName)")
+        GeometryReader { box in
+            ZStack(alignment: .leading) {
+                MetalPreviewCanvas(shaderManager: shaderManager)
+                    .accessibilityLabel("Filter preview, \(selectedName)")
+                if comparing {
+                    // Before on the left of the divider, after on the right.
+                    MetalPreviewCanvas(shaderManager: shaderManager, unfiltered: true)
+                        .mask(alignment: .leading) { Rectangle().frame(width: max(1, box.size.width * split)) }
+                        .accessibilityHidden(true)
+                    Rectangle().fill(AppTheme.ink).frame(width: 2).offset(x: box.size.width * split - 1)
+                        .accessibilityHidden(true)
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .gesture(DragGesture(minimumDistance: 0).onChanged { split = min(max($0.location.x / max(box.size.width, 1), 0), 1) })
+                        .accessibilityElement()
+                        .accessibilityLabel("Before and after divider")
+                        .accessibilityValue("\(Int(split * 100)) percent before")
+                        .accessibilityAdjustableAction { direction in
+                            split = min(max(split + (direction == .increment ? 0.1 : -0.1), 0), 1)
+                        }
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
+        .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
     }
 
     var body: some View {
@@ -214,8 +386,16 @@ struct FilterPickerView: View {
         .onAppear {
             imported = state.filters.entries
             presets = state.presets.presets
+            if game != nil { scope = .game }
             preview(selected)
+            // The game's own picture, from its newest save, when there is one. Else the built-in scene.
+            if let game, let shot = state.saveStore(for: game).slots().lazy.compactMap({ UIImage(contentsOfFile: $0.thumbnailURL.path) }).first,
+               shaderManager.setPreviewImage(shot) {
+                customPreview = true
+            }
         }
+        .onDisappear { if customPreview { shaderManager.setPreviewImage(nil) } }
+        .onChange(of: shaderManager.previewSource.map(ObjectIdentifier.init)) { tiles = [:] }
         .onChange(of: selected) { _, newID in preview(newID) }
         .onChange(of: previewPick) { _, item in
             guard let item else { return }
@@ -373,24 +553,16 @@ struct FilterPickerView: View {
         .contentShape(Rectangle())
     }
 
-    private func row(_ shader: ShaderCatalog.Shader) -> some View {
-        let locked = shader.premium && !store.canUseShader(shader.id)
-        let isSelected = selected == shader.id
-        return Button {
-            if locked { showPlans = true } else { select(shader.id) }
-        } label: {
-            rowLabel(shader.name, credit: shader.credit, selected: isSelected, locked: locked, premium: shader.premium)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(locked ? "\(shader.name), needs Gaga Plus" : shader.name)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
     private func select(_ id: String) {
-        if let game {
-            state.update(game.id) { $0.shaderID = id }
-        } else {
-            state.shaderID = id
+        switch scope {
+        case .defaults: state.shaderID = id
+        case .system(let platform): state.setSystemFilter(id, platformID: platform)
+        case .game:
+            guard let game else { return }
+            state.update(game.id) {
+                $0.shaderID = id
+                $0.filterOverride = true
+            }
         }
     }
 
@@ -454,6 +626,15 @@ struct FilterPickerView: View {
             state.update(item.id) { $0.shaderID = "original" }
         }
         if state.shaderID == entry.id { state.shaderID = "original" }
+        for (platform, id) in state.systemShaders where id == entry.id { state.systemShaders[platform] = nil }
+    }
+}
+
+private struct ScopeStyle: ViewModifier {
+    let segmented: Bool
+
+    func body(content: Content) -> some View {
+        if segmented { content.pickerStyle(.segmented) } else { content.pickerStyle(.menu) }
     }
 }
 
@@ -565,13 +746,14 @@ private struct FilterControls: View {
             values[keyPath: kind.keyPath] = Float($0)
             shaderManager.apply(values)
         })
+        let title = preset.title(for: kind)
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(kind.title).font(.footnote)
+                Text(title).font(.footnote)
                 Spacer(minLength: 4)
                 Text("\(Int((binding.wrappedValue * 100).rounded()))").font(.meta).foregroundStyle(AppTheme.muted)
             }
-            Slider(value: binding, in: 0...1) { Text(kind.title) } onEditingChanged: { editing in
+            Slider(value: binding, in: 0...1) { Text(title) } onEditingChanged: { editing in
                 if !editing { commit() }
             }
             .tint(AppTheme.accentFill)
