@@ -78,6 +78,8 @@ typedef struct {
     uint16_t rumble_sent[LR_RUMBLE_PORTS][2];    // As the host last heard it.
     bool multitap_in;      // gaga_libretro_core.multitap is plugged in.
     bool variables_dirty;  // Options changed since the core last asked (GET_VARIABLE_UPDATE).
+    struct retro_memory_descriptor* memory_descriptors; // Copied from SET_MEMORY_MAPS, for memory_map.
+    struct retro_memory_map memory_map;
 } LrInstance;
 
 // The instance libretro's callbacks reach. Set before the core can call back and cleared before the
@@ -204,6 +206,19 @@ static bool lr_environment(unsigned command, void* data) {
             }
         }
         return false;
+    }
+    case RETRO_ENVIRONMENT_SET_MEMORY_MAPS: {
+        // A copy: a core may build the table on its stack. The regions it points to live until unload.
+        const struct retro_memory_map* map = data;
+        size_t bytes = map->num_descriptors * sizeof(struct retro_memory_descriptor);
+        struct retro_memory_descriptor* copy = bytes ? malloc(bytes) : NULL;
+        if (bytes && !copy) return false;
+        if (bytes) memcpy(copy, map->descriptors, bytes);
+        free(a->memory_descriptors);
+        a->memory_descriptors = copy;
+        a->memory_map.descriptors = copy;
+        a->memory_map.num_descriptors = map->num_descriptors;
+        return true;
     }
     case RETRO_ENVIRONMENT_SET_VARIABLES:
         return true; // Values come from the table above, but melonDS DS reads none until this succeeds.
@@ -550,7 +565,19 @@ void gaga_lr_destroy(GagaInstance* inst) {
     for (size_t i = 0; i < a->cheat_count; ++i) free(a->cheats[i].code);
     free(a->cheats);
     free(a->opaque);
+    free(a->memory_descriptors);
     free(a);
+}
+
+void* gaga_lr_memory_data(GagaInstance* inst, uint32_t region, size_t* size) {
+    (void)inst;
+    *size = retro_get_memory_size(region);
+    return *size ? retro_get_memory_data(region) : NULL;
+}
+
+const void* gaga_lr_memory_map(GagaInstance* inst) {
+    LrInstance* a = (LrInstance*)inst;
+    return a->memory_map.num_descriptors ? &a->memory_map : NULL;
 }
 
 // FNV-1a, for telling ROMs apart, not for security: the host's SHA-256 covers damage to the state file.

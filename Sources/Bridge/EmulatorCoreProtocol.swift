@@ -134,6 +134,8 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     /// Ports in use while `lockstep` is set, the same on both phones, so a multiplayer adapter goes in on both.
     /// Queue only, like `lockstep`.
     var lockstepPlayerCount = 2
+    /// Runs on the queue after each emulated frame. Nil costs one branch; set only for a signed-in player (achievements).
+    var onFrameStepped: (() -> Void)?
     #if DEBUG
     /// Benchmark timing for each timed frame: start time, wall time and this thread's CPU time, in ns.
     public var onFrameTimed: ((UInt64, UInt64, UInt64) -> Void)?
@@ -469,6 +471,15 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             }
             recordRewind(inst)
             stepFn(inst, inArray, UInt32(count))
+            onFrameStepped?()
+        }
+    }
+
+    /// Builds the achievement address map from this core's memory. False when it exposes none.
+    func prepareAchievementMemory(consoleID: UInt32) -> Bool {
+        executionQueue.sync {
+            guard let instance else { return false }
+            return withUnsafePointer(to: coreInterface) { gaga_cheevos_memory_init($0, instance, consoleID) }
         }
     }
 
@@ -524,6 +535,7 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
         #else
         stepFn(inst, currentInputs, players)
         #endif
+        onFrameStepped?()
 
         inputLock.lock()
         framesStepped += 1

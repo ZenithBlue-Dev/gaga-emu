@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 5u
+#define GAGA_BRIDGE_ABI_VERSION 6u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -200,6 +200,12 @@ typedef struct GagaCoreInterface {
     // drives rumble sends RUMBLE events from step_frame.
     void (*set_event_callback)(GagaInstance* inst,
         void (*cb)(GagaEventSeverity severity, int32_t code, const char* message, void* userdata), void* userdata);
+
+    // Guest memory for RetroAchievements. NULL means this core exposes none. region is a libretro RETRO_MEMORY_*
+    // value, and the pointer stays valid until destroy. memory_map returns a struct retro_memory_map* the core set
+    // with RETRO_ENVIRONMENT_SET_MEMORY_MAPS, or NULL when it set none. Both are read-only for the host.
+    void*       (*memory_data)(GagaInstance* inst, uint32_t region, size_t* size);
+    const void* (*memory_map)(GagaInstance* inst);
 } GagaCoreInterface;
 
 #ifdef __cplusplus

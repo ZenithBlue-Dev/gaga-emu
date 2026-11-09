@@ -107,6 +107,8 @@ bool gaga_lr_self_test(char* error, size_t error_capacity);
 void gaga_lr_pause(GagaInstance* inst);
 void gaga_lr_resume(GagaInstance* inst);
 void gaga_lr_set_event_callback(GagaInstance* inst, void (*cb)(GagaEventSeverity, int32_t, const char*, void*), void* userdata);
+void* gaga_lr_memory_data(GagaInstance* inst, uint32_t region, size_t* size);
+const void* gaga_lr_memory_map(GagaInstance* inst);
 
 // First in a core's GagaCoreInterface initialiser. The core adds its ID, names, rates and state_version.
 #define GAGA_LIBRETRO_ENTRY_POINTS \
@@ -125,7 +127,9 @@ void gaga_lr_set_event_callback(GagaInstance* inst, void (*cb)(GagaEventSeverity
     .self_test = gaga_lr_self_test, \
     .pause = gaga_lr_pause, \
     .resume = gaga_lr_resume, \
-    .set_event_callback = gaga_lr_set_event_callback
+    .set_event_callback = gaga_lr_set_event_callback, \
+    .memory_data = gaga_lr_memory_data, \
+    .memory_map = gaga_lr_memory_map
 
 // Add for a core whose retro_cheat_set does something, with is_cheat set. Without it the menu row hides.
 #define GAGA_LIBRETRO_CHEATS \

@@ -282,8 +282,20 @@ static void mock_set_event_callback(GagaInstance* inst,
     m->event_userdata = userdata;
 }
 
+// A NES-sized work RAM (0x800), for the achievement tests.
+static uint8_t s_mock_memory[0x800];
+void MockCore_SetMemory(uint32_t address, uint8_t value) { s_mock_memory[address % sizeof s_mock_memory] = value; }
+
+static void* mock_memory_data(GagaInstance* inst, uint32_t region, size_t* size) {
+    (void)inst;
+    enum { RETRO_MEMORY_SYSTEM_RAM_ID = 2 };
+    *size = region == RETRO_MEMORY_SYSTEM_RAM_ID ? sizeof s_mock_memory : 0;
+    return *size ? s_mock_memory : NULL;
+}
+
 static const GagaCoreInterface s_mock_interface = {
     .abi_version = GAGA_BRIDGE_ABI_VERSION,
+    .memory_data = mock_memory_data,
     .core_id = "mock",
     .core_name = "Mock Validation Core",
     .core_version = "1.0.0",

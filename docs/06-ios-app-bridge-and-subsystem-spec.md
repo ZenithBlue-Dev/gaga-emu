@@ -66,7 +66,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 5u
+#define GAGA_BRIDGE_ABI_VERSION 6u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;

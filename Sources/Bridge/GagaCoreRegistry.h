@@ -54,6 +54,8 @@ const GagaCoreInterface* MockCore_GetInterface(void);
 // The last step_frame the mock core ran, for tests: its player_count and one port's buttons.
 uint32_t MockCore_LastPlayerCount(void);
 uint32_t MockCore_LastButtons(uint32_t port);
+// Pokes the mock core's work RAM, for the achievement tests.
+void MockCore_SetMemory(uint32_t address, uint8_t value);
 
 // Core Registry lookup APIs
 size_t GagaCoreRegistry_GetCount(void);
