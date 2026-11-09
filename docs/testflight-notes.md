@@ -2,6 +2,14 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611092335), 2026-11-09
+
+New: iCloud Sync, off by default, in Settings, Storage. It keeps saves and save states the same on your devices, and can include game files. It syncs when you quit a game or leave the app.
+
+If two devices changed the same save, the newest is used and the older stays as a named copy. Deleting a save on one device does not delete it on another.
+
+To test: turn it on on two devices signed in to the same iCloud account, play on one, quit, then open the other.
+
 ## 1.0.0 (202611092225), 2026-11-09
 
 New: RetroAchievements. Sign in with your own account in Settings, Play, then earn achievements with toasts and an in-game list. Hardcore mode turns off state loading, cheats and rewind; hardcore approval from RetroAchievements is pending.
