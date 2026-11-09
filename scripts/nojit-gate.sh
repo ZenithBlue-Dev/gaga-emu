@@ -21,6 +21,9 @@ default_strings='asmjit::JitRuntime'
 code_gen_imports='_pthread_jit_write_protect_np|_pthread_jit_write_with_callback_np|_sys_icache_invalidate|_sys_dcache_flush|___clear_cache|_mach_vm_protect|_vm_protect$|_mach_vm_remap|_vm_remap$'
 # get-task-allow is in the source plist's refusal list: Xcode adds it when it signs a development build, never the plist.
 jit_entitlements='allow-jit|allow-unsigned-executable-memory|disable-executable-page-protection|dynamic-codesigning|get-task-allow'
+# The development JIT option (Sources/UI/Games/DevJITOption.swift, docs/04 section 8.1): only this configuration may hold it.
+dev_jit_marker='GAGA_DEV_JIT_OPTION_MARKER'
+dev_jit_config='DevJIT'
 
 # Third and fourth arguments: the core's FORBIDDEN_IMPORTS (extra refused imports) and ALLOWED_IMPORTS (reviewed
 # exceptions to code_gen_imports, a regex per core in its core.env, with the reason beside it).
@@ -42,6 +45,24 @@ check_binary() {
         return 1
     fi
     echo "no-JIT gate: pass $(basename "$binary")"
+}
+
+# Every file in the bundle, frameworks and resources too. grep exit 2 (unreadable) fails, it does not pass.
+check_no_dev_jit() {
+    local hits rc=0
+    if [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" GAGA_DEV_JIT "* ]]; then
+        echo "no-JIT gate: this build sets GAGA_DEV_JIT, allowed only in the $dev_jit_config configuration and never in a release" >&2
+        return 1
+    fi
+    hits=$(grep -rlaF -- "$dev_jit_marker" "$1") || rc=$?
+    if [ "$rc" -eq 0 ]; then
+        echo "no-JIT gate: $1 contains the development JIT option: $(head -n 3 <<<"$hits")" >&2
+        return 1
+    elif [ "$rc" -ne 1 ]; then
+        echo "no-JIT gate: cannot scan $1 for the development JIT option" >&2
+        return 1
+    fi
+    echo "no-JIT gate: pass $(basename "$1"), no development JIT option"
 }
 
 check_entitlements() {
@@ -198,6 +219,7 @@ check_ipa_app() {
 # A built release app (an archive's): no non-commercial core framework and no debug core inside it.
 check_release_app() {
     local framework core
+    check_no_dev_jit "$1" || return 1
     for framework in "$1"/Frameworks/*.framework; do
         [ -d "$framework" ] || continue
         if [ "$(basename "$framework")" = VkTestCore.framework ]; then
@@ -245,6 +267,11 @@ check_sideload_app() {
 check_app() {
     local app=$1 framework name binary env core links contents
     check_entitlements "$2"
+    # Run by hand with no CONFIGURATION, the option is refused too.
+    if [ "${CONFIGURATION:-}" != "$dev_jit_config" ] || [ "${GAGA_RELEASE:-}" = 1 ] || [ "${ACTION:-}" = install ] ||
+        [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" PAYWALL_ENABLED "* ]]; then
+        check_no_dev_jit "$app"
+    fi
     # GAGA_SIDELOAD is a build setting from scripts/generate-project.sh for GAGA_CORE_SET=sideload.
     [ "${GAGA_SIDELOAD:-}" != 1 ] || check_sideload_app "$app"
     # Xcode passes build settings to this step. GAGA_RELEASE=1 comes from scripts/appstore_release.sh, and a

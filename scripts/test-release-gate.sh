@@ -14,7 +14,7 @@ trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/scripts" "$tmp/Cores/free" "$tmp/Cores/nc" "$tmp/Cores/vktest" "$tmp/Free.app/Frameworks/FreeCore.framework" \
     "$tmp/Mixed.app/Frameworks/FreeCore.framework" "$tmp/Mixed.app/Frameworks/NcCore.framework" \
     "$tmp/Debug.app/Frameworks/VkTestCore.framework" "$tmp/Snes.app/Frameworks/Snes9xCore.framework"
-cp "$root/scripts/nojit-gate.sh" "$tmp/scripts/"
+cp "$root/scripts/nojit-gate.sh" "$root/scripts/bootrom-gate.py" "$root/scripts/bootrom-hashes.txt" "$tmp/scripts/"
 printf 'CORE_FRAMEWORK=FreeCore\n' >"$tmp/Cores/free/core.env"
 printf 'CORE_FRAMEWORK=NcCore\nCORE_NONCOMMERCIAL=1\n' >"$tmp/Cores/nc/core.env"
 printf 'CORE_FRAMEWORK=VkTestCore\n' >"$tmp/Cores/vktest/core.env"
@@ -90,10 +90,10 @@ expect pass --entitlements "$fx/good.plist"
 expect fail --entitlements "$fx/jit.plist"
 expect fail --entitlements "$fx/gta.plist"
 
-ipa() { # name, entitlements plist -> $fx/<name>.ipa with a signed Free.app
+ipa() { # name, entitlements plist, optional main source -> $fx/<name>.ipa with a signed Free.app
     local app="$fx/$1/Payload/Free.app"
     mkdir -p "$app/Frameworks/FreeCore.framework"
-    cc "$fx/clean.c" -o "$app/Free"
+    cc "${3:-$fx/clean.c}" -o "$app/Free"
     cc -dynamiclib "$fx/clean.c" -o "$app/Frameworks/FreeCore.framework/FreeCore" 2>/dev/null ||
         cc "$fx/clean.c" -o "$app/Frameworks/FreeCore.framework/FreeCore"
     plist "$app/Info.plist" '<key>CFBundleExecutable</key><string>Free</string><key>CFBundleIdentifier</key><string>test.free</string>'
@@ -107,6 +107,50 @@ expect pass --release-ipa "$fx/good.ipa"
 expect fail --release-ipa "$fx/gta.ipa"
 expect fail --release-ipa "$fx/jit.ipa"
 expect fail --release-ipa "$fx/missing.ipa"
+
+# The development JIT option: a store build holding its marker, or built with its flag, fails.
+marker=$(sed -n "s/^dev_jit_marker='\(.*\)'$/\1/p" "$root/scripts/nojit-gate.sh")
+if [ -z "$marker" ] || ! grep -qF "\"$marker\"" "$root/Sources/UI/Games/DevJITOption.swift"; then
+    echo "FAIL: the gate's marker '$marker' is not the one in DevJITOption.swift" >&2
+    failures=$((failures + 1))
+fi
+printf 'const char m[] __attribute__((used)) = "%s";\nint main(void){return 0;}\n' "$marker" >"$fx/marked.c"
+ipa marked "$fx/good.plist" "$fx/marked.c"
+good_app="$fx/good/Payload/Free.app"
+marked_app="$fx/marked/Payload/Free.app"
+expect fail --release-ipa "$fx/marked.ipa"
+expect pass --release-app "$good_app"
+expect fail --release-app "$marked_app"
+SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG GAGA_DEV_JIT' expect fail --release-app "$good_app"
+# Marker in a resource, not a binary.
+mkdir -p "$tmp/Res.app"
+echo "$marker" >"$tmp/Res.app/x.dat"
+expect fail --release-app "$tmp/Res.app"
+expect fail --release-app "$tmp/missing.app"
+
+# The app build step: only DevJIT may hold it, and never when archiving or releasing.
+export GAGA_CORE_SET=free
+CONFIGURATION=Debug expect pass --app "$good_app" "$fx/good.plist"
+CONFIGURATION=Debug expect fail --app "$marked_app" "$fx/good.plist"
+CONFIGURATION=Release expect fail --app "$marked_app" "$fx/good.plist"
+expect fail --app "$marked_app" "$fx/good.plist" # by hand, no CONFIGURATION
+CONFIGURATION=Debug SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG GAGA_DEV_JIT' expect fail --app "$good_app" "$fx/good.plist"
+CONFIGURATION=DevJIT expect pass --app "$marked_app" "$fx/good.plist"
+CONFIGURATION=DevJIT SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG GAGA_DEV_JIT' expect pass --app "$marked_app" "$fx/good.plist"
+CONFIGURATION=DevJIT ACTION=install expect fail --app "$marked_app" "$fx/good.plist"
+CONFIGURATION=DevJIT GAGA_RELEASE=1 expect fail --app "$marked_app" "$fx/good.plist"
+CONFIGURATION=DevJIT SWIFT_ACTIVE_COMPILATION_CONDITIONS='PAYWALL_ENABLED' expect fail --app "$marked_app" "$fx/good.plist"
+unset GAGA_CORE_SET
+
+# Only the DevJIT configuration has the flag's xcconfig, and no release path names the flag.
+if [ "$(grep '\.xcconfig' "$root/project.yml" | tr -d ' ')" != 'DevJIT:DevJIT.xcconfig' ]; then
+    echo "FAIL: project.yml must apply an xcconfig to DevJIT only" >&2
+    failures=$((failures + 1))
+fi
+if grep -l 'GAGA_DEV_JIT' "$root/project.yml" "$root/scripts/appstore_release.sh" "$root/scripts/generate-project.sh" "$root/ExportOptions.plist" >&2; then
+    echo "FAIL: a release path names GAGA_DEV_JIT" >&2
+    failures=$((failures + 1))
+fi
 
 for core in $noncommercial; do
     env="$root/Cores/$core/core.env"
