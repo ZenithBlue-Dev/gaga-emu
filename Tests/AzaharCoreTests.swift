@@ -137,6 +137,9 @@ final class AzaharCoreTests: GagaTestCase {
         core.onVideoFrame = { _ in capture.frames += 1 }
         core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
         try await core.loadROM(path: try write(N3DSTestProgram.build(), name: "test.3dsx"))
+        // The Gateway engine runs with a code on and the picture must not change: offset to spare VRAM, one write.
+        XCTAssertThrowsError(try core.addCheat(id: 2, code: "not a code", enabled: true))
+        try core.addCheat(id: 1, code: "D3000000 1F500000\n00000000 12345678", enabled: true)
         for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
         XCTAssertNil(capture.fatal)
         XCTAssertGreaterThan(capture.frames, 0, "no frame presented")

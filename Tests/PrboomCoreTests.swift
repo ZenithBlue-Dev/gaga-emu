@@ -33,6 +33,19 @@ final class PrboomCoreTests: GagaTestCase {
         kit.run(core, frames: 120)
     }
 
+    /// The word reaches Doom's cheat reader. Doom shows nothing the test can read, so only the path is checked.
+    func testCheatWordsAreAcceptedAndBadOnesRefused() async throws {
+        let (core, capture) = try await kit.loaded(path: romPath)
+        enterGame(core)
+        XCTAssertTrue(core.supportsCheats)
+        XCTAssertThrowsError(try core.addCheat(id: 2, code: "NOT A WORD", enabled: true))
+        try core.addCheat(id: 1, code: "iddqd", enabled: true)
+        try core.addCheat(id: 3, code: "idkfa", enabled: true)
+        kit.run(core, frames: 10)
+        XCTAssertNil(capture.fatal)
+        core.stop()
+    }
+
     func testRegistryResolvesTheRealCore() throws {
         try kit.assertRegistry(version: "2.5.0 4849268e", extensions: ["wad"], platforms: ["doom"])
         XCTAssertEqual(kit.interface.target_fps, 60.0, accuracy: 0.01)

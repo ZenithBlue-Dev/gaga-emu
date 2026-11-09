@@ -1,13 +1,34 @@
 // GagaEmu's own code for the Azahar core: the refusing stand-ins flags.h sends network calls to, and the
 // settings upstream's libretro frontend has no option for.
+#include <algorithm>
 #include <cerrno>
+#include <memory>
 #include <netdb.h>
+#include <string>
 #include <sys/socket.h>
 
 #include "common/settings.h"
+#include "core/cheats/cheats.h"
+#include "core/cheats/gateway_cheat.h"
 #include "core/core.h"
 #include "video_core/gpu.h"
 #include "video_core/renderer_vulkan/renderer_vulkan.h"
+
+// MARK: - Cheats
+
+// Upstream's libretro frontend leaves retro_cheat_set empty; its engine already runs in the core once a game is loaded.
+extern "C" void gaga_azahar_cheat_reset(void) {
+    Cheats::CheatEngine& engine = Core::System::GetInstance().CheatEngine();
+    while (!engine.GetCheats().empty()) engine.RemoveCheat(0);
+}
+
+extern "C" void gaga_azahar_cheat_set(unsigned, bool enabled, const char* code) {
+    std::string lines(code);
+    std::replace(lines.begin(), lines.end(), '+', '\n'); // The adapter joins one cheat's lines with '+'.
+    auto cheat = std::make_shared<Cheats::GatewayCheat>("GagaEmu", std::move(lines), "");
+    cheat->SetEnabled(enabled);
+    Core::System::GetInstance().CheatEngine().AddCheat(std::move(cheat));
+}
 
 // MARK: - Frame order
 

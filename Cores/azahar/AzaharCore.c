@@ -8,6 +8,7 @@
 // is off); Azahar's own open-source system archives stand in for the shared font and Mii data.
 #include "LibretroAdapter.h"
 #include "LibretroVulkan.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -86,8 +87,23 @@ static const char* azahar_refuse_load(const char* system_dir, const char* rom_pa
     return refusal;
 }
 
+void gaga_azahar_cheat_reset(void);                                     // AzaharSupport.cpp: Azahar's Gateway engine.
+void gaga_azahar_cheat_set(unsigned index, bool enabled, const char* code);
+
+// One Gateway line: XXXXXXXX YYYYYYYY. The engine ignores what it cannot run, so the shape is checked here.
+static bool azahar_is_cheat(const char* line) {
+    for (int i = 0; i < 17; ++i) {
+        if (i == 8 ? line[i] != ' ' : !isxdigit((unsigned char)line[i])) return false;
+    }
+    return line[17] == '\0';
+}
+
 const GagaLibretroCore gaga_libretro_core = {
     .name = "Azahar",
+    .is_cheat = azahar_is_cheat,
+    .cheat_lines_are_one_code = true,
+    .cheat_reset = gaga_azahar_cheat_reset,
+    .cheat_set = gaga_azahar_cheat_set,
     .refuse_load = azahar_refuse_load,
     .game_kind = "a decrypted Nintendo 3DS game or 3DS homebrew",
     .variables = s_variables,
@@ -102,6 +118,7 @@ const GagaCoreInterface* Azahar_GetInterface(void) {
     static const GagaCoreInterface interface = {
         GAGA_LIBRETRO_ENTRY_POINTS,
         GAGA_LIBRETRO_VULKAN_LAYER,
+        GAGA_LIBRETRO_CHEATS,
         .core_id = "azahar",
         .core_name = "Azahar",
         .core_version = GAGA_CORE_VERSION,
