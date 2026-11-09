@@ -30,7 +30,7 @@ public struct ClipboardImporter: Sendable {
         "sms", "gg", "cdi", "gdi", "pce", "sgx", "vb", "vboy", "a26", "a78", "lnx", "ws", "wsc",
         "pc2", "ngp", "ngc", "ngpc", "npc", "min", "3dsx", "cci", "cxi", "app", "axf", "elf",
         "sg", "mv", "a52", "xex", "atr", "xfd", "dcm", "atx", "j64", "jag", "d64", "t64", "prg", "crt", "tap", "adf", "hdf", "wad",
-        "ips", "ups", "bps", "sav", "srm"
+        "ips", "ups", "bps", "xdelta", "vcdiff", "sav", "srm"
     ]
     public static let archiveExtensions: Set<String> = ["zip", "7z", "rar"]
 
@@ -146,6 +146,7 @@ public struct ClipboardImporter: Sendable {
         if data.starts(with: Data("PATCH".utf8)) { return "ips" }
         if data.starts(with: Data("UPS1".utf8)) { return "ups" }
         if data.starts(with: Data("BPS1".utf8)) { return "bps" }
+        if Xdelta.isPatch(data) { return "xdelta" }
         return nil
     }
 }

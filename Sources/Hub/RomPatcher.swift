@@ -1,11 +1,11 @@
 import Foundation
 import CryptoKit
 
-/// IPS, UPS, BPS, PPF, APS and RUP patcher, written from the format descriptions. The source dump is never
+/// IPS, UPS, BPS, PPF, APS, RUP and xdelta patcher, written from the format descriptions. The source dump is never
 /// modified; the patched image is returned (or written to a new file).
 public enum RomPatcher {
 
-    public enum Format: String, Sendable { case ips, ups, bps, ppf, aps, rup }
+    public enum Format: String, Sendable { case ips, ups, bps, ppf, aps, rup, xdelta }
 
     /// Largest image a patch may ask for: a header is untrusted, and its size is allocated.
     static let maxOutput = 1 << 31
@@ -17,10 +17,12 @@ public enum RomPatcher {
     }
 
     public enum PatchError: LocalizedError, Equatable {
-        case unknownFormat, truncated, badChecksum(expected: String, actual: String), unsupported
+        case unknownFormat, truncated, badChecksum(expected: String, actual: String), unsupported, corrupt, wrongSource
         public var errorDescription: String? {
             switch self {
-            case .unknownFormat: return "Patch is not IPS, UPS, BPS, PPF, APS or RUP."
+            case .corrupt: return "Patch is damaged."
+            case .wrongSource: return "This patch is for a different game file."
+            case .unknownFormat: return "Patch is not IPS, UPS, BPS, PPF, APS, RUP or xdelta."
             case .truncated: return "Patch ended early."
             case .badChecksum(let expected, let actual): return "Checksum \(actual) != \(expected)."
             case .unsupported: return "Patch uses an unsupported feature."
@@ -35,6 +37,7 @@ public enum RomPatcher {
         if patch.starts(with: Data("PPF".utf8)) { return .ppf }
         if patch.starts(with: Data("APS1".utf8)) { return .aps }
         if patch.starts(with: Data("NINJA2".utf8)) { return .rup }
+        if Xdelta.isPatch(patch) { return .xdelta }
         return nil
     }
 
@@ -47,6 +50,7 @@ public enum RomPatcher {
         case .ppf: return try applyPPF(patch, to: source)
         case .aps: return patch.starts(with: Data("APS10".utf8)) ? try applyAPSN64(patch, to: source) : try applyAPSGBA(patch, to: source)
         case .rup: return try applyRUP(patch, to: source)
+        case .xdelta: return try Xdelta.apply(patch, to: source)
         case nil: throw PatchError.unknownFormat
         }
     }
@@ -54,8 +58,12 @@ public enum RomPatcher {
     public static func apply(patch url: URL, toSource sourceURL: URL, writingTo dest: URL) throws -> Checksums {
         let patch = try Data(contentsOf: url)
         // PPF is for disc images: the copy is patched on disk, so the image is never held in memory.
-        if format(of: patch) == .ppf {
-            try applyPPF(patch, toFile: sourceURL, writingTo: dest)
+        if format(of: patch) == .ppf || format(of: patch) == .xdelta {
+            if format(of: patch) == .ppf {
+                try applyPPF(patch, toFile: sourceURL, writingTo: dest)
+            } else {
+                try Xdelta.apply(patch: patch, toFile: sourceURL, writingTo: dest)
+            }
             guard let sums = checksums(fileAt: dest) else { throw PatchError.truncated }
             return sums
         }

@@ -80,7 +80,7 @@ struct AddView: View {
             Rule()
             sourceRow("Multi-Disc Helper", "opticaldisc", "Joins disc files into one playlist.") { showMultiDisc = true }
             Rule()
-            sourceRow("Patch a ROM", "bandage", "Applies an IPS, UPS, BPS, PPF, APS or RUP patch to a copy.") { showPatcher = true }
+            sourceRow("Patch a ROM", "bandage", "Applies an IPS, UPS, BPS, PPF, APS, RUP or xdelta patch to a copy.") { showPatcher = true }
             Rule()
             Text("Add only games you have the right to use. GagaEmu comes with no games.")
                 .font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 12)
@@ -328,7 +328,7 @@ struct RomPatcherSheet: View {
                 .pickerStyle(.segmented).frame(minHeight: 44)
                 picker(creating ? "Original ROM" : "ROM", url: rom) { picking = .rom }
                 Rule()
-                picker(creating ? "Changed ROM" : "Patch (IPS, UPS, BPS, PPF, APS, RUP)", url: patch) { picking = .patch }
+                picker(creating ? "Changed ROM" : "Patch (IPS, UPS, BPS, PPF, APS, RUP, xdelta)", url: patch) { picking = .patch }
                 Rule()
                 Button(creating ? "Create UPS Patch" : "Apply Patch") { creating ? create() : apply() }
                     .buttonStyle(PrimaryButtonStyle())
