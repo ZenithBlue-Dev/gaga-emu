@@ -459,6 +459,149 @@ final class GagaEmuWalkTests: XCTestCase {
         auditPage(app, "Guides", as: "49 Guides")
     }
 
+    /// A catalogue filter on a texture-path Vulkan core, then that game's own picture from a save in the picker.
+    func testAuditShaderOnVulkanCore() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaImportTestROM", "ppsspp"]
+        app.launch()
+        _ = importedGame(app, "The \(title) game")
+        sleep(6)
+        guard !promptUp() else { return }
+        let tile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, "PSP")).firstMatch
+        XCTAssertTrue(tile.waitForExistence(timeout: timeout), "No PSP tile")
+        tile.press(forDuration: 1.2)
+        sleep(1)
+        XCTAssertTrue(open(app, "Choose Filter"), "No Choose Filter")
+        XCTAssertTrue(open(app, "System"), "No System scope")
+        XCTAssertTrue(open(app, "Show Scanlines"), "No Scanlines chip")
+        sleep(1)
+        tap(app.buttons["Thick Scanlines"].firstMatch, "Thick Scanlines")
+        sleep(1)
+        close(app)
+        guard !promptUp() else { return }
+        tap(tile, "The PSP tile")
+        let pause = app.buttons["Pause game"]
+        guard pause.waitForExistence(timeout: timeout) else {
+            snapshot("78 PSP did not start")
+            return
+        }
+        sleep(5)
+        audit("78 Vulkan core with a filter")
+        guard !promptUp() else { return }
+        pause.tap()
+        sleep(1)
+        tap(button(app, "Save State"), "Save State")
+        sleep(2)
+        tap(button(app, "Quit to Library"), "Quit to Library")
+        XCTAssertTrue(tile.waitForExistence(timeout: timeout), "Quit did not return to the Library")
+        sleep(1)
+        tile.press(forDuration: 1.2)
+        sleep(1)
+        XCTAssertTrue(open(app, "Choose Filter"), "No Choose Filter")
+        XCTAssertTrue(app.buttons["Use built-in preview image"].firstMatch.waitForExistence(timeout: 6), "The game's own picture was not used")
+        sleep(3)
+        audit("79 Filter on the game's picture")
+        close(app)
+    }
+
+    /// The filter catalogue, every control: categories, search, favourites, compare, sliders, and each scope.
+    func testAuditShaderCatalogue() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaImportTestROM", core]
+        app.launch()
+        let game = importedGame(app, "The \(title) game")
+        sleep(8)
+        guard !promptUp() else { return }
+        app.buttons["Settings"].firstMatch.tap()
+        sleep(1)
+        guard selectTab(app, "Graphics") else { return }
+        XCTAssertTrue(open(app, "Default Filter"), "No Default Filter row")
+        XCTAssertTrue(button(app, "Show CRT").waitForExistence(timeout: 6), "No category strip")
+        sleep(3)
+        audit("70 Filter catalogue")
+        for chip in ["Show CRT", "Show LCD and Handheld", "Show Scanlines", "Show Upscaling", "Show Smoothing", "Show Colour", "Show Sharpen", "Show Retro Looks"] {
+            XCTAssertTrue(open(app, chip), "No \(chip)")
+            sleep(2)
+            XCTAssertTrue(app.buttons["Add "].exists || app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add ' OR label BEGINSWITH 'Remove '")).firstMatch.exists, "\(chip) shows no tiles")
+            snapshot("71 \(chip)")
+        }
+        open(app, "Show All")
+        let aperture = app.buttons["Aperture Grille"].firstMatch
+        let search = app.textFields["Search filters"].firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 4), "No search")
+        search.tap()
+        search.typeText("xbr")
+        sleep(2)
+        XCTAssertTrue(app.buttons["xBR Style"].firstMatch.exists, "Search did not find xBR Style")
+        XCTAssertFalse(aperture.exists, "Search left Aperture Grille")
+        snapshot("72 Filter search xbr")
+        app.keyboards.buttons["search"].firstMatch.tap()
+        sleep(1)
+        let tile = app.buttons["xBR Style"].firstMatch
+        XCTAssertTrue(tile.waitForExistence(timeout: 4), "No xBR tile")
+        tile.tap()
+        sleep(2)
+        XCTAssertTrue(tile.isSelected, "The tile is not marked selected")
+        let star = app.buttons["Add xBR Style to favourites"].firstMatch
+        XCTAssertTrue(star.exists, "No favourite control")
+        star.tap()
+        sleep(1)
+        XCTAssertTrue(app.buttons["Remove xBR Style from favourites"].firstMatch.exists, "The star did not turn on")
+        let compare = app.buttons["Compare before and after"].firstMatch
+        XCTAssertTrue(compare.exists, "No compare button")
+        compare.tap()
+        sleep(2)
+        XCTAssertTrue(app.otherElements["Before and after divider"].firstMatch.exists || app.descendants(matching: .any)["Before and after divider"].firstMatch.exists, "No divider")
+        audit("73 Filter compare")
+        XCTAssertTrue(app.sliders["Softness"].firstMatch.exists, "No Softness slider for xBR Style")
+        XCTAssertTrue(app.sliders["Colour"].firstMatch.exists, "No Colour slider")
+        app.sliders["Softness"].firstMatch.adjust(toNormalizedSliderPosition: 0.9)
+        sleep(1)
+        snapshot("74 Filter slider")
+        compare.tap()
+        search.tap()
+        search.buttons.firstMatch.exists ? search.buttons.firstMatch.tap() : search.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 3))
+        app.keyboards.buttons["search"].firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(open(app, "Show Favourites"), "No favourites chip")
+        sleep(1)
+        XCTAssertTrue(app.buttons["xBR Style"].firstMatch.exists, "Favourites does not list the starred filter")
+        snapshot("75 Filter favourites")
+        close(app)
+        guard !promptUp() else { return }
+        app.buttons["Library"].firstMatch.tap()
+        sleep(2)
+        _ = game
+        let library = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        XCTAssertTrue(library.waitForExistence(timeout: 6), "No game in the Library")
+        library.press(forDuration: 1.2)
+        sleep(1)
+        XCTAssertTrue(open(app, "Choose Filter"), "No Choose Filter")
+        XCTAssertTrue(button(app, "This Game").waitForExistence(timeout: 6) || app.segmentedControls["filterScope"].firstMatch.exists, "No scope picker")
+        sleep(3)
+        audit("76 Filter for a game")
+        let system = app.buttons["System"].firstMatch
+        XCTAssertTrue(system.exists, "No System scope")
+        system.tap()
+        sleep(1)
+        XCTAssertTrue(open(app, "Show Colour"), "No Colour chip in game scope")
+        // A tile in the first row: a tap on a half-visible one can land on its star.
+        let tint = app.buttons["S-Video"].firstMatch
+        XCTAssertTrue(tint.waitForExistence(timeout: 4), "No S-Video tile")
+        tint.tap()
+        sleep(1)
+        XCTAssertTrue(tint.isSelected, "System filter did not select")
+        XCTAssertTrue(app.buttons["Clear this system's filter"].firstMatch.exists, "No Clear for a system filter")
+        snapshot("77 Filter for a system")
+        app.buttons["Clear this system's filter"].firstMatch.tap()
+        sleep(1)
+        close(app)
+    }
+
     /// Batch 3: RomM sign-in, the download rows, patch creation, the filter preview picture and the app icons, each
     /// upright and in landscape. An icon is never tapped: changing it raises a system notice this walk must not answer.
     func testAuditManic3() {
