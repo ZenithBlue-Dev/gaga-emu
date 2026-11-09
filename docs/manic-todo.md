@@ -2,7 +2,7 @@
 
 GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so nothing here asks to copy its layout, labels or art.
 
-Items: 48 open, 53 done (101 total).
+Items: 43 open, 61 done (104 total).
 
 The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
 
@@ -66,7 +66,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [ ] PSP networking toggle and ad hoc support. No ad hoc code today. (P3, L, blocked: legal review)
 - [ ] 3DS Artic Base setup by IP address. Needs core networking and the user's own console. (P3, L, blocked: legal review)
 - [ ] 3DS Pretendo Network with an install step for its helper. Third-party service with its own terms. (P3, L, blocked: legal review)
-- [ ] Internet netplay beyond local play ("Other Netplay"). Manic's page was not seen. (P3, L, blocked: legal review)
+- [ ] Internet netplay beyond local play ("Other Netplay"). Manic's page is captured in the gap analysis. (P3, L, blocked: legal review)
 
 ## Achievements
 
@@ -187,15 +187,21 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 The gap analysis could not reach these. Each is a task to capture.
 
-- [ ] Capture game detail and the long-press menu on a populated library. (P2, S, blocked: needs an imported game)
-- [ ] Capture the in-game menu, including skin and speed options. (P2, S, blocked: needs an imported game)
-- [ ] Capture save states. (P2, S, blocked: needs an imported game)
-- [ ] Capture cheats. (P2, S, blocked: needs an imported game)
-- [ ] Capture 3DS Pretendo Network. Opening it raised the iOS Local Network prompt. (P3, S, blocked: Local Network prompt)
-- [ ] Capture Other Netplay. (P3, S)
-- [ ] Capture the Shaders RetroArch tab. (P3, S)
-- [ ] Capture Language. (P3, S)
-- [ ] Capture Terms of Service. (P3, S)
+- [x] Capture game detail and the long-press menu on a populated library. (P2, S)
+- [x] Capture the in-game menu, including skin and speed options. (P2, S)
+- [x] Capture save states. Empty list only. (P2, S)
+- [x] Capture cheats. Empty list only. (P2, S)
+- [x] Capture 3DS Pretendo Network. No Local Network prompt this time. (P3, S)
+- [x] Capture Other Netplay. (P3, S)
+- [x] Capture the Shaders RetroArch tab. Empty until a download the walk did not start. (P3, S)
+- [ ] Capture Language. Row only: tapping it lost the walk's connection to Manic, so the destination is unseen. (P3, S)
+- [x] Capture Terms of Service. (P3, S)
+
+## Found in the game-page walk, 2026-11-09
+
+- [ ] Safe Mode launch from the game detail page. Manic's behaviour behind the button was not explored. (P3, S)
+- [ ] Slow motion in the in-game menu, next to fast forward. (P3, S)
+- [ ] Netplay public lobby, server and spectator passwords, and spectator mode. Manic's Other Netplay page lists them. (P3, L, blocked: legal review)
 
 ## Owner requests, 2026-11-09
 
@@ -215,3 +221,6 @@ Sources and plans for cheats: `docs/cheats-sources.md`.
 
 - `10-settings-1.png`: shows the profile card with the nickname and join date, which is personal info.
 - `30-paywall.png`: background shows cover art with game titles.
+- `32-game-long-press.png`: shows game titles in the library behind the menu.
+- `33-game-detail.png`: shows a game title, cover art and description.
+- `45-3ds-camera-prompt.png`: shows game art behind the iOS camera prompt.

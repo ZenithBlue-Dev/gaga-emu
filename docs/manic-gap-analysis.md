@@ -355,16 +355,122 @@ Nothing below was seen in Manic. Items marked "unseen" could exist on pages the 
 - Emulation is free for every core, with no platform gated (`docs/02` 2.6).
 - Keyboard input mapping editable per system and game (`Sources/Input/ControlMapping.swift`).
 
+## Second walk, game pages (2026-11-09)
+
+The owner allowed importing games into Manic and playing them. Games went in through Manic's Wi-Fi transfer, driven from the phone itself. No purchase, sign-in or terms were accepted, no game was deleted, and no setting changed beyond switching Wi-Fi transfer on for the import. Screens below are from Manic EMU 2.0.2 on the same iPhone 17.
+
+### Game detail and long-press menu
+
+Screenshots not embedded (`32-game-long-press.png`, `33-game-detail.png`): they show game titles and cover art.
+
+![Game more menu](../maniac-emu-reference-images/walk/31-game-more-menu.png)
+
+**Offers:** tapping a game opens a detail page with cover, description, Play Now, Safe Mode and View Metadata. Long press, and the carousel's more button, give Rename, Edit Cover, Assign Skin, View Save States, Import Game Save, Export Game Save, RetroAchievements and Cheat Codes, plus a Listen with BitBop sister-app promotion. Portrait shows a grouped grid with a system index and search; landscape shows a cover carousel with Play and more buttons. Games get cover art from a scraped database.
+
+| Item | Status | Detail |
+| :--- | :--- | :--- |
+| Rename, edit cover, assign skin per game | Present | Long-press menu on the Library |
+| Import and export a game save | Present | `Sources/UI/Game/ManageSavesSheet.swift`, `Sources/Session/SaveStore.swift` |
+| Safe Mode launch | Missing | No matching code in `Sources/` |
+| Sister-app promotion | Not planned | Same reason as the other promotions |
+
+### In-game menu, skin and speed
+
+![In-game menu 1](../maniac-emu-reference-images/walk/34-ingame-menu-1.png)
+![In-game menu 2](../maniac-emu-reference-images/walk/35-ingame-menu-2.png)
+![In-game menu 3](../maniac-emu-reference-images/walk/36-ingame-menu-3.png)
+![Assign skin in game](../maniac-emu-reference-images/walk/39-ingame-assign-skin.png)
+
+**Offers:** a sheet opened by the skin's menu button, with quick buttons for quit, reset, save state and load state. Rows: Assign Skin (per game, portrait and landscape), View Save States, RetroAchievements, Cheat Codes, Core Settings, Save State, Quick Load, Volume, Fast Forward, Slow Motion, Shaders, Screenshot, Haptics, AirPlay, Controllers, Dead Zone.
+
+| Item | Status | Detail |
+| :--- | :--- | :--- |
+| Fast forward | Present | `Sources/UI/Game/GameView.swift` |
+| Slow motion | Missing | No matching code in `Sources/` |
+| Dead zone | Present | `Sources/UI/Settings/ControlsViews.swift` |
+
+### Save states
+
+![Save states](../maniac-emu-reference-images/walk/38-ingame-save-states.png)
+
+**Offers:** Manual Save States and Auto Save States tabs. Empty on the tested game, so the list and its row actions were not seen.
+
+### Cheats
+
+![Cheats](../maniac-emu-reference-images/walk/37-ingame-cheats.png)
+
+**Offers:** an empty list with Add Cheat Codes. The add form was not opened.
+
+### Shaders, RetroArch tab
+
+![Shaders RetroArch tab](../maniac-emu-reference-images/walk/40-settings-shaders-retroarch.png)
+
+**Offers:** tabs Default, RetroArch, Import and Custom. The RetroArch tab is empty until the user taps Download Shaders from RetroArch, so the size of the catalogue is still unseen; the download was not started.
+
+### Other Netplay
+
+![Other Netplay](../maniac-emu-reference-images/walk/42-settings-other-netplay.png)
+
+**Offers:** Announce Publicly (public lobby), Use Relay Server, Server Password, Spectator Mode, Spectator Password.
+
+| Item | Status | Detail |
+| :--- | :--- | :--- |
+| Relay server | Partial | `Sources/Netplay/NetplayTransport.swift` mentions relay; not compared in detail |
+| Public lobby, passwords, spectator mode | Missing | No spectator code in `Sources/` |
+
+### 3DS Pretendo Network
+
+![Pretendo](../maniac-emu-reference-images/walk/43-settings-pretendo.png)
+
+**Offers:** Artic Base transfer from a real 3DS by IP address with a Start Transfer button, then Install Nimbus for Pretendo. No iOS Local Network prompt appeared this time. Nothing was started.
+
+### Terms of Service and Language
+
+![Terms](../maniac-emu-reference-images/walk/41-settings-terms.png)
+![Language row](../maniac-emu-reference-images/walk/44-settings-language-row.png)
+
+Terms of Use open as a web page in an in-app browser; there is nothing to accept. The Language row shows the current language. Tapping it twice ended the walk with the test connection to Manic lost, consistent with leaving the app, so the destination was not captured.
+
+### Import behaviour
+
+- Wi-Fi transfer is a GCDWebUploader page on port 6969. Each uploaded file is imported on its own.
+- A `.zip` raises a ZIP File Handling sheet, one per archive, asking whether to extract or keep it as a ZIP ROM. The walk uploaded extracted ROMs instead.
+- Cue sheets sent file by file fail with "Missing file", and each `.bin` becomes its own entry. Disc games need a different route, such as a ZIP, which was not tried.
+- Identical ROMs are refused as already existing. 3DS and PSP titles appear to come from the game data, not the file name.
+- `.bin` cartridge ROMs land in Unknown Platform and do not launch. Two BIOS or data files with a `.rom` extension were classed as Jaguar; launching one crashed Manic.
+- One 3DS game raised the iOS camera permission prompt while running. It was not answered.
+
+### Boot comparison by system
+
+Manic: launched about 20 s, counted when the screenshot at 20 s showed a game picture (non-black, spot-checked by eye). Manic showed no fps counter on the tested screens, so no fps was recorded. GagaEmu: counts from device run 20 (launched with a real frame and audio).
+
+| System | Manic boots | GagaEmu boots | Note on Manic |
+| :--- | ---: | ---: | :--- |
+| 3DS | 1 | 1 | Only one of four uploaded dumps was imported; one more failed to extract on the Mac |
+| FDS | 0 | 2 | Both returned to the library; BIOS not imported, as it was outside the allowed data change |
+| GB | 4 | 4 | |
+| GBC | 4 | 5 | One id not found in the library after upload |
+| GBA | 13 | 13 | |
+| MEGADRIVE | 0 | 4 | Two `.bin` ROMs in Unknown Platform; three CD games blocked by the cue issue above |
+| N64 | 3 | 3 | |
+| NDS | 8 | 8 | One `.rar` id was not extracted |
+| NES | 8 | 8 | |
+| PS1 | not tested | 6 | Cue issue above |
+| PSP | not tested | 4 | Imported, but the walk could not find them under their ids, so none was launched |
+| Saturn | not tested | 0 | Archive failed to extract on the Mac |
+| SNES | 10 | 10 | |
+| Total | 51 | 68 | Not a like-for-like total: PS1, PSP, Saturn and the disc games were not launched on Manic |
+
+Differences worth noting: FDS and Mega Drive `.bin` are the systems where Manic did worse here, both from import handling rather than from emulation. Where both launched, there is no measured fps to compare.
+
 ## Pages not reached
 
 | Page | Why |
 | :--- | :--- |
-| Populated library, game detail, long-press menu | Manic's library is empty; no game to open and importing is not allowed |
-| In-game menu, save states, cheats, in-game skin and speed options | Same |
-| 3DS Pretendo Network page screenshot | Opening it raised the iOS Local Network permission prompt. The walk stopped there and the prompt was not answered. Labels come from the accessibility tree only |
-| Other Netplay, Shaders RetroArch tab, Language, Terms of Service | Queued after that prompt; the walk stopped as instructed |
-| Files picker, Read Clipboard | Files starts the import flow; clipboard raises an iOS paste prompt |
-| Wi-Fi toggle and all other switches | Toggling is not allowed |
+| Language destination | Tapping the row lost the walk's connection to Manic; only the row is captured |
+| Save state list items, cheat add form | Empty on the tested game; adding would create data |
+| Files picker, Read Clipboard | Files picker was not used; clipboard raises an iOS paste prompt |
+| Other switches | Toggling is not allowed |
 | Cloud provider rows | Each starts a sign-in |
 | RetroAchievements account flow | Sign-in |
 | Feedback, Join QQ, Join Discord, Share, Clear Cache, Reset Tips, Rate Us, sister-app promo | Leaves the app, or changes data |
