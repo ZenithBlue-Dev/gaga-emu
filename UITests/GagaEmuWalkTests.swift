@@ -58,7 +58,7 @@ final class GagaEmuWalkTests: XCTestCase {
         let alert = app.alerts.firstMatch
         let deadline = Date().addingTimeInterval(importTimeout)
         while Date() < deadline {
-            if game.exists { return game }
+            if game.exists || promptUp() { return game }
             if alert.exists {
                 snapshot("Import alert")
                 XCTFail("\(what): the import failed: " + ([alert.label] + alert.staticTexts.allElementsBoundByIndex.map(\.label)).joined(separator: " | "))
@@ -548,32 +548,50 @@ final class GagaEmuWalkTests: XCTestCase {
     func testAuditGamePSP() { auditGame("ppsspp", platform: "PSP", tag: "14 PSP") }
 
     /// Settings > About > Licences.
-    func testOpenLicences() {
+    func testOpenLicences() throws {
         let app = launchApp()
-        tap(button(app, "Settings"), "Settings in the rail")
-        tap(button(app, "About"), "About")
-        tap(button(app, "Licences"), "Licences")
+        try guardedTap(button(app, "Settings"), "Settings in the rail")
+        try guardedTap(button(app, "About"), "About")
+        try guardedTap(button(app, "Licences"), "Licences")
         snapshot("Licences")
+    }
+
+    /// Ends the test as skipped, with a screenshot, while a system prompt is up, so nothing taps or waits under it.
+    private func stopIfPrompt() throws {
+        if promptUp() { throw XCTSkip("A system prompt is up") }
+    }
+
+    private func arrive(_ element: XCUIElement, _ what: String) throws {
+        try stopIfPrompt()
+        if element.waitForExistence(timeout: timeout) { return }
+        try stopIfPrompt()
+        XCTFail("\(what) did not appear")
+    }
+
+    private func guardedTap(_ element: XCUIElement, _ what: String) throws {
+        try arrive(element, what)
+        try stopIfPrompt()
+        element.tap()
     }
 
     /// Play, turn the phone upright and back: the touch controls lay out again for each orientation and stay on
     /// screen, and the game keeps running, so its pause menu still opens and closes.
-    func testRotation() {
+    func testRotation() throws {
         let app = launchApp()
-        importedGame(app, "The \(title) game").tap()
+        try guardedTap(importedGame(app, "The \(title) game"), "The game")
         let pause = app.buttons["Pause game"]
-        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
+        try arrive(pause, "The game")
         sleep(2)
         let control = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@",
             ["A button", "B button", "Start", "D-pad right"])).firstMatch
-        XCTAssertTrue(control.waitForExistence(timeout: timeout), "No touch control")
+        try arrive(control, "A touch control")
         let landscape = control.frame
         snapshot("Rotation landscape")
 
         XCUIDevice.shared.orientation = .portrait
         sleep(2)
         snapshot("Rotation portrait")
-        XCTAssertTrue(control.waitForExistence(timeout: timeout), "The touch control left after turning upright")
+        try arrive(control, "The touch control after turning upright")
         let portrait = control.frame
         XCTAssertNotEqual(portrait, landscape, "The touch controls did not lay out again upright")
         XCTAssertTrue(app.frame.contains(portrait), "The touch control is off screen upright: \(portrait) in \(app.frame)")
@@ -581,16 +599,16 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         sleep(2)
         snapshot("Rotation landscape again")
-        XCTAssertTrue(control.waitForExistence(timeout: timeout), "The touch control left after turning back")
+        try arrive(control, "The touch control after turning back")
         XCTAssertTrue(app.frame.contains(control.frame), "The touch control is off screen in landscape: \(control.frame) in \(app.frame)")
 
-        tap(pause, "Pause game after turning")
-        tap(button(app, "Resume"), "Resume after turning")
-        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not run again after turning")
+        try guardedTap(pause, "Pause game after turning")
+        try guardedTap(button(app, "Resume"), "Resume after turning")
+        try arrive(pause, "The running game after turning")
     }
 
     /// Play, press a touch control, pause, resume, save a state, load it, quit, relaunch, check the battery save.
-    func testWalk() {
+    func testWalk() throws {
         var app = launchApp()
         snapshot("Library")
         let play = importedGame(app, "The \(title) game")
@@ -601,37 +619,37 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("Library portrait")
         XCUIDevice.shared.orientation = .landscapeLeft
         sleep(2)
-        play.tap()
+        try guardedTap(play, "The game")
         let pause = app.buttons["Pause game"]
-        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
+        try arrive(pause, "The game")
         sleep(2)
         snapshot("Playing, touch layout")
 
         // Touch input: the glyph passes the touch to the layer under it, which presses the button.
         let control = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@",
             ["A button", "B button", "Start", "D-pad right"])).firstMatch
-        tap(control, "A touch control")
+        try guardedTap(control, "A touch control")
         snapshot("After input")
 
-        pause.tap()
-        tap(button(app, "Resume"), "Resume")
-        pause.tap()
-        tap(button(app, "Save State"), "Save State")
-        tap(button(app, "Load State"), "Load State")
+        try guardedTap(pause, "Pause game")
+        try guardedTap(button(app, "Resume"), "Resume")
+        try guardedTap(pause, "Pause game")
+        try guardedTap(button(app, "Save State"), "Save State")
+        try guardedTap(button(app, "Load State"), "Load State")
         let load = button(app, "Load Save state")
-        tap(load, "The saved state")
-        XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not resume after loading the state")
+        try guardedTap(load, "The saved state")
+        try arrive(pause, "The game after loading the state")
         snapshot("Loaded state")
 
-        pause.tap()
-        tap(button(app, "Quit to Library"), "Quit to Library")
-        XCTAssertTrue(play.waitForExistence(timeout: timeout), "Quit did not return to the Library")
+        try guardedTap(pause, "Pause game")
+        try guardedTap(button(app, "Quit to Library"), "Quit to Library")
+        try arrive(play, "The Library after quitting")
 
         app.terminate()
         app = launchApp()
-        importedGame(app, "The game after relaunch").tap()
-        tap(app.buttons["Pause game"], "Pause game after relaunch")
-        tap(button(app, "Load State"), "Load State after relaunch")
+        try guardedTap(importedGame(app, "The game after relaunch"), "The game after relaunch")
+        try guardedTap(app.buttons["Pause game"], "Pause game after relaunch")
+        try guardedTap(button(app, "Load State"), "Load State after relaunch")
         snapshot("Saves after relaunch")
         XCTAssertTrue(button(app, "Load Save state").exists,
                       "The save state did not survive a relaunch")

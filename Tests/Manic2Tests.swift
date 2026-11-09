@@ -50,6 +50,13 @@ final class Manic2Tests: GagaTestCase {
         return Data("<?xml version=\"1.0\"?><D:multistatus xmlns:D=\"DAV:\">\(body)</D:multistatus>".utf8)
     }
 
+    /// Read by the device run before the long walks start.
+    func testReportFreeSpace() throws {
+        let free = try FileManager.default.temporaryDirectory
+            .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage ?? 0
+        print("GAGA_FREE_BYTES=\(free)")
+    }
+
     func testAddressNeedsTLSUnlessAllowed() throws {
         XCTAssertEqual(try WebDAVClient(address: "nas.local/games", allowPlainHTTP: false, credentials: nil).base.absoluteString, "https://nas.local/games/")
         XCTAssertThrowsError(try WebDAVClient(address: "http://nas.local", allowPlainHTTP: false, credentials: nil)) {
