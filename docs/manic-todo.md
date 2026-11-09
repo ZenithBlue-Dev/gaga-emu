@@ -48,7 +48,8 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 ![Add Service](../maniac-emu-reference-images/walk/05-import-add-service.png)
 ![Settings, Advanced (iCloud Sync row)](../maniac-emu-reference-images/walk/11-settings-2.png)
 
-- [ ] iCloud sync of saves and library across devices. No CloudKit or ubiquity code. (P1, L, blocked: App ID capability)
+- [x] iCloud sync of saves and save states, optionally ROMs, off by default in Settings, Storage. `Sources/Hub/CloudSync.swift`, container `iCloud.com.zenithblue.gagaemu`, in build 202611092335. Conflict unit tests and the Settings walk pass on iPhone. (P1, L)
+- [ ] Check iCloud sync between two real devices signed in to one account, including iCloud's own file-version conflicts. Needs the owner. Library metadata (play time, favourites) does not sync, and a deletion does not travel. (P1, S, needs owner)
 - [ ] WebDAV as a game source. Built (`Sources/Hub/WebDAVClient.swift`, Add > WebDAV Server). Sign-in, browse, download and refusal of unsafe paths pass on the iPhone against a loopback server only; not yet run against a real server over Wi-Fi. (P2, M)
 - [ ] SMB network share as a game source. Partial: through the Files app's Connect to Server, then Choose from Files (Add > SMB Share, guide written). Not run against a share. An in-app client needs libsmb2 (LGPL), so it was not added. (P2, M)
 - [ ] Google Drive, Dropbox and OneDrive browse and import. Each needs an OAuth client and a file browser. Confirm against App Review 4.7 first. (P2, L, blocked: owner account)
@@ -213,7 +214,7 @@ Sources and plans for cheats: `docs/cheats-sources.md`.
 - [ ] RetroArch shader catalogue and GPL shaders (xBRZ, CRT-Royale and similar). Owner accepts GPL. Where a licence forbids use, write a clean engineered replacement. Add to the licences screen. (P1, M)
 - [x] xdelta patches, including secondary compression (djw, lzma), clean engineered. Licence tag removed. (P2, M)
 - [x] RetroAchievements: a real implementation on rcheevos. The player signs in with their own account in the app; no shared credentials. (P1, M) Built on rcheevos v12.5.0: settings sign-in, token in Keychain, unlock toast, list with progress, hardcore gates. Unit tests with a fake server and a synthetic set pass on iPhone; a real server sign-in is unverified, and hardcore needs RetroAchievements approval of GagaEmu.
-- [ ] iCloud sync of saves and library. Owner will supply access; the owner enters credentials themselves. (P1, L, needs owner: client IDs and capability)
+- [x] iCloud sync of saves and save states, with optional ROMs. Capability and container registered 2026-11-09. Real two-device sync is unverified, and library metadata does not sync; see the iCloud items above. (P1, L)
 - [ ] Google Drive, Dropbox and OneDrive browse and import. Owner will supply access; the owner enters credentials themselves. Check App Review 4.7 first. (P2, L, needs owner: client IDs and capability)
 - [ ] JIT mode per core as an option, development build only. NEVER in App Store or TestFlight builds: gate it at compile time so release targets cannot contain it. (P2, L) Option only so far: a per-game "JIT mode (not functional)" toggle in the core picker, compiled only in the DevJIT configuration, for the 10 cores with an arm64 recompiler upstream (`docs/04` section 8.1). It stores a preference and enables nothing; `scripts/nojit-gate.sh` fails any Release, archive or IPA holding it. The JIT itself is future work.
 

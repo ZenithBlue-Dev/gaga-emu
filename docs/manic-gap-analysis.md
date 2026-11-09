@@ -14,7 +14,7 @@ Manic's library was empty, so everything that needs a game was not reachable. Se
 
 | # | Gap | Status | Effort | Blocked? | Page |
 | :-- | :--- | :--- | :-- | :--- | :--- |
-| 1 | Cross-device save and library sync through iCloud | Missing | L | Yes: needs the iCloud capability on the App ID | [Settings, Advanced](#settings-general-and-advanced) |
+| 1 | Cross-device save and library sync through iCloud | Built for saves, states and ROMs; library metadata missing; two-device check pending | L | Capability registered 2026-11-09 | [Settings, Advanced](#settings-general-and-advanced) |
 | 2 | Connect cloud drives and network shares as game sources (Google Drive, Dropbox, OneDrive, Baidu, AliCloud, WebDAV, SMB, RomM) | Missing | L | Partly: OAuth client registration per provider; see the 4.7 note | [Add Service](#add-service) |
 | 3 | RetroAchievements sign-in and achievements | Present | M | Owner approval for hardcore | [RetroAchievements](#retroachievements) |
 | 4 | Internet play services: DS Wi-Fi Connection servers, PSP networking, 3DS Artic Base and Pretendo | Missing | L | Partly: third-party services and terms; review needed | [Online Play](#online-play-settings) |
@@ -176,7 +176,7 @@ Pulling a user's own files from their own storage is a different case from an in
 | Assign Skin | Present | `AssignSkinView.swift` | |
 | Cover Scraping | Present | `SettingsView.swift:216`, `Sources/Hub/CoverArtFetcher.swift` | Off by default. Manic's page says only "No compatible games" with an empty library |
 | AirPlay Fullscreen | Partial | `Sources/UI/Game/ExternalDisplay.swift`, hidden at `SettingsView.swift:270` | Built, awaiting a second-screen check |
-| iCloud Sync | Missing, Blocked | None | No `CloudKit` or ubiquity code. Needs the App ID capability |
+| iCloud Sync | Built | Settings, Storage | iCloud Documents sync of saves, states and optional ROMs (`Sources/Hub/CloudSync.swift`). Library metadata does not sync. Two-device check pending |
 | Auto Full Screen | Present | `SettingsView.swift:202` | |
 | Respect Silent Mode | Present | `SettingsView.swift:204` | |
 | Rumble | Present | `SettingsView.swift:326`, `Sources/Input/RumbleManager.swift` | |
