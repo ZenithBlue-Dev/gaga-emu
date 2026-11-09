@@ -2,6 +2,23 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611091149), 2026-11-09
+
+Add games from your own RomM server, queue and cancel downloads, make UPS patches, and pick a new app icon.
+
+**Adding games**
+- Add games from your own RomM server.
+- Downloads from your WebDAV or RomM server now queue, and you can cancel them.
+- Start a few downloads, cancel one, and check the rest finish and appear in the Library.
+
+**Patching**
+- Patch a ROM can create UPS patches.
+- Create one and check it applies to the original file.
+
+**Settings**
+- Use your own picture in the filter preview.
+- Choose from five new app icons in Settings > Display.
+
 ## 1.0.0 (202611091030), 2026-11-09
 
 Add games from your own WebDAV server, import skin layouts, and new Library tools.
