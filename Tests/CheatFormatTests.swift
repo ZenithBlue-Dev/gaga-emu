@@ -62,6 +62,16 @@ final class CheatFormatTests: GagaTestCase {
         XCTAssertEqual(CheatFormat.chtBlocks(String(repeating: "\u{0}cheat=\n", count: 1000), coreID: "mgba"), [], "junk is skipped")
     }
 
+    func testTheBundledDatabaseFindsAGameByItsLibraryTitle() {
+        XCTAssertEqual(CheatDatabase.key("Legend of Zelda, The - Oracle (USA) [T+Eng]"), "legendofzeldaoracle")
+        XCTAssertEqual(CheatDatabase.key("The Pokémon!"), "pokemon")
+        let found = CheatDatabase.blocks(title: "Super Mario Advance 4 - Super Mario Bros. 3 (USA)", platformID: "gba", coreID: "mgba")
+        XCTAssertFalse(found.isEmpty)
+        XCTAssertTrue(found.allSatisfy { !$0.enabled }, "off until the player switches one on")
+        XCTAssertEqual(CheatDatabase.blocks(title: "No Such Game (USA)", platformID: "gba", coreID: "mgba"), [])
+        XCTAssertEqual(CheatDatabase.blocks(title: "Super Mario Advance 4 - Super Mario Bros. 3 (USA)", platformID: "n3ds", coreID: "azahar"), [], "no 3DS data")
+    }
+
     func testPlainCodesAreNotABlock() {
         XCTAssertEqual(CheatFormat.cwCheatBlocks("_L 0x20000000 0x00000001"), [], "no _C line: one cheat, as typed")
         XCTAssertEqual(CheatFormat.cwCheatBlocks("01FF34C2\nGameShark"), [])

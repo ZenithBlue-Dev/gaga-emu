@@ -125,9 +125,12 @@ struct CheatsSheet: View {
     @State private var failure: String?
     @State private var importing = false
     @State private var imported: [CheatFormat.Block]?
+    @State private var bundled: [CheatFormat.Block] = []
     @FocusState private var editing: Bool
 
     private var trimmedCode: String { code.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// A bundled cheat the player switched on moves to the list above, so it is not offered twice.
+    private var available: [CheatFormat.Block] { bundled.filter { block in !session.cheats.contains { $0.code == block.code } } }
 
     var body: some View {
         // Upright on a phone the two columns stack.
@@ -180,6 +183,14 @@ struct CheatsSheet: View {
                         Text("No cheats yet.").foregroundStyle(AppTheme.muted).padding(.vertical, 12)
                     }
                     ForEach(session.cheats) { row($0) }
+                    if !available.isEmpty {
+                        Text("Available cheats").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+                            .padding(.top, 16)
+                            .frame(minHeight: 44)
+                        LazyVStack(spacing: 0) { // A game can have thousands.
+                            ForEach(Array(available.enumerated()), id: \.offset) { bundledRow($0.element) }
+                        }
+                    }
                     if let imported {
                         Text("In this file").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
                             .padding(.top, 16)
@@ -199,6 +210,12 @@ struct CheatsSheet: View {
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.data, .item]) { outcome in
             if case .success(let url) = outcome { load(url) }
+        }
+        .task {
+            let (title, platformID, coreID) = (session.game.title, session.game.platformID, session.coreID)
+            bundled = await Task.detached(priority: .userInitiated) {
+                CheatDatabase.blocks(title: title, platformID: platformID, coreID: coreID)
+            }.value
         }
         #if DEBUG
         .onAppear { // Device walks: Files cannot be driven, so a file put in Documents stands in for the pick.
@@ -233,6 +250,18 @@ struct CheatsSheet: View {
                 .buttonStyle(QuietButtonStyle())
                 .accessibilityLabel("Add \(block.name)")
             }
+            .frame(minHeight: 44)
+            Rule()
+        }
+    }
+
+    /// Off until the player switches it on, which adds it like any other cheat: the core and the cheat limit still judge it.
+    private func bundledRow(_ block: CheatFormat.Block) -> some View {
+        VStack(spacing: 0) {
+            Toggle(block.name, isOn: Binding(get: { false }, set: { value in
+                if value { attempt { try session.addCheat(name: block.name, code: block.code, enabled: true) } }
+            }))
+            .tint(AppTheme.accentFill)
             .frame(minHeight: 44)
             Rule()
         }
