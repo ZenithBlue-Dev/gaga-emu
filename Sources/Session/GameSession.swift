@@ -74,6 +74,14 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// What the touch button switches to. The pause menu sets it.
     var fastForwardChoice = 2
     @Published private(set) var cheats: [CheatEntry] = []
+    /// A signed-in player's achievements. Set by the owner before `prepare`; nil costs nothing.
+    var achievements: RetroAchievements?
+    /// The game has an achievement set running, so the pause menu lists it.
+    @Published private(set) var achievementsLoaded = false
+    /// A game is running under RetroAchievements hardcore rules: no state load, cheats or rewind.
+    @Published private(set) var hardcoreActive = false
+    /// A state was loaded before the set arrived; hardcore must then start from a reset.
+    private var stateLoadedBeforeSet = false
     /// A message for the player that does not end the session.
     @Published var notice: String?
     let saves: SaveStore
@@ -301,8 +309,68 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             // shortcut: a stored code this core now refuses stays listed but does nothing. It was valid when added, so this needs a core change; show it in the list if that ever happens.
             for cheat in cheats { try? core.addCheat(id: cheat.id, code: cheat.code, enabled: cheat.enabled) }
         }
+        startAchievements(core)
         phase = .prepared
     }
+
+    private func startAchievements(_ core: GagaCoreWrapper) {
+        guard let achievements, let console = RetroAchievements.consoleID(platform: game.platformID),
+              core.prepareAchievementMemory(consoleID: console) else {
+            achievements = nil
+            return
+        }
+        core.onFrameStepped = { [weak achievements] in achievements?.doFrame() }
+        achievements.onEvent = { [weak self] event in self?.handleAchievement(event) }
+        achievements.startGame(path: romPath, console: console) { [weak self] loaded in
+            guard let self else { return }
+            achievementsLoaded = loaded
+            updateHardcoreGate()
+            if hardcoreActive, stateLoadedBeforeSet {
+                stateLoadedBeforeSet = false
+                self.core?.reset()
+                achievements.reset()
+            }
+        }
+    }
+
+    private func handleAchievement(_ event: RetroAchievements.Event) {
+        switch event {
+        case .unlocked(let title, let points): announce("Achievement unlocked: \(title), \(points) points.")
+        case .offline: show("Offline. Unlocks will be sent when the connection returns.")
+        case .reconnected: show("Reconnected. Unlocks sent.")
+        case .serverError(let message): show(message)
+        case .reset:
+            // Hardcore was just switched on: the rules require a fresh start.
+            core?.reset()
+            achievements?.reset()
+        }
+    }
+
+    /// The toast, read out by VoiceOver as well.
+    private func announce(_ line: String) {
+        show(line)
+        UIAccessibility.post(notification: .announcement, argument: line)
+    }
+
+    func setHardcore(_ on: Bool) {
+        achievements?.setHardcore(on)
+        updateHardcoreGate()
+    }
+
+    private func updateHardcoreGate() {
+        let on = achievementsLoaded && achievements?.hardcore == true
+        guard on != hardcoreActive else { return }
+        hardcoreActive = on
+        if on {
+            rewindTouchHeld = false
+            updateRewinding(controllerHeld: false)
+        }
+        // Enabled cheats stop reaching the core under hardcore and come back after it, without changing the saved list.
+        for cheat in cheats where cheat.enabled { core?.setCheat(id: cheat.id, enabled: !on) }
+    }
+
+    /// RetroAchievements' list for the pause menu.
+    func achievementList() -> [AchievementInfo] { achievements?.achievements() ?? [] }
 
     private func wire(_ core: GagaCoreWrapper) {
         // Queue only. Stops a bad core from raising the same error every frame.
@@ -424,6 +492,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     func pause(_ reason: PauseReason) {
         guard phase == .running || phase == .paused else { return }
+        // Hardcore limits how often the game may pause. A forced stop still pauses.
+        if reason == .menu, hardcoreActive, phase == .running, achievements?.canPause() == false {
+            return show("Hardcore: pausing again in a moment.")
+        }
         pauseReasons.insert(reason)
         rewindTouchHeld = false // The button may vanish under the finger, and its release with it.
         processors.forEach { $0.cancelMacros() }
@@ -461,6 +533,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         // A session ending on an error may be why it ended, so it must not replace a good auto save.
         if message == nil { saveAuto() }
         phase = .stopped
+        achievements?.onEvent = nil
+        achievements?.endGame() // Before the core goes: the address map points into it.
         #if DEBUG
         CodeGenCheck.report("session stop, \(game.title)")
         #endif
@@ -543,8 +617,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// Every check runs before the core is touched, and the core keeps its game on any failure.
     func loadState(_ slot: SaveSlot) throws {
         guard let core else { throw EmulatorCoreError.coreNotLoaded }
+        if hardcoreActive { throw RetroAchievementsError.hardcoreBlocks("Loading a state") }
         let file = try Data(contentsOf: slot.url, options: .mappedIfSafe)
         try core.loadState(SaveStateFile.decode(file, coreID: core.coreID, stateVersion: core.stateVersion))
+        if achievementsLoaded { achievements?.stateChanged() } else { stateLoadedBeforeSet = true }
     }
 
     private func saveAuto() {
@@ -592,10 +668,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     }
 
     private func updateRewinding(controllerHeld: Bool) {
-        let held = rewindStatus == .ready && (rewindTouchHeld || controllerHeld)
+        let held = rewindStatus == .ready && !hardcoreActive && (rewindTouchHeld || controllerHeld)
         guard held != rewinding else { return }
         rewinding = held
         core?.setRewinding(held)
+        if !held { achievements?.stateChanged() }
     }
 
     // MARK: - Cheats
@@ -613,6 +690,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// The core judges the code. Nothing is stored unless it accepts.
     func addCheat(name: String, code: String, enabled: Bool = true) throws {
         guard let core else { throw EmulatorCoreError.coreNotLoaded }
+        if hardcoreActive { throw RetroAchievementsError.hardcoreBlocks("Cheats") }
         guard canAddCheat else {
             let limit = entitlements().maxCheats
             throw EmulatorCoreError.cheatRejected("You have \(limit) cheats, the most without Gaga Plus. Remove one to add another.")
@@ -636,6 +714,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     }
 
     func setCheat(_ cheat: CheatEntry, enabled: Bool) throws {
+        if hardcoreActive { throw RetroAchievementsError.hardcoreBlocks("Cheats") }
         var updated = cheats
         guard let index = updated.firstIndex(where: { $0.id == cheat.id }) else { return }
         updated[index].enabled = enabled
@@ -943,6 +1022,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         case .previousSlot: setQuickSlot(quickSlot - 1)
         case .reset:
             core?.reset()
+            achievements?.reset()
             show("Game reset.")
         case .pauseMenu, .fastForwardHold, .rewindHold: break // `applyActions` handles these.
         }

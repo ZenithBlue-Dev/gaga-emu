@@ -182,7 +182,9 @@ private struct PaneNote: View {
 private struct PlayPane: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var store: StoreKitManager
+    @ObservedObject private var account = RetroAchievements.shared
     @State private var showPlans = false
+    @State private var showAchievements = false
 
     var body: some View {
         ValueRow(title: "Total play time", value: CoreCatalog.playTime(state.totalPlayTime))
@@ -204,6 +206,10 @@ private struct PlayPane: View {
         ToggleRow(title: "Rewind",
                   note: "Hold the rewind button, or a controller input mapped to Rewind in Controls, to step back through recent play. Uses up to \(RewindPolicy.standard.budgetBytes / 1_048_576) MB of memory while a game runs. Only systems with a small, quick save state can rewind; the pause menu says when one cannot.",
                   isOn: $state.rewind)
+        Rule()
+        ActionRow(title: "RetroAchievements", value: account.username ?? "Off", symbol: "trophy") { showAchievements = true }
+            .sheet(isPresented: $showAchievements) { RetroAchievementsView() }
+            .accessibilityIdentifier("settingsRetroAchievements")
         Rule()
         ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen)
         Rule()
@@ -757,7 +763,7 @@ struct BIOSManagerView: View {
     }
 }
 
-private extension View {
+extension View {
     func paperList() -> some View {
         listStyle(.plain).scrollContentBackground(.hidden)
     }

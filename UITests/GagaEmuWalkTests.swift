@@ -828,6 +828,18 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("Licences")
     }
 
+    /// Settings > RetroAchievements: shows the sign-in form. Types nothing and signs in to nothing.
+    func testAuditRetroAchievements() throws {
+        let app = launchApp()
+        try guardedTap(button(app, "Settings"), "Settings in the rail")
+        try guardedTap(button(app, "Play"), "Play")
+        try guardedTap(button(app, "RetroAchievements"), "RetroAchievements row")
+        try arrive(app.textFields["raUsername"], "Username field")
+        XCTAssertTrue(app.secureTextFields["raPassword"].exists)
+        XCTAssertFalse(app.buttons["raSignIn"].isEnabled, "Sign In must wait for a username and password")
+        snapshot("RetroAchievements sign-in")
+    }
+
     /// Ends the test as skipped, with a screenshot, while a system prompt is up, so nothing taps or waits under it.
     private func stopIfPrompt() throws {
         if promptUp() { throw XCTSkip("A system prompt is up") }

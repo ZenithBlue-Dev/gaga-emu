@@ -57,7 +57,7 @@ struct GameView: View {
                     if session.recordingMacro { stopRecordingButton }
                     // A device skin fixes both screens in its bezel.
                     if session.isDualScreen && !(touchVisible && skins.skin?.device != nil) { swapButton }
-                    if session.rewindStatus == .ready { rewindButton }
+                    if session.rewindStatus == .ready && !session.hardcoreActive { rewindButton }
                     fastForwardButton
                 }
                 // Upright the row moves up beside the notch, so it leaves the top of the picture clear.
@@ -648,6 +648,7 @@ private struct PauseMenu: View {
     @EnvironmentObject private var state: AppState
     @State private var showSaves = false
     @State private var showCheats = false
+    @State private var showAchievements = false
     @State private var showPlans = false
     @State private var showScreen = false
     @State private var showControls = false
@@ -687,6 +688,7 @@ private struct PauseMenu: View {
             }
         }
         .sheet(isPresented: $showCheats) { CheatsSheet(session: session) }
+        .sheet(isPresented: $showAchievements) { AchievementsSheet(session: session) }
         .sheet(isPresented: $showControls) { ControlsSheet(game: session.game, session: session) }
         #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
@@ -749,8 +751,22 @@ private struct PauseMenu: View {
             })
             fastForward
             rewindNote
-            PlayNearbyRow(session: session)
-            if session.supportsCheats {
+            if session.achievementsLoaded {
+                menuRow(title: "Achievements", action: { showAchievements = true })
+                ToggleRow(title: "Hardcore", note: "Turning it on resets the game.",
+                          isOn: Binding(get: { session.achievements?.hardcore ?? false }, set: { session.setHardcore($0) }))
+            }
+            if session.hardcoreActive {
+                Text("Hardcore: state loading, cheats and rewind are off.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("hardcoreNote")
+            } else {
+                PlayNearbyRow(session: session)
+            }
+            if session.hardcoreActive {
+                EmptyView()
+            } else if session.supportsCheats {
                 menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
             } else if let note = session.noCheatsNote {
                 Text(note)

@@ -1637,6 +1637,7 @@ final class AppState: ObservableObject {
                                       entitlements: { [store] in store.entitlements })
         session.autoSaveEnabled = { [weak self] in self?.autoSaveEnabled ?? false }
         session.rewindEnabled = rewind
+        if RetroAchievements.shared.username != nil { session.achievements = .shared }
         session.renderer.apply(shaderParameters[shader] ?? ShaderParameterValues())
         session.screen = screens.settings(platformID: game.platformID, gameID: game.id)
         // Saved where it came from, for the orientation it was made in: the game's own choice while it has one, else its system's.

@@ -17,6 +17,7 @@ struct GagaEmuApp: App {
                 .tint(AppTheme.accent)
                 .task {
                     GameCenter.authenticate()
+                    RetroAchievements.shared.restoreSession()
                     state.refreshCovers()
                     await state.finishInterruptedImports()
                     #if DEBUG
