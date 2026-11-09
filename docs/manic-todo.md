@@ -2,7 +2,7 @@
 
 GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so nothing here asks to copy its layout, labels or art.
 
-Items: 39 open, 53 done (92 total).
+Items: 48 open, 53 done (101 total).
 
 The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
 
@@ -72,7 +72,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ![RetroAchievements sign-in](../maniac-emu-reference-images/walk/23-settings-retroachievements.png)
 
-- [ ] RetroAchievements sign-in and in-game achievements. `rcheevos` appears only in the licence list. (P1, M, blocked: owner account)
+- [ ] RetroAchievements sign-in and in-game achievements. `rcheevos` appears only in the licence list. The player signs in with their own account; see "Owner requests, 2026-11-09". (P1, M)
 
 ## Skins
 
@@ -103,7 +103,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] PPF 1, 2 and 3 patches; a disc image is patched on disk, not in memory (`Sources/Hub/RomPatcher.swift`).
 - [x] APS (GBA and N64) and RUP patches.
 - [x] Patch creator mode: Patch a ROM > Create writes a UPS patch from two ROMs, shared or saved through the system sheet. The screen and round trip pass on the iPhone; choosing a file in the system picker cannot be automated.
-- [ ] xdelta patches. Common for disc translations. Most real patches use djw or lzma secondary compression, so a decoder written from RFC 3284 alone would refuse them. (P2, M, blocked: licence check of the implementation)
+- [ ] xdelta patches. Common for disc translations. Most real patches use djw or lzma secondary compression, so a decoder written from RFC 3284 alone would refuse them. See "Owner requests, 2026-11-09". (P2, M)
 
 ## Shaders and filters
 
@@ -111,10 +111,10 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 - [x] Default presets with live preview (`Sources/UI/Settings/FilterPickerView.swift`).
 - [x] Custom parameters, `.metal` and `.slangp` import, saved presets.
-- [ ] Browsable RetroArch catalogue. Partial: three community presets against a tab that may be large. (P2, S, blocked: licence per shader)
+- [ ] Browsable RetroArch catalogue. Partial: three community presets against a tab that may be large. Now a must, see "Owner requests, 2026-11-09". (P1, L)
 - [x] Filter list search.
 - [x] Pick your own image for the filter preview, from the system photo picker, for this run of the app, with a way back to the built-in picture. Passes on the iPhone through a seeded picture; choosing in the system picker cannot be automated.
-- [ ] GPL shaders (xBRZ, CRT-Royale). Not shipped, replaced by own work. (P3, M, blocked: licence)
+- [ ] GPL shaders (xBRZ, CRT-Royale). Not shipped, replaced by own work. The owner accepts GPL; see "Owner requests, 2026-11-09". (P2, M)
 
 ## Themes and appearance
 
@@ -169,7 +169,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ![JIT status](../maniac-emu-reference-images/walk/25-settings-jit.png)
 
-- [ ] JIT mode and a sideload build. Dropped by design; do not add a sideload link to the App Store build. (P3, L, blocked: no JIT)
+- [ ] JIT mode per core, development build only; see "Owner requests, 2026-11-09". Never in App Store or TestFlight builds, and no sideload link in them. (P2, L)
 
 ## Help and about
 
@@ -196,6 +196,20 @@ The gap analysis could not reach these. Each is a task to capture.
 - [ ] Capture the Shaders RetroArch tab. (P3, S)
 - [ ] Capture Language. (P3, S)
 - [ ] Capture Terms of Service. (P3, S)
+
+## Owner requests, 2026-11-09
+
+Sources and plans for cheats: `docs/cheats-sources.md`.
+
+- [ ] Cheats for every core. Today azahar (empty upstream `retro_cheat_set`), flycast, atari800, beetle_ngp, beetle_vb, dosbox_pure, handy, pokemini, prboom, prosystem, puae, stella, vice and virtualjaguar have none. Per-core plan in `docs/cheats-sources.md`: a host poke engine over each core's RAM, a Gateway engine for azahar, `cheatManager` for flycast. dosbox_pure is not feasible. (P1, L)
+- [ ] Bundle the libretro `cht` collection as the cheat database, with credit on the licences screen. Owner decided to bundle all cheats. Record the commit bundled; replace the "never ships a cheat file" line in `docs/06`. (P1, M)
+- [ ] Shaders are a must: a large catalogue, a proper visual preview UI, and every core that supports shaders. (P1, L)
+- [ ] RetroArch shader catalogue and GPL shaders (xBRZ, CRT-Royale and similar). Owner accepts GPL. Where a licence forbids use, write a clean engineered replacement. Add to the licences screen. (P1, M)
+- [ ] xdelta patches, including secondary compression (djw, lzma), clean engineered. Licence tag removed. (P2, M)
+- [ ] RetroAchievements: a real implementation on rcheevos. The player signs in with their own account in the app; no shared credentials. (P1, M)
+- [ ] iCloud sync of saves and library. Owner will supply access; the owner enters credentials themselves. (P1, L, needs owner: client IDs and capability)
+- [ ] Google Drive, Dropbox and OneDrive browse and import. Owner will supply access; the owner enters credentials themselves. Check App Review 4.7 first. (P2, L, needs owner: client IDs and capability)
+- [ ] JIT mode per core as an option, development build only. NEVER in App Store or TestFlight builds: gate it at compile time so release targets cannot contain it. (P2, L)
 
 ## Screenshots not embedded
 
