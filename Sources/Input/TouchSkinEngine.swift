@@ -5,11 +5,10 @@ import UIKit
 import CoreHaptics
 #endif
 
-/// Loads a `.deltaskin` (JSON layout + PNG assets) or a Manic flex skin (JSON + SVG)
-/// and turns touches into button masks, stick positions and app actions. Haptics fire on press when enabled.
+/// Loads a flex skin (JSON + optional SVG) and turns touches into button masks, stick positions and app actions. Haptics fire on press when enabled.
 public final class TouchSkinEngine: ObservableObject {
 
-    public enum Format: String, Sendable { case delta, flex }
+    public enum Format: String, Sendable { case flex }
 
     public struct Button: Identifiable, Equatable, Sendable {
         public let id: String
@@ -242,29 +241,6 @@ public final class TouchSkinEngine: ObservableObject {
     }
 
     // MARK: Loading
-
-    /// `directory` is an unpacked `.deltaskin`: `info.json` plus PNG assets.
-    public func loadDelta(from directory: URL) throws {
-        let info = try Data(contentsOf: directory.appendingPathComponent("info.json"))
-        let decoded = try JSONDecoder().decode(DeltaInfo.self, from: info)
-        var assets: [String: Data] = [:]
-        for representation in decoded.representations {
-            for item in representation.items {
-                guard let asset = item.asset else { continue }
-                let url = directory.appendingPathComponent(asset)
-                if let data = try? Data(contentsOf: url) { assets[asset] = data }
-            }
-        }
-        let buttons = decoded.representations.first?.items.compactMap { item -> Button? in
-            guard let mask = Self.mask(for: item.inputs) else { return nil }
-            return Button(id: item.inputs, frame: item.frame.rect, mask: mask,
-                          asset: item.asset, shape: .circle)
-        } ?? []
-        skin = Skin(id: directory.lastPathComponent, name: decoded.name ?? directory.lastPathComponent,
-                    format: .delta, buttons: buttons, opacity: opacity, scale: scale,
-                    landscape: decoded.representations.first?.orientation == "landscape",
-                    assets: assets, svg: nil, portraitButtons: Self.portrait(from: buttons))
-    }
 
     /// Flex skin: one JSON document with normalized frames and an inline SVG. Its opacity, when it has one,
     /// replaces the drawn controls' opacity.
@@ -783,20 +759,6 @@ public final class TouchSkinEngine: ObservableObject {
     }
 }
 
-private struct DeltaInfo: Decodable {
-    let name: String?
-    let representations: [Representation]
-    struct Representation: Decodable {
-        let orientation: String?
-        let items: [Item]
-    }
-    struct Item: Decodable {
-        let inputs: String
-        let frame: Frame
-        let asset: String?
-    }
-}
-
 /// Version 2 adds `portraitButtons`, `overlay` and the per-button fields after `mask`. Version 1 files still read.
 private struct FlexSkin: Codable {
     var version: Int?
@@ -858,15 +820,6 @@ enum TouchSkinEngineChecks {
         assert(engine.touchUp(at: CGPoint(x: 0.90, y: 0.72)) == 0)
         assert(TouchSkinEngine.mask(for: "cross") == ControllerManager.Button.south)
         assert(TouchSkinEngine.mask(for: "nope") == nil)
-
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("gaga-skin-\(UUID().uuidString)")
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: dir) }
-        let json = #"{"name":"Test","representations":[{"orientation":"landscape","items":[{"inputs":"a","frame":{"x":0.8,"y":0.6,"width":0.1,"height":0.1},"asset":null}]}]}"#
-        try? json.data(using: .utf8)?.write(to: dir.appendingPathComponent("info.json"))
-        try? engine.loadDelta(from: dir)
-        assert(engine.skin?.buttons.count == 1)
-        assert(engine.skin?.format == .delta)
     }
 }
 #endif

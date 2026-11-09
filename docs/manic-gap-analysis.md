@@ -234,7 +234,7 @@ Pulling a user's own files from their own storage is a different case from an in
 | :--- | :--- | :--- |
 | Assign per platform and orientation | Present | |
 | Skin editor | Present | `SkinEditorView.swift` |
-| `.deltaskin` | Present | `TouchSkinEngine.swift` |
+| `.deltaskin` | Partial | Button positions only, `SkinPackageImport.swift` |
 | `.manicskin` | Missing | No handling under `Sources/`. Format must be studied before estimating |
 
 ## Cover Scraping

@@ -2,7 +2,7 @@
 
 GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so nothing here asks to copy its layout, labels or art.
 
-Items: 41 open, 51 done (92 total).
+Items: 42 open, 50 done (92 total).
 
 The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
 
@@ -80,7 +80,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 - [x] Assign a skin per platform and orientation, portrait and landscape (`Sources/UI/Settings/AssignSkinView.swift`).
 - [x] Skin editor (`Sources/UI/Settings/SkinEditorView.swift`).
-- [x] `.deltaskin` support (`Sources/Input/TouchSkinEngine.swift`).
+- [ ] `.deltaskin` skins. Partial: the same editor Import as `.manicskin` reads the real Delta schema for button positions; the art is not used, and no real skin file was tried. (P2, M)
 - [x] Skin sound effects toggle.
 - [ ] Read `.manicskin` skins. Partial: the skin editor's Import reads button positions from a `.manicskin` or `.deltaskin` (`Sources/Input/SkinPackageImport.swift`); the art is not used. Passes on the iPhone with generated files only; no real skin file tried, and the file picker step cannot be automated. (P2, M)
 
