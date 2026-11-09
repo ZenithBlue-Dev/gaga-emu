@@ -129,6 +129,30 @@ public final class ShaderManager: ObservableObject {
 
     // MARK: - Procedural 16-Bit Retro Scene Generator
 
+    /// Shows the user's picture in the filter preview, or the built-in scene for nil. For this run of the app only.
+    /// False when the picture cannot be read.
+    @discardableResult public func setPreviewImage(_ image: UIImage?) -> Bool {
+        guard let image else {
+            if let previewTexture { previewRenderer?.setTexture(previewTexture) }
+            return true
+        }
+        // Redrawn to apply its orientation and cap its size: a photo can be far larger than the preview needs.
+        let longest = max(image.size.width, image.size.height)
+        guard longest > 0 else { return false }
+        let scale = min(1, 1024 / longest)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        // 8-bit and opaque: Automatic can pick a wide-gamut format the texture loader refuses.
+        format.preferredRange = .standard
+        format.opaque = true
+        let size = CGSize(width: max(1, (image.size.width * scale).rounded()), height: max(1, (image.size.height * scale).rounded()))
+        let drawn = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        guard let cgImage = drawn.cgImage,
+              let texture = try? MTKTextureLoader(device: device).newTexture(cgImage: cgImage, options: [.SRGB: false, .textureUsage: MTLTextureUsage.shaderRead.rawValue]) else { return false }
+        previewRenderer?.setTexture(texture)
+        return true
+    }
+
     private func createPreviewTexture() {
         let width = 256
         let height = 224

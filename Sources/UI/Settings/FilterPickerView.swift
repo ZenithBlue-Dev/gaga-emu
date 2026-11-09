@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -24,6 +25,8 @@ struct FilterPickerView: View {
     /// The preset being renamed, or nil while naming a new one.
     @State private var renaming: SavedFilterPreset?
     @State private var deleting: SavedFilterPreset?
+    @State private var previewPick: PhotosPickerItem?
+    @State private var customPreview = false
     @StateObject private var shaderManager = ShaderManager.shared
 
     private struct ImportFailure: Identifiable {
@@ -112,8 +115,20 @@ struct FilterPickerView: View {
 
     private var previewHeader: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(selectedName).font(.gameTitle)
+            Text(selectedName).font(.gameTitle).lineLimit(1).minimumScaleFactor(0.7)
             Spacer(minLength: 0)
+            // The system's picker runs out of process, so no Photos permission is asked for.
+            PhotosPicker(selection: $previewPick, matching: .images) {
+                Image(systemName: "photo").frame(width: 44, height: 44).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Choose preview image")
+            if customPreview {
+                iconButton("arrow.uturn.backward", label: "Use built-in preview image") {
+                    shaderManager.setPreviewImage(nil)
+                    customPreview = false
+                    previewPick = nil
+                }
+            }
             Button("Save Preset") { startNaming(nil) }
                 .buttonStyle(QuietButtonStyle())
                 .disabled(filtersSkipped)
@@ -202,6 +217,28 @@ struct FilterPickerView: View {
             preview(selected)
         }
         .onChange(of: selected) { _, newID in preview(newID) }
+        .onChange(of: previewPick) { _, item in
+            guard let item else { return }
+            Task {
+                let image = (try? await item.loadTransferable(type: Data.self)).flatMap { UIImage(data: $0) }
+                if let image, shaderManager.setPreviewImage(image) {
+                    customPreview = true
+                } else {
+                    importFailure = ImportFailure(title: "Picture Not Used", subtitle: nil, message: "GagaEmu could not read that picture.")
+                }
+            }
+        }
+        #if DEBUG
+        .onAppear {
+            // `-GagaPreviewImage YES`: the walk cannot pick from Photos, so this feeds the same path.
+            guard UserDefaults.standard.bool(forKey: "GagaPreviewImage") else { return }
+            let image = UIGraphicsImageRenderer(size: CGSize(width: 320, height: 240)).image {
+                UIColor.systemPurple.setFill()
+                $0.fill(CGRect(x: 0, y: 0, width: 320, height: 240))
+            }
+            customPreview = shaderManager.setPreviewImage(image)
+        }
+        #endif
     }
 
     /// `.metal` has no system type on every OS version, so plain text and source code stay pickable too.
