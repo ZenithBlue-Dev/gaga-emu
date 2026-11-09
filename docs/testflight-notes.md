@@ -2,6 +2,10 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611092225), 2026-11-09
+
+New: RetroAchievements. Sign in with your own account in Settings, Play, then earn achievements with toasts and an in-game list. Hardcore mode turns off state loading, cheats and rewind; hardcore approval from RetroAchievements is pending.
+
 ## 1.0.0 (202611092051), 2026-11-09
 
 73 new screen filters with live previews, xdelta patches, and about a million built-in cheats.
