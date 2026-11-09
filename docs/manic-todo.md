@@ -208,8 +208,8 @@ The gap analysis could not reach these. Each is a task to capture.
 
 Sources and plans for cheats: `docs/cheats-sources.md`.
 
-- [ ] Cheats for every core. Today azahar (empty upstream `retro_cheat_set`), flycast, atari800, beetle_ngp, beetle_vb, dosbox_pure, handy, pokemini, prboom, prosystem, puae, stella, vice and virtualjaguar have none. Per-core plan in `docs/cheats-sources.md`: a host poke engine over each core's RAM, a Gateway engine for azahar, `cheatManager` for flycast. dosbox_pure is not feasible. (P1, L)
-- [x] Bundle the libretro `cht` collection as the cheat database, with credit on the licences screen. Commit `c4e17d4`, `Resources/cheats.pack`, about 10 MB, 18 systems. Not yet checked on a device. (P1, M)
+- [x] Cheats for every core that can have them (2026-11-10). A host poke engine (`Sources/Bridge/PokeEngine.swift`) serves atari800, beetle_ngp, beetle_vb, flycast, handy, pokemini, prosystem, puae, stella, vice and virtualjaguar; a real-core test on the iPhone shows a poke changing RAM on each, using homebrew fixtures. azahar takes Gateway codes through upstream's engine and prboom takes Doom cheat words; on the iPhone both accept codes and keep running, but their effect in a game is not observed. dosbox_pure stays out: it exposes no memory and its cheat call is a stub. No bundled code has been tried in the commercial game it was written for. (P1, L)
+- [x] Bundle the libretro `cht` collection as the cheat database, with credit on the licences screen. `Resources/cheats.pack`, about 10 MB, 28 systems. A bundled cheat switched on in a running game passes on the iPhone (Handy, homebrew, looked up under a real title by a debug setting). (P1, M)
 - [ ] Shaders are a must: a large catalogue, a proper visual preview UI, and every core that supports shaders. (P1, L)
 - [ ] RetroArch shader catalogue and GPL shaders (xBRZ, CRT-Royale and similar). Owner accepts GPL. Where a licence forbids use, write a clean engineered replacement. Add to the licences screen. (P1, M)
 - [x] xdelta patches, including secondary compression (djw, lzma), clean engineered. Licence tag removed. (P2, M)
