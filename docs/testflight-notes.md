@@ -2,6 +2,14 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611091303), 2026-11-09
+
+Import cheats from a RetroArch .cht file.
+
+**Cheats**
+- Import a RetroArch .cht file from the Cheats screen. Pick the cheats you want; each is added switched off.
+- Import a file, switch a cheat on, and check it takes effect in the game.
+
 ## 1.0.0 (202611091149), 2026-11-09
 
 Add games from your own RomM server, queue and cancel downloads, make UPS patches, and pick a new app icon.
