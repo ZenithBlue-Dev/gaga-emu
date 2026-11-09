@@ -111,7 +111,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 - [x] Default presets with live preview (`Sources/UI/Settings/FilterPickerView.swift`).
 - [x] Custom parameters, `.metal` and `.slangp` import, saved presets.
-- [ ] Browsable RetroArch catalogue. Partial: 73 in-house filters with a browsable picker (`docs/shader-catalogue.md`) pass the iPhone walks; open until the Fluorescent Display slider fix passes `testSlidersChangeTheFilterThatUsesThem` on the iPhone. Now a must, see "Owner requests, 2026-11-09". (P1, L)
+- [x] Browsable catalogue. 73 in-house filters with a browsable picker (`docs/shader-catalogue.md`) pass the iPhone walks, and `testSlidersChangeTheFilterThatUsesThem` passes on the iPhone (2026-11-09). GPL shaders below stay open. Was a must, see "Owner requests, 2026-11-09". (P1, L)
 - [x] Filter list search.
 - [x] Pick your own image for the filter preview, from the system photo picker, for this run of the app, with a way back to the built-in picture. Passes on the iPhone through a seeded picture; choosing in the system picker cannot be automated.
 - [ ] GPL shaders (xBRZ, CRT-Royale). Not shipped, replaced by own work. The owner accepts GPL; see "Owner requests, 2026-11-09". (P2, M)

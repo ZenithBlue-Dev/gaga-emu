@@ -2,6 +2,24 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611092051), 2026-11-09
+
+73 new screen filters with live previews, xdelta patches, and about a million built-in cheats.
+
+**Filters**
+- 73 new filters in categories such as upscaling, CRT, LCD and handheld, with a search box and a favourites row.
+- Each filter shows a live preview, with a before and after view, and its sliders change the picture.
+- Set a filter per game or per system.
+- Pick a few filters, move the sliders, and check the picture changes in a game.
+
+**Patching**
+- Patch a ROM now accepts xdelta and VCDIFF patches.
+- Apply one and check the patched game starts.
+
+**Cheats**
+- About a million built-in cheats for 18 systems. All are off until you switch them on.
+- Open Pause > Cheats in a game, switch one on, and check it takes effect.
+
 ## 1.0.0 (202611091303), 2026-11-09
 
 Import cheats from a RetroArch .cht file.
