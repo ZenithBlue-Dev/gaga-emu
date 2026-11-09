@@ -4,9 +4,13 @@ Research date: 2026-11-09. Web research only, nothing downloaded. Not legal advi
 
 ## Decision
 
-The owner decided on 2026-11-09: **bundle all cheats**. GagaEmu ships the libretro `cht` collection inside the app, with credit on the licences screen (`Sources/UI/Settings/LicencesView.swift`). This replaces the line in `docs/06-ios-app-bridge-and-subsystem-spec.md` section on Cheats, "GagaEmu never fetches or ships a cheat file or database"; update that line when the bundle lands. User import stays as the route for sources whose terms do not allow bundling.
+The owner decided on 2026-11-09: **bundle all cheats**. GagaEmu ships the libretro `cht` collection inside the app, with credit on the licences screen (`Sources/UI/Settings/LicencesView.swift`). User import stays as the route for sources whose terms do not allow bundling.
 
-Licence caveat to settle at build time. The brief says the `cht` folder carries a CC BY-SA 4.0 blanket. I could not re-confirm it: GitHub pages returned HTTP 504, and the README I read has no licence text. A third-party index lists the repository as MIT with a `COPYING` file. Read `COPYING` and the `cht` licence note in the repo on the day of the build, and record the commit hash bundled.
+**Bundled 2026-11-09:** commit `c4e17d41ec1bb744fb064f7cefeb61b878fc5d64`. The repository's `LICENSE` is the full text of CC BY-SA 4.0. It has no `COPYING` file, so the third-party MIT listing is wrong. Its README still says the codes come from any source on the web, so the licence does not prove each contributor held the rights. The owner accepted that. The adapted pack carries the same licence and is credited in `Licences/notices.json`.
+
+`scripts/build-cheat-pack.py` writes `Resources/cheats.pack` (9,995,554 bytes). It covers 18 platforms: gb 16,849 cheats, gbc 9,274, gba 7,018, nes 44,347, snes 68,152, n64 178,650, nds 548,889, ps1 22,647, psp 81,099, saturn 1,698, megadrive 37,571, megacd 164, mastersystem 4,679, gamegear 7,274, sg1000 69, pce 1,437, sgx 14, ws 32. That is 1,029,863 cheats in 13,127 titles. The 4 MiB and 20,000-entry limits drop 144,401 more: those are the last files of titles whose region and device files together pass a limit. Six titles among DS, N64 and PSP pass it.
+
+Left out: systems whose release core cannot apply a `.cht` today (Dreamcast, Lynx, Neo Geo Pocket, Virtual Boy, Atari, DOS, Doom), the 3DS (no upstream folder and no cheat hook), arcade and the 32X (its only core is not in the release set). Add a system to `SYSTEMS` in the script when its core can use it.
 
 ## Sources
 
@@ -69,7 +73,7 @@ Generic route, "poke engine": the host parses a plain `address value` code (libr
 
 ## Options the owner must decide
 
-1. Bundle: decided. Open sub-choices: ship the whole `cht` tree, or only systems GagaEmu has cores for (smaller). Recommend the latter.
+1. Bundle: done, for systems whose core can apply the codes.
 2. Other sources (PPSSPP database, usrcheat, CTRPF AR): bundle (needs a licence read first), user import (works now for PSP, MAME, FBNeo), or on-demand fetch.
 3. On-demand fetch of cheat text is not a ROM download, but check App Review Guideline 4.7 (software that downloads or runs code) with the reviewer, and each source's terms. Recommend: do not add a fetch path until a source offers terms that allow it.
 4. ShareAlike: confirm with a lawyer that bundling CC BY-SA text, and any converted copies, fits the App Store licence terms. Give the credit text for the licences screen.
