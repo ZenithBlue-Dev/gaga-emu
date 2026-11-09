@@ -200,6 +200,43 @@ public enum RomPatcher {
         return output
     }
 
+    /// A UPS patch turning `source` into `target`. UPS because it takes any size, either direction, and carries
+    /// checksums that `applyUPS` verifies.
+    public static func createUPS(from source: Data, to target: Data) throws -> Data {
+        guard source.count <= maxOutput, target.count <= maxOutput else { throw PatchError.unsupported }
+        var patch = Data("UPS1".utf8)
+        func put(_ value: Int) {
+            var rest = value
+            while true {
+                let low = UInt8(rest & 0x7F)
+                rest >>= 7
+                if rest == 0 { patch.append(low | 0x80); return }
+                patch.append(low)
+                rest -= 1
+            }
+        }
+        put(source.count)
+        put(target.count)
+        let (src, dst) = (Array(source), Array(target))
+        let length = max(src.count, dst.count)
+        func xor(_ index: Int) -> UInt8 { (index < src.count ? src[index] : 0) ^ (index < dst.count ? dst[index] : 0) }
+        var index = 0, last = 0
+        while index < length {
+            guard xor(index) != 0 else { index += 1; continue }
+            put(index - last)
+            while index < length, xor(index) != 0 {
+                patch.append(xor(index))
+                index += 1
+            }
+            patch.append(0) // Ends the hunk, and stands for the unchanged byte after it.
+            index += 1
+            last = index
+        }
+        for sum in [crc32(source), crc32(target)] { withUnsafeBytes(of: sum.littleEndian) { patch.append(contentsOf: $0) } }
+        withUnsafeBytes(of: crc32(patch).littleEndian) { patch.append(contentsOf: $0) }
+        return patch
+    }
+
     // MARK: BPS (linear mode; source-copy and target-copy)
 
     static func applyBPS(_ patch: Data, to source: Data) throws -> Data {

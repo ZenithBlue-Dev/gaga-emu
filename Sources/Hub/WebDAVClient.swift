@@ -6,36 +6,37 @@ struct WebDAVCredentials: Codable, Equatable {
     var username: String
     var password: String
 
-    private static var query: [String: Any] {
+    /// `account` keeps each kind of server's sign-in apart: "server" is WebDAV, "romm" is RomM.
+    private static func query(_ account: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "com.zenithblue.gagaemu.webdav",
-         kSecAttrAccount as String: "server"]
+         kSecAttrAccount as String: account]
     }
 
-    static func load() -> WebDAVCredentials? {
+    static func load(account: String = "server") -> WebDAVCredentials? {
         var result: AnyObject?
-        var search = query
+        var search = query(account)
         search[kSecReturnData as String] = true
         guard SecItemCopyMatching(search as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
         return try? JSONDecoder().decode(WebDAVCredentials.self, from: data)
     }
 
-    @discardableResult func save() -> Bool {
+    @discardableResult func save(account: String = "server") -> Bool {
         guard let data = try? JSONEncoder().encode(self) else { return false }
-        Self.delete()
-        var item = Self.query
+        Self.delete(account: account)
+        var item = Self.query(account)
         item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }
 
-    static func delete() { SecItemDelete(query as CFDictionary) }
+    static func delete(account: String = "server") { SecItemDelete(query(account) as CFDictionary) }
 }
 
 /// Browses a WebDAV server the user names and copies the games they pick into the ROM folder. There is no server
 /// list and nothing is fetched unless the user taps it. HTTPS unless the user allows plain HTTP, and App Transport
 /// Security still limits plain HTTP to local names and addresses.
-final class WebDAVClient: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+class WebDAVClient: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     struct Entry: Identifiable, Equatable {
         let name: String
         let isFolder: Bool
@@ -58,7 +59,7 @@ final class WebDAVClient: NSObject, URLSessionTaskDelegate, @unchecked Sendable 
     }
 
     let base: URL
-    private let credentials: WebDAVCredentials?
+    let credentials: WebDAVCredentials?
     private lazy var session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.urlCredentialStorage = nil
@@ -94,25 +95,34 @@ final class WebDAVClient: NSObject, URLSessionTaskDelegate, @unchecked Sendable 
     // MARK: Requests
 
     func list(_ folder: [String]) async throws -> [Entry] {
-        var request = URLRequest(url: try url(folder, isFolder: true))
+        var request = makeRequest(try url(folder, isFolder: true))
         request.httpMethod = "PROPFIND"
         request.setValue("1", forHTTPHeaderField: "Depth")
         request.setValue("application/xml", forHTTPHeaderField: "Content-Type")
         request.httpBody = Data(#"<?xml version="1.0"?><propfind xmlns="DAV:"><prop><resourcetype/><getcontentlength/></prop></propfind>"#.utf8)
+        let data = try await fetch(request, expected: 207)
+        return try Self.parse(data, directory: request.url?.path ?? "/")
+    }
+
+    /// WebDAV answers a challenge, so it adds nothing here. RomM overrides this to sign the request.
+    func makeRequest(_ url: URL) -> URLRequest { URLRequest(url: url) }
+
+    /// A reply read up to `replyLimit`.
+    func fetch(_ request: URLRequest, expected: Int) async throws -> Data {
         let (bytes, response) = try await session.bytes(for: request)
-        try check(response, expected: 207)
+        try check(response, expected: expected)
         var data = Data()
         for try await byte in bytes {
             data.append(byte)
             guard data.count <= Self.replyLimit else { throw Failure.badReply }
         }
-        return try Self.parse(data, directory: request.url?.path ?? "/")
+        return data
     }
 
     /// Copies one file into `directory` through the same placement as every other import.
     func download(_ path: [String], into directory: URL) async throws -> URL {
         guard let name = path.last else { throw Failure.unsafeName }
-        let (temporary, response) = try await session.download(for: URLRequest(url: try url(path, isFolder: false)))
+        let (temporary, response) = try await session.download(for: makeRequest(try url(path, isFolder: false)))
         defer { try? FileManager.default.removeItem(at: temporary) }
         try check(response, expected: 200)
         let part = try ClipboardImporter.partFile(in: directory)

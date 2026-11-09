@@ -9,6 +9,7 @@ struct AddView: View {
     @State private var showMultiDisc = false
     @State private var showPatcher = false
     @State private var showWebDAV = false
+    @State private var showRomM = false
     @State private var notice: String?
     @State private var isTargeted = false
     @Environment(\.horizontalSizeClass) private var horizontalSize
@@ -42,7 +43,11 @@ struct AddView: View {
         .sheet(isPresented: $showMultiDisc) { MultiDiscSheet() }
         .sheet(isPresented: $showPatcher) { RomPatcherSheet() }
         .sheet(isPresented: $showWebDAV) { WebDAVSheet() }
+        .sheet(isPresented: $showRomM) { RomMSheet() }
         .gameFileDrop(isTargeted: $isTargeted) { line, _ in notice = line }
+        #if DEBUG
+        .onAppear { DownloadQueue.shared.seedForWalk() }
+        #endif
     }
 
     private var filesColumn: some View {
@@ -55,6 +60,7 @@ struct AddView: View {
             dropTarget
             TipLine(tip: .dropFiles)
             ImportProgressRows()
+            DownloadRows()
             if let notice { Text(notice).font(.footnote).foregroundStyle(AppTheme.muted) }
         }
         .padding(16)
@@ -67,6 +73,8 @@ struct AddView: View {
             sourceRow("Read Clipboard", "doc.on.clipboard", "Reads the clipboard only when you tap here.", readClipboard)
             Rule()
             sourceRow("WebDAV Server", "externaldrive.connected.to.line.below", "Browse your own server and copy games in.") { showWebDAV = true }
+            Rule()
+            sourceRow("RomM Server", "books.vertical", "Browse your own RomM library and copy games in.") { showRomM = true }
             Rule()
             sourceRow("SMB Share", "server.rack", "Connect to it in the Files app first, then pick your games here.") { showFiles = true }
             Rule()
@@ -305,23 +313,42 @@ struct RomPatcherSheet: View {
     @State private var patch: URL?
     @State private var picking: Pick?
     @State private var result: String?
+    @State private var creating = false
+    @State private var working = false
+    @State private var created: URL?
     enum Pick: Identifiable { case rom, patch; var id: Int { self == .rom ? 0 : 1 } }
 
     var body: some View {
         PaperSheet(title: "Patch a ROM") {
             VStack(alignment: .leading, spacing: 0) {
-                picker("ROM", url: rom) { picking = .rom }
+                Picker("Task", selection: $creating) {
+                    Text("Apply").tag(false)
+                    Text("Create").tag(true)
+                }
+                .pickerStyle(.segmented).frame(minHeight: 44)
+                picker(creating ? "Original ROM" : "ROM", url: rom) { picking = .rom }
                 Rule()
-                picker("Patch (IPS, UPS, BPS, PPF, APS, RUP)", url: patch) { picking = .patch }
+                picker(creating ? "Changed ROM" : "Patch (IPS, UPS, BPS, PPF, APS, RUP)", url: patch) { picking = .patch }
                 Rule()
-                Button("Apply Patch") { apply() }
+                Button(creating ? "Create UPS Patch" : "Apply Patch") { creating ? create() : apply() }
                     .buttonStyle(PrimaryButtonStyle())
-                    .disabled(rom == nil || patch == nil)
+                    .disabled(rom == nil || patch == nil || working)
                     .padding(.top, 16)
+                if working { ProgressView().padding(.top, 8) }
                 if let result { Text(result).font(.meta).foregroundStyle(AppTheme.muted).padding(.top, 8) }
-                Text("The original ROM is left untouched. The patched copy is saved next to it.")
+                if creating, let created {
+                    ShareLink(item: created) { Text("Share or Save Patch") }.frame(minHeight: 44).padding(.top, 8)
+                }
+                Text(creating ? "Compares two versions of your own ROM and writes only the differences. Neither ROM is changed."
+                              : "The original ROM is left untouched. The patched copy is saved next to it.")
                     .font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 8)
             }
+        }
+        .onChange(of: creating) {
+            rom = nil
+            patch = nil
+            result = nil
+            created = nil
         }
         .fileImporter(isPresented: Binding(get: { picking != nil }, set: { if !$0 { picking = nil } }),
                       allowedContentTypes: [.data, .item]) { outcome in
@@ -347,6 +374,37 @@ struct RomPatcherSheet: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func create() {
+        guard let rom, let changed = patch else { return }
+        working = true
+        result = nil
+        created = nil
+        Task {
+            defer { working = false }
+            do {
+                let output = try await Task.detached { () throws -> URL in
+                    let scopedOriginal = rom.startAccessingSecurityScopedResource()
+                    let scopedChanged = changed.startAccessingSecurityScopedResource()
+                    defer {
+                        if scopedOriginal { rom.stopAccessingSecurityScopedResource() }
+                        if scopedChanged { changed.stopAccessingSecurityScopedResource() }
+                    }
+                    let data = try RomPatcher.createUPS(from: Data(contentsOf: rom, options: .alwaysMapped),
+                                                        to: Data(contentsOf: changed, options: .alwaysMapped))
+                    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+                    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                    let file = folder.appendingPathComponent(changed.deletingPathExtension().lastPathComponent + ".ups")
+                    try data.write(to: file, options: .atomic)
+                    return file
+                }.value
+                created = output
+                result = "Patch created."
+            } catch {
+                result = error.localizedDescription
+            }
+        }
     }
 
     private func apply() {

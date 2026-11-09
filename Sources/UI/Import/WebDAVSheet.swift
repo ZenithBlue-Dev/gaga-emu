@@ -11,8 +11,8 @@ struct WebDAVSheet: View {
     @State private var folder: [String] = []
     @State private var entries: [WebDAVClient.Entry] = []
     @State private var busy = false
-    @State private var importing: String?
     @State private var message: String?
+    @ObservedObject private var queue = DownloadQueue.shared
 
     var body: some View {
         PaperSheet(title: "WebDAV Server", subtitle: client?.base.host) {
@@ -23,6 +23,7 @@ struct WebDAVSheet: View {
                     Text(message).font(.footnote).foregroundStyle(AppTheme.accent).padding(.top, 8)
                         .accessibilityAddTraits(.updatesFrequently)
                 }
+                DownloadRows().padding(.top, 12)
                 Text("Use your own server and only games you have the right to use. GagaEmu lists no servers and fetches a file only when you choose it.")
                     .font(.footnote).foregroundStyle(AppTheme.muted).padding(.top, 12)
             }
@@ -33,60 +34,18 @@ struct WebDAVSheet: View {
                 password = saved.password
             }
         }
-        .onDisappear { client?.close() }
+        .onDisappear { if let client { queue.release(client) } }
     }
 
     private var signIn: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            field("Server Address") {
-                TextField("https://nas.local/games", text: $address)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityLabel("Server address")
-            }
-            field("Username") {
-                TextField("Optional", text: $username)
-                    .textContentType(.username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .accessibilityLabel("Username")
-            }
-            field("Password") {
-                SecureField("Optional", text: $password)
-                    .textContentType(.password)
-                    .accessibilityLabel("Password")
-            }
-            ToggleRow(title: "Allow Unencrypted HTTP",
-                      note: "Off by default. With an http address your password and files cross the network unencrypted, so use it only on a network you trust.",
-                      isOn: $allowHTTP)
-            Rule()
-            HStack(spacing: 12) {
-                Button("Connect", action: connect)
-                    .buttonStyle(PrimaryButtonStyle())
-                    .disabled(busy || address.isEmpty)
-                if WebDAVCredentials.load() != nil {
-                    Button("Forget Server", role: .destructive) {
-                        WebDAVCredentials.delete()
-                        address = ""
-                        username = ""
-                        password = ""
-                        allowHTTP = false
-                    }
-                    .buttonStyle(QuietButtonStyle())
-                }
-            }
-            .padding(.top, 16)
+        ServerSignInForm(placeholder: "https://nas.local/games", address: $address, username: $username, password: $password,
+                         allowHTTP: $allowHTTP, busy: busy, canForget: WebDAVCredentials.load() != nil, connect: connect) {
+            WebDAVCredentials.delete()
+            address = ""
+            username = ""
+            password = ""
+            allowHTTP = false
         }
-    }
-
-    private func field<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(LocalizedStringKey(title)).font(.footnote).foregroundStyle(AppTheme.muted)
-            content().frame(minHeight: 44)
-            Rule()
-        }
-        .padding(.bottom, 8)
     }
 
     private var browser: some View {
@@ -94,7 +53,7 @@ struct WebDAVSheet: View {
             HStack(spacing: 12) {
                 Button(folder.isEmpty ? "Sign Out" : "Up") {
                     if folder.isEmpty {
-                        client?.close()
+                        if let client { queue.release(client) }
                         client = nil
                         entries = []
                     } else {
@@ -131,14 +90,19 @@ struct WebDAVSheet: View {
                     }
                 }
                 Spacer(minLength: 0)
-                if importing == entry.name { ProgressView() }
+                if queue.status(of: key(entry)) == .active { ProgressView() }
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(busy || importing != nil)
+        .disabled(busy)
+        .accessibilityValue(queue.status(of: key(entry)) == nil ? "" : "Queued")
         .accessibilityHint(entry.isFolder ? "Opens this folder" : "Copies this file into your Library")
+    }
+
+    private func key(_ entry: WebDAVClient.Entry) -> String {
+        "webdav:\(client?.base.absoluteString ?? ""):\((folder + [entry.name]).joined(separator: "/"))"
     }
 
     private func connect() {
@@ -181,17 +145,70 @@ struct WebDAVSheet: View {
 
     private func download(_ entry: WebDAVClient.Entry) {
         guard let client else { return }
-        importing = entry.name
         message = nil
-        let path = folder + [entry.name], romDirectory = state.romDirectory
-        Task {
-            defer { importing = nil }
-            do {
-                let dest = try await client.download(path, into: romDirectory)
-                message = await state.importChosen(dest) ?? "Imported \(dest.lastPathComponent)"
-            } catch {
-                message = error.localizedDescription
+        let path = folder + [entry.name], romDirectory = state.romDirectory, library = state
+        queue.add(key: key(entry), name: entry.name, client: client,
+                  run: { try await client.download(path, into: romDirectory) },
+                  finish: { await library.importChosen($0) })
+    }
+}
+
+/// Address, sign-in and the unencrypted-HTTP choice, for any server the user brings.
+struct ServerSignInForm: View {
+    let placeholder: String
+    @Binding var address: String
+    @Binding var username: String
+    @Binding var password: String
+    @Binding var allowHTTP: Bool
+    let busy: Bool
+    let canForget: Bool
+    let connect: () -> Void
+    let forget: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            field("Server Address") {
+                TextField(placeholder, text: $address)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("Server address")
             }
+            field("Username") {
+                TextField("Optional", text: $username)
+                    .textContentType(.username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("Username")
+            }
+            field("Password") {
+                SecureField("Optional", text: $password)
+                    .textContentType(.password)
+                    .accessibilityLabel("Password")
+            }
+            ToggleRow(title: "Allow Unencrypted HTTP",
+                      note: "Off by default. With an http address your password and files cross the network unencrypted, so use it only on a network you trust.",
+                      isOn: $allowHTTP)
+            Rule()
+            HStack(spacing: 12) {
+                Button("Connect", action: connect)
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(busy || address.isEmpty)
+                if canForget {
+                    Button("Forget Server", role: .destructive, action: forget)
+                        .buttonStyle(QuietButtonStyle())
+                }
+            }
+            .padding(.top, 16)
         }
+    }
+
+    private func field<Content: View>(_ title: String, @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(LocalizedStringKey(title)).font(.footnote).foregroundStyle(AppTheme.muted)
+            content().frame(minHeight: 44)
+            Rule()
+        }
+        .padding(.bottom, 8)
     }
 }
