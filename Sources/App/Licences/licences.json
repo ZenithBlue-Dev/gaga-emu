@@ -1734,6 +1734,19 @@
    ]
   },
   {
+   "id": "libretro-cht",
+   "title": "libretro-database cheats",
+   "licence": "CC-BY-SA-4.0",
+   "source": "https://github.com/libretro/libretro-database, cht folder, commit c4e17d41ec1bb744fb064f7cefeb61b878fc5d64. Adapted: only systems with a release core, each cheat cut to its name and code, region and device added to names, compressed into cheats.pack.",
+   "cores": [],
+   "texts": [
+    {
+     "title": "libretro-database cheats",
+     "file": "licence-9b0cb404729f.txt"
+    }
+   ]
+  },
+  {
    "id": "moltenvk",
    "title": "MoltenVK",
    "licence": "Apache-2.0",

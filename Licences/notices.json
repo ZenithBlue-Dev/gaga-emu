@@ -477,6 +477,11 @@
       "texts": [{ "title": "Vulkan Test core", "text": "GagaEmu's own code, with no upstream. It links MoltenVK and its dependencies, which have their own entry.\n" }]
     },
     {
+      "id": "libretro-cht", "title": "libretro-database cheats", "licence": "CC-BY-SA-4.0",
+      "source": "https://github.com/libretro/libretro-database, cht folder, commit c4e17d41ec1bb744fb064f7cefeb61b878fc5d64. Adapted: only systems with a release core, each cheat cut to its name and code, region and device added to names, compressed into cheats.pack.",
+      "texts": [ { "title": "libretro-database cheats", "from": "Licences/libretro-database-cht.txt" } ]
+    },
+    {
       "id": "moltenvk", "title": "MoltenVK", "cores": ["vktest", "mupen64plus_next", "ppsspp", "flycast", "azahar", "beetle_psx"], "licence": "Apache-2.0",
       "source": "https://github.com/KhronosGroup/MoltenVK, tag v1.4.2, commit db66022, with the dependencies that tag records. Shipped once, as MoltenVK.framework, which every core that draws its own 3D picture links.",
       "texts": [
