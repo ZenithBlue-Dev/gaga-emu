@@ -596,6 +596,18 @@
       ]
     },
     {
+      "id": "xdelta3-format",
+      "title": "xdelta3 secondary compression format",
+      "licence": "Apache-2.0",
+      "source": "https://github.com/jmacd/xdelta, whose djw and fgk bitstreams Sources/Hub/Xdelta.swift decodes. No xdelta3 code is compiled in; its format and decoder structure were followed.",
+      "texts": [
+        {
+          "title": "Apache License 2.0",
+          "from": "build/moltenvk/licenses/SPIRV-Cross/LICENSES/Apache-2.0.txt"
+        }
+      ]
+    },
+    {
       "id": "slang-import",
       "title": "glslang and SPIRV-Cross",
       "licence": "BSD-3-Clause, BSD-2-Clause, MIT and Apache-2.0 (glslang); Apache-2.0 (SPIRV-Cross)",
