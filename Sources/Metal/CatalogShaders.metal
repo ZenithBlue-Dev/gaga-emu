@@ -219,7 +219,7 @@ CAT(cat_lcd_subpixel) {
 CAT(cat_lcd_vfd) {
     float l = cat_luma(PIX(0, 0));
     float on = step(0.35, l) * cat_cell(in.uv, SIZE, params.scanline_weight);
-    float halo = l * (1.0 - cat_cell(in.uv, SIZE, 0.0)) * params.phosphor_glow;
+    float halo = l * (1.0 - cat_cell(in.uv, SIZE, 0.6)) * params.phosphor_glow;
     return cat_done(float3(0.18, 0.95, 0.85) * (on + halo), params);
 }
 
