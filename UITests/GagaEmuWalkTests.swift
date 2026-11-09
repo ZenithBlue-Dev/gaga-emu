@@ -637,6 +637,45 @@ final class GagaEmuWalkTests: XCTestCase {
     func testAuditGame3DS() { auditGame("azahar", platform: "Nintendo 3DS", tag: "13 3DS") }
     func testAuditGamePSP() { auditGame("ppsspp", platform: "PSP", tag: "14 PSP") }
 
+    /// Pause > Cheats has the .cht import. With `GAGA_WALK_CHEATS` (a file in Documents) the first cheat in it
+    /// is added, accepted by the core and turned on, and the game keeps running.
+    func testAuditCheats() throws {
+        let app = XCUIApplication()
+        app.launchArguments = (environment["GAGA_WALK_ROM"].map { ["-GagaImportROM", $0] } ?? ["-GagaImportTestROM", core])
+            + (environment["GAGA_WALK_CHEATS"].map { ["-GagaCheatFile", $0] } ?? [])
+        app.launch()
+        try guardedTap(importedGame(app, "The \(title) game"), "The game")
+        let pause = app.buttons["Pause game"]
+        try arrive(pause, "The game")
+        sleep(2)
+        try guardedTap(pause, "Pause game")
+        try guardedTap(button(app, "Cheats"), "Cheats")
+        try arrive(app.buttons["Import .cht File"], "Import .cht File")
+        snapshot("Cheats landscape")
+        XCUIDevice.shared.orientation = .portrait
+        sleep(2)
+        snapshot("Cheats portrait")
+        try arrive(app.buttons["Import .cht File"], "Import .cht File upright")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        guard environment["GAGA_WALK_CHEATS"] != nil else { return }
+        let add = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add ' AND NOT label == 'Add Cheat'")).firstMatch
+        try guardedTap(add, "Add on the first cheat in the file")
+        snapshot("Cheat added")
+        XCTAssertTrue(app.staticTexts["Add a code"].waitForExistence(timeout: 5), "The core refused the code")
+        let toggle = app.switches.firstMatch
+        try arrive(toggle, "The added cheat's toggle")
+        toggle.switches.firstMatch.tap()
+        sleep(1)
+        XCTAssertTrue(app.staticTexts["Add a code"].exists, "The core refused the code when turned on")
+        snapshot("Cheat on")
+        try guardedTap(app.buttons["Close"], "Close")
+        try guardedTap(button(app, "Resume"), "Resume")
+        sleep(5)
+        try arrive(pause, "The running game with the cheat on")
+        snapshot("Running with the cheat")
+    }
+
     /// Settings > About > Licences.
     func testOpenLicences() throws {
         let app = launchApp()
