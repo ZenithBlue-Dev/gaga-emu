@@ -5,15 +5,18 @@ import SwiftUI
 
 public struct MetalPreviewCanvas: UIViewRepresentable {
     @ObservedObject var shaderManager: ShaderManager
+    /// Draws the unfiltered picture, for the before and after comparison.
+    var unfiltered = false
 
-    public init(shaderManager: ShaderManager = .shared) {
+    public init(shaderManager: ShaderManager = .shared, unfiltered: Bool = false) {
         self.shaderManager = shaderManager
+        self.unfiltered = unfiltered
     }
 
     public func makeUIView(context: Context) -> MTKView {
         let mtkView = MTKView()
         mtkView.device = shaderManager.device
-        mtkView.delegate = shaderManager.previewRenderer
+        mtkView.delegate = unfiltered ? shaderManager.unfilteredRenderer : shaderManager.previewRenderer
         mtkView.clearColor = MTLClearColor(red: 0.043, green: 0.047, blue: 0.063, alpha: 1.0)
         mtkView.colorPixelFormat = .bgra8Unorm
         mtkView.preferredFramesPerSecond = 60
@@ -32,6 +35,8 @@ public final class ShaderManager: ObservableObject {
 
     public let device: MTLDevice
     public let previewRenderer: MetalRenderer?
+    /// Always Original, on the same picture.
+    public let unfilteredRenderer: MetalRenderer?
 
     @Published public var selectedPreset: ShaderPreset = .original {
         didSet {
@@ -70,13 +75,21 @@ public final class ShaderManager: ObservableObject {
         }
         self.device = dev
         self.previewRenderer = MetalRenderer(device: dev)
+        self.unfilteredRenderer = MetalRenderer(device: dev)
 
         createPreviewTexture()
-        if let tex = previewTexture {
-            previewRenderer?.setTexture(tex)
-        }
+        if let tex = previewTexture { show(tex) }
         syncUniforms()
     }
+
+    private func show(_ texture: MTLTexture) {
+        previewRenderer?.setTexture(texture)
+        unfilteredRenderer?.setTexture(texture)
+        objectWillChange.send()
+    }
+
+    /// The picture the preview and the catalogue's tiles are drawn from.
+    public var previewSource: MTLTexture? { previewRenderer?.customTexture }
 
     public func syncUniforms() {
         let uniforms = ShaderUniforms(
@@ -127,13 +140,38 @@ public final class ShaderManager: ObservableObject {
         syncUniforms()
     }
 
+    // MARK: - Catalogue tiles
+
+    private lazy var tileRenderer = MetalRenderer(device: device)
+
+    /// A small picture of one preset at its default sliders, on the current preview picture. Runs on the main
+    /// thread, one tile at a time, as each tile scrolls in. Nil when the GPU has no room for it.
+    func tile(presetID: String, width: Int = 240, height: Int = 180) -> UIImage? {
+        guard let tileRenderer, let source = previewSource else { return nil }
+        let desc = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false)
+        desc.usage = [.renderTarget, .shaderRead]
+        desc.storageMode = .shared
+        guard let target = device.makeTexture(descriptor: desc) else { return nil }
+        tileRenderer.activePreset = ShaderPreset.from(id: presetID)
+        tileRenderer.apply(ShaderParameterValues())
+        tileRenderer.setTexture(source)
+        tileRenderer.render(into: target)
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        target.getBytes(&pixels, bytesPerRow: width * 4, from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0)
+        let info = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+        guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: info.rawValue),
+              let image = context.makeImage() else { return nil }
+        return UIImage(cgImage: image)
+    }
+
     // MARK: - Procedural 16-Bit Retro Scene Generator
 
     /// Shows the user's picture in the filter preview, or the built-in scene for nil. For this run of the app only.
     /// False when the picture cannot be read.
     @discardableResult public func setPreviewImage(_ image: UIImage?) -> Bool {
         guard let image else {
-            if let previewTexture { previewRenderer?.setTexture(previewTexture) }
+            if let previewTexture { show(previewTexture) }
             return true
         }
         // Redrawn to apply its orientation and cap its size: a photo can be far larger than the preview needs.
@@ -149,7 +187,7 @@ public final class ShaderManager: ObservableObject {
         let drawn = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
         guard let cgImage = drawn.cgImage,
               let texture = try? MTKTextureLoader(device: device).newTexture(cgImage: cgImage, options: [.SRGB: false, .textureUsage: MTLTextureUsage.shaderRead.rawValue]) else { return false }
-        previewRenderer?.setTexture(texture)
+        show(texture)
         return true
     }
 

@@ -14,6 +14,25 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
     case lottesCrt = "lottes-crt"
     case lcd3x = "lcd3x"
     case sharpBilinear = "sharp-bilinear"
+    // The in-house catalogue (ShaderLibrary). A test checks these and its entries match.
+    case catCrtAperture = "cat-crt-aperture", catCrtSlot = "cat-crt-slot", catCrtShadow = "cat-crt-shadow", catCrtPvm = "cat-crt-pvm"
+    case catCrtConsumer = "cat-crt-consumer", catCrtArcade = "cat-crt-arcade", catCrtVga = "cat-crt-vga", catCrtComposite = "cat-crt-composite"
+    case catCrtAged = "cat-crt-aged", catCrtTrinitron = "cat-crt-trinitron"
+    case catLcdGrid = "cat-lcd-grid", catLcdDmg = "cat-lcd-dmg", catLcdPocket = "cat-lcd-pocket", catLcdLight = "cat-lcd-light"
+    case catLcdGba = "cat-lcd-gba", catLcdNds = "cat-lcd-nds", catLcdSubpixel = "cat-lcd-subpixel", catLcdVfd = "cat-lcd-vfd"
+    case catScanClassic = "cat-scan-classic", catScanSoft = "cat-scan-soft", catScanThick = "cat-scan-thick"
+    case catScanInterlace = "cat-scan-interlace", catScanDouble = "cat-scan-double", catScanDynamic = "cat-scan-dynamic"
+    case catScale2x = "cat-scale2x", catScale3x = "cat-scale3x", catEagle = "cat-eagle", catXbr = "cat-xbr", catXbrShallow = "cat-xbr-shallow"
+    case catXbrz = "cat-xbrz", catScalefx = "cat-scalefx", catSai = "cat-sai", catHq = "cat-hq", catLanczos2 = "cat-lanczos2"
+    case catCatmull = "cat-catmull", catMitchell = "cat-mitchell", catSmoothstep = "cat-smoothstep", catPixellate = "cat-pixellate"
+    case catGaussian = "cat-gaussian", catBilateral = "cat-bilateral", catKuwahara = "cat-kuwahara", catFxaa = "cat-fxaa", catGlow = "cat-glow"
+    case catNtsc = "cat-ntsc", catSvideo = "cat-svideo", catPal = "cat-pal", catSepia = "cat-sepia", catGrey = "cat-grey"
+    case catVibrance = "cat-vibrance", catGamma = "cat-gamma", catNight = "cat-night", catDaltonize = "cat-daltonize"
+    case catPalGb = "cat-pal-gb", catPalCga = "cat-pal-cga", catPalEga = "cat-pal-ega", catPalC64 = "cat-pal-c64"
+    case catUnsharp = "cat-unsharp", catCas = "cat-cas", catLumaSharpen = "cat-luma-sharpen", catEdgeInk = "cat-edge-ink"
+    case catVhs = "cat-vhs", catPosterize = "cat-posterize", catDitherMono = "cat-dither-mono", catDitherColour = "cat-dither-colour"
+    case catHalftone = "cat-halftone", catCrossStitch = "cat-cross-stitch", catMosaic = "cat-mosaic", catThermal = "cat-thermal"
+    case catScope = "cat-scope", catAmber = "cat-amber", catBlueprint = "cat-blueprint", catGbcamera = "cat-gbcamera", catCinema = "cat-cinema"
 
     public var id: String { rawValue }
 
@@ -31,8 +50,12 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
         case .lottesCrt: return "Lottes CRT"
         case .lcd3x: return "LCD3x"
         case .sharpBilinear: return "Sharp Bilinear"
+        default: return ShaderLibrary.entry(rawValue)?.name ?? rawValue
         }
     }
+
+    /// A slider's title, which the catalogue names per filter.
+    public func title(for kind: ShaderParameterKind) -> String { ShaderLibrary.entry(rawValue)?.sliders[kind] ?? kind.title }
 
     public static func from(id: String) -> ShaderPreset {
         if let preset = ShaderPreset(rawValue: id) { return preset }
@@ -67,6 +90,7 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
         case .lottesCrt: return [.final("lottes_crt_fragment", sampling: .nearest)]
         case .lcd3x: return [.final("lcd3x_fragment")]
         case .sharpBilinear: return [.final("sharp_bilinear_fragment", sampling: .linear)]
+        default: return [.final(ShaderLibrary.fragment(rawValue))]
         }
     }
 
@@ -74,7 +98,7 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
     public var usesUpscaler: Bool {
         switch self {
         case .crtDeluxe, .anime4k, .lottesCrt, .sharpBilinear: return false
-        default: return true
+        default: return ShaderLibrary.entry(rawValue)?.usesUpscaler ?? true
         }
     }
 
@@ -86,6 +110,9 @@ public enum ShaderPreset: String, CaseIterable, Identifiable {
         case .crtV2: return [.scanlines, .glow, .colorTemp]
         case .geomCrtBorder: return [.curvature, .scanlines, .colorTemp]
         case .geomCrt, .crtDeluxe, .lottesCrt: return [.curvature, .scanlines, .glow, .colorTemp]
+        default:
+            let sliders = ShaderLibrary.entry(rawValue)?.sliders ?? [:]
+            return ShaderParameterKind.allCases.filter { sliders[$0] != nil }
         }
     }
 }

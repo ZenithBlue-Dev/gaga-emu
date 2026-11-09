@@ -18,6 +18,8 @@ struct GameItem: Identifiable, Codable, Equatable {
     var shaderID: String
     /// A touch layout for this game only. Nil follows the platform's choice.
     var skinID: String? = nil
+    /// True once the player picked a filter for this game alone, so its system's filter no longer applies.
+    var filterOverride: Bool? = nil
 
     /// Resolution order: game override, platform default, catalog recommendation.
     func resolvedCoreID(defaults: [String: String]) -> String {
@@ -947,25 +949,28 @@ enum ShaderCatalog {
         let name: String
         let premium: Bool
         var credit: String? = nil
+        var category: ShaderCategory? = nil
     }
     static let builtIn: [Shader] = [
         .init(id: "original", name: "Original", premium: false),
-        .init(id: "cartoon", name: "Cartoon", premium: false),
-        .init(id: "crt-v1", name: "CRT v1", premium: false),
-        .init(id: "crt-v2", name: "CRT v2", premium: false),
-        .init(id: "geom-crt-border", name: "Geom CRT Border", premium: true),
-        .init(id: "geom-crt", name: "Geom CRT", premium: true),
-        .init(id: "film", name: "Film", premium: false),
-        .init(id: "crt-deluxe", name: "CRT Deluxe", premium: true),
-        .init(id: "anime4k", name: "Anime4K", premium: true)
+        .init(id: "cartoon", name: "Cartoon", premium: false, category: .retro),
+        .init(id: "crt-v1", name: "CRT v1", premium: false, category: .crt),
+        .init(id: "crt-v2", name: "CRT v2", premium: false, category: .crt),
+        .init(id: "geom-crt-border", name: "Geom CRT Border", premium: true, category: .crt),
+        .init(id: "geom-crt", name: "Geom CRT", premium: true, category: .crt),
+        .init(id: "film", name: "Film", premium: false, category: .retro),
+        .init(id: "crt-deluxe", name: "CRT Deluxe", premium: true, category: .crt),
+        .init(id: "anime4k", name: "Anime4K", premium: true, category: .upscaling)
     ]
     /// Offline conversions that may ship because each source file says so (docs/05 section 5).
     static let community: [Shader] = [
-        .init(id: "lottes-crt", name: "Lottes CRT", premium: false, credit: "Timothy Lottes, public domain"),
-        .init(id: "lcd3x", name: "LCD3x", premium: false, credit: "Gigaherz, public domain"),
-        .init(id: "sharp-bilinear", name: "Sharp Bilinear", premium: false, credit: "Themaister, public domain")
+        .init(id: "lottes-crt", name: "Lottes CRT", premium: false, credit: "Timothy Lottes, public domain", category: .crt),
+        .init(id: "lcd3x", name: "LCD3x", premium: false, credit: "Gigaherz, public domain", category: .lcd),
+        .init(id: "sharp-bilinear", name: "Sharp Bilinear", premium: false, credit: "Themaister, public domain", category: .upscaling)
     ]
-    static var all: [Shader] { builtIn + community }
+    /// The in-house catalogue. Free.
+    static let library: [Shader] = ShaderLibrary.entries.map { .init(id: $0.id, name: $0.name, premium: false, category: $0.category) }
+    static let all: [Shader] = builtIn + community + library
 }
 
 /// Settings > Display. `Snapshot.appearance` is an old field that held `dark` unread, so the choice has its own.
@@ -1052,6 +1057,22 @@ final class AppState: ObservableObject {
     @Published private(set) var coverRevision = 0
     /// Saved per preset ID or imported filter ID. A preset with no entry uses the defaults.
     @Published var shaderParameters: [String: ShaderParameterValues] { didSet { save() } }
+    /// Filter for a whole system, by platform ID. A game's own choice (`filterOverride`) comes first.
+    @Published var systemShaders: [String: String] { didSet { save() } }
+    @Published var favouriteShaders: [String] { didSet { save() } }
+
+    func effectiveShaderID(_ game: GameItem) -> String {
+        if game.filterOverride != true, let system = systemShaders[game.platformID] { return system }
+        return game.shaderID
+    }
+
+    /// Sets or, with nil, clears a system's filter. A game the player already gave its own filter keeps it.
+    func setSystemFilter(_ id: String?, platformID: String) {
+        for game in games where game.platformID == platformID && game.filterOverride == nil && game.shaderID != shaderID {
+            update(game.id) { $0.filterOverride = true }
+        }
+        systemShaders[platformID] = id
+    }
     /// Touch layout per platform ID. A platform with no entry uses the standard layout.
     @Published var platformSkins: [String: String] { didSet { save() } }
     @Published var airPlayFullscreen: Bool { didSet { save() } }
@@ -1118,6 +1139,8 @@ final class AppState: ObservableObject {
         var appearanceChoice: AppearanceMode?
         var accentHex: Int?
         var libraryDisplay: LibraryDisplay?
+        var systemShaders: [String: String]?
+        var favouriteShaders: [String]?
     }
 
     /// Test only: the folder that holds the Library (state.json), ROMs, System and the rest, in place of the app's
@@ -1157,6 +1180,8 @@ final class AppState: ObservableObject {
         rewind = snapshot?.rewind ?? false
         coverArt = snapshot?.coverArt ?? false
         shaderParameters = snapshot?.shaderParameters ?? [:]
+        systemShaders = snapshot?.systemShaders ?? [:]
+        favouriteShaders = snapshot?.favouriteShaders ?? []
         platformSkins = snapshot?.platformSkins ?? [:]
         airPlayFullscreen = snapshot?.airPlayFullscreen ?? false
         iCloudSync = snapshot?.iCloudSync ?? false
@@ -1603,7 +1628,8 @@ final class AppState: ObservableObject {
         skins.hapticStrength = controls.file.touchHaptics
         skins.soundEnabled = skinSoundEffects
         skins.prepareHaptics()
-        let shader = store.canUseShader(game.shaderID) ? game.shaderID : "original"
+        let chosen = effectiveShaderID(game)
+        let shader = store.canUseShader(chosen) ? chosen : "original"
         let session = try GameSession(game: game, interface: interface, romPath: romPath, controllers: controllers,
                                       skins: skins, bindings: triggerPro.bindings, shaderID: shader,
                                       respectSilentMode: respectSilentMode,
@@ -1628,7 +1654,7 @@ final class AppState: ObservableObject {
 
     /// A filter that no longer builds is not a failed launch: Original runs, and the player is told.
     private func applyImportedFilter(to session: GameSession) async {
-        let id = session.game.shaderID
+        let id = effectiveShaderID(session.game)
         guard ImportedFilter.isImported(id) || ImportedFilter.isSlang(id) else { return }
         let renderer = session.renderer
         do {
@@ -1867,7 +1893,8 @@ final class AppState: ObservableObject {
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
                                 rumble: rumble, rumbleStrength: rumbleStrength, skinSoundEffects: skinSoundEffects, language: language,
                                 shaderID: shaderID, defaultCores: defaultCores,
-                                appearanceChoice: appearanceChoice, accentHex: accentHex, libraryDisplay: libraryDisplay)
+                                appearanceChoice: appearanceChoice, accentHex: accentHex, libraryDisplay: libraryDisplay,
+                                systemShaders: systemShaders, favouriteShaders: favouriteShaders)
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? data.write(to: storeURL, options: .atomic)
     }
