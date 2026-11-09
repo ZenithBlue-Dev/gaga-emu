@@ -90,6 +90,21 @@ expect pass --entitlements "$fx/good.plist"
 expect fail --entitlements "$fx/jit.plist"
 expect fail --entitlements "$fx/gta.plist"
 
+# iCloud: only this app's container, exact values, and no other key in the source plist.
+cid=iCloud.com.zenithblue.gagaemu
+arr() { printf '<array><string>%s</string></array>' "$1"; }
+icloud_ok="<key>com.apple.developer.icloud-container-identifiers</key>$(arr "$cid")<key>com.apple.developer.ubiquity-container-identifiers</key>$(arr "$cid")<key>com.apple.developer.icloud-services</key>$(arr CloudDocuments)"
+plist "$fx/icloud.plist" "$icloud_ok"
+plist "$fx/wrong-container.plist" "<key>com.apple.developer.icloud-container-identifiers</key>$(arr iCloud.com.zenithblue.other)"
+plist "$fx/two-containers.plist" "<key>com.apple.developer.ubiquity-container-identifiers</key><array><string>$cid</string><string>iCloud.other</string></array>"
+plist "$fx/cloudkit.plist" "<key>com.apple.developer.icloud-services</key>$(arr CloudKit)"
+plist "$fx/kvstore.plist" '<key>com.apple.developer.ubiquity-kvstore-identifier</key><string>9227VF8RW4.x</string>'
+plist "$fx/other-key.plist" '<key>com.apple.developer.networking.wifi-info</key><true/>'
+plist "$fx/env-dev.plist" "$icloud_ok<key>com.apple.developer.icloud-container-environment</key><string>Development</string>"
+plist "$fx/env-prod.plist" "$icloud_ok<key>com.apple.developer.icloud-container-environment</key><string>Production</string>"
+expect pass --entitlements "$fx/icloud.plist"
+for bad in wrong-container two-containers cloudkit kvstore other-key env-prod; do expect fail --entitlements "$fx/$bad.plist"; done
+
 ipa() { # name, entitlements plist, optional main source -> $fx/<name>.ipa with a signed Free.app
     local app="$fx/$1/Payload/Free.app"
     mkdir -p "$app/Frameworks/FreeCore.framework"
@@ -107,6 +122,12 @@ expect pass --release-ipa "$fx/good.ipa"
 expect fail --release-ipa "$fx/gta.ipa"
 expect fail --release-ipa "$fx/jit.ipa"
 expect fail --release-ipa "$fx/missing.ipa"
+ipa icloud "$fx/env-prod.plist"
+ipa icloud-dev "$fx/env-dev.plist"
+ipa icloud-wrong "$fx/wrong-container.plist"
+expect pass --release-ipa "$fx/icloud.ipa"
+expect fail --release-ipa "$fx/icloud-dev.ipa"
+expect fail --release-ipa "$fx/icloud-wrong.ipa"
 
 # The development JIT option: a store build holding its marker, or built with its flag, fails.
 marker=$(sed -n "s/^dev_jit_marker='\(.*\)'$/\1/p" "$root/scripts/nojit-gate.sh")

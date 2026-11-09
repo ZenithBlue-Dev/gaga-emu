@@ -71,7 +71,38 @@ check_entitlements() {
         echo "no-JIT gate: $1 asks for a JIT entitlement: $found" >&2
         return 1
     fi
+    check_icloud_values source <"$1" || { echo "no-JIT gate: $1 has an entitlement outside the allow-list" >&2; return 1; }
     echo "no-JIT gate: pass $(basename "$1")"
+}
+
+# Reads an entitlements plist on stdin. Exact iCloud keys and values only, for this app's one container. source: the
+# plist in the repo, where no other key is allowed either. signed and strict look at iCloud keys only, as the signing
+# step adds its own; strict is a distribution build, so only the Production environment.
+check_icloud_values() {
+    python3 -I -c '
+import plistlib, sys
+mode = sys.argv[1]
+container = ["iCloud.com.zenithblue.gagaemu"]
+exact = {
+    "com.apple.developer.icloud-container-identifiers": container,
+    "com.apple.developer.ubiquity-container-identifiers": container,
+    "com.apple.developer.icloud-services": ["CloudDocuments"],
+}
+environment = "com.apple.developer.icloud-container-environment"
+environments = {"source": [], "signed": ["Development", "Production"], "strict": ["Production"]}[mode]
+bad = []
+data = sys.stdin.buffer.read()
+for key, value in (plistlib.loads(data) if data.strip() else {}).items():
+    if "icloud" in key.lower() or "ubiquity" in key.lower():
+        ok = value in environments if key == environment else exact.get(key) == value
+    else:
+        ok = mode != "source" or key == "com.apple.developer.game-center"
+    if not ok:
+        bad.append(key)
+if bad:
+    print("refused entitlements:", ", ".join(bad), file=sys.stderr)
+    sys.exit(1)
+' "$1"
 }
 
 # A core.env variable of the core that builds framework $1 (empty if unset). A framework without a core.env is
@@ -109,6 +140,10 @@ check_signed_entitlements() {
     fi
     if [ "${2:-}" = strict ] && grep -q 'get-task-allow</key><true/>' <<<"$flat"; then
         echo "release gate: $1 is signed with get-task-allow, a development build" >&2
+        return 1
+    fi
+    if ! check_icloud_values "${2:-signed}" <<<"$ents"; then
+        echo "release gate: $1 is signed with an iCloud entitlement outside the allow-list" >&2
         return 1
     fi
     echo "release gate: pass signed entitlements of $(basename "$1")"
