@@ -2,7 +2,7 @@
 
 GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so nothing here asks to copy its layout, labels or art.
 
-Items: 42 open, 50 done (92 total).
+Items: 39 open, 53 done (92 total).
 
 The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
 
@@ -40,7 +40,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] MultiDisc helper: builds `.m3u` playlists by scanning the ROM folder and grouping by disc naming.
 - [ ] Import games from other emulators (five targets in Manic). Value is migrating from emulators covering the same systems. (P3, M, blocked: depends on those apps exposing files)
 - [x] MultiDisc helper: hand-pick discs whose names do not group.
-- [ ] Download queue for active transfers. Only useful together with cloud sources or add-by-link. (P3, M)
+- [x] Download queue for files from the user's own WebDAV or RomM server: runs one at a time, keeps going after the sheet closes, cancel and failure rows on Add. Rows and cancel pass on the iPhone with seeded jobs, and a queued download passes over loopback; not run against a real server over Wi-Fi.
 - [ ] Add game by link. GagaEmu rejects web links on purpose. (P3, M, blocked: App Store rule)
 
 ## Cloud and sync
@@ -52,7 +52,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [ ] WebDAV as a game source. Built (`Sources/Hub/WebDAVClient.swift`, Add > WebDAV Server). Sign-in, browse, download and refusal of unsafe paths pass on the iPhone against a loopback server only; not yet run against a real server over Wi-Fi. (P2, M)
 - [ ] SMB network share as a game source. Partial: through the Files app's Connect to Server, then Choose from Files (Add > SMB Share, guide written). Not run against a share. An in-app client needs libsmb2 (LGPL), so it was not added. (P2, M)
 - [ ] Google Drive, Dropbox and OneDrive browse and import. Each needs an OAuth client and a file browser. Confirm against App Review 4.7 first. (P2, L, blocked: owner account)
-- [ ] RomM server as a game source (self-hosted library). (P3, M)
+- [ ] RomM server as a game source (self-hosted library). Built (`Sources/Hub/RomMClient.swift`, Add > RomM Server), the user brings the server, with WebDAV's security rules. Sign-in, systems, paged lists, download and refusal of plain HTTP pass on the iPhone against a loopback server only; written from RomM's source and not yet run against a real server. Games made of several files are hidden. (P3, M)
 - [ ] Baidu Cloud and AliCloud browse and import. (P3, L, blocked: owner account)
 
 ## Online play
@@ -102,8 +102,8 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] IPS, UPS and BPS patching, original left untouched (`Sources/Hub/RomPatcher.swift`).
 - [x] PPF 1, 2 and 3 patches; a disc image is patched on disk, not in memory (`Sources/Hub/RomPatcher.swift`).
 - [x] APS (GBA and N64) and RUP patches.
+- [x] Patch creator mode: Patch a ROM > Create writes a UPS patch from two ROMs, shared or saved through the system sheet. The screen and round trip pass on the iPhone; choosing a file in the system picker cannot be automated.
 - [ ] xdelta patches. Common for disc translations. Most real patches use djw or lzma secondary compression, so a decoder written from RFC 3284 alone would refuse them. (P2, M, blocked: licence check of the implementation)
-- [ ] Patch creator mode. Niche. (P3, M)
 
 ## Shaders and filters
 
@@ -113,7 +113,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 - [x] Custom parameters, `.metal` and `.slangp` import, saved presets.
 - [ ] Browsable RetroArch catalogue. Partial: three community presets against a tab that may be large. (P2, S, blocked: licence per shader)
 - [x] Filter list search.
-- [ ] Pick your own image for the preview. (P3, S)
+- [x] Pick your own image for the filter preview, from the system photo picker, for this run of the app, with a way back to the built-in picture. Passes on the iPhone through a seeded picture; choosing in the system picker cannot be automated.
 - [ ] GPL shaders (xBRZ, CRT-Royale). Not shipped, replaced by own work. (P3, M, blocked: licence)
 
 ## Themes and appearance
@@ -122,7 +122,7 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 - [x] Appearance choice: dark, light or automatic (Settings > Display).
 - [x] Accent colours with a custom colour; any colour is adjusted to meet AA.
-- [ ] Alternate app icons. No `setAlternateIconName`; needs original icon art. (P3, M)
+- [ ] Alternate app icons. Partial: Settings > Display offers five original icons from `design/icons`, and the bundle and picker pass on the iPhone. Changing the icon raises a system notice the walk must not answer, so the change itself is not run. (P3, M)
 
 ## Settings
 
