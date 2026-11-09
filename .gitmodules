@@ -145,3 +145,6 @@
 [submodule "Cores/beetle_psx/upstream"]
 	path = Cores/beetle_psx/upstream
 	url = https://github.com/libretro/beetle-psx-libretro.git
+[submodule "Vendor/rcheevos"]
+	path = Vendor/rcheevos
+	url = https://github.com/RetroAchievements/rcheevos

@@ -12,6 +12,11 @@
       "texts": [{ "title": "crt-lottes, lcd3x, sharp-bilinear", "text": "crt-lottes (crt/shaders/crt-lottes.slang): \"PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER by Timothy Lottes\"\n\nlcd3x (handheld/shaders/lcd3x.slang): \"Author: Gigaherz, License: Public domain\"\n\nsharp-bilinear (pixel-art-scaling/shaders/sharp-bilinear.slang): \"Author: Themaister, License: Public domain\"\n" }]
     },
     {
+      "id": "rcheevos", "title": "rcheevos", "licence": "MIT",
+      "source": "https://github.com/RetroAchievements/rcheevos, tag v12.5.0, commit 1433173. RetroAchievements client library.",
+      "texts": [{ "title": "rcheevos", "from": "Vendor/rcheevos/LICENSE" }]
+    },
+    {
       "id": "mgba", "title": "mGBA", "cores": ["mgba"], "framework": "MgbaCore", "licence": "MPL-2.0",
       "source": "https://github.com/mgba-emu/mgba, tag 0.10.5, commit 26b7884. The source of every MPL file is at that URL and commit; none is changed.",
       "texts": [

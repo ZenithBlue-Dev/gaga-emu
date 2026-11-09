@@ -72,6 +72,11 @@ if [ -n "${uses_moltenvk:-}" ]; then
 "
 fi
 
+# The GagaCheevos target (RetroAchievements) compiles this submodule in every build.
+if [ ! -f Vendor/rcheevos/src/rc_client.c ]; then
+    echo "rcheevos is missing. Run: git submodule update --init Vendor/rcheevos" >&2
+    exit 1
+fi
 # The GagaSlang target (.slangp import) compiles glslang and SPIRV-Cross from these submodules in every build.
 if [ ! -f Cores/flycast/deps/glslang/SPIRV/GlslangToSpv.cpp ] || [ ! -f Cores/ppsspp/upstream/ext/SPIRV-Cross/spirv_msl.cpp ]; then
     echo "glslang or SPIRV-Cross is missing. Run: git submodule update --init Cores/flycast/deps/glslang Cores/ppsspp/upstream && git -C Cores/ppsspp/upstream submodule update --init ext/SPIRV-Cross" >&2

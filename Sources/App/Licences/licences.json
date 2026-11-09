@@ -27,6 +27,19 @@
    ]
   },
   {
+   "id": "rcheevos",
+   "title": "rcheevos",
+   "licence": "MIT",
+   "source": "https://github.com/RetroAchievements/rcheevos, tag v12.5.0, commit 1433173. RetroAchievements client library.",
+   "cores": [],
+   "texts": [
+    {
+     "title": "rcheevos",
+     "file": "licence-bf820c034966.txt"
+    }
+   ]
+  },
+  {
    "id": "mgba",
    "title": "mGBA",
    "licence": "MPL-2.0",

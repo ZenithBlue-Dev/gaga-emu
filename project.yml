@@ -56,10 +56,13 @@ targets:
         buildPhase: resources
     dependencies:
       - target: GagaSlang
+      - target: GagaCheevos
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.gagaemu
       # GagaSlang is C++.
       OTHER_LDFLAGS: $(inherited) -lc++
+      # rc_client.h declares identify-and-load only with this, and GagaCheevos builds with it.
+      OTHER_SWIFT_FLAGS: $(inherited) -Xcc -DRC_CLIENT_SUPPORTS_HASH
       INFOPLIST_FILE: Sources/App/Info.plist
       ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
       ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIconTwoBeats AppIconFolio AppIconShelf AppIconWell AppIconPhosphor
@@ -67,6 +70,9 @@ targets:
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
+        - $(SRCROOT)/Vendor/rcheevos/include
+        - $(SRCROOT)/Vendor/rcheevos/src
+        - $(SRCROOT)/Cores/melonds_ds/deps/libretro-common/include
       # Not OTHER_CFLAGS: C++ inherits those, and -std=c99 is an error in a C++ compile.
       GCC_C_LANGUAGE_STANDARD: c99
       # The no-JIT gate reads the built app, outside what a sandboxed script may read.
@@ -151,6 +157,34 @@ targets:
         - ENABLE_OPT=0
         - GLSLANG_OSINCLUDE_UNIX
 
+  # RetroAchievements (rcheevos, MIT, submodule Vendor/rcheevos at tag v12.5.0). An interpreter of achievement logic only:
+  # this version has no Lua and generates no code.
+  GagaCheevos:
+    type: library.static
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Vendor/rcheevos/src
+        group: GagaCheevos/rcheevos
+        includes:
+          - "*.c"
+          - "rapi/*.c"
+          - "rcheevos/*.c"
+          - "rhash/*.c"
+    settings:
+      PRODUCT_NAME: GagaCheevos
+      # The include folder ships a module map whose umbrella pulls headers rc_internal.h expects in plain include order.
+      CLANG_ENABLE_MODULES: NO
+      GCC_C_LANGUAGE_STANDARD: gnu11
+      GCC_WARN_INHIBIT_ALL_WARNINGS: YES
+      HEADER_SEARCH_PATHS:
+        - $(SRCROOT)/Vendor/rcheevos/include
+        - $(SRCROOT)/Vendor/rcheevos/src
+        - $(SRCROOT)/Cores/melonds_ds/deps/libretro-common/include
+      GCC_PREPROCESSOR_DEFINITIONS:
+        - $(inherited)
+        - RC_CLIENT_SUPPORTS_HASH
+
   GagaEmuTests:
     type: bundle.unit-test
     platform: iOS
@@ -162,9 +196,12 @@ targets:
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: com.zenithblue.GagaEmuTests
       GENERATE_INFOPLIST_FILE: YES
+      OTHER_SWIFT_FLAGS: $(inherited) -Xcc -DRC_CLIENT_SUPPORTS_HASH
       SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridge/GagaBridge-Bridging-Header.h
       HEADER_SEARCH_PATHS:
         - $(SRCROOT)/Sources/Bridge
+        - $(SRCROOT)/Vendor/rcheevos/include
+        - $(SRCROOT)/Vendor/rcheevos/src
 
   # Device walks (UITests/GagaEmuWalkTests.swift). A separate bundle, never inside the app, and it needs a
   # Debug app for -GagaImportTestROM.
