@@ -22,17 +22,26 @@ struct TipLine: View {
     let tip: Tip
     /// Comma-separated `Tip` raw values.
     @AppStorage(Tip.storageKey) private var dismissed = ""
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         if !dismissed.split(separator: ",").contains(Substring(tip.rawValue)) {
-            HStack(spacing: 8) {
-                Image(systemName: "lightbulb").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
-                Text(tip.text).font(.footnote).frame(maxWidth: .infinity, alignment: .leading)
+            // At accessibility sizes Got It goes under the text, which keeps its full height.
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                : AnyLayout(HStackLayout(spacing: 8))
+            layout {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: "lightbulb").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                    Text(tip.text).font(.footnote).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 Button("Got It") { dismissed = (dismissed.isEmpty ? "" : dismissed + ",") + tip.rawValue }
                     .buttonStyle(QuietButtonStyle())
                     .accessibilityHint("Hides this tip")
             }
             .padding(.horizontal, 12)
+            .padding(.vertical, 4)
             .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
             .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
             .accessibilityElement(children: .contain)

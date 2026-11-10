@@ -82,7 +82,7 @@ struct WebDAVSheet: View {
         Button { entry.isFolder ? open(entry) : download(entry) } label: {
             HStack(spacing: 12) {
                 Image(systemName: entry.isFolder ? "folder" : "arrow.down.circle")
-                    .frame(width: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                    .frame(minWidth: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: entry.name).multilineTextAlignment(.leading)
                     if let size = entry.size {

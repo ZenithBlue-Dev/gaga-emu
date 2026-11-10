@@ -72,6 +72,7 @@ struct CoreOptionsView: View {
     @State private var probed: CoreOptionSet?
     @State private var loading = true
     @State private var confirmRestart = false
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var revision = 0 // Redraws after a change to the store, which this view reads through AppState.
 
     private var store: CoreOptionsStore { state.coreOptions }
@@ -173,10 +174,17 @@ struct CoreOptionsView: View {
     @ViewBuilder private func row(_ option: CoreOptionSet.Option) -> some View {
         let value = current(option)
         let chosen = store.value(option.key, coreID: core.id, gameID: scopeGameID ?? gameID) != nil
+        // At accessibility sizes the value goes under the name, so words never break mid-word.
+        let line = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .center, spacing: 12) {
-                OptionTile(symbol: Self.symbol(key: option.key, label: option.label), dimmed: option.locked)
-                Text(option.label).frame(maxWidth: .infinity, alignment: .leading)
+            line {
+                line {
+                    OptionTile(symbol: Self.symbol(key: option.key, label: option.label), dimmed: option.locked)
+                    Text(option.label).fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 if option.locked {
                     Text(option.label(of: value)).font(.meta).foregroundStyle(AppTheme.muted)
                 } else {

@@ -77,7 +77,7 @@ struct RomMSheet: View {
                 ForEach(platforms) { item in
                     Button { open(item) } label: {
                         HStack(spacing: 12) {
-                            Image(systemName: "folder").frame(width: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                            Image(systemName: "folder").frame(minWidth: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                             Text(verbatim: item.name).multilineTextAlignment(.leading)
                             Spacer(minLength: 0)
                         }
@@ -97,7 +97,7 @@ struct RomMSheet: View {
         let status = queue.status(of: key)
         return Button { download(rom, key: key) } label: {
             HStack(spacing: 12) {
-                Image(systemName: "arrow.down.circle").frame(width: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                Image(systemName: "arrow.down.circle").frame(minWidth: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: rom.title).multilineTextAlignment(.leading)
                     if let size = rom.size {

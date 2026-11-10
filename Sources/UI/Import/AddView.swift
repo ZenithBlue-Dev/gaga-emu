@@ -101,7 +101,7 @@ struct AddView: View {
 
     private var wifiRow: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "wifi").frame(width: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+            Image(systemName: "wifi").frame(minWidth: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("WiFi Transfer")
                 wifiDetail
@@ -115,7 +115,7 @@ struct AddView: View {
     private func sourceRow(_ title: String, _ symbol: String, _ detail: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: symbol).frame(width: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                Image(systemName: symbol).frame(minWidth: 24).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(LocalizedStringKey(title))
                     Text(LocalizedStringKey(detail)).font(.footnote).foregroundStyle(AppTheme.muted).multilineTextAlignment(.leading)

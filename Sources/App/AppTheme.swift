@@ -133,11 +133,23 @@ struct PaperSheet<Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title).font(.screenTitle).accessibilityAddTraits(.isHeader).layoutPriority(1)
-                if let subtitle { Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2) }
-                Spacer(minLength: 0)
-                Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+            // One line when it fits; otherwise Close goes above a title that wraps, so nothing runs off the edge.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(title).font(.screenTitle).accessibilityAddTraits(.isHeader).layoutPriority(1)
+                    if let subtitle { Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2) }
+                    Spacer(minLength: 0)
+                    close
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack { Spacer(minLength: 0); close }
+                    Text(title).font(.screenTitle).accessibilityAddTraits(.isHeader)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let subtitle {
+                        Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.bottom, 6)
             }
             .padding(.horizontal, 20)
             Rule()
@@ -153,6 +165,8 @@ struct PaperSheet<Content: View>: View {
         .background(AppTheme.paper.ignoresSafeArea())
         .presentationCornerRadius(AppTheme.corner)
     }
+
+    private var close: some View { Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle()) }
 }
 
 enum AppTheme {
