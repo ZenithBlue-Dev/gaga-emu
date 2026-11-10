@@ -1,6 +1,6 @@
 # GagaEmu UX Redesign Plan
 
-Status: plan, not built. Written 2026-11-10 from the owner's feedback, the code on `main` (11213c4), and the walk screenshots of 2026-11-09 (`testAuditScreens`, `testAuditManic2`, `testAuditManic3`, `testAuditDisplay`, `testAuditGameGBA`). Those screenshots stay outside the repo. Each reference below names the walk test and the attachment label, for example `Screens/06 Settings Controls portrait`.
+Status: built 2026-11-10, batches 1-10 (see "Build status" at the end). Plan written 2026-11-10 from the owner's feedback, the code on `main` (11213c4), and the walk screenshots of 2026-11-09 (`testAuditScreens`, `testAuditManic2`, `testAuditManic3`, `testAuditDisplay`, `testAuditGameGBA`). Those screenshots stay outside the repo. Each reference below names the walk test and the attachment label, for example `Screens/06 Settings Controls portrait`.
 
 Owner feedback, in short:
 
@@ -278,3 +278,39 @@ Each batch builds, passes `xcodebuild test`, gets a device walk in portrait and 
 10. **Footnote trim.** One-line notes plus info popovers. Verify: AX sizes show at least 5 rows per screen on iPhone.
 
 Target after batch 8: each of the 20 features in section 1 takes 3 taps or fewer, and each is found by search in one query.
+
+## 9. Build status (2026-11-10)
+
+All ten batches are on `main`. `UITests/GagaEmuWalkTests.swift` `testTopFeatureTaps` measures the taps on the iPhone and attaches them as `TAPS`: 52 before, 42 after. No feature takes more taps than before.
+
+| # | Feature | Before | After |
+|---|---|---|---|
+| 1 | Resume last game | 1 | 1 |
+| 2 | Start any game | 2 | 2 |
+| 3 | Import from Files | 2 | 2 |
+| 4 | Save state | 2 | 2 |
+| 5 | Load state | 3 | 2 |
+| 6 | Fast forward | 1 | 1 |
+| 7 | Change skin, all games | 4 | 2 |
+| 8 | Change skin, one game | 3 | 2 |
+| 9 | Edit skin layout | 4 | 2 |
+| 10 | Default filter | 3 | 3 |
+| 11 | Filter, one game | 3 | 2 |
+| 12 | Change core | 3 | 2 |
+| 13 | Core options | 2 | 2 |
+| 14 | Cheats | 3 | 2 |
+| 15 | Controller mapping | 3 | 3 |
+| 16 | Controller player slots | 2 | 2 |
+| 17 | BIOS files | 3 | 3 |
+| 18 | RetroAchievements sign-in | 3 | 2 |
+| 19 | iCloud Sync | 3 | 3 |
+| 20 | Library layout | 2 | 2 |
+
+Where it differs from the plan:
+
+- Settings search is a field above the categories, not `.searchable`, as Settings has no navigation stack. There is no scope bar, and the pause menu's search covers this game only. A result opens its page; it does not highlight the row.
+- Library search stays where it was, and the landscape Continue strip is not built.
+- Upright on a phone the categories are a sideways strip of icons; in landscape and on iPad they are a sidebar list.
+- Cheats on the game page starts the game, since cheats live in the pause menu.
+- The new strings have no Spanish translations yet.
+- The iPad sidebar (`.sidebarAdaptable`, iOS 18) is built but not run on an iPad.
