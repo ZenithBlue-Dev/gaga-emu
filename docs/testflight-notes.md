@@ -2,6 +2,20 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611101512), 2026-11-10
+
+New look, easier to find things. Four tabs: Library, Import, Style and Settings.
+
+- Tap a game to open its page: Play or Resume, Start Over, skin, filter, core, save states, cheats and controls. Touch and hold still opens the quick menu.
+- Style has Skins, Filters, Icon and Colours, and Library Layout. Every skin picture shows that skin's own buttons, in the way you hold the phone.
+- Settings has a search box at the top, and new groups: Profile, Gameplay, Controllers, Screen, Systems, Library, Storage and Sync, and Help. Options show a picture of what they do.
+- Player Name is in Settings, Profile. RetroAchievements is there too.
+- Each core has its own options page in Settings, Systems, and in a game's pause menu under Core Options. Some options apply at once; others say "Restart to apply".
+- The pause menu is a grid of tiles, with Filter and Skin, and a search for this game's options.
+- Large text sizes no longer push buttons off the screen.
+
+To test: find a setting with the search box, change a skin in Style, and open a game's page. Tell us anything you could not find.
+
 ## 1.0.0 (202611100201), 2026-11-10
 
 New: Cheats now work on more systems. Atari 2600, 5200, 7800 and 8-bit, Atari Lynx, Jaguar, Virtual Boy, Neo Geo Pocket, Dreamcast and Doom have bundled cheats. Commodore 64, Amiga, Pokemon Mini and 3DS take codes you enter yourself. Cheats stay off until you switch them on, and hardcore RetroAchievements still blocks them.
