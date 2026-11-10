@@ -88,11 +88,53 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         sleep(2)
         snapshot("\(name) portrait")
+        checkBounds("\(name) portrait")
         XCUIDevice.shared.orientation = .landscapeLeft
         sleep(2)
         snapshot("\(name) landscape")
+        checkBounds("\(name) landscape")
         XCUIDevice.shared.orientation = .portrait
         sleep(1)
+    }
+
+    /// Fails when a control or text runs past the window: off the side anywhere except inside a sideways strip, or
+    /// off the top or bottom outside a scroll view. One accessibility snapshot, so it is quick. With
+    /// `GAGA_WALK_OVERFLOW=record` it only lists them, as an `OVERFLOW` attachment.
+    private func checkBounds(_ name: String) {
+        let app = XCUIApplication()
+        guard app.state == .runningForeground, let root = try? app.snapshot() else { return }
+        let screen = root.frame
+        let kinds: Set<XCUIElement.ElementType> = [.button, .staticText, .textField, .secureTextField, .switch, .slider,
+                                                   .stepper, .segmentedControl, .image, .link, .searchField, .toggle]
+        var found: [String] = []
+        func walk(_ node: XCUIElementSnapshot, vertical: Bool, sideways: Bool) {
+            let frame = node.frame
+            let scrolls = [.scrollView, .collectionView, .table].contains(node.elementType)
+            // Sideways when its content runs past its sides only.
+            let content = node.children.reduce(CGRect.null) { $0.union($1.frame) }
+            let strip = scrolls && !content.isNull && (content.width > frame.width + 1 && content.height <= frame.height + 1
+                                                      || frame.width > frame.height * 2.5)
+            // A backdrop that covers the whole screen, such as the game picture behind a sheet, is not an overflow.
+            if kinds.contains(node.elementType), frame.width > 1, frame.height > 1, !frame.contains(screen) {
+                let offSide = frame.minX < screen.minX - 1 || frame.maxX > screen.maxX + 1
+                let offEnd = frame.minY < screen.minY - 1 || frame.maxY > screen.maxY + 1
+                // Off the top or bottom inside a scroll view is content scrolled away; off a side is an overflow.
+                if (offSide && !sideways) || (offEnd && !vertical && !sideways) {
+                    let what = node.label.isEmpty ? node.identifier : node.label
+                    found.append("\(node.elementType.rawValue) '\(what.prefix(60))' \(Int(frame.minX)),\(Int(frame.minY)) \(Int(frame.width))x\(Int(frame.height))")
+                }
+            }
+            for child in node.children { walk(child, vertical: vertical || (scrolls && !strip), sideways: sideways || strip) }
+        }
+        walk(root, vertical: false, sideways: false)
+        guard !found.isEmpty else { return }
+        let list = XCTAttachment(string: "screen \(Int(screen.width))x\(Int(screen.height))\n" + found.joined(separator: "\n"))
+        list.name = "OVERFLOW \(name)"
+        list.lifetime = .keepAlways
+        add(list)
+        if environment["GAGA_WALK_OVERFLOW"] != "record" {
+            XCTFail("\(name): \(found.count) elements run past the window, first \(found[0])")
+        }
     }
 
     /// A system prompt over the app, such as a sign-in request, must not get the walk's taps: a tap could answer it.
@@ -282,6 +324,62 @@ final class GagaEmuWalkTests: XCTestCase {
             default: break
             }
         }
+    }
+
+    /// Every main screen upright at the largest accessibility text size, each with the bounds check: nothing runs
+    /// past the window and no row is cut off by the edges.
+    func testAuditLargeText() throws {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaImportTestROM", core, "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+        let cover = importedGame(app, "The \(title) game")
+        sleep(3)
+        try stopIfPrompt()
+        func shoot(_ name: String) {
+            sleep(2)
+            snapshot("AX \(name)")
+            checkBounds("AX \(name)")
+        }
+        shoot("01 Library")
+        tap(cover, "The cover")
+        _ = startOnPage(app).waitForExistence(timeout: timeout)
+        shoot("02 Game page")
+        app.swipeUp()
+        shoot("02 Game page scrolled")
+        close(app)
+        goTo(app, "Import")
+        shoot("03 Import")
+        for section in ["Skins", "Filters", "Icon and Colours", "Library Layout"] where styleSection(app, section) {
+            shoot("04 Style \(section)")
+        }
+        goTo(app, "Settings")
+        for category in ["Profile", "Gameplay", "Controllers", "Screen", "Systems", "Library", "Storage and Sync", "Help"] where selectTab(app, category) {
+            shoot("05 Settings \(category)")
+        }
+        let field = app.textFields["Search settings"].firstMatch
+        try enter(app, field, "skin", "The settings search field")
+        shoot("06 Search skin")
+        goTo(app, "Settings")
+        if selectTab(app, "Systems") {
+            let row = app.buttons["core.\(core)"].firstMatch
+            if row.waitForExistence(timeout: 6) {
+                row.tap()
+                shoot("07 Core options")
+                close(app)
+            }
+        }
+        goTo(app, "Library")
+        play(app, cover)
+        let pause = app.buttons["Pause game"]
+        try arrive(pause, "The game")
+        sleep(3)
+        shoot("08 Playing")
+        pause.tap()
+        shoot("09 Pause menu")
+        app.swipeUp()
+        shoot("09 Pause menu scrolled")
     }
 
     /// Batch 2: Settings search finds a setting by the word people use, and opens it.

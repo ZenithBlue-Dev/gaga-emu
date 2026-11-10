@@ -314,3 +314,27 @@ Where it differs from the plan:
 - Cheats on the game page starts the game, since cheats live in the pause menu.
 - The new strings have no Spanish translations yet.
 - The iPad sidebar (`.sidebarAdaptable`, iOS 18) is built but not run on an iPad.
+
+### Skin pictures
+
+Every skin picture (Style > Skins, Assign Skin, the game page, the pause menu, Settings > Controllers) is a miniature
+of the skin itself: `SkinThumbnail` draws each button, D-pad arm, stick and shoulder from the layout's frames, with the
+game picture's area, in the current orientation. The game page and pause menu draw the skin the game plays with, in
+the order `AppState.applySkin` uses: device skin, the game's own edit, the custom layout, then the built-in choice.
+VoiceOver reads "<skin> skin for <system>, portrait layout".
+
+### Overflow audit
+
+Every `audit` screenshot in `UITests/GagaEmuWalkTests.swift` now also fails when a control or text runs past the
+window (`checkBounds`), and `testAuditLargeText` walks the main screens at the largest accessibility text size. Found
+and fixed, all at accessibility sizes on the iPhone, none at the default size:
+
+- Sheet headers (`PaperSheet`): a long title pushed Close and the subtitle off the right edge. Close now goes above a
+  wrapping title when the line does not fit.
+- Core option rows: the name broke mid-word beside the value menu. The value goes under the name.
+- Tips (`TipLine`): the text overlapped Got It. Got It goes under the text.
+- Pause menu tiles: names broke mid-word in two columns. One column at accessibility sizes.
+- Settings rows with a value: the value goes under the title.
+- Import and server rows: the icon ran 3 pt past the left edge in a fixed 24 pt frame.
+
+Not checked: the narrowest iPhone width and iPad split view, as only one iPhone was available.

@@ -46,6 +46,29 @@ final class SettingsSearchTests: XCTestCase {
         XCTAssertEqual(CoreOptionsView.symbol(key: "x_zzz", label: "Something"), "slider.horizontal.3")
     }
 
+    /// A skin's picture is its own controls at their places, per orientation, custom layouts included.
+    func testSkinPicturesDrawTheRealLayout() throws {
+        let standard = TouchSkinEngine.Layout.builtIn[0]
+        let wide = SkinDrawing.layout(standard, platformID: "n64", portrait: false)
+        XCTAssertEqual(wide.buttons, standard.buttons(for: "n64"))
+        XCTAssertTrue(wide.buttons.contains { $0.shape == .stick }, "The N64 picture has no stick")
+        XCTAssertGreaterThan(wide.aspect, 1)
+        let upright = SkinDrawing.layout(standard, platformID: "n64", portrait: true)
+        XCTAssertEqual(upright.buttons, TouchSkinEngine.portrait(from: standard.buttons(for: "n64")))
+        XCTAssertLessThan(upright.aspect, 1)
+        XCTAssertNotEqual(SkinDrawing.layout(standard, platformID: "gba", portrait: false).buttons.count, wide.buttons.count)
+
+        var moved = standard.buttons(for: "gba")
+        moved[0].frame.origin.x += 0.01
+        let data = try TouchSkinEngine.encodeFlex(name: "Custom", buttons: moved, opacity: 0.8)
+        let custom = try TouchSkinEngine.decodeFlex(data, id: "custom")
+        XCTAssertEqual(SkinDrawing.skin(custom, portrait: false).buttons.map(\.frame), moved.map(\.frame))
+        XCTAssertEqual(SkinDrawing.skin(custom, portrait: true).buttons.map(\.frame), TouchSkinEngine.portrait(from: moved).map(\.frame))
+
+        let spoken = SkinThumbnail.spoken("Standard", platformID: "gba", upright: true)
+        XCTAssertTrue(spoken.contains("Standard") && spoken.contains(CoreCatalog.platformName("gba")) && spoken.contains("portrait"))
+    }
+
     func testPicturesSayWhatTheyShow() {
         for mode in ScalingMode.allCases { XCTAssertFalse(ScalingPicture.effect(mode).isEmpty) }
         var display = LibraryDisplay()
