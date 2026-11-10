@@ -432,6 +432,29 @@ final class NetplayTests: XCTestCase {
         XCTAssertEqual(netplay.phase, .ended("The other player didn't confirm the code."))
     }
 
+    /// Core options are locked in a game while Play Nearby is active, so the two phones cannot drift apart.
+    @MainActor
+    func testCoreOptionsAreLockedDuringPlayNearby() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("netplay-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let rom = directory.appendingPathComponent("game.mock")
+        try Data([1, 2, 3]).write(to: rom)
+        let game = GameItem(id: UUID(), title: "Demo", platformID: "unknown", romPath: rom.path, coverPath: nil,
+                            coreOverride: "mock", playTime: 0, lastPlayed: nil, isFavorite: false, shaderID: "original")
+        let session = try GameSession(game: game, interface: MockCore_GetInterface()!.pointee, romPath: rom.path,
+                                      audio: AudioEngineManager(), controllers: ControllerManager(), skins: TouchSkinEngine(),
+                                      bindings: [], shaderID: "original", respectSilentMode: false, saveDirectory: directory)
+        XCTAssertNil(session.coreOptionsLockedReason)
+        let netplay = NetplaySession.session(for: session, romPath: rom.path)
+        defer { netplay.leave() }
+        netplay.debugWaitForHost()
+        XCTAssertNotNil(session.coreOptionsLockedReason)
+        XCTAssertFalse(session.setCoreOption("any", "value"), "a change went through during Play Nearby")
+        netplay.leave()
+        XCTAssertNil(session.coreOptionsLockedReason)
+    }
+
     func testEligibilityList() {
         for (platform, core) in [("nes", "nestopia"), ("snes", "bsnes"), ("megadrive", "jgenesis"), ("mastersystem", "gearsystem"),
                                  ("pce", "beetle_pce_fast"), ("n64", "mupen64plus_next"), ("ps1", "pcsx_rearmed")] {

@@ -542,9 +542,15 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     /// Hands the running core a new value, or the default for nil. The core reads it once play resumes. False when the
     /// core refuses it.
+    /// Why options cannot change now: both phones must run the same settings, and lockstep cannot carry a change.
+    var coreOptionsLockedReason: String? {
+        guard let net = NetplaySession.current, net.game === self, net.isActive else { return nil }
+        return "Locked during Play Nearby. Both phones must run the same settings. Leave Play Nearby to change them."
+    }
+
     @discardableResult
     func setCoreOption(_ key: String, _ value: String?) -> Bool {
-        guard let core, core.setOption(key, value) else { return false }
+        guard coreOptionsLockedReason == nil, let core, core.setOption(key, value) else { return false }
         coreOptions = core.options()
         guard let option = coreOptions?.option(key) else { return true }
         if option.restart == true {

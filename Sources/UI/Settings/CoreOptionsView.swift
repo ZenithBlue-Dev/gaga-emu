@@ -77,12 +77,18 @@ struct CoreOptionsView: View {
     private var scopeGameID: UUID? { gameID.flatMap { store.hasGameValues(coreID: core.id, gameID: $0) || gameOnlyChosen ? $0 : nil } }
     @State private var gameOnlyChosen = false
 
+    private var locked: String? { session?.coreOptionsLockedReason }
+
     private var declared: CoreOptionSet? { session?.coreOptions ?? probed ?? store.declaration(coreID: core.id) }
 
     var body: some View {
         PaperSheet(title: core.name, subtitle: core.systems.joined(separator: ", ")) {
             VStack(alignment: .leading, spacing: 0) {
                 let _ = revision
+                if let reason = locked {
+                    Text(reason).font(.footnote.weight(.semibold)).foregroundStyle(AppTheme.accent).padding(.bottom, 12)
+                        .accessibilityIdentifier("coreOptions.netplayLock")
+                }
                 if let session, !session.optionsNeedRestart.isEmpty { restartBanner(session) }
                 if loading && declared == nil {
                     ProgressView().frame(maxWidth: .infinity, minHeight: 88)
@@ -100,6 +106,7 @@ struct CoreOptionsView: View {
                     }
                     Button("Reset All to Defaults") { resetAll(declared) }
                         .buttonStyle(QuietButtonStyle())
+                        .disabled(locked != nil)
                         .frame(minHeight: 44)
                         .padding(.top, 12)
                         .accessibilityIdentifier("coreOptions.resetAll")
@@ -140,6 +147,7 @@ struct CoreOptionsView: View {
         ToggleRow(title: "This Game Only",
                   note: "On: changes here are kept for this game. Off: they are for every game on \(core.name), and this game's own are dropped.",
                   isOn: Binding(get: { scopeGameID != nil }, set: setGameOnly))
+            .disabled(locked != nil)
             .accessibilityIdentifier("coreOptions.gameOnly")
     }
 
@@ -172,6 +180,7 @@ struct CoreOptionsView: View {
                         ForEach(option.values, id: \.value) { Text($0.label).tag($0.value) }
                     }
                     .labelsHidden()
+                    .disabled(locked != nil)
                     .tint(AppTheme.accent)
                     .accessibilityLabel(option.label)
                     .accessibilityValue(option.label(of: value))
@@ -189,6 +198,7 @@ struct CoreOptionsView: View {
                 if chosen, !option.locked {
                     Button("Reset") { choose(nil, option) }
                         .buttonStyle(QuietButtonStyle())
+                        .disabled(locked != nil)
                         .frame(minHeight: 44)
                         .accessibilityLabel("Reset \(option.label) to default, \(option.label(of: option.default))")
                         .accessibilityIdentifier("coreOptions.reset.\(option.key)")
