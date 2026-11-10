@@ -1,19 +1,22 @@
 import SwiftUI
 
+/// The four tabs: one word each, the same in every orientation.
 enum AppScreen: String, CaseIterable, Identifiable {
-    case library, add, settings
+    case library, importer, style, settings
     var id: String { rawValue }
     var title: String {
         switch self {
         case .library: return "Library"
-        case .add: return "Add"
+        case .importer: return "Import"
+        case .style: return "Style"
         case .settings: return "Settings"
         }
     }
     var symbol: String {
         switch self {
         case .library: return "books.vertical"
-        case .add: return "plus"
+        case .importer: return "square.and.arrow.down"
+        case .style: return "paintpalette"
         case .settings: return "gearshape"
         }
     }
@@ -21,74 +24,92 @@ enum AppScreen: String, CaseIterable, Identifiable {
 
 struct RootView: View {
     @EnvironmentObject private var state: AppState
-    @State private var screen: AppScreen = .library
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.horizontalSizeClass) private var horizontalSize
     @Environment(\.verticalSizeClass) private var verticalSize
 
     var body: some View {
-        // Upright on a phone the rail becomes a bar along the bottom, where the width is short and the height long.
-        let upright = horizontalSize == .compact && verticalSize == .regular
-        AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
-            if !upright {
-                LeftRail(selection: $screen)
-                Rule(vertical: true).ignoresSafeArea(edges: .vertical)
-            }
-            Group {
-                switch screen {
-                case .library: LibraryView { screen = .add }
-                case .add: AddView()
-                case .settings: SettingsView()
+        tabs
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: state.tab)
+            .foregroundStyle(AppTheme.ink)
+            .background(AppTheme.paper.ignoresSafeArea())
+            .preferredColorScheme(state.appearanceChoice == .system ? nil : state.appearanceChoice == .dark ? .dark : .light)
+            .overlay {
+                if state.launching {
+                    ProgressView("Starting")
+                        .padding(16)
+                        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                        .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            if upright {
-                Rule()
-                LeftRail(selection: $screen, horizontal: true)
+            .unplacedQuestion()
+            .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) {
+                // Passed again: on a Mac (Designed for iPad) the cover did not inherit them, and GameView trapped.
+                GameView(session: $0)
+                    .environmentObject(state)
+                    .environmentObject(state.controllers)
+                    .environmentObject(state.triggerPro)
+                    .environmentObject(state.skins)
+                    .environmentObject(state.store)
+                    .environmentObject(state.wifi)
+            }
+            .alert(state.launchFailure?.heading ?? "Could not play this game",
+                   isPresented: Binding(get: { state.launchFailure != nil }, set: { if !$0 { state.launchFailure = nil } }),
+                   presenting: state.launchFailure) { _ in
+                Button("OK", role: .cancel) {}
+            } message: { failure in
+                Text(failure.message)
+            }
+            .alert("Resume \(state.resumeOffer?.title ?? "game")?",
+                   isPresented: Binding(get: { state.resumeOffer != nil }, set: { if !$0 { state.resumeOffer = nil } }),
+                   presenting: state.resumeOffer) { game in
+                Button("Resume") { state.start(game, loading: state.saveStore(for: game).autoSlot) }
+                Button("Start Over") { state.start(game) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("Resume continues from your auto save. Start Over uses the game's own save, and replaces the auto save when you next leave the game.")
+            }
+            .task {
+                // Runs once, when the app starts.
+                if state.quickStart, let game = state.recentGames.first { state.launch(game) }
+            }
+    }
+
+    /// iPad on iOS 18 and later: the system tab bar that becomes a sidebar. Elsewhere the rail, or upright on a phone
+    /// the bar along the bottom.
+    @ViewBuilder private var tabs: some View {
+        if #available(iOS 18, *), UIDevice.current.userInterfaceIdiom == .pad {
+            TabView(selection: $state.tab) {
+                ForEach(AppScreen.allCases) { item in
+                    Tab(LocalizedStringKey(item.title), systemImage: item.symbol, value: item) { screen(item) }
+                }
+            }
+            .tabViewStyle(.sidebarAdaptable)
+            .tint(AppTheme.accent)
+        } else {
+            // Upright on a phone the rail becomes a bar along the bottom, where the width is short and the height long.
+            let upright = horizontalSize == .compact && verticalSize == .regular
+            AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
+                if !upright {
+                    LeftRail(selection: $state.tab)
+                    Rule(vertical: true).ignoresSafeArea(edges: .vertical)
+                }
+                screen(state.tab)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if upright {
+                    Rule()
+                    LeftRail(selection: $state.tab, horizontal: true)
+                }
             }
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: screen)
-        .foregroundStyle(AppTheme.ink)
-        .background(AppTheme.paper.ignoresSafeArea())
-        .preferredColorScheme(state.appearanceChoice == .system ? nil : state.appearanceChoice == .dark ? .dark : .light)
-        .overlay {
-            if state.launching {
-                ProgressView("Starting")
-                    .padding(16)
-                    .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
-                    .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
-            }
-        }
-        .unplacedQuestion()
-        .fullScreenCover(item: $state.session, onDismiss: state.showPendingFailure) {
-            // Passed again: on a Mac (Designed for iPad) the cover did not inherit them, and GameView trapped.
-            GameView(session: $0)
-                .environmentObject(state)
-                .environmentObject(state.controllers)
-                .environmentObject(state.triggerPro)
-                .environmentObject(state.skins)
-                .environmentObject(state.store)
-                .environmentObject(state.wifi)
-        }
-        .alert(state.launchFailure?.heading ?? "Could not play this game",
-               isPresented: Binding(get: { state.launchFailure != nil }, set: { if !$0 { state.launchFailure = nil } }),
-               presenting: state.launchFailure) { _ in
-            Button("OK", role: .cancel) {}
-        } message: { failure in
-            Text(failure.message)
-        }
-        .alert("Resume \(state.resumeOffer?.title ?? "game")?",
-               isPresented: Binding(get: { state.resumeOffer != nil }, set: { if !$0 { state.resumeOffer = nil } }),
-               presenting: state.resumeOffer) { game in
-            Button("Resume") { state.start(game, loading: state.saveStore(for: game).autoSlot) }
-            Button("Start Over") { state.start(game) }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("Resume continues from your auto save. Start Over uses the game's own save, and replaces the auto save when you next leave the game.")
-        }
-        .task {
-            // Runs once, when the app starts.
-            if state.quickStart, let game = state.recentGames.first { state.launch(game) }
+    }
+
+    @ViewBuilder private func screen(_ item: AppScreen) -> some View {
+        switch item {
+        case .library: LibraryView { state.tab = .importer }
+        case .importer: AddView()
+        case .style: StyleView()
+        case .settings: SettingsView()
         }
     }
 }
@@ -126,7 +147,7 @@ private struct LeftRail: View {
             }
             if !horizontal { Spacer(minLength: 0) }
         }
-        .padding(horizontal ? .bottom : .top, horizontal ? 0 : 8)
+        .padding(.top, horizontal ? 0 : 8)
         .frame(width: horizontal ? nil : 72)
         // The rail stays one fixed width; the large content viewer covers larger text sizes.
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)

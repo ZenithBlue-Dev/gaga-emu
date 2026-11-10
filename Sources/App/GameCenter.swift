@@ -15,6 +15,11 @@ enum PlayerName {
         let player = GKLocalPlayer.local
         return sanitized(!chosen.isEmpty ? chosen : player.isAuthenticated ? player.alias : "")
     }
+
+    /// For Settings > Profile. The alias only, never other Game Center details.
+    @MainActor static var gameCenterStatus: String {
+        GKLocalPlayer.local.isAuthenticated ? GKLocalPlayer.local.alias : "Not signed in"
+    }
 }
 
 /// Signs in the local player in the background. No leaderboards or achievements yet.

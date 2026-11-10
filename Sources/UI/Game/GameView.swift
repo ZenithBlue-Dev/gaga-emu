@@ -654,6 +654,9 @@ private struct PauseMenu: View {
     @State private var showControls = false
     @State private var coreOptions: CoreListing?
     @State private var saved: Date?
+    @State private var showFilter = false
+    @State private var showSkin = false
+    @State private var query = ""
 
     private func resume() { session.resume(.menu) }
 
@@ -692,9 +695,112 @@ private struct PauseMenu: View {
         .sheet(isPresented: $showAchievements) { AchievementsSheet(session: session) }
         .sheet(isPresented: $showControls) { ControlsSheet(game: session.game, session: session) }
         .sheet(item: $coreOptions) { CoreOptionsView(core: $0, session: session) }
+        .sheet(isPresented: $showSkin, onDismiss: reloadSkin) { GameSkinSheet(game: liveGame) }
+        .fullScreenCover(isPresented: $showFilter, onDismiss: { state.refilter(session) }) { FilterPickerView(game: liveGame) }
         #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
         #endif
+    }
+
+    /// The Library's entry for this game, which the Filter and Skin pages change.
+    private var liveGame: GameItem { state.games.first { $0.id == session.game.id } ?? session.game }
+
+    /// A skin chosen here shows in the running game at once.
+    private func reloadSkin() {
+        let upright = state.skins.portrait
+        state.applySkin(for: liveGame)
+        state.skins.portrait = upright
+    }
+
+    /// One tile in the grid.
+    private struct Entry: Identifiable {
+        let id: String
+        let title: String
+        var value: String?
+        var keywords = ""
+        let picture: AnyView
+        let action: () -> Void
+    }
+
+    private var filterName: String {
+        let id = state.effectiveShaderID(liveGame)
+        return ShaderCatalog.all.first { $0.id == id }?.name ?? state.filters.name(of: id) ?? "Original"
+    }
+
+    private var skinLayout: TouchSkinEngine.Layout {
+        let game = liveGame
+        let id = TouchSkinEngine.layoutID(game: game.skinID, platform: state.platformSkins[game.platformID], platformID: game.platformID)
+        let choices = TouchSkinEngine.Layout.choices(for: game.platformID)
+        return choices.first { $0.id == id } ?? choices.first ?? TouchSkinEngine.Layout.builtIn[0]
+    }
+
+    private var entries: [Entry] {
+        var list: [Entry] = []
+        let symbol = { (name: String) in AnyView(SymbolPicture(symbol: name)) }
+        if session.supportsSaveStates {
+            list.append(Entry(id: "pause.saveState", title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" },
+                              keywords: "save slot", picture: symbol("square.and.arrow.down"), action: saveState))
+            list.append(Entry(id: "pause.loadState", title: "Load State", keywords: "load slot restore",
+                              picture: AnyView(SaveStatePicture(slot: session.saves.slots().first)), action: { showSaves = true }))
+        }
+        list.append(Entry(id: "pause.filter", title: "Filter", value: filterName, keywords: "shader crt lcd scanlines look",
+                          picture: AnyView(FilterPicture(shaderID: state.effectiveShaderID(liveGame))), action: { showFilter = true }))
+        list.append(Entry(id: "pause.skin", title: "Skin", value: skinLayout.name, keywords: "touch layout buttons",
+                          picture: AnyView(SkinThumbnail(layout: skinLayout).padding(3)), action: { showSkin = true }))
+        list.append(Entry(id: "pause.screen", title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
+                          keywords: "scaling fit stretch zoom layout dual",
+                          picture: session.isDualScreen ? AnyView(DualLayoutPicture(preset: session.screen.preset)) : AnyView(ScalingPicture(mode: session.screen.scaling)),
+                          action: { showScreen = true }))
+        list.append(Entry(id: "pause.controls", title: "Controls", value: "Layout, mapping, macros", keywords: "controller mapping macros turbo players",
+                          picture: symbol("gamecontroller"), action: { showControls = true }))
+        if !session.hardcoreActive, session.supportsCheats {
+            list.append(Entry(id: "pause.cheats", title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", keywords: "code",
+                              picture: symbol("wand.and.stars"), action: { showCheats = true }))
+        }
+        if let core = CoreListing.listing(coreID: session.coreID) {
+            list.append(Entry(id: "pause.coreOptions", title: "Core Options", value: session.optionsNeedRestart.isEmpty ? core.name : "Restart needed",
+                              keywords: "core settings emulator", picture: symbol("cpu"), action: { coreOptions = core }))
+        }
+        if session.achievementsLoaded {
+            list.append(Entry(id: "pause.achievements", title: "Achievements", keywords: "retroachievements trophy",
+                              picture: symbol("trophy"), action: { showAchievements = true }))
+        }
+        list.append(Entry(id: "pause.recordMacro", title: "Record Macro", value: "Plays until you tap Stop", keywords: "macro record",
+                          picture: symbol("record.circle"), action: {
+                              session.startRecordingMacro()
+                              resume()
+                          }))
+        if offersPlus {
+            list.append(Entry(id: "pause.plus", title: "See Gaga Plus", keywords: "plus subscription", picture: symbol("star.circle"), action: { showPlans = true }))
+        }
+        return list
+    }
+
+    private func matches(_ entry: Entry) -> Bool {
+        let words = query.lowercased().split(whereSeparator: \.isWhitespace)
+        let text = (entry.title + " " + entry.keywords).lowercased()
+        return words.allSatisfy { text.contains($0) }
+    }
+
+    private func tile(_ entry: Entry) -> some View {
+        Button(action: entry.action) {
+            VStack(alignment: .leading, spacing: 6) {
+                OptionTile { entry.picture }
+                Text(entry.title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                if let value = entry.value {
+                    Text(value).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2)
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
+            .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier(entry.id)
     }
 
     /// Changes show on the picture beside the menu as they are made.
@@ -732,57 +838,50 @@ private struct PauseMenu: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
             Text(session.game.title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(3)
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                TextField("Search this game", text: $query)
+                    .submitLabel(.search)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .accessibilityLabel("Search this game's options")
+            }
+            .padding(.horizontal, 8)
+            .frame(minHeight: 44)
+            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
             Rule().padding(.vertical, 4)
             Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
-            if session.supportsSaveStates {
-                menuRow(title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" }, action: saveState)
-                menuRow(title: "Load State", action: { showSaves = true })
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8, alignment: .top), GridItem(.flexible(), spacing: 8, alignment: .top)],
+                      alignment: .leading, spacing: 8) {
+                ForEach(entries.filter(matches)) { tile($0) }
             }
-            menuRow(title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
-                    action: { showScreen = true })
-            menuRow(title: "Controls", value: "Layout, mapping, macros", action: { showControls = true })
-            if let core = CoreListing.listing(coreID: session.coreID) {
-                menuRow(title: "Core Options", value: session.optionsNeedRestart.isEmpty ? core.name : "Restart needed",
-                        action: { coreOptions = core })
-                    .accessibilityIdentifier("pause.coreOptions")
-            }
-            if session.supportsSaveStates {
-                Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
-                    Text("Quick Slot \(session.quickSlot)")
+            if query.isEmpty {
+                if session.supportsSaveStates {
+                    Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
+                        Text("Quick Slot \(session.quickSlot)")
+                    }
+                    .frame(minHeight: 44)
                 }
-                .frame(minHeight: 44)
-            }
-            menuRow(title: "Record Macro", value: "Plays until you tap Stop", action: {
-                session.startRecordingMacro()
-                resume()
-            })
-            fastForward
-            rewindNote
-            if session.achievementsLoaded {
-                menuRow(title: "Achievements", action: { showAchievements = true })
-                ToggleRow(title: "Hardcore", note: "Turning it on resets the game.",
-                          isOn: Binding(get: { session.achievements?.hardcore ?? false }, set: { session.setHardcore($0) }))
-            }
-            if session.hardcoreActive {
-                Text("Hardcore: state loading, cheats and rewind are off.")
-                    .font(.footnote).foregroundStyle(AppTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("hardcoreNote")
-            } else {
-                PlayNearbyRow(session: session)
-            }
-            if session.hardcoreActive {
-                EmptyView()
-            } else if session.supportsCheats {
-                menuRow(title: "Cheats", value: session.cheats.isEmpty ? nil : "\(session.cheats.count)", action: { showCheats = true })
-            } else if let note = session.noCheatsNote {
-                Text(note)
-                    .font(.footnote).foregroundStyle(AppTheme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("noCheatsNote")
-            }
-            if offersPlus {
-                menuRow(title: "See Gaga Plus", action: { showPlans = true })
+                fastForward
+                rewindNote
+                if session.achievementsLoaded {
+                    ToggleRow(title: "Hardcore", note: "Turning it on resets the game.",
+                              isOn: Binding(get: { session.achievements?.hardcore ?? false }, set: { session.setHardcore($0) }))
+                }
+                if session.hardcoreActive {
+                    Text("Hardcore: state loading, cheats and rewind are off.")
+                        .font(.footnote).foregroundStyle(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("hardcoreNote")
+                } else {
+                    PlayNearbyRow(session: session)
+                }
+                if !session.hardcoreActive, !session.supportsCheats, let note = session.noCheatsNote {
+                    Text(note)
+                        .font(.footnote).foregroundStyle(AppTheme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("noCheatsNote")
+                }
             }
             Rule().padding(.vertical, 4)
             Button("Quit to Library", action: { session.stop() })
@@ -798,21 +897,6 @@ private struct PauseMenu: View {
         } catch {
             session.notice = error.localizedDescription
         }
-    }
-
-    private func menuRow(title: String, value: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack {
-                Text(title)
-                Spacer(minLength: 8)
-                if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted) }
-            }
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
     }
 
     /// Whether this core can rewind, and why not. Nothing while the setting is off.

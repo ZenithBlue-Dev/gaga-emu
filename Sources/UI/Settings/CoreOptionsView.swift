@@ -38,7 +38,10 @@ struct CoresPane: View {
         Rule()
         ForEach(CoreListing.installed) { core in
             Button { open = core } label: {
-                HStack {
+                HStack(spacing: 12) {
+                    if let platform = CoreCatalog.platforms.first(where: { $0.cores.contains { $0.id == core.id } }) {
+                        OptionTile { PlatformPicture(platformID: platform.id) }
+                    }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(core.name)
                         Text(core.systems.joined(separator: ", ")).font(.footnote).foregroundStyle(AppTheme.muted)
@@ -171,7 +174,8 @@ struct CoreOptionsView: View {
         let value = current(option)
         let chosen = store.value(option.key, coreID: core.id, gameID: scopeGameID ?? gameID) != nil
         VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                OptionTile(symbol: Self.symbol(key: option.key, label: option.label), dimmed: option.locked)
                 Text(option.label).frame(maxWidth: .infinity, alignment: .leading)
                 if option.locked {
                     Text(option.label(of: value)).font(.meta).foregroundStyle(AppTheme.muted)
@@ -207,6 +211,26 @@ struct CoreOptionsView: View {
         }
         .padding(.vertical, 8)
         .accessibilityElement(children: option.locked ? .combine : .contain)
+    }
+
+    /// A picture for an option from words in its key and label; options with no match get a slider.
+    static func symbol(key: String, label: String) -> String {
+        let text = (key + " " + label).lowercased()
+        let table: [([String], String)] = [
+            (["resolution", "upscal", "internal", "scale"], "arrow.up.left.and.arrow.down.right"),
+            (["audio", "sound", "volume", "sample", "reverb"], "speaker.wave.2"),
+            (["color", "colour", "palette", "gamma", "bright"], "paintpalette"),
+            (["aspect", "crop", "overscan", "border", "widescreen"], "aspectratio"),
+            (["frame", "skip", "speed", "fps", "cpu", "clock", "overclock", "cycle"], "speedometer"),
+            (["texture", "filter", "smooth", "blend", "interlac", "dither"], "camera.filters"),
+            (["bios", "region", "language", "system"], "globe"),
+            (["controller", "input", "pad", "mouse", "gun", "analog", "rumble", "turbo"], "gamecontroller"),
+            (["save", "memory", "card", "cartridge"], "sdcard"),
+            (["renderer", "render", "gpu", "vulkan", "opengl", "shader"], "cpu"),
+            (["screen", "layout", "display", "rotat"], "rectangle.split.2x1"),
+            (["cheat", "hack", "patch"], "wand.and.stars"),
+        ]
+        return table.first { $0.0.contains(where: text.contains) }?.1 ?? "slider.horizontal.3"
     }
 
     private func note(_ option: CoreOptionSet.Option) -> String? {

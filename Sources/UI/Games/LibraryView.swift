@@ -8,8 +8,9 @@ struct LibraryView: View {
     var onAdd: () -> Void
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
-    @State private var showControllers = false
     @State private var pendingLoad: (GameItem, SaveSlot)?
+    /// What the game's page asked for, done once the page has gone.
+    @State private var pendingStart: (GameItem, GamePageStart)?
     @State private var dropTargeted = false
     /// Tiles widen with Dynamic Type so titles do not break mid-word.
     @ScaledMetric(relativeTo: .footnote) private var tileScale: CGFloat = 1
@@ -31,9 +32,10 @@ struct LibraryView: View {
     private var trail: CGFloat { 16 + sides.trailing }
 
     private enum GameSheet: Identifiable {
-        case core(GameItem), saves(GameItem), edit(GameItem), skin(GameItem), delete(GameItem)
+        case page(GameItem), core(GameItem), saves(GameItem), edit(GameItem), skin(GameItem), delete(GameItem)
         var id: String {
             switch self {
+            case .page(let game): return "page\(game.id)"
             case .core(let game): return "core\(game.id)"
             case .saves(let game): return "saves\(game.id)"
             case .edit(let game): return "edit\(game.id)"
@@ -63,7 +65,6 @@ struct LibraryView: View {
                     }
                     VStack(spacing: 0) {
                         ImportProgressRows().padding(.leading, lead).padding(.trailing, trail)
-                        TipLine(tip: .holdGame).padding(.leading, lead).padding(.trailing, trail).padding(.top, 8)
                         filterRow
                         Rule()
                         shelvesList
@@ -82,6 +83,7 @@ struct LibraryView: View {
         .dropHighlight(dropTargeted)
         .sheet(item: $sheet, onDismiss: startPendingLoad) { sheet in
             switch sheet {
+            case .page(let game): GamePage(game: game) { pendingStart = (game, $0) }
             case .core(let game): CorePickerSheet(game: game)
             case .saves(let game):
                 ManageSavesSheet(title: game.title, store: state.saveStore(for: game)) { pendingLoad = (game, $0) }
@@ -91,11 +93,19 @@ struct LibraryView: View {
             }
         }
         .fullScreenCover(item: $filterGame) { FilterPickerView(game: $0) }
-        .sheet(isPresented: $showControllers) { PlayersView(platformID: nil) }
     }
 
     /// A game view cannot present until the sheet has gone.
     private func startPendingLoad() {
+        if let (game, how) = pendingStart {
+            pendingStart = nil
+            switch how {
+            case .play: state.launch(game)
+            case .startOver: state.start(game)
+            case .slot(let slot): state.start(game, loading: slot)
+            case .nearby: PlayNearbyMenuItem.begin(game, state: state)
+            }
+        }
         guard let (game, slot) = pendingLoad else { return }
         pendingLoad = nil
         state.start(game, loading: slot)
@@ -213,12 +223,11 @@ struct LibraryView: View {
                     Text("All Makers").tag("all")
                     ForEach(makers, id: \.self) { Text(verbatim: $0).tag("maker:" + $0) }
                 }
-                Button { showControllers = true } label: { Label("Controllers", systemImage: "gamecontroller") }
             } label: {
                 Image(systemName: "arrow.up.arrow.down").foregroundStyle(AppTheme.accent)
                     .frame(width: 44, height: 44).contentShape(Rectangle())
             }
-            .accessibilityLabel("Sort games, filter by maker, controllers")
+            .accessibilityLabel("Sort games, filter by maker")
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 TextField("Search", text: $state.search)
@@ -317,7 +326,7 @@ struct LibraryView: View {
 
     private func tile(_ game: GameItem) -> some View {
         let width = display.perRow > 0 ? gridTile : (compact ? 120 : 140) * min(tileScale, 1.8)
-        return Button { state.launch(game) } label: {
+        return Button { sheet = .page(game) } label: {
             VStack(alignment: .leading, spacing: 4) {
                 CoverArt(game: game, width: width)
                 if !display.hideTitle {
@@ -339,7 +348,7 @@ struct LibraryView: View {
         .contextMenu { menu(game) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(a11yLabel(game))
-        .accessibilityHint("Plays the game. Touch and hold for more actions.")
+        .accessibilityHint("Opens the game's page: play, skin, filter, core and saves. Touch and hold for a quick menu.")
         .accessibilityAddTraits(.isButton)
     }
 

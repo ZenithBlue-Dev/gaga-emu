@@ -20,13 +20,16 @@ public struct MetalPreviewCanvas: UIViewRepresentable {
         mtkView.clearColor = MTLClearColor(red: 0.043, green: 0.047, blue: 0.063, alpha: 1.0)
         mtkView.colorPixelFormat = .bgra8Unorm
         mtkView.preferredFramesPerSecond = 60
-        mtkView.enableSetNeedsDisplay = false
-        mtkView.isPaused = false
+        // Reduce Motion and Low Power Mode get a still picture, redrawn only when a choice changes it.
+        let still = UIAccessibility.isReduceMotionEnabled || ProcessInfo.processInfo.isLowPowerModeEnabled
+        mtkView.enableSetNeedsDisplay = still
+        mtkView.isPaused = still
         return mtkView
     }
 
     public func updateUIView(_ uiView: MTKView, context: Context) {
-        // Uniforms and textures are updated dynamically via ShaderManager
+        // Uniforms and textures are updated dynamically via ShaderManager; a still view draws once per change.
+        if uiView.isPaused { uiView.setNeedsDisplay() }
     }
 }
 
@@ -143,6 +146,21 @@ public final class ShaderManager: ObservableObject {
     // MARK: - Catalogue tiles
 
     private lazy var tileRenderer = MetalRenderer(device: device)
+    /// Small tiles for rows and galleries. NSCache drops them under memory pressure, so a long scroll stays flat.
+    private let tileCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 160
+        return cache
+    }()
+
+    /// `tile(presetID:)` at row size, kept per preview picture.
+    func cachedTile(presetID: String) -> UIImage? {
+        let key = "\(presetID)|\(previewSource.map { ObjectIdentifier($0).hashValue } ?? 0)" as NSString
+        if let hit = tileCache.object(forKey: key) { return hit }
+        guard let image = tile(presetID: presetID, width: 160, height: 120) else { return nil }
+        tileCache.setObject(image, forKey: key)
+        return image
+    }
 
     /// A small picture of one preset at its default sliders, on the current preview picture. Runs on the main
     /// thread, one tile at a time, as each tile scrolls in. Nil when the GPU has no room for it.

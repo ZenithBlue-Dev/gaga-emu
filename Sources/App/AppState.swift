@@ -1101,6 +1101,14 @@ final class AppState: ObservableObject {
     @Published var defaultCores: [String: String] { didSet { save() } }
     @Published var platformFilter: String = "all"
     @Published var search: String = ""
+    /// The root tab and Style's page, so Settings and its search can send the player to a Style page.
+    @Published var tab: AppScreen = .library
+    @Published var styleSection: StyleSection = .skins
+
+    func showStyle(_ section: StyleSection) {
+        styleSection = section
+        tab = .style
+    }
 
     let controllers = ControllerManager()
     let triggerPro = TriggerProManager()
@@ -1686,9 +1694,22 @@ final class AppState: ObservableObject {
         session.stop()
     }
 
+    /// A filter chosen from the pause menu shows at once. A core that draws its own picture and started with no
+    /// filter shows it from its next start.
+    func refilter(_ session: GameSession) {
+        let game = games.first { $0.id == session.game.id } ?? session.game
+        let chosen = effectiveShaderID(game)
+        let id = store.canUseShader(chosen) ? chosen : "original"
+        session.renderer.setImported(nil)
+        session.renderer.setSlang(nil)
+        session.renderer.activePreset = ShaderPreset.from(id: id)
+        session.renderer.apply(shaderParameters[id] ?? ShaderParameterValues())
+        Task { await applyImportedFilter(to: session, id: id) }
+    }
+
     /// A filter that no longer builds is not a failed launch: Original runs, and the player is told.
-    private func applyImportedFilter(to session: GameSession) async {
-        let id = effectiveShaderID(session.game)
+    private func applyImportedFilter(to session: GameSession, id chosen: String? = nil) async {
+        let id = chosen ?? effectiveShaderID(session.game)
         guard ImportedFilter.isImported(id) || ImportedFilter.isSlang(id) else { return }
         let renderer = session.renderer
         do {

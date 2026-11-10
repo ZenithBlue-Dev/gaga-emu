@@ -3,99 +3,113 @@ import StoreKit
 #endif
 import SwiftUI
 
-/// Two-pane settings. Only rows with working behaviour appear; docs/07 says what returns when.
-/// Saved values for hidden rows stay in state.json.
-struct SettingsView: View {
-    @Environment(\.verticalSizeClass) private var verticalSize
-    @Environment(\.horizontalSizeClass) private var horizontalSize
-    @State private var category: Category = .play
-    /// Four across fits every category on the narrowest phone, upright, with nothing past the edge.
-    private let uprightTabs = Array(repeating: GridItem(.flexible(), spacing: 0), count: 4)
-    /// The category column widens with Dynamic Type so names do not break mid-word.
-    @ScaledMetric(relativeTo: .body) private var columnScale: CGFloat = 1
-
-    enum Category: String, CaseIterable, Identifiable {
-        case play = "Play", library = "Library", display = "Display", graphics = "Graphics", controls = "Controls",
-             cores = "Cores", storage = "Storage", gagaPlus = "Gaga Plus", about = "About"
-        var id: String { rawValue }
-        /// Gaga Plus stays out of the app while the paywall gate is closed (docs/06 section 4.5).
-        static var visible: [Category] { allCases.filter { $0 != .gagaPlus || PaywallGate.isOpen } }
+/// Settings' categories. Visual choices (skins, filters, icon, library layout) live in the Style tab.
+enum SettingsCategory: String, CaseIterable, Identifiable, ShellCategory {
+    case profile = "Profile", gameplay = "Gameplay", controllers = "Controllers", screen = "Screen", systems = "Systems",
+         library = "Library", storage = "Storage and Sync", gagaPlus = "Gaga Plus", help = "Help"
+    var id: String { rawValue }
+    var title: String { rawValue }
+    var identifier: String { "settings.\(rawValue)" }
+    var symbol: String {
+        switch self {
+        case .profile: return "person.crop.circle"
+        case .gameplay: return "play.circle"
+        case .controllers: return "gamecontroller"
+        case .screen: return "tv"
+        case .systems: return "cpu"
+        case .library: return "books.vertical"
+        case .storage: return "icloud"
+        case .gagaPlus: return "star.circle"
+        case .help: return "questionmark.circle"
+        }
     }
+    /// Gaga Plus stays out of the app while the paywall gate is closed (docs/06 section 4.5).
+    static var visible: [SettingsCategory] { allCases.filter { $0 != .gagaPlus || PaywallGate.isOpen } }
+}
+
+/// Settings: search on top, then the categories with icons, and the chosen one's rows, each with a picture. Only rows
+/// with working behaviour appear; docs/07 says what returns when. Saved values for hidden rows stay in state.json.
+struct SettingsView: View {
+    @EnvironmentObject private var state: AppState
+    @State private var category: SettingsCategory = .profile
+    @State private var query = ""
+    @FocusState private var searching: Bool
+    @State private var target: SettingsTarget?
+    /// The last five searches that led somewhere, newest first, one per line.
+    @AppStorage("settingsRecentSearches") private var recentText = ""
+
+    private var recent: [String] { recentText.split(separator: "\n").map(String.init) }
+    private var showsResults: Bool { searching || !query.isEmpty }
 
     var body: some View {
-        // Upright on a phone the categories run along the top, so the detail keeps the full width.
-        let upright = horizontalSize == .compact && verticalSize == .regular
-        AnyLayout(upright ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))) {
-            if upright {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                        .padding(.horizontal, 16).padding(.top, 8)
-                    LazyVGrid(columns: uprightTabs, spacing: 0) {
-                        ForEach(Category.visible) { categoryRow($0, underline: true) }
-                    }
-                }
-                Rule()
+        CategoryShell(title: "Settings", items: SettingsCategory.visible, selection: $category,
+                      detailTitle: showsResults ? "Search" : category.title) {
+            SettingsSearchField(query: $query, focused: $searching)
+        } detail: {
+            if showsResults {
+                SettingsSearchResults(query: query, recent: recent, pickRecent: { query = $0 }, pick: open)
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Settings").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                            .padding(.horizontal, 16).padding(.vertical, 8)
-                        ForEach(Category.visible) { categoryRow($0) }
-                    }
-                }
-                .frame(width: (verticalSize == .compact ? 170 : 240) * min(columnScale, 1.5))
-                Rule(vertical: true).ignoresSafeArea(edges: .vertical)
+                detail
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(LocalizedStringKey(category.rawValue)).font(.gameTitle).accessibilityAddTraits(.isHeader)
-                        .padding(.bottom, 8)
-                    detail
-                }
-                .padding(.horizontal, 20).padding(.vertical, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .id(category)
+        }
+        .onChange(of: category) { query = ""; searching = false }
+        .environment(\.openSetting, show)
+        .sheet(item: Binding(get: { target?.fullScreen == false ? target : nil }, set: { target = $0 })) { sheet($0) }
+        .fullScreenCover(item: Binding(get: { target?.fullScreen == true ? target : nil }, set: { target = $0 })) { sheet($0) }
+    }
+
+    /// A result opens its category, and its sheet or Style page when it has one.
+    private func open(_ entry: SettingEntry) {
+        let text = query.trimmingCharacters(in: .whitespaces)
+        recentText = ([text] + recent.filter { $0 != text }).prefix(5).joined(separator: "\n")
+        query = ""
+        searching = false
+        category = entry.category
+        if let next = entry.target { show(next) }
+    }
+
+    /// The visual choices open their page in the Style tab; the rest open as sheets here.
+    private func show(_ next: SettingsTarget) {
+        if let section = next.style {
+            // The keyboard goes first: switching tabs under it left the app busy on the device.
+            searching = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { state.showStyle(section) }
+        } else {
+            target = next
         }
     }
 
-    private func categoryRow(_ item: Category, underline: Bool = false) -> some View {
-        let selected = category == item
-        return Button { category = item } label: {
-            Text(LocalizedStringKey(item.rawValue))
-                .fontWeight(selected ? .bold : .regular)
-                .foregroundStyle(selected ? AppTheme.accent : AppTheme.ink)
-                .lineLimit(underline ? 1 : nil)
-                .minimumScaleFactor(underline ? 0.6 : 1)
-                .padding(.horizontal, underline ? 4 : 16).padding(.vertical, 6)
-                .frame(maxWidth: .infinity, minHeight: 44, alignment: underline ? .center : .leading)
-                .contentShape(Rectangle())
-                .overlay(alignment: underline ? .bottom : .leading) {
-                    if selected {
-                        Rectangle().fill(AppTheme.accent).frame(width: underline ? nil : 3, height: underline ? 3 : nil)
-                    }
-                }
+    @ViewBuilder private func sheet(_ target: SettingsTarget) -> some View {
+        switch target {
+        case .bios: BIOSManagerView()
+        case .achievements: RetroAchievementsView()
+        case .skins, .filters, .layout, .look: EmptyView() // Style pages, never sheets.
+        case .screen: ScreenSettingsView(store: state.screens)
+        case .mapping: ControllerMappingView(platformID: nil, game: nil)
+        case .macros: MacrosView()
+        case .turbo: TurboView()
+        case .players: PlayersView(platformID: nil)
+        case .guides: GuidesView()
+        case .licences: LicencesView()
+        case .aboutUs: AboutUsView()
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityIdentifier("settings.\(item.rawValue)")
     }
 
     @ViewBuilder private var detail: some View {
         switch category {
-        case .play: PlayPane()
+        case .profile: ProfilePane()
+        case .gameplay: GameplayPane()
+        case .controllers: ControllersPane()
+        case .screen: ScreenPane()
+        case .systems: SystemsPane()
         case .library: LibraryPane()
-        case .display: DisplayPane()
-        case .graphics: GraphicsPane()
-        case .controls: ControlsPane()
-        case .cores: CoresPane()
         case .storage: StoragePane()
         #if GAGA_SIDELOAD
         case .gagaPlus: EmptyView()
         #else
         case .gagaPlus: GagaPlusPane()
         #endif
-        case .about: AboutPane()
+        case .help: HelpPane()
         }
     }
 }
@@ -105,12 +119,15 @@ struct SettingsView: View {
 struct ValueRow: View {
     let title: String
     let value: String
+    var tile: RowTile?
 
     var body: some View {
-        HStack {
-            Text(LocalizedStringKey(title))
-            Spacer(minLength: 12)
-            Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing)
+        TiledRow(tile: tile) {
+            HStack {
+                Text(LocalizedStringKey(title))
+                Spacer(minLength: 12)
+                Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing)
+            }
         }
         .padding(.vertical, 6)
         .frame(minHeight: 44)
@@ -118,25 +135,30 @@ struct ValueRow: View {
     }
 }
 
-private struct ActionRow: View {
+/// A row that opens something, with its picture. `PictureRow` in docs/ux-redesign.md.
+struct ActionRow: View {
     let title: String
     var value: String?
     var symbol = "chevron.right"
+    var tile: RowTile?
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack {
-                Text(LocalizedStringKey(title))
-                Spacer(minLength: 12)
-                if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted) }
-                Image(systemName: symbol).font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+            TiledRow(tile: tile) {
+                HStack {
+                    Text(LocalizedStringKey(title))
+                    Spacer(minLength: 12)
+                    if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing) }
+                    Image(systemName: symbol).font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                }
             }
             .padding(.vertical, 6)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -144,30 +166,68 @@ private struct LinkRow: View {
     @Environment(\.openURL) private var openURL
     let title: String
     let url: String
+    var tile: RowTile?
 
     var body: some View {
-        ActionRow(title: title, symbol: "arrow.up.right") {
+        ActionRow(title: title, symbol: "arrow.up.right", tile: tile) {
             if let link = URL(string: url) { openURL(link) }
         }
         .accessibilityAddTraits(.isLink)
     }
 }
 
+/// A switch with its picture, which dims while off. The note shows on one line; the info button and the VoiceOver
+/// hint give all of it.
 struct ToggleRow: View {
     let title: String
     let note: String
     @Binding var isOn: Bool
+    var tile: RowTile?
 
     var body: some View {
+        // The Toggle stays the outermost view, so an identifier set on the row lands on the switch.
         Toggle(isOn: $isOn) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(LocalizedStringKey(title))
-                Text(LocalizedStringKey(note)).font(.footnote).foregroundStyle(AppTheme.muted)
+            TiledRow(tile: tile, dimmed: !isOn) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(title))
+                    if !note.isEmpty {
+                        HStack(spacing: 0) {
+                            Text(LocalizedStringKey(note)).font(.footnote).foregroundStyle(AppTheme.muted).lineLimit(1)
+                            NoteButton(title: title, note: note)
+                        }
+                    }
+                }
             }
         }
         .tint(AppTheme.accentFill)
+        .accessibilityHint(Text(LocalizedStringKey(note)))
         .padding(.vertical, 6)
         .frame(minHeight: 44)
+    }
+}
+
+/// `info.circle`, opening a row's full note in a popover.
+struct NoteButton: View {
+    let title: String
+    let note: String
+    @State private var shown = false
+
+    var body: some View {
+        Button { shown = true } label: {
+            Image(systemName: "info.circle").foregroundStyle(AppTheme.accent).frame(width: 44, height: 44).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("About \(title)")
+        .accessibilityHidden(true) // The row's hint reads the note already.
+        .popover(isPresented: $shown) {
+            Text(LocalizedStringKey(note))
+                .font(.footnote)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(16)
+                .frame(idealWidth: 320)
+                .foregroundStyle(AppTheme.ink)
+                .presentationCompactAdaptation(.popover)
+        }
     }
 }
 
@@ -180,93 +240,257 @@ private struct PaneNote: View {
 
 // MARK: - Panes
 
-private struct PlayPane: View {
-    @EnvironmentObject private var state: AppState
-    @EnvironmentObject private var store: StoreKitManager
+private struct ProfilePane: View {
+    @Environment(\.openSetting) private var openSetting
     @ObservedObject private var account = RetroAchievements.shared
-    @State private var showPlans = false
-    @State private var showAchievements = false
     @AppStorage(PlayerName.key) private var playerName = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            TextField("Player Name", text: $playerName, prompt: Text("Player Name"))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .frame(minHeight: 44)
-                .accessibilityIdentifier("playerName")
-            Text("The name games and Play Nearby show: \(PlayerName.effective). Letters, digits, _ and -, 3 to 16 of them. Empty uses your Game Center name, else GagaEmu. A change applies when the next game starts.")
-                .font(.footnote).foregroundStyle(AppTheme.muted)
+        TiledRow(tile: .picture { MonogramPicture(name: PlayerName.effective) }) {
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Player Name", text: $playerName, prompt: Text("Player Name"))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("playerName")
+                    .accessibilityHint("Letters, digits, underscore and hyphen, 3 to 16 of them. Applies when the next game starts.")
+                Text("Games and Play Nearby show \(PlayerName.effective). Applies at the next game start.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.vertical, 6)
         Rule()
-        ValueRow(title: "Total play time", value: CoreCatalog.playTime(state.totalPlayTime))
+        ValueRow(title: "Game Center", value: PlayerName.gameCenterStatus, tile: .symbol("person.2.circle"))
         Rule()
-        ValueRow(title: "Sessions", value: "\(state.history.count)")
+        ActionRow(title: "RetroAchievements", value: account.username ?? "Off", symbol: "chevron.right", tile: .symbol("trophy")) {
+            openSetting(.achievements)
+        }
+        .accessibilityIdentifier("settingsRetroAchievements")
         Rule()
-        ToggleRow(title: "Quick Start", note: "Opens your most recent game when the app starts.", isOn: $state.quickStart)
+    }
+}
+
+/// A player's initial on the tile.
+private struct MonogramPicture: View {
+    let name: String
+    var body: some View {
+        GeometryReader { box in
+            Text(String(name.prefix(1)).uppercased())
+                .font(.system(size: box.size.width * 0.45, weight: .semibold, design: .serif))
+                .foregroundStyle(AppTheme.accent)
+                .frame(width: box.size.width, height: box.size.height)
+        }
+    }
+}
+
+private struct GameplayPane: View {
+    @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var store: StoreKitManager
+    @State private var showPlans = false
+
+    var body: some View {
+        ToggleRow(title: "Quick Start", note: "Opens your most recent game when the app starts.", isOn: $state.quickStart, tile: .symbol("bolt"))
         Rule()
         // Reaching the second branch needs an open paywall gate, because a closed one lifts the limit.
         if store.canUseAutoSaveState {
-            ToggleRow(title: "Auto Save State", note: "Saves when you quit or leave the app, and offers to resume when you next play.", isOn: $state.autoSaveStates)
+            ToggleRow(title: "Auto Save State", note: "Saves when you quit or leave the app, and offers to resume when you next play.",
+                      isOn: $state.autoSaveStates, tile: .symbol("square.and.arrow.down"))
         } else {
-            ActionRow(title: "Auto Save State", value: "Plus", symbol: "lock") { showPlans = true }
+            ActionRow(title: "Auto Save State", value: "Plus", symbol: "lock", tile: .symbol("square.and.arrow.down")) { showPlans = true }
                 #if !GAGA_SIDELOAD
                 .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
                 #endif
         }
         Rule()
         ToggleRow(title: "Rewind",
-                  note: "Hold the rewind button, or a controller input mapped to Rewind in Controls, to step back through recent play. Uses up to \(RewindPolicy.standard.budgetBytes / 1_048_576) MB of memory while a game runs. Only systems with a small, quick save state can rewind; the pause menu says when one cannot.",
-                  isOn: $state.rewind)
+                  note: "Hold the rewind button, or a controller input mapped to Rewind in Controllers, to step back through recent play. Uses up to \(RewindPolicy.standard.budgetBytes / 1_048_576) MB of memory while a game runs. Only systems with a small, quick save state can rewind; the pause menu says when one cannot.",
+                  isOn: $state.rewind, tile: .symbol("backward.fill"))
         Rule()
-        ActionRow(title: "RetroAchievements", value: account.username ?? "Off", symbol: "trophy") { showAchievements = true }
-            .sheet(isPresented: $showAchievements) { RetroAchievementsView() }
-            .accessibilityIdentifier("settingsRetroAchievements")
+        ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen,
+                  tile: .symbol("arrow.up.left.and.arrow.down.right"))
         Rule()
-        ToggleRow(title: "Auto Full Screen", note: "The picture fills the screen when a controller connects.", isOn: $state.autoFullScreen)
+        ToggleRow(title: "Respect Silent Mode", note: "Game sound plays only when the device is not in silent mode.", isOn: $state.respectSilentMode,
+                  tile: .symbol("bell.slash"))
         Rule()
-        ToggleRow(title: "Respect Silent Mode", note: "Game sound plays only when the device is not in silent mode.", isOn: $state.respectSilentMode)
+        ValueRow(title: "Total play time", value: CoreCatalog.playTime(state.totalPlayTime), tile: .symbol("clock"))
         Rule()
+        ValueRow(title: "Sessions", value: "\(state.history.count)", tile: .symbol("list.number"))
+        Rule()
+        PaneNote(text: "Save states, cheats and fast forward are in each game's pause menu and on its page in the Library.")
     }
 }
 
 private struct LibraryPane: View {
     @EnvironmentObject private var state: AppState
-    @State private var showBIOS = false
+    @Environment(\.openSetting) private var openSetting
 
     var body: some View {
-        ValueRow(title: "Games", value: "\(state.games.count)")
+        ValueRow(title: "Games", value: "\(state.games.count)", tile: .symbol("books.vertical"))
         Rule()
         ToggleRow(title: "Cover Art",
                   note: "Off by default. When on, GagaEmu reads box art lists from \(LibretroThumbnails.host) and asks it for the art of each game it matches, so that server sees which games you have. Pictures are kept in the cache. Turn this off at any time.",
-                  isOn: $state.coverArt)
+                  isOn: $state.coverArt, tile: .symbol("photo"))
         Rule()
         if state.coverArt {
-            ActionRow(title: "Refresh Covers", symbol: "arrow.clockwise") { state.refetchCovers() }
+            ActionRow(title: "Refresh Covers", symbol: "arrow.clockwise", tile: .symbol("arrow.clockwise")) { state.refetchCovers() }
             Rule()
         }
-        ActionRow(title: "BIOS Files") { showBIOS = true }
-            .sheet(isPresented: $showBIOS) { BIOSManagerView() }
+        ActionRow(title: "Library Layout", value: "In Style",
+                  tile: .picture(ShelfPicture.description(state.libraryDisplay)) { ShelfPicture(display: state.libraryDisplay) }) {
+            openSetting(.layout)
+        }
         Rule()
-        Text("Default core per platform")
+        ActionRow(title: "App Icon and Colours", value: "In Style", tile: .symbol("paintpalette")) { openSetting(.look) }
+        Rule()
+    }
+}
+
+private struct ScreenPane: View {
+    @EnvironmentObject private var state: AppState
+    @Environment(\.openSetting) private var openSetting
+
+    private var filterName: String {
+        ShaderCatalog.all.first { $0.id == state.shaderID }?.name ?? state.filters.name(of: state.shaderID) ?? "Original"
+    }
+
+    var body: some View {
+        ActionRow(title: "Screen", value: "Scaling and layouts",
+                  tile: .picture("Scaling: Fit, \(ScalingPicture.effect(.fit))") { ScalingPicture(mode: .fit) }) {
+            openSetting(.screen)
+        }
+        Rule()
+        ActionRow(title: "Default Filter", value: filterName,
+                  tile: .picture("Filter preview: \(filterName)") { FilterPicture(shaderID: state.shaderID) }) {
+            openSetting(.filters)
+        }
+        Rule()
+        // shortcut: not yet checked on a real second screen, so it stays off by default; tick docs/manic-todo.md once it is.
+        ToggleRow(title: "AirPlay Full Screen",
+                  note: "With a TV or display connected by AirPlay or cable, the game fills that screen and this device keeps the controls.",
+                  isOn: $state.airPlayFullscreen, tile: .symbol("airplayvideo"))
+        Rule()
+        PaneNote(text: "Filters are in Style. A game's page and its pause menu choose one for that game.")
+    }
+}
+
+private struct ControllersPane: View {
+    @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var controllers: ControllerManager
+    @Environment(\.openSetting) private var openSetting
+
+    var body: some View {
+        ValueRow(title: "Touch Control", value: controllers.touchOwnsPlayerOne ? "Player 1" : "Unassigned", tile: .symbol("hand.tap"))
+        Rule()
+        ForEach(controllers.devices) { device in
+            TiledRow(tile: .symbol("gamecontroller")) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(device.name)
+                        if !device.hasSentInput {
+                            Text("Touch stays on until this sends input in a game.").font(.footnote).foregroundStyle(AppTheme.muted)
+                        }
+                    }
+                    Spacer(minLength: 12)
+                    Menu(device.slot.map { "Player \($0 + 1)" } ?? "Unassigned") {
+                        ForEach(0..<ControllerManager.slotCount, id: \.self) { index in
+                            Button("Player \(index + 1)") { controllers.assign(device.id, to: index) }
+                        }
+                        Button("Unassign") { controllers.assign(device.id, to: nil) }
+                    }
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(minHeight: 44)
+                    .accessibilityLabel("\(device.name) player slot")
+                }
+            }
+            Rule()
+        }
+        ActionRow(title: "Players", value: "\(controllers.devices.count) connected", tile: .symbol("person.2")) { openSetting(.players) }
+            .accessibilityIdentifier("settingsPlayers")
+        Rule()
+        ActionRow(title: "Skins", value: "In Style",
+                  tile: .picture { SkinThumbnail(layout: TouchSkinEngine.Layout.builtIn[0]).padding(4) }) {
+            openSetting(.skins)
+        }
+        Rule()
+        ActionRow(title: "Controller Mapping", tile: .symbol("arrow.triangle.swap")) { openSetting(.mapping) }
+        Rule()
+        ActionRow(title: "Macros", value: "\(state.controls.file.macros.count)", tile: .symbol("record.circle")) { openSetting(.macros) }
+        Rule()
+        ActionRow(title: "Turbo", value: "\(Int(state.controls.file.turboHertz)) per second", tile: .symbol("dot.radiowaves.right")) {
+            openSetting(.turbo)
+        }
+        Rule()
+        ControlOptions().padding(.vertical, 6)
+        Rule()
+        ToggleRow(title: "Rumble", note: "The device vibrates when a game rumbles while you play on touch.", isOn: $state.rumble,
+                  tile: .symbol("iphone.radiowaves.left.and.right"))
+        Rule()
+        TiledRow(tile: .symbol("waveform"), dimmed: state.rumbleStrength == 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text("Rumble Strength")
+                    Spacer(minLength: 12)
+                    Text(state.rumbleStrength == 0 ? "Off" : "\(Int((state.rumbleStrength * 100).rounded()))%")
+                        .font(.meta).foregroundStyle(AppTheme.muted)
+                }
+                Slider(value: $state.rumbleStrength, in: 0...1, step: 0.1) { Text("Rumble Strength") }
+                    .tint(AppTheme.accentFill)
+                    .accessibilityValue(state.rumbleStrength == 0 ? "Off" : "\(Int((state.rumbleStrength * 100).rounded())) percent")
+                    .accessibilityHint("How hard a game shakes your controller or device. Off stops game rumble everywhere.")
+            }
+        }
+        .padding(.vertical, 6)
+        .frame(minHeight: 44)
+        Rule()
+        ToggleRow(title: "Skin Sound Effects", note: "Touch controls click when you press them.", isOn: $state.skinSoundEffects,
+                  tile: .symbol("speaker.wave.2"))
+        Rule()
+        if controllers.devices.isEmpty {
+            PaneNote(text: "No controllers connected. Pair a DualSense, DualShock 4, Xbox, Joy-Con or MFi pad in iOS Settings.")
+        }
+    }
+}
+
+/// BIOS files, every core and its options, and the default core per system.
+private struct SystemsPane: View {
+    @EnvironmentObject private var state: AppState
+    @Environment(\.openSetting) private var openSetting
+    @State private var biosFound = 0
+
+    private var biosNeeded: Int { BIOSManagerView.required.filter { !$0.1.contains("optional") }.count }
+
+    var body: some View {
+        ActionRow(title: "BIOS Files", value: "\(biosFound) of \(biosNeeded) found",
+                  tile: .picture("BIOS files: \(biosFound) of \(biosNeeded) found") { FilePicture(found: biosFound > 0) }) {
+            openSetting(.bios)
+        }
+        .task { biosFound = BIOSManagerView.foundCount() }
+        Rule()
+        Text("Cores").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader).padding(.top, 16).padding(.bottom, 4)
+        CoresPane()
+        Text("Default core per system")
             .font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader).padding(.top, 16).padding(.bottom, 4)
-        PaneNote(text: "Touch and hold a game in the library to change the core for that game only.")
+        PaneNote(text: "A game's page in the Library changes the core for that game only.")
             .padding(.bottom, 4)
         Rule()
         ForEach(CoreCatalog.platforms) { platform in
+            let tile = RowTile.picture { PlatformPicture(platformID: platform.id) }
             if platform.cores.count > 1 {
-                HStack {
-                    Text(platform.name)
-                    Spacer(minLength: 12)
-                    Picker(platform.name, selection: core(platform)) {
-                        ForEach(platform.cores) { Text($0.name).tag($0.id) }
+                TiledRow(tile: tile) {
+                    HStack {
+                        Text(platform.name)
+                        Spacer(minLength: 12)
+                        Picker(platform.name, selection: core(platform)) {
+                            ForEach(platform.cores) { Text($0.name).tag($0.id) }
+                        }
+                        .labelsHidden()
+                        .tint(AppTheme.accent)
                     }
-                    .labelsHidden()
                 }
                 .frame(minHeight: 44)
             } else {
-                ValueRow(title: platform.name, value: platform.cores.first?.name ?? "")
+                ValueRow(title: platform.name, value: platform.cores.first?.name ?? "", tile: tile)
             }
             Rule()
         }
@@ -278,110 +502,11 @@ private struct LibraryPane: View {
     }
 }
 
-private struct GraphicsPane: View {
-    @EnvironmentObject private var state: AppState
-    @State private var showFilters = false
-    @State private var showScreen = false
-
-    var body: some View {
-        ActionRow(title: "Default Filter", value: ShaderCatalog.all.first { $0.id == state.shaderID }?.name
-                  ?? state.filters.name(of: state.shaderID) ?? "Original") {
-            showFilters = true
-        }
-        Rule()
-        ActionRow(title: "Screen", value: "Scaling and layouts") { showScreen = true }
-            .sheet(isPresented: $showScreen) { ScreenSettingsView(store: state.screens) }
-        Rule()
-        // shortcut: not yet checked on a real second screen, so it stays off by default; tick docs/manic-todo.md once it is.
-        ToggleRow(title: "AirPlay Full Screen",
-                  note: "With a TV or display connected by AirPlay or cable, the game fills that screen and this device keeps the controls.",
-                  isOn: $state.airPlayFullscreen)
-        Rule()
-        PaneNote(text: "New games start with this filter. Touch and hold a game to choose one for that game.")
-            .fullScreenCover(isPresented: $showFilters) { FilterPickerView() }
-    }
-}
-
-private struct ControlsPane: View {
-    @EnvironmentObject private var state: AppState
-    @EnvironmentObject private var controllers: ControllerManager
-    @State private var showSkins = false
-    @State private var page: ControlsSheet.Page?
-
-    var body: some View {
-        ValueRow(title: "Touch Control", value: controllers.touchOwnsPlayerOne ? "Player 1" : "Unassigned")
-        Rule()
-        ForEach(controllers.devices) { device in
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(device.name)
-                    if !device.hasSentInput {
-                        Text("Touch stays on until this sends input in a game.").font(.footnote).foregroundStyle(AppTheme.muted)
-                    }
-                }
-                Spacer(minLength: 12)
-                Menu(device.slot.map { "Player \($0 + 1)" } ?? "Unassigned") {
-                    ForEach(0..<ControllerManager.slotCount, id: \.self) { index in
-                        Button("Player \(index + 1)") { controllers.assign(device.id, to: index) }
-                    }
-                    Button("Unassign") { controllers.assign(device.id, to: nil) }
-                }
-                .foregroundStyle(AppTheme.accent)
-                .frame(minHeight: 44)
-                .accessibilityLabel("\(device.name) player slot")
-            }
-            Rule()
-        }
-        ActionRow(title: "Touch Layout", value: "Skins and editor") { showSkins = true }
-            .sheet(isPresented: $showSkins) { AssignSkinView() }
-        Rule()
-        ActionRow(title: "Controller Mapping") { page = .mapping }
-        Rule()
-        ActionRow(title: "Macros", value: "\(state.controls.file.macros.count)") { page = .macros }
-        Rule()
-        ActionRow(title: "Turbo", value: "\(Int(state.controls.file.turboHertz)) per second") { page = .turbo }
-            .sheet(item: $page) { page in
-                switch page {
-                case .mapping: ControllerMappingView(platformID: nil, game: nil)
-                case .macros: MacrosView()
-                case .turbo: TurboView()
-                case .players: PlayersView(platformID: nil)
-                }
-            }
-        Rule()
-        ControlOptions().padding(.vertical, 6)
-        Rule()
-        ToggleRow(title: "Rumble", note: "The device vibrates when a game rumbles while you play on touch.", isOn: $state.rumble)
-        Rule()
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
-                Text("Rumble Strength")
-                Spacer(minLength: 12)
-                Text(state.rumbleStrength == 0 ? "Off" : "\(Int((state.rumbleStrength * 100).rounded()))%")
-                    .font(.meta).foregroundStyle(AppTheme.muted)
-            }
-            Slider(value: $state.rumbleStrength, in: 0...1, step: 0.1) { Text("Rumble Strength") }
-                .tint(AppTheme.accentFill)
-                .accessibilityValue(state.rumbleStrength == 0 ? "Off" : "\(Int((state.rumbleStrength * 100).rounded())) percent")
-            Text("How hard a game shakes your controller or device. Off stops game rumble everywhere.")
-                .font(.footnote).foregroundStyle(AppTheme.muted)
-        }
-        .padding(.vertical, 6)
-        .frame(minHeight: 44)
-        Rule()
-        ToggleRow(title: "Skin Sound Effects", note: "Touch controls click when you press them.", isOn: $state.skinSoundEffects)
-        Rule()
-        if controllers.devices.isEmpty {
-            PaneNote(text: "No controllers connected. Pair a DualSense, DualShock 4, Xbox, Joy-Con or MFi pad in iOS Settings.")
-        }
-    }
-}
-
 private struct CloudStatusRow: View {
     @ObservedObject var cloud: CloudSync
 
     var body: some View {
-        ValueRow(title: "iCloud", value: cloud.status.text).accessibilityIdentifier("icloudSyncStatus")
+        ValueRow(title: "iCloud", value: cloud.status.text, tile: .symbol("icloud.and.arrow.up")).accessibilityIdentifier("icloudSyncStatus")
     }
 }
 
@@ -392,19 +517,21 @@ private struct StoragePane: View {
     @State private var cleared = false
 
     var body: some View {
-        ValueRow(title: "Game files", value: romBytes.formatted(.byteCount(style: .file)))
+        ValueRow(title: "Game files", value: romBytes.formatted(.byteCount(style: .file)), tile: .symbol("internaldrive"))
             .task { romBytes = folderSize(state.romDirectory) }
         Rule()
-        ToggleRow(title: "iCloud Sync", note: "Keeps saves and save states the same on your devices, when you quit a game or leave the app. If two devices changed a save, the newest is used and the older stays as a copy. Deleting a save on one device does not delete it on another.", isOn: $state.iCloudSync)
+        ToggleRow(title: "iCloud Sync", note: "Keeps saves and save states the same on your devices, when you quit a game or leave the app. If two devices changed a save, the newest is used and the older stays as a copy. Deleting a save on one device does not delete it on another.",
+                  isOn: $state.iCloudSync, tile: .symbol("icloud"))
             .accessibilityIdentifier("icloudSyncToggle")
         Rule()
         if state.iCloudSync {
-            ToggleRow(title: "Include Game Files", note: "Game files are large and count against your iCloud storage.", isOn: $state.iCloudSyncROMs)
+            ToggleRow(title: "Include Game Files", note: "Game files are large and count against your iCloud storage.", isOn: $state.iCloudSyncROMs,
+                      tile: .symbol("externaldrive.badge.icloud"))
             Rule()
             CloudStatusRow(cloud: state.cloud)
             Rule()
         }
-        ActionRow(title: "Clear Cache", value: cleared ? "Cleared" : nil, symbol: "trash") { showClearConfirm = true }
+        ActionRow(title: "Clear Cache", value: cleared ? "Cleared" : nil, symbol: "trash", tile: .symbol("trash")) { showClearConfirm = true }
             .confirmationDialog("Clear cached files?", isPresented: $showClearConfirm, titleVisibility: .visible) {
                 Button("Clear Cache", role: .destructive) {
                     state.clearCache()
@@ -436,27 +563,25 @@ private struct GagaPlusPane: View {
     }
 
     var body: some View {
-        ValueRow(title: "Status", value: status)
+        ValueRow(title: "Status", value: status, tile: .symbol("star.circle"))
             #if !GAGA_SIDELOAD
             .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
             #endif
         Rule()
         if store.entitlements.showsSubscribePrompts {
-            ActionRow(title: "See Plans") { showPlans = true }
+            ActionRow(title: "See Plans", tile: .symbol("star")) { showPlans = true }
             Rule()
         }
     }
 }
 #endif
 
-private struct AboutPane: View {
+private struct HelpPane: View {
     // App Store review is StoreKit; a sideload build is not on the App Store.
     #if !GAGA_SIDELOAD
     @Environment(\.requestReview) private var requestReview
     #endif
-    @State private var showLicences = false
-    @State private var showAboutUs = false
-    @State private var showGuides = false
+    @Environment(\.openSetting) private var openSetting
     @State private var tipsReset = false
     #if DEBUG
     @EnvironmentObject private var state: AppState
@@ -471,17 +596,22 @@ private struct AboutPane: View {
     private var hasLanguages: Bool { Bundle.main.localizations.filter { $0 != "Base" }.count > 1 }
 
     var body: some View {
-        ValueRow(title: "Version", value: version)
+        ActionRow(title: "Guides", tile: .symbol("book")) { openSetting(.guides) }
         Rule()
-        ActionRow(title: "About Us") { showAboutUs = true }
-            .sheet(isPresented: $showAboutUs) { AboutUsView() }
+        LinkRow(title: "Support and FAQ", url: SiteLinks.support, tile: .symbol("questionmark.bubble"))
+        Rule()
+        ActionRow(title: "About Us", tile: .symbol("info.circle")) { openSetting(.aboutUs) }
+        Rule()
+        ValueRow(title: "Version", value: version, tile: .symbol("number"))
         Rule()
         if let link = URL(string: SiteLinks.appStore) {
             ShareLink(item: link, message: Text("GagaEmu plays your own game files on iPhone and iPad.")) {
-                HStack {
-                    Text("Share GagaEmu")
-                    Spacer(minLength: 12)
-                    Image(systemName: "square.and.arrow.up").font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                TiledRow(tile: .symbol("square.and.arrow.up")) {
+                    HStack {
+                        Text("Share GagaEmu")
+                        Spacer(minLength: 12)
+                        Image(systemName: "square.and.arrow.up").font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
+                    }
                 }
                 .padding(.vertical, 6)
                 .frame(minHeight: 44)
@@ -490,35 +620,29 @@ private struct AboutPane: View {
             .buttonStyle(.plain)
             Rule()
         }
-        ActionRow(title: "Reset Tips", value: tipsReset ? "Tips will show again" : nil, symbol: "arrow.counterclockwise") {
+        ActionRow(title: "Reset Tips", value: tipsReset ? "Tips will show again" : nil, symbol: "arrow.counterclockwise", tile: .symbol("lightbulb")) {
             Tip.reset()
             tipsReset = true
         }
         Rule()
         if hasLanguages {
-            LinkRow(title: "Language", url: UIApplication.openSettingsURLString)
+            LinkRow(title: "Language", url: UIApplication.openSettingsURLString, tile: .symbol("globe"))
             Rule()
         }
-        ActionRow(title: "Guides") { showGuides = true }
-            .sheet(isPresented: $showGuides) { GuidesView() }
+        LinkRow(title: "Feedback", url: SiteLinks.support, tile: .symbol("envelope"))
         Rule()
-        LinkRow(title: "Support and FAQ", url: SiteLinks.support)
+        LinkRow(title: "Terms of Service", url: SiteLinks.terms, tile: .symbol("doc.plaintext"))
         Rule()
-        LinkRow(title: "Feedback", url: SiteLinks.support)
-        Rule()
-        LinkRow(title: "Terms of Service", url: SiteLinks.terms)
-        Rule()
-        LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
+        LinkRow(title: "Privacy Policy", url: SiteLinks.privacy, tile: .symbol("hand.raised"))
         Rule()
         #if !GAGA_SIDELOAD
-        ActionRow(title: "Rate GagaEmu", symbol: "star") { requestReview() }
+        ActionRow(title: "Rate GagaEmu", symbol: "star", tile: .symbol("star")) { requestReview() }
         Rule()
         #endif
-        ActionRow(title: "Licences") { showLicences = true }
-            .fullScreenCover(isPresented: $showLicences) { LicencesView() }
+        ActionRow(title: "Licences", tile: .symbol("doc.text")) { openSetting(.licences) }
         Rule()
         #if DEBUG
-        ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer") { state.runBenchmark() }
+        ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer", tile: .symbol("speedometer")) { state.runBenchmark() }
         Rule()
         #endif
     }
@@ -754,8 +878,17 @@ struct BIOSManagerView: View {
         files = (try? FileManager.default.contentsOfDirectory(at: biosDirectory, includingPropertiesForKeys: nil)) ?? []
     }
 
+    /// How many required BIOS files are in the system folder, for the Systems row.
+    static func foundCount() -> Int {
+        let names = Set(((try? FileManager.default.contentsOfDirectory(atPath: GagaCoreWrapper.systemDirectory.path)) ?? []).map { $0.lowercased() })
+        return required.filter { !$0.1.contains("optional") && names.contains($0.0.lowercased()) }.count
+    }
+
     private func row(_ name: String, note: String) -> some View {
         HStack {
+            OptionTile(label: "\(name): \(present(name) ? "found" : note.contains("optional") ? "optional" : "missing")") {
+                FilePicture(found: present(name), optional: note.contains("optional"))
+            }
             VStack(alignment: .leading) {
                 Text(name)
                 Text(note).font(.meta).foregroundStyle(AppTheme.muted)

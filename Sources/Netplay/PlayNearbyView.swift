@@ -58,7 +58,10 @@ struct PlayNearbyMenuItem: View {
         Button(action: start) { Label("Play Nearby", systemImage: "person.2") }
     }
 
-    private func start() {
+    private func start() { Self.begin(game, state: state) }
+
+    /// Starts the game, pauses it once running, and the pause menu opens Play Nearby. Also from the game's page.
+    @MainActor static func begin(_ game: GameItem, state: AppState) {
         guard CoreCatalog.playNearbyAllowed(platformID: game.platformID, coreID: game.resolvedCoreID(defaults: state.defaultCores)) else {
             state.launchFailure = .init(title: "Play Nearby", message: CoreCatalog.playNearbyUnavailable)
             return
