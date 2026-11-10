@@ -654,6 +654,7 @@ private struct PauseMenu: View {
     @State private var showControls = false
     @State private var coreOptions: CoreListing?
     @State private var saved: Date?
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showFilter = false
     @State private var showSkin = false
     @State private var query = ""
@@ -727,12 +728,6 @@ private struct PauseMenu: View {
         return ShaderCatalog.all.first { $0.id == id }?.name ?? state.filters.name(of: id) ?? "Original"
     }
 
-    private var skinLayout: TouchSkinEngine.Layout {
-        let game = liveGame
-        let id = TouchSkinEngine.layoutID(game: game.skinID, platform: state.platformSkins[game.platformID], platformID: game.platformID)
-        let choices = TouchSkinEngine.Layout.choices(for: game.platformID)
-        return choices.first { $0.id == id } ?? choices.first ?? TouchSkinEngine.Layout.builtIn[0]
-    }
 
     private var entries: [Entry] {
         var list: [Entry] = []
@@ -745,8 +740,8 @@ private struct PauseMenu: View {
         }
         list.append(Entry(id: "pause.filter", title: "Filter", value: filterName, keywords: "shader crt lcd scanlines look",
                           picture: AnyView(FilterPicture(shaderID: state.effectiveShaderID(liveGame))), action: { showFilter = true }))
-        list.append(Entry(id: "pause.skin", title: "Skin", value: skinLayout.name, keywords: "touch layout buttons",
-                          picture: AnyView(SkinThumbnail(layout: skinLayout).padding(3)), action: { showSkin = true }))
+        list.append(Entry(id: "pause.skin", title: "Skin", value: state.skinDrawing(platformID: liveGame.platformID, game: liveGame, portrait: false).name, keywords: "touch layout buttons",
+                          picture: AnyView(CurrentSkinPicture(platformID: liveGame.platformID, game: liveGame).padding(3)), action: { showSkin = true }))
         list.append(Entry(id: "pause.screen", title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
                           keywords: "scaling fit stretch zoom layout dual",
                           picture: session.isDualScreen ? AnyView(DualLayoutPicture(preset: session.screen.preset)) : AnyView(ScalingPicture(mode: session.screen.scaling)),
@@ -851,7 +846,8 @@ private struct PauseMenu: View {
             .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
             Rule().padding(.vertical, 4)
             Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8, alignment: .top), GridItem(.flexible(), spacing: 8, alignment: .top)],
+            // One column at accessibility sizes, so tile names never break mid-word.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8, alignment: .top), count: typeSize.isAccessibilitySize ? 1 : 2),
                       alignment: .leading, spacing: 8) {
                 ForEach(entries.filter(matches)) { tile($0) }
             }

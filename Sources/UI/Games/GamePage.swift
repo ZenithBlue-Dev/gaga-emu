@@ -34,7 +34,7 @@ struct GamePage: View {
                 header(game, resume: resume)
                 Rule().padding(.top, 12)
                 pictureRow("Skin", value: skinName(game), id: "skin", tile: .picture("\(CoreCatalog.platformName(game.platformID)) skin: \(skinName(game))") {
-                    SkinThumbnail(layout: skinLayout(game)).padding(3)
+                    CurrentSkinPicture(platformID: game.platformID, game: game).padding(3)
                 }) { sheet = .skin }
                 pictureRow("Filter", value: filterName(game), id: "filter", tile: .picture("Filter preview: \(filterName(game))") {
                     FilterPicture(shaderID: state.effectiveShaderID(game))
@@ -145,15 +145,9 @@ struct GamePage: View {
         .padding(.vertical, 8)
     }
 
-    private func skinLayout(_ game: GameItem) -> TouchSkinEngine.Layout {
-        let id = TouchSkinEngine.layoutID(game: game.skinID, platform: state.platformSkins[game.platformID], platformID: game.platformID)
-        let choices = TouchSkinEngine.Layout.choices(for: game.platformID)
-        return choices.first { $0.id == id } ?? choices.first ?? TouchSkinEngine.Layout.builtIn[0]
-    }
-
     private func skinName(_ game: GameItem) -> String {
-        if game.skinID == nil, state.platformSkins[game.platformID] == TouchSkinEngine.customID, state.hasCustomSkin(game.platformID) { return "Custom" }
-        return game.skinID == nil ? "\(skinLayout(game).name), system" : skinLayout(game).name
+        let name = state.skinDrawing(platformID: game.platformID, game: game, portrait: false).name
+        return game.skinID == nil && !state.hasCustomSkin(game.platformID, gameID: game.id) ? "\(name), system" : name
     }
 
     private func filterName(_ game: GameItem) -> String {

@@ -73,7 +73,8 @@ struct SettingsView: View {
         if let section = next.style {
             // The keyboard goes first: switching tabs under it left the app busy on the device.
             searching = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { state.showStyle(section) }
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { state.showStyle(section) }
         } else {
             target = next
         }
@@ -123,15 +124,35 @@ struct ValueRow: View {
 
     var body: some View {
         TiledRow(tile: tile) {
-            HStack {
-                Text(LocalizedStringKey(title))
-                Spacer(minLength: 12)
-                Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing)
-            }
+            TitleValue(title: title, value: value)
         }
         .padding(.vertical, 6)
         .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// A row's title and value side by side, or the value under the title at accessibility sizes so neither breaks
+/// mid-word.
+struct TitleValue: View {
+    let title: String
+    var value: String?
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(LocalizedStringKey(title)).fixedSize(horizontal: false, vertical: true)
+                if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted).fixedSize(horizontal: false, vertical: true) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack {
+                Text(LocalizedStringKey(title))
+                Spacer(minLength: 12)
+                if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing) }
+            }
+        }
     }
 }
 
@@ -147,9 +168,7 @@ struct ActionRow: View {
         Button(action: action) {
             TiledRow(tile: tile) {
                 HStack {
-                    Text(LocalizedStringKey(title))
-                    Spacer(minLength: 12)
-                    if let value { Text(value).font(.meta).foregroundStyle(AppTheme.muted).multilineTextAlignment(.trailing) }
+                    TitleValue(title: title, value: value)
                     Image(systemName: symbol).font(.caption).foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 }
             }
@@ -409,7 +428,7 @@ private struct ControllersPane: View {
             .accessibilityIdentifier("settingsPlayers")
         Rule()
         ActionRow(title: "Skins", value: "In Style",
-                  tile: .picture { SkinThumbnail(layout: TouchSkinEngine.Layout.builtIn[0]).padding(4) }) {
+                  tile: .picture { CurrentSkinPicture(platformID: state.games.first?.platformID ?? "snes").padding(4) }) {
             openSetting(.skins)
         }
         Rule()

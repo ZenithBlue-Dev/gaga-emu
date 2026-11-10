@@ -39,6 +39,8 @@ struct StyleView: View {
 struct SkinsGallery: View {
     @EnvironmentObject private var state: AppState
     @State private var editing: EditTarget?
+    @Environment(\.verticalSizeClass) private var vertical
+    @Environment(\.horizontalSizeClass) private var horizontal
     @ScaledMetric(relativeTo: .footnote) private var thumbWidth: CGFloat = 132
 
     private struct EditTarget: Identifiable { let id: String }
@@ -61,13 +63,15 @@ struct SkinsGallery: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(alignment: .top, spacing: 10) {
                             ForEach(TouchSkinEngine.Layout.choices(for: platform.id)) { layout in
-                                choice(platform, id: layout.id, name: layout.name) { SkinThumbnail(layout: layout) }
+                                choice(platform, id: layout.id, name: layout.name) {
+                                    SkinThumbnail(layout: layout, platformID: platform.id, portrait: upright)
+                                }
                             }
                             if state.hasCustomSkin(platform.id) {
-                                choice(platform, id: TouchSkinEngine.customID, name: "Custom") {
-                                    SymbolPicture(symbol: "slider.horizontal.below.rectangle")
-                                        .aspectRatio(2.1, contentMode: .fit)
-                                        .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                                if let skin = state.flexSkin(state.customSkinURL(platform.id)) {
+                                    choice(platform, id: TouchSkinEngine.customID, name: "Custom") {
+                                        SkinThumbnail(drawing: .skin(skin, portrait: upright))
+                                    }
                                 }
                             }
                         }
@@ -86,8 +90,9 @@ struct SkinsGallery: View {
         let selected = current(platform.id) == id
         return Button { state.platformSkins[platform.id] = id } label: {
             VStack(alignment: .leading, spacing: 4) {
+                // Upright the box is tall, as the upright layouts are.
                 picture()
-                    .frame(width: min(thumbWidth, 220))
+                    .frame(width: min(thumbWidth, 220), height: min(thumbWidth, 220) * (upright ? 1.2 : 0.6))
                     .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
                 HStack(spacing: 2) {
                     if selected { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
@@ -100,9 +105,11 @@ struct SkinsGallery: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(platform.name) skin: \(name), landscape")
+        .accessibilityLabel("\(platform.name) skin: \(name), \(upright ? "portrait" : "landscape") layout")
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
+
+    private var upright: Bool { SkinThumbnail.upright(horizontal, vertical) }
 
     /// Custom shows only while its file exists; otherwise the platform's built-in choice.
     private func current(_ platformID: String) -> String {
