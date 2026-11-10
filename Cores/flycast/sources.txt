@@ -73,7 +73,7 @@ upstream/core/hw/maple/maple_devs.cpp
 upstream/core/hw/maple/maple_helper.cpp
 upstream/core/hw/maple/maple_if.cpp
 upstream/core/hw/maple/maple_jvs.cpp
-upstream/core/hw/mem/addrspace.cpp
+AddrspaceHeap.cpp
 upstream/core/hw/mem/mem_watch.cpp
 upstream/core/hw/modem/modem.cpp
 upstream/core/hw/modem/v42.cpp
