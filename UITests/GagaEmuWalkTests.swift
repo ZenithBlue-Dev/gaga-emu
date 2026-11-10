@@ -53,6 +53,7 @@ final class GagaEmuWalkTests: XCTestCase {
 
     private func tap(_ element: XCUIElement, _ what: String) {
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "\(what) did not appear")
+        if element.identifier.hasPrefix("settings.") || element.identifier.hasPrefix("style.") { reveal(element) }
         element.tap()
     }
 
@@ -62,7 +63,8 @@ final class GagaEmuWalkTests: XCTestCase {
     /// The imported game, once the Library lists it (the import filters the Library to it). A failed import
     /// shows an alert instead, and its text is the failure.
     private func importedGame(_ app: XCUIApplication, _ what: String) -> XCUIElement {
-        let game = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", title)).firstMatch
+        // BEGINSWITH: the cover, not the Continue panel's "Play <title>".
+        let game = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
         let alert = app.alerts.firstMatch
         let deadline = Date().addingTimeInterval(importTimeout)
         while Date() < deadline {
@@ -125,16 +127,48 @@ final class GagaEmuWalkTests: XCTestCase {
         sleep(1)
     }
 
+    /// Opens a root tab (Library, Import, Style, Settings) from the rail or the bar.
+    private func goTo(_ app: XCUIApplication, _ tab: String) {
+        guard !promptUp() else { return }
+        // Not the Settings category of the same name, such as Library.
+        let button = app.buttons.matching(NSPredicate(format: "label == %@ AND NOT (identifier BEGINSWITH 'settings.') AND NOT (identifier BEGINSWITH 'style.')", tab)).firstMatch
+        tap(button, "The \(tab) tab")
+        sleep(1)
+        // A tap made while a menu is open only closes the menu.
+        if button.exists, !button.isSelected {
+            button.tap()
+            sleep(1)
+        }
+    }
+
+    /// Plays a game: a tap on its cover opens its page, and Play (or Resume) there starts it.
+    private func play(_ app: XCUIApplication, _ tile: XCUIElement) {
+        tap(tile, "The game's cover")
+        tap(startOnPage(app), "Play on the game's page")
+    }
+
+    /// The game page's Play, or Resume once the game has an auto save.
+    private func startOnPage(_ app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "identifier IN %@", ["gamePage.play", "gamePage.resume"])).firstMatch
+    }
+
+    /// Opens a Style page by its identifier, such as `Skins` or `Library Layout`.
+    @discardableResult private func styleSection(_ app: XCUIApplication, _ name: String) -> Bool {
+        goTo(app, "Style")
+        return selectTab(app, name, prefix: "style")
+    }
+
     /// Selects a Settings tab and checks it took. The tabs sit under where a notification banner drops: a tap
     /// on the banner opens its app (seen on the iPhone), so GagaEmu is brought back and the tap made again.
-    @discardableResult private func selectTab(_ app: XCUIApplication, _ name: String) -> Bool {
-        let tab = app.buttons["settings.\(name)"].firstMatch
+    @discardableResult private func selectTab(_ app: XCUIApplication, _ name: String, prefix: String = "settings") -> Bool {
+        let tab = app.buttons["\(prefix).\(name)"].firstMatch
         for _ in 0..<3 where !promptUp() {
             if app.state != .runningForeground {
                 app.activate()
                 sleep(6) // Lets the banner leave.
             }
             guard tab.waitForExistence(timeout: 6) else { continue }
+            reveal(tab)
             tab.tap()
             sleep(1)
             if app.state == .runningForeground, tab.isSelected { return true }
@@ -143,13 +177,33 @@ final class GagaEmuWalkTests: XCTestCase {
         return false
     }
 
+    /// Upright on a phone the category tabs are a sideways strip, and in landscape a sidebar list, so a tab past
+    /// the edge is scrolled to first. Only identified elements are looked for in a scroll view.
+    private func reveal(_ element: XCUIElement) {
+        let app = XCUIApplication()
+        guard element.exists, !element.identifier.isEmpty else { return }
+        let screen = app.windows.firstMatch.frame
+        guard !screen.contains(element.frame) else { return }
+        let strip = app.scrollViews.containing(.any, identifier: element.identifier).firstMatch
+        for forward in [true, true, true, false, false, false, false, false] where !screen.contains(element.frame) && strip.exists {
+            switch (strip.frame.width > strip.frame.height, forward) {
+            case (true, true): strip.swipeLeft()
+            case (true, false): strip.swipeRight()
+            case (false, true): strip.swipeUp()
+            case (false, false): strip.swipeDown()
+            }
+            sleep(1)
+        }
+    }
+
     private func auditPage(_ app: XCUIApplication, _ prefix: String, as name: String) {
         guard open(app, prefix) else { return }
         audit(name)
         close(app)
     }
 
-    /// Library, its long-press sheets, Add and every Settings page, each upright and in landscape.
+    /// Library, the game page and its long-press sheets, Import, every Style page and every Settings page, each
+    /// upright and in landscape.
     func testAuditScreens() {
         continueAfterFailure = true
         XCUIDevice.shared.orientation = .portrait
@@ -157,6 +211,26 @@ final class GagaEmuWalkTests: XCTestCase {
         _ = importedGame(app, "The \(title) game")
         sleep(1)
         audit("01 Library")
+        let cover = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        if !promptUp(), cover.waitForExistence(timeout: 6) {
+            cover.tap()
+            sleep(1)
+            if app.buttons["gamePage.play"].waitForExistence(timeout: 6) || app.buttons["gamePage.resume"].exists {
+                audit("02 Game page")
+                for (entry, name) in [("gamePage.skin", "Skin"), ("gamePage.core", "Core"), ("gamePage.saves", "Save States"), ("gamePage.controls", "Controls")] {
+                    let row = app.buttons[entry].firstMatch
+                    guard !promptUp(), row.waitForExistence(timeout: 4) else { snapshot("MISSING \(entry)"); continue }
+                    row.tap()
+                    sleep(1)
+                    audit("02 Game page \(name)")
+                    close(app)
+                }
+                // A sheet the subpage left open is closed too, so the page itself goes.
+                for _ in 0..<3 where app.buttons["gamePage.delete"].exists { close(app) }
+            } else {
+                snapshot("MISSING game page")
+            }
+        }
         for (index, entry) in ["Change Core", "Choose Filter", "Assign Skin", "Manage Saves", "Edit Details", "Delete"].enumerated() {
             let tile = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
             guard !promptUp(), tile.waitForExistence(timeout: 6) else { continue }
@@ -165,50 +239,231 @@ final class GagaEmuWalkTests: XCTestCase {
             if index == 0 { snapshot("02 Library menu portrait") }
             auditPage(app, entry, as: "03 Game \(entry)")
         }
-        guard !promptUp() else { return }
-        app.buttons["Add"].tap()
-        sleep(1)
-        audit("04 Add")
-        auditPage(app, "Multi-Disc", as: "05 Add Multi-Disc")
-        auditPage(app, "Patch a ROM", as: "05 Add Patch")
-        guard !promptUp() else { return }
-        app.buttons["Settings"].tap()
-        sleep(1)
-        for category in ["Play", "Library", "Display", "Graphics", "Controls", "Storage", "About"] {
+        goTo(app, "Import")
+        audit("04 Import")
+        auditPage(app, "Multi-Disc", as: "05 Import Multi-Disc")
+        auditPage(app, "Patch a ROM", as: "05 Import Patch")
+        for section in ["Skins", "Filters", "Icon and Colours", "Library Layout"] where styleSection(app, section) {
+            audit("06 Style \(section)")
+            if section == "Skins" {
+                let edit = app.buttons.matching(NSPredicate(format: "label ENDSWITH %@", "skin")).firstMatch
+                if edit.waitForExistence(timeout: 6) {
+                    edit.tap()
+                    sleep(2)
+                    audit("07 Skin Editor")
+                    cancel(app)
+                }
+            }
+            if section == "Filters" { auditPage(app, "Open Filter Studio", as: "07 Filter Studio") }
+        }
+        goTo(app, "Settings")
+        for category in ["Profile", "Gameplay", "Controllers", "Screen", "Systems", "Library", "Storage and Sync", "Help"] {
             // By identifier, as the rail has a Library button too.
             let row = app.buttons["settings.\(category)"].firstMatch
             if !promptUp(), row.waitForExistence(timeout: 6) {
+                reveal(row)
                 XCTAssertTrue(row.isHittable, "The \(category) tab is off the screen")
                 row.tap()
                 sleep(1)
                 audit("06 Settings \(category)")
             }
             switch category {
-            case "Library": auditPage(app, "BIOS Files", as: "07 BIOS")
-            case "Graphics":
-                auditPage(app, "Default Filter", as: "07 Filter")
-                auditPage(app, "Screen", as: "07 Screen")
-            case "Controls":
-                if open(app, "Touch Layout") {
-                    audit("07 Assign Skin")
-                    let edit = app.buttons.matching(NSPredicate(format: "label ENDSWITH %@", "skin")).firstMatch
-                    if edit.waitForExistence(timeout: 6) {
-                        edit.tap()
-                        sleep(2)
-                        audit("07 Skin Editor")
-                        cancel(app)
-                    }
-                    close(app)
-                }
+            case "Systems": auditPage(app, "BIOS Files", as: "07 BIOS")
+            case "Screen": auditPage(app, "Screen, Scaling", as: "07 Screen")
+            case "Controllers":
+                auditPage(app, "Players", as: "07 Players")
                 auditPage(app, "Controller Mapping", as: "07 Mapping")
                 auditPage(app, "Macros", as: "07 Macros")
                 auditPage(app, "Turbo", as: "07 Turbo")
-            case "About":
+            case "Help":
+                auditPage(app, "Guides", as: "07 Guides")
                 auditPage(app, "About Us", as: "07 About Us")
                 auditPage(app, "Licences", as: "07 Licences")
             default: break
             }
         }
+    }
+
+    /// Batch 2: Settings search finds a setting by the word people use, and opens it.
+    func testSettingsSearch() throws {
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        _ = importedGame(app, "The \(title) game")
+        sleep(2)
+        try guardedTap(app.buttons["Settings"].firstMatch, "Settings in the bar")
+        let field = app.textFields["Search settings"].firstMatch
+        try enter(app, field, "skin", "The settings search field")
+        snapshot("80 Search skin")
+        try guardedTap(app.buttons["settingsResult.Skins"].firstMatch, "The Skins result")
+        try arrive(app.buttons.matching(NSPredicate(format: "label ENDSWITH %@", "skin")).firstMatch, "A skin's Edit button in Style")
+        XCTAssertTrue(app.buttons["style.Skins"].firstMatch.isSelected, "Search did not open Style > Skins")
+        snapshot("80 Search reached Skins")
+        try guardedTap(app.buttons["Settings"].firstMatch, "Settings again")
+        try enter(app, field, "bios", "The settings search field again")
+        try guardedTap(app.buttons["settingsResult.BIOS Files"].firstMatch, "The BIOS Files result")
+        try arrive(app.staticTexts["Required"].firstMatch, "The BIOS list")
+        snapshot("81 Search reached BIOS")
+        close(app)
+        try enter(app, field, "username", "The settings search field for a username")
+        try arrive(app.buttons["settingsResult.Player Name"].firstMatch, "The Player Name result")
+        snapshot("82 Search username")
+    }
+
+    /// The 20 most-used features of docs/ux-redesign.md section 1, each reached from the Library and its taps
+    /// counted, against that table's counts. The counts go into the result bundle as `TAPS` and the log.
+    func testTopFeatureTaps() throws {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        let cover = importedGame(app, "The \(title) game")
+        sleep(8)
+        try stopIfPrompt()
+        var taps = 0
+        var rows: [(name: String, old: Int, new: Int, reached: Bool)] = []
+        let pause = app.buttons["Pause game"]
+        func count(_ element: XCUIElement, _ what: String) {
+            tap(element, what)
+            taps += 1
+            sleep(1)
+        }
+        func record(_ name: String, old: Int, _ goal: XCUIElement) {
+            let reached = goal.waitForExistence(timeout: 10)
+            XCTAssertTrue(reached, "\(name) was not reached")
+            rows.append((name, old, taps, reached))
+            snapshot("90 \(rows.count) \(name)")
+            taps = 0
+        }
+        /// Back to the Library with nothing open, uncounted.
+        func home() {
+            for _ in 0..<3 where app.buttons["Close"].firstMatch.exists || app.buttons["Cancel"].firstMatch.exists { close(app) }
+            // A game still starting can ignore Pause, so it is tapped until the menu shows.
+            let quit = button(app, "Quit to Library")
+            for _ in 0..<4 where pause.exists && !quit.exists {
+                pause.tap()
+                _ = quit.waitForExistence(timeout: 4)
+            }
+            if quit.exists {
+                quit.tap()
+                sleep(3)
+            }
+            goTo(app, "Library")
+        }
+        /// Starts the game, uncounted, for the in-game features.
+        func inGame() {
+            home()
+            play(app, cover)
+            _ = pause.waitForExistence(timeout: timeout)
+            sleep(3)
+        }
+
+        // 1 Resume last game: the Continue panel's Play.
+        home()
+        count(app.buttons["Play \(title)"].firstMatch, "Continue's Play")
+        record("Resume last game", old: 1, pause)
+        // 2 Start any game: the cover, then Play.
+        home()
+        count(cover, "The cover")
+        count(app.buttons["gamePage.play"].firstMatch, "Play")
+        record("Start any game", old: 2, pause)
+        // 3 Import from Files: the tab, and the button that opens the system's file picker (not opened here).
+        home()
+        count(app.buttons["Import"].firstMatch, "Import")
+        taps += 1
+        record("Import from Files", old: 2, button(app, "Choose from Files"))
+        // 4 and 5 Save and load a state.
+        inGame()
+        count(pause, "Pause")
+        count(button(app, "Save State"), "Save State")
+        record("Save state", old: 2, button(app, "Save State, Saved"))
+        count(button(app, "Load State"), "Load State")
+        count(button(app, "Load Save state"), "The saved state")
+        record("Load state", old: 3, pause)
+        // 6 Fast forward: the in-game button.
+        count(app.buttons["Fast forward"].firstMatch, "Fast forward")
+        record("Fast forward", old: 1, pause)
+        // 7 Skin for every game on a system: Style opens on Skins; a picture picks it.
+        home()
+        count(app.buttons["Style"].firstMatch, "Style")
+        let skin = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", " skin: ")).element(boundBy: 1)
+        count(skin, "A skin picture")
+        record("Change skin, all games", old: 4, app.buttons.matching(NSPredicate(format: "label CONTAINS %@", " skin: ")).firstMatch)
+        // 8 Skin for one game: the cover, Skin, a choice.
+        home()
+        count(cover, "The cover")
+        count(app.buttons["gamePage.skin"].firstMatch, "Skin")
+        record("Change skin, one game", old: 3, button(app, "Platform Default"))
+        // 9 Edit a skin's layout: Style, then Edit beside a system.
+        home()
+        count(app.buttons["Style"].firstMatch, "Style")
+        count(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Edit ' AND label ENDSWITH ' skin'")).firstMatch, "Edit")
+        record("Edit skin layout", old: 4, app.buttons["Cancel"].firstMatch)
+        // 10 Default filter: Style, Filters, a picture.
+        home()
+        count(app.buttons["Style"].firstMatch, "Style")
+        count(app.buttons["style.Filters"].firstMatch, "Filters")
+        count(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'styleFilter.'")).element(boundBy: 1), "A filter picture")
+        record("Default filter", old: 3, app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'styleFilter.'")).firstMatch)
+        // 11 Filter for one game: the cover, Filter.
+        home()
+        count(cover, "The cover")
+        count(app.buttons["gamePage.filter"].firstMatch, "Filter")
+        record("Filter, one game", old: 3, app.textFields["Search filters"].firstMatch)
+        // 12 Change core: the cover, Core.
+        home()
+        count(cover, "The cover")
+        count(app.buttons["gamePage.core"].firstMatch, "Core")
+        record("Change core", old: 3, app.staticTexts["Change Core"].firstMatch)
+        // 13 and 14 Core options and cheats, from the pause menu.
+        inGame()
+        count(pause, "Pause")
+        count(app.buttons["pause.coreOptions"].firstMatch, "Core Options")
+        record("Core options", old: 2, app.buttons["coreOptions.resetAll"].firstMatch)
+        close(app)
+        taps += 1 // Pause, still open from Core Options, counts for Cheats too.
+        count(button(app, "Cheats"), "Cheats")
+        record("Cheats", old: 3, app.buttons["Import .cht File"].firstMatch)
+        // 15 to 19 in Settings.
+        home()
+        count(app.buttons["Settings"].firstMatch, "Settings")
+        count(app.buttons["settings.Controllers"].firstMatch, "Controllers")
+        count(button(app, "Controller Mapping"), "Controller Mapping")
+        record("Controller mapping", old: 3, app.buttons["Close"].firstMatch)
+        home()
+        count(app.buttons["Settings"].firstMatch, "Settings")
+        count(app.buttons["settings.Controllers"].firstMatch, "Controllers")
+        record("Controller player slots", old: 2, app.buttons["settingsPlayers"].firstMatch)
+        home()
+        count(app.buttons["Settings"].firstMatch, "Settings")
+        count(app.buttons["settings.Systems"].firstMatch, "Systems")
+        count(button(app, "BIOS Files"), "BIOS Files")
+        record("BIOS files", old: 3, app.staticTexts["Required"].firstMatch)
+        home()
+        count(app.buttons["Settings"].firstMatch, "Settings")
+        count(app.buttons["settings.Profile"].firstMatch, "Profile")
+        taps -= 1 // Profile is where Settings opens: that tap only makes sure of it.
+        count(button(app, "RetroAchievements"), "RetroAchievements")
+        record("RetroAchievements sign-in", old: 3, app.textFields["raUsername"].firstMatch)
+        home()
+        count(app.buttons["Settings"].firstMatch, "Settings")
+        count(app.buttons["settings.Storage and Sync"].firstMatch, "Storage and Sync")
+        taps += 1 // The switch itself, not flipped here: it would start syncing.
+        record("iCloud Sync", old: 3, app.switches["icloudSyncToggle"].firstMatch)
+        // 20 Library layout: Style, Library Layout.
+        home()
+        count(app.buttons["Style"].firstMatch, "Style")
+        count(app.buttons["style.Library Layout"].firstMatch, "Library Layout")
+        record("Library layout", old: 2, app.buttons["Framed"].firstMatch)
+
+        let table = rows.enumerated().map { "\($0.offset + 1)\t\($0.element.name)\told \($0.element.old)\tnew \($0.element.new)\($0.element.reached ? "" : "\tNOT REACHED")" }
+        let report = (table + ["TOTAL\told \(rows.map(\.old).reduce(0, +))\tnew \(rows.map(\.new).reduce(0, +))"]).joined(separator: "\n")
+        print("TAPS\n" + report)
+        let attachment = XCTAttachment(string: report)
+        attachment.name = "TAPS"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertEqual(rows.count, 20, "Not every feature was walked")
+        for row in rows { XCTAssertLessThanOrEqual(row.new, row.old, "\(row.name) takes more taps than before") }
+        XCTAssertLessThan(rows.map(\.new).reduce(0, +), rows.map(\.old).reduce(0, +), "The redesign does not save taps overall")
     }
 
     /// The accessibility tree as text: scroll bars and system sheets show here, not always in a screenshot.
@@ -240,26 +495,22 @@ final class GagaEmuWalkTests: XCTestCase {
         _ = importedGame(app, "The \(title) game")
         // The system's Game Center banner sits over the tabs just after launch: a tap there opened its dashboard.
         sleep(10)
-        guard !promptUp() else { return }
-        app.buttons["Settings"].tap()
-        sleep(1)
-        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
-        sleep(1)
-        guard app.buttons["settings.Display"].firstMatch.isSelected else {
-            snapshot("STOPPED Display tab not selected")
-            return
+        guard !promptUp(), styleSection(app, "Icon and Colours") else { return }
+        audit("20 Icon and Colours default")
+        for choice in ["Light", "Teal"] where !promptUp() {
+            app.buttons[choice].firstMatch.tap()
+            sleep(1)
         }
-        audit("20 Display default")
-        for choice in ["Light", "Teal", "3", "Framed"] where !promptUp() {
+        guard styleSection(app, "Library Layout") else { return }
+        audit("20 Library Layout default")
+        for choice in ["3", "Framed"] where !promptUp() {
             app.buttons[choice].firstMatch.tap()
             sleep(1)
         }
         for toggle in ["Square Covers", "Hide Details"] where !promptUp() { flip(app, toggle) }
         if open(app, "Shelf Title") { open(app, "Maker") }
-        audit("21 Display changed")
-        guard !promptUp() else { return }
-        app.buttons["Library"].firstMatch.tap()
-        sleep(1)
+        audit("21 Library Layout changed")
+        goTo(app, "Library")
         open(app, "All games")
         audit("22 Library three per row")
         dumpTree(app, "22 hierarchy")
@@ -267,12 +518,7 @@ final class GagaEmuWalkTests: XCTestCase {
             snapshot("23 Sort menu portrait")
             open(app, "Title")
         }
-        guard !promptUp() else { return }
-        app.buttons["Settings"].tap()
-        sleep(1)
-        // Leaving Settings put it back on its first tab.
-        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
-        sleep(1)
+        guard styleSection(app, "Library Layout") else { return }
         for choice in ["5", "Plain"] where !promptUp() {
             app.buttons[choice].firstMatch.tap()
             sleep(1)
@@ -281,26 +527,15 @@ final class GagaEmuWalkTests: XCTestCase {
         sleep(1)
         for toggle in ["Hide Game Titles", "Hide Scroll Indicators"] where !promptUp() { flip(app, toggle) }
         if open(app, "Shelf Title") { open(app, "Short Code") }
-        audit("25 Display second pass")
-        guard !promptUp() else { return }
-        app.buttons["Library"].firstMatch.tap()
-        sleep(1)
+        audit("25 Library Layout second pass")
+        goTo(app, "Library")
         audit("26 Library five per row")
         dumpTree(app, "26 hierarchy")
-        guard !promptUp() else { return }
-        app.buttons["Settings"].tap()
-        sleep(1)
-        tap(app.buttons["settings.Display"].firstMatch, "The Display tab")
-        sleep(1)
+        guard styleSection(app, "Library Layout") else { return }
         flip(app, "Hide Shelf Titles")
-        guard !promptUp() else { return }
-        app.buttons["Library"].firstMatch.tap()
-        sleep(1)
+        goTo(app, "Library")
         audit("27 Library no shelf titles")
-        guard !promptUp() else { return }
-        app.buttons["Settings"].tap()
-        sleep(1)
-        guard selectTab(app, "Display") else { return }
+        guard styleSection(app, "Icon and Colours") else { return }
         let well = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Custom accent colour")).firstMatch
         if well.waitForExistence(timeout: 6) {
             well.tap()
@@ -317,10 +552,11 @@ final class GagaEmuWalkTests: XCTestCase {
             snapshot("29 Custom accent portrait")
         } else {
             snapshot("MISSING colour well")
-            XCTFail("No custom colour well on the Display tab")
+            XCTFail("No custom colour well on Style > Icon and Colours")
         }
-        guard !promptUp(), selectTab(app, "Library") else { return }
-        XCTAssertTrue(button(app, "BIOS Files").waitForExistence(timeout: 6), "No BIOS Files row on the Library tab")
+        goTo(app, "Settings")
+        guard !promptUp(), selectTab(app, "Systems") else { return }
+        XCTAssertTrue(button(app, "BIOS Files").waitForExistence(timeout: 6), "No BIOS Files row on the Systems tab")
         if open(app, "BIOS Files") {
             if open(app, "Import scph5500") {
                 sleep(2)
@@ -333,8 +569,8 @@ final class GagaEmuWalkTests: XCTestCase {
             }
             close(app)
         }
-        guard !promptUp(), selectTab(app, "Graphics") else { return }
-        guard open(app, "Default Filter") else { return }
+        guard !promptUp(), styleSection(app, "Filters") else { return }
+        guard open(app, "Open Filter Studio") else { return }
         let search = app.textFields["Search filters"].firstMatch
         if search.waitForExistence(timeout: 6) {
             search.tap()
@@ -362,7 +598,7 @@ final class GagaEmuWalkTests: XCTestCase {
         _ = importedGame(app, "The \(title) game")
         guard !promptUp() else { return }
         // The Library keeps earlier tests' test ROMs, all of one title: the platform picks this one.
-        tap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, platform)).firstMatch, "The \(platform) tile")
+        play(app, app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, platform)).firstMatch)
         let pause = app.buttons["Pause game"]
         guard pause.waitForExistence(timeout: timeout) else {
             snapshot("\(tag) did not start")
@@ -379,6 +615,12 @@ final class GagaEmuWalkTests: XCTestCase {
             open(app, "Back")
         }
         auditPage(app, "Load State", as: "\(tag) Load State")
+        auditPage(app, "Skin", as: "\(tag) Pause Skin")
+        if open(app, "Filter") {
+            sleep(2)
+            audit("\(tag) Pause Filter")
+            close(app)
+        }
         if open(app, "Controls") {
             audit("\(tag) Controls")
             if open(app, "Touch Layout") {
@@ -417,14 +659,14 @@ final class GagaEmuWalkTests: XCTestCase {
         guard !promptUp() else { return }
         open(app, "Sort games")
         snapshot("40 Sort menu with maker portrait")
-        if open(app, "Controllers") {
-            audit("41 Controllers from Library")
+        app.swipeDown(velocity: .fast) // Leaves the menu.
+        goTo(app, "Settings")
+        if selectTab(app, "Controllers"), open(app, "Players") {
+            audit("41 Players from Settings Controllers")
             close(app)
         }
-        guard !promptUp() else { return }
-        app.buttons["Add"].firstMatch.tap()
-        sleep(1)
-        audit("42 Add")
+        goTo(app, "Import")
+        audit("42 Import")
         if open(app, "WebDAV Server") {
             audit("43 WebDAV sign in")
             let field = app.textFields["Server address"].firstMatch
@@ -441,21 +683,19 @@ final class GagaEmuWalkTests: XCTestCase {
         }
         guard !promptUp() else { return }
         auditPage(app, "Multi-Disc", as: "44 Multi-Disc picker")
-        guard !promptUp() else { return }
-        app.buttons["Settings"].firstMatch.tap()
+        goTo(app, "Settings")
+        tap(app.buttons["settings.Gameplay"].firstMatch, "The Gameplay tab")
         sleep(1)
-        tap(app.buttons["settings.Play"].firstMatch, "The Play tab")
+        audit("45 Gameplay")
+        tap(app.buttons["settings.Screen"].firstMatch, "The Screen tab")
         sleep(1)
-        audit("45 Play")
-        tap(app.buttons["settings.Graphics"].firstMatch, "The Graphics tab")
-        sleep(1)
-        audit("46 Graphics")
-        tap(app.buttons["settings.Library"].firstMatch, "The Library tab")
+        audit("46 Screen")
+        tap(app.buttons["settings.Systems"].firstMatch, "The Systems tab")
         sleep(1)
         auditPage(app, "BIOS Files", as: "47 BIOS optional")
-        tap(app.buttons["settings.About"].firstMatch, "The About tab")
+        tap(app.buttons["settings.Help"].firstMatch, "The Help tab")
         sleep(1)
-        audit("48 About")
+        audit("48 Help")
         auditPage(app, "Guides", as: "49 Guides")
     }
 
@@ -481,7 +721,7 @@ final class GagaEmuWalkTests: XCTestCase {
         sleep(1)
         close(app)
         guard !promptUp() else { return }
-        tap(tile, "The PSP tile")
+        play(app, tile)
         let pause = app.buttons["Pause game"]
         guard pause.waitForExistence(timeout: timeout) else {
             snapshot("78 PSP did not start")
@@ -515,11 +755,11 @@ final class GagaEmuWalkTests: XCTestCase {
         app.launch()
         let game = importedGame(app, "The \(title) game")
         sleep(8)
-        guard !promptUp() else { return }
-        app.buttons["Settings"].firstMatch.tap()
-        sleep(1)
-        guard selectTab(app, "Graphics") else { return }
-        XCTAssertTrue(open(app, "Default Filter"), "No Default Filter row")
+        guard !promptUp(), styleSection(app, "Filters") else { return }
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'styleFilter.'")).firstMatch.waitForExistence(timeout: 6),
+                      "No filter pictures in Style > Filters")
+        snapshot("70 Style filters gallery")
+        XCTAssertTrue(open(app, "Open Filter Studio"), "No Open Filter Studio")
         XCTAssertTrue(button(app, "Show CRT").waitForExistence(timeout: 6), "No category strip")
         sleep(3)
         audit("70 Filter catalogue")
@@ -573,7 +813,7 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("75 Filter favourites")
         close(app)
         guard !promptUp() else { return }
-        app.buttons["Library"].firstMatch.tap()
+        goTo(app, "Library")
         sleep(2)
         _ = game
         let library = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
@@ -612,9 +852,7 @@ final class GagaEmuWalkTests: XCTestCase {
         app.launch()
         _ = importedGame(app, "The \(title) game")
         sleep(10)
-        guard !promptUp() else { return }
-        app.buttons["Add"].firstMatch.tap()
-        sleep(1)
+        goTo(app, "Import")
         XCTAssertTrue(app.staticTexts["Sample One.gba"].waitForExistence(timeout: 6), "No download row")
         XCTAssertTrue(app.staticTexts["Downloading"].exists, "The first download is not running")
         XCTAssertTrue(app.staticTexts["Waiting"].exists, "The second download is not waiting")
@@ -649,11 +887,8 @@ final class GagaEmuWalkTests: XCTestCase {
         XCTAssertTrue(button(app, "Create UPS Patch").exists, "Create mode did not switch")
         audit("62 Patch create")
         close(app)
-        guard !promptUp() else { return }
-        app.buttons["Settings"].firstMatch.tap()
-        sleep(1)
-        guard selectTab(app, "Graphics") else { return }
-        XCTAssertTrue(open(app, "Default Filter"), "No Default Filter row")
+        guard !promptUp(), styleSection(app, "Filters") else { return }
+        XCTAssertTrue(open(app, "Open Filter Studio"), "No Open Filter Studio")
         XCTAssertTrue(app.buttons["Choose preview image"].firstMatch.waitForExistence(timeout: 6), "No preview picture button")
         XCTAssertTrue(app.buttons["Use built-in preview image"].firstMatch.exists, "The seeded picture was not taken")
         audit("63 Filter preview picture")
@@ -662,7 +897,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCTAssertFalse(app.buttons["Use built-in preview image"].firstMatch.exists, "The built-in picture did not come back")
         snapshot("63 Filter preview built in")
         close(app)
-        guard !promptUp(), selectTab(app, "Display") else { return }
+        guard !promptUp(), styleSection(app, "Icon and Colours") else { return }
         let icon = app.buttons["App icon, Phosphor"].firstMatch
         XCTAssertTrue(icon.waitForExistence(timeout: 6), "No app icon choices")
         XCTAssertTrue(app.buttons["App icon, Steps"].firstMatch.isSelected, "The primary icon is not marked")
@@ -676,6 +911,9 @@ final class GagaEmuWalkTests: XCTestCase {
         psp.launchArguments = ["-GagaImportTestROM", "ppsspp"]
         psp.launch()
         _ = importedGame(psp, "The ppsspp game")
+        // Another walk's game can be listed already, so the PSP one itself is waited for before the relaunch.
+        _ = psp.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, "PSP")).firstMatch
+            .waitForExistence(timeout: importTimeout)
         let app = XCUIApplication()
         app.launchArguments = ["-GagaSeedDiscs", "YES", "-GagaImportTestROM", core]
         app.launch()
@@ -692,9 +930,7 @@ final class GagaEmuWalkTests: XCTestCase {
         audit("52 Filtered by Nintendo")
         XCTAssertFalse(pspGame.exists, "The maker filter left the PSP game")
 
-        guard !promptUp() else { return }
-        app.buttons["Add"].firstMatch.tap()
-        sleep(1)
+        goTo(app, "Import")
         XCTAssertTrue(open(app, "Multi-Disc"))
         tap(button(app, "Odd End.chd"), "The second disc")
         tap(button(app, "Odd Start.chd"), "The first disc")
@@ -708,10 +944,8 @@ final class GagaEmuWalkTests: XCTestCase {
         audit("53 Playlist written")
         close(app)
 
-        guard !promptUp() else { return }
-        app.buttons["Settings"].firstMatch.tap()
-        sleep(1)
-        tap(app.buttons["settings.Library"].firstMatch, "The Library tab")
+        goTo(app, "Settings")
+        tap(app.buttons["settings.Systems"].firstMatch, "The Systems tab")
         sleep(1)
         XCTAssertTrue(open(app, "BIOS Files"))
         let optional = app.staticTexts["Optional"].firstMatch
@@ -734,10 +968,10 @@ final class GagaEmuWalkTests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 6), "No Ajustes tab")
         settings.tap()
         sleep(1)
-        tap(app.buttons["settings.About"].firstMatch, "The About tab")
+        tap(app.buttons["settings.Help"].firstMatch, "The Help tab")
         sleep(1)
         XCTAssertTrue(button(app, "Idioma").waitForExistence(timeout: 6), "No Idioma row")
-        audit("50 Spanish About")
+        audit("50 Spanish Help")
     }
 
     /// Auto Save State: on, play, quit, and playing again offers Resume.
@@ -748,11 +982,12 @@ final class GagaEmuWalkTests: XCTestCase {
         guard !promptUp() else { return }
         tap(app.buttons["Settings"].firstMatch, "Settings")
         sleep(1)
+        guard selectTab(app, "Gameplay") else { return }
         flip(app, "Auto Save State")
         snapshot("51 Auto Save on")
-        tap(app.buttons["Library"].firstMatch, "Library")
+        goTo(app, "Library")
         sleep(1)
-        game.tap()
+        play(app, game)
         let pause = app.buttons["Pause game"]
         XCTAssertTrue(pause.waitForExistence(timeout: timeout), "The game did not start")
         sleep(4)
@@ -761,10 +996,12 @@ final class GagaEmuWalkTests: XCTestCase {
         XCTAssertTrue(game.waitForExistence(timeout: timeout), "Quit did not return to the Library")
         sleep(1)
         game.tap()
-        let resume = app.alerts.buttons["Resume"].firstMatch
-        XCTAssertTrue(resume.waitForExistence(timeout: timeout), "No Resume offer after quitting with Auto Save on")
+        // The game's page offers Resume itself, with no alert in between.
+        let resume = app.buttons["gamePage.resume"].firstMatch
+        XCTAssertTrue(resume.waitForExistence(timeout: timeout), "No Resume on the game's page after quitting with Auto Save on")
+        XCTAssertTrue(app.buttons["gamePage.startOver"].exists, "No Start Over beside Resume")
         snapshot("51 Resume offer")
-        app.alerts.buttons["Cancel"].firstMatch.tap()
+        close(app)
     }
 
     /// Leaves an editor whose parent sheet also has a Close button.
@@ -789,6 +1026,7 @@ final class GagaEmuWalkTests: XCTestCase {
             + (environment["GAGA_WALK_CHEAT_TITLE"].map { ["-GagaCheatTitle", $0] } ?? [])
         app.launch()
         try guardedTap(importedGame(app, "The \(title) game"), "The game")
+        try guardedTap(startOnPage(app), "Play on the game's page")
         let pause = app.buttons["Pause game"]
         try arrive(pause, "The game")
         sleep(2)
@@ -842,13 +1080,14 @@ final class GagaEmuWalkTests: XCTestCase {
         let game = importedGame(app, "The \(title) game")
         sleep(2)
         try guardedTap(button(app, "Settings"), "Settings in the rail")
-        guard selectTab(app, "Cores") else { return }
+        guard selectTab(app, "Systems") else { return }
         try guardedTap(app.buttons["core.\(core)"].firstMatch, "The \(core) row")
         try changeFirstOption(app, "Settings")
         snapshot("Core options from Settings")
         close(app)
-        try guardedTap(app.buttons["Library"].firstMatch, "Library")
+        goTo(app, "Library")
         try guardedTap(game, "The game")
+        try guardedTap(startOnPage(app), "Play on the game's page")
         let pause = app.buttons["Pause game"]
         try arrive(pause, "The game")
         sleep(2)
@@ -883,7 +1122,7 @@ final class GagaEmuWalkTests: XCTestCase {
     func testOpenLicences() throws {
         let app = launchApp()
         try guardedTap(button(app, "Settings"), "Settings in the rail")
-        try guardedTap(button(app, "About"), "About")
+        try guardedTap(app.buttons["settings.Help"].firstMatch, "Help")
         try guardedTap(button(app, "Licences"), "Licences")
         snapshot("Licences")
     }
@@ -892,7 +1131,7 @@ final class GagaEmuWalkTests: XCTestCase {
     func testAuditRetroAchievements() throws {
         let app = launchApp()
         try guardedTap(button(app, "Settings"), "Settings in the rail")
-        try guardedTap(button(app, "Play"), "Play")
+        try guardedTap(app.buttons["settings.Profile"].firstMatch, "Profile")
         try guardedTap(button(app, "RetroAchievements"), "RetroAchievements row")
         try arrive(app.textFields["raUsername"], "Username field")
         XCTAssertTrue(app.secureTextFields["raPassword"].exists)
@@ -905,7 +1144,7 @@ final class GagaEmuWalkTests: XCTestCase {
     func testAuditICloudSync() throws {
         let app = launchApp()
         try guardedTap(button(app, "Settings"), "Settings in the rail")
-        try guardedTap(app.buttons["settings.Storage"].firstMatch, "Storage")
+        try guardedTap(app.buttons["settings.Storage and Sync"].firstMatch, "Storage and Sync")
         let toggle = app.switches["icloudSyncToggle"].firstMatch
         try arrive(toggle, "iCloud Sync switch")
         XCTAssertEqual(toggle.value as? String, "0", "iCloud Sync must be off by default")
@@ -935,7 +1174,19 @@ final class GagaEmuWalkTests: XCTestCase {
     private func guardedTap(_ element: XCUIElement, _ what: String) throws {
         try arrive(element, what)
         try stopIfPrompt()
+        if element.identifier.hasPrefix("settings.") || element.identifier.hasPrefix("style.") { reveal(element) }
         element.tap()
+    }
+
+    /// Types into a field once the keyboard is up. A tap made while a tab is still changing can leave the field
+    /// without focus, so the tap is made again.
+    private func enter(_ app: XCUIApplication, _ field: XCUIElement, _ text: String, _ what: String) throws {
+        for _ in 0..<3 {
+            try guardedTap(field, what)
+            if app.keyboards.firstMatch.waitForExistence(timeout: 3) { break }
+            sleep(1)
+        }
+        field.typeText(text)
     }
 
     /// Play, turn the phone upright and back: the touch controls lay out again for each orientation and stay on
@@ -943,6 +1194,7 @@ final class GagaEmuWalkTests: XCTestCase {
     func testRotation() throws {
         let app = launchApp()
         try guardedTap(importedGame(app, "The \(title) game"), "The game")
+        try guardedTap(startOnPage(app), "Play on the game's page")
         let pause = app.buttons["Pause game"]
         try arrive(pause, "The game")
         sleep(2)
@@ -984,6 +1236,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
         sleep(2)
         try guardedTap(play, "The game")
+        try guardedTap(startOnPage(app), "Play on the game's page")
         let pause = app.buttons["Pause game"]
         try arrive(pause, "The game")
         sleep(2)
@@ -1012,6 +1265,7 @@ final class GagaEmuWalkTests: XCTestCase {
         app.terminate()
         app = launchApp()
         try guardedTap(importedGame(app, "The game after relaunch"), "The game after relaunch")
+        try guardedTap(startOnPage(app), "Play on the game's page after relaunch")
         try guardedTap(app.buttons["Pause game"], "Pause game after relaunch")
         try guardedTap(button(app, "Load State"), "Load State after relaunch")
         snapshot("Saves after relaunch")
