@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 // Bump on any change to GagaCoreInterface or the structs it passes. The host refuses a core built for another version.
-#define GAGA_BRIDGE_ABI_VERSION 6u
+#define GAGA_BRIDGE_ABI_VERSION 7u
 
 // Opaque instance handle for core isolation
 typedef struct GagaInstance GagaInstance;
@@ -207,6 +207,18 @@ typedef struct GagaCoreInterface {
     // which write through memory_data (Sources/Bridge/PokeEngine.swift).
     void*       (*memory_data)(GagaInstance* inst, uint32_t region, size_t* size);
     const void* (*memory_map)(GagaInstance* inst);
+
+    // Core options (docs/06 section 2.4, "Core options"). NULL options means the core takes none.
+    // options returns JSON: {"categories":[{"key","label","info"}],"options":[{"key","label","info","category",
+    // "values":[{"value","label"}],"default","visible","locked","restart","value","served"}]}. "default" is the value
+    // GagaEmu runs with when the player sets none, "value" the player's choice or null, "served" what the core last read
+    // or null. "restart" is present only when the core knows. A NULL inst asks with no game, and only while no
+    // instance of this core is alive; NULL comes back otherwise. The string stays valid until the next options call.
+    const char* (*options)(GagaInstance* inst);
+    // The player's value for key, or NULL for the default. False for a locked key or a value the core did not
+    // declare; a key not declared yet is kept and checked once it is. Call before load_rom, or any time after:
+    // the core hears of the change at its next frame (RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE).
+    bool (*set_option)(GagaInstance* inst, const char* key, const char* value);
 } GagaCoreInterface;
 
 #ifdef __cplusplus

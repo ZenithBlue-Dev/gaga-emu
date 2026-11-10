@@ -652,6 +652,7 @@ private struct PauseMenu: View {
     @State private var showPlans = false
     @State private var showScreen = false
     @State private var showControls = false
+    @State private var coreOptions: CoreListing?
     @State private var saved: Date?
 
     private func resume() { session.resume(.menu) }
@@ -690,6 +691,7 @@ private struct PauseMenu: View {
         .sheet(isPresented: $showCheats) { CheatsSheet(session: session) }
         .sheet(isPresented: $showAchievements) { AchievementsSheet(session: session) }
         .sheet(isPresented: $showControls) { ControlsSheet(game: session.game, session: session) }
+        .sheet(item: $coreOptions) { CoreOptionsView(core: $0, session: session) }
         #if !GAGA_SIDELOAD
         .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
         #endif
@@ -739,6 +741,11 @@ private struct PauseMenu: View {
             menuRow(title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
                     action: { showScreen = true })
             menuRow(title: "Controls", value: "Layout, mapping, macros", action: { showControls = true })
+            if let core = CoreListing.listing(coreID: session.coreID) {
+                menuRow(title: "Core Options", value: session.optionsNeedRestart.isEmpty ? core.name : "Restart needed",
+                        action: { coreOptions = core })
+                    .accessibilityIdentifier("pause.coreOptions")
+            }
             if session.supportsSaveStates {
                 Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
                     Text("Quick Slot \(session.quickSlot)")

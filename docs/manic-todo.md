@@ -164,6 +164,9 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 ![Emulator Core](../maniac-emu-reference-images/walk/27-settings-emulator-core.png)
 
 - [x] Default core per platform, and per-game core picker (`Sources/UI/Games/CorePickerSheet.swift`).
+- [x] Per-core options page, in Settings > Cores and Pause > Core Options, with every option the core declares, per-game overrides and restart marking (`docs/06` section 2.4).
+- [ ] Core options during Play Nearby: block or sync changes so the two players stay in step. (P2, S)
+- [ ] JGenesis Sega CD and Europe options are not exposed. (P3, S)
 - [ ] Java ME platform. Spike failed (`docs/07` 6.4). (P3, L, blocked: spike failed)
 
 ## JIT

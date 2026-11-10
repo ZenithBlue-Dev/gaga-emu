@@ -224,6 +224,15 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
     }
 
     #if DEBUG
+    /// A copy of one libretro memory region (RETRO_MEMORY_*), for tests.
+    func memoryForTest(region: UInt32) -> Data? {
+        executionQueue.sync {
+            var size = 0
+            guard let instance, let data = coreInterface.memory_data?(instance, region, &size), size > 0 else { return nil }
+            return Data(bytes: data, count: size)
+        }
+    }
+
     /// One byte of the game's memory through the same address map the cheats use, for tests.
     func pokeReadForTest(address: UInt64) -> UInt8? {
         executionQueue.sync {
@@ -811,4 +820,37 @@ public final class GagaCoreWrapper: EmulatorCoreProtocol {
             return read ? (pixels, Int(width), Int(height)) : nil
         }
     }
+
+    // MARK: - Core options
+
+    /// The core's options as it holds them now, nil for a core that takes none.
+    func options() -> CoreOptionSet? {
+        guard let optionsFn = coreInterface.options else { return nil }
+        return executionQueue.sync { instance.flatMap { CoreOptionSet.decode(optionsFn($0)) } }
+    }
+
+    /// Nil goes back to the default. False when the core refuses it: a locked key, or a value it does not declare.
+    /// A running game hears of it at its next frame.
+    @discardableResult
+    func setOption(_ key: String, _ value: String?) -> Bool {
+        guard let setFn = coreInterface.set_option else { return false }
+        return executionQueue.sync {
+            guard let inst = instance else { return false }
+            return key.withCString { keyC in
+                guard let value else { return setFn(inst, keyC, nil) }
+                return value.withCString { setFn(inst, keyC, $0) }
+            }
+        }
+    }
+
+    /// What a core declares with no game running. Nil while any instance of it is alive, for a core built for another
+    /// bridge, and for a core that takes none. Brings the core up and down, so call it off the main thread.
+    static func probeOptions(_ interface: GagaCoreInterface) -> CoreOptionSet? {
+        guard interface.abi_version == GAGA_BRIDGE_ABI_VERSION, let optionsFn = interface.options else { return nil }
+        probeLock.lock() // The text lives until the next probe, so the next waits until this one is read.
+        defer { probeLock.unlock() }
+        return CoreOptionSet.decode(optionsFn(nil))
+    }
+
+    private static let probeLock = NSLock()
 }

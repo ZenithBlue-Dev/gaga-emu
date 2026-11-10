@@ -22,6 +22,8 @@ bool jg_cheat_add(GagaInstance* inst, uint32_t id, const char* code, bool enable
 void jg_cheat_remove(GagaInstance* inst, uint32_t id);
 void jg_cheat_set_enabled(GagaInstance* inst, uint32_t id, bool enabled);
 bool jg_self_test(char* error, size_t error_capacity);
+const char* jg_options(GagaInstance* inst);
+bool jg_set_option(GagaInstance* inst, const char* key, const char* value);
 
 // Rust's enum is a 32-bit int on this ABI; the shim passes severities as int32_t.
 _Static_assert(sizeof(GagaEventSeverity) == sizeof(int32_t), "event severity is passed as int32_t");
@@ -60,6 +62,8 @@ static const GagaCoreInterface s_interface = {
     .pause = jg_pause,
     .resume = jg_resume,
     .set_event_callback = jg_set_event_callback,
+    .options = jg_options,
+    .set_option = jg_set_option,
 };
 
 const GagaCoreInterface* Jgenesis_GetInterface(void) {

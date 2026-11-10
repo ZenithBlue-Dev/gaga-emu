@@ -1122,6 +1122,10 @@ final class AppState: ObservableObject {
     /// Controller mappings, macros and control options, in Controls.json beside Skins.
     let controls: ControlsStore
     private var controlsChanged: AnyCancellable?
+    /// Each core's options, and each game's own, in CoreOptions.json beside Skins.
+    let coreOptions: CoreOptionsStore
+    /// Set by `restart`: the game to start again once its session ends.
+    private var restartGameID: UUID?
     private let storeURL: URL
 
     struct Snapshot: Codable {
@@ -1171,6 +1175,8 @@ final class AppState: ObservableObject {
         skinDirectory = root.appendingPathComponent("Skins", isDirectory: true)
         screens = ScreenLayoutStore(url: root.appendingPathComponent("ScreenLayouts.json"))
         controls = ControlsStore(url: root.appendingPathComponent("Controls.json"))
+        coreOptions = CoreOptionsStore(url: root.appendingPathComponent("CoreOptions.json"),
+                                       cacheFolder: root.appendingPathComponent("CoreOptionDeclarations", isDirectory: true))
         wifi = WiFiTransferServer(romDirectory: romDirectory)
         filters = ImportedFilterStore(directory: root.appendingPathComponent("Filters", isDirectory: true))
         let documents = Self.rootOverride.map { $0.appendingPathComponent("Documents", isDirectory: true) }
@@ -1668,7 +1674,16 @@ final class AppState: ObservableObject {
             self?.screens.settings(platformID: platform, gameID: id, portrait: upright) ?? ScreenLayoutStore.defaults(portrait: upright)
         }
         configureControls(session, game: game)
+        session.coreOptionValues = coreOptions.values(coreID: coreID, gameID: game.id)
+        session.onCoreOptions = { [weak options = coreOptions] set in options?.remember(set, coreID: coreID) }
+        session.onOptionLearned = { [weak options = coreOptions] key, live in options?.record(coreID: coreID, key: key, live: live) }
         return session
+    }
+
+    /// Ends the game and starts it again, so core options that apply only at load take effect. The game saves as on quit.
+    func restart(_ session: GameSession) {
+        restartGameID = session.game.id
+        session.stop()
     }
 
     /// A filter that no longer builds is not a failed launch: Original runs, and the player is told.
@@ -1730,6 +1745,12 @@ final class AppState: ObservableObject {
         pendingFailure = message.map { LaunchFailure(title: game.title, message: $0) }
         activeGameID = nil
         session = nil
+        if restartGameID == game.id, message == nil {
+            restartGameID = nil
+            start(games.first { $0.id == game.id } ?? game)
+            return
+        }
+        restartGameID = nil
         syncCloud()
     }
 

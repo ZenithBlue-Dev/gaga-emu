@@ -835,6 +835,50 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("Running with the cheat")
     }
 
+    /// Settings > Cores > the walk's core: changes its first option there, then in the game opens Pause > Core
+    /// Options and changes one again, and the game keeps running.
+    func testCoreOptions() throws {
+        let app = launchApp()
+        let game = importedGame(app, "The \(title) game")
+        sleep(2)
+        try guardedTap(button(app, "Settings"), "Settings in the rail")
+        guard selectTab(app, "Cores") else { return }
+        try guardedTap(app.buttons["core.\(core)"].firstMatch, "The \(core) row")
+        try changeFirstOption(app, "Settings")
+        snapshot("Core options from Settings")
+        close(app)
+        try guardedTap(app.buttons["Library"].firstMatch, "Library")
+        try guardedTap(game, "The game")
+        let pause = app.buttons["Pause game"]
+        try arrive(pause, "The game")
+        sleep(2)
+        try guardedTap(pause, "Pause game")
+        try guardedTap(app.buttons["pause.coreOptions"].firstMatch, "Core Options in the pause menu")
+        try changeFirstOption(app, "the pause menu")
+        snapshot("Core options in the game")
+        close(app)
+        try guardedTap(button(app, "Resume"), "Resume")
+        sleep(3)
+        try arrive(pause, "The running game after a core option change")
+        snapshot("Running after a core option change")
+    }
+
+    /// Picks another value in the page's first option menu and checks the row shows it.
+    private func changeFirstOption(_ app: XCUIApplication, _ place: String) throws {
+        let picker = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'coreOption.'")).firstMatch
+        try arrive(picker, "A core option from \(place)")
+        let before = picker.value as? String
+        picker.tap()
+        sleep(1)
+        // A Picker's menu lists its values in a collection view over the page.
+        let other = app.collectionViews.firstMatch.buttons.matching(NSPredicate(format: "label != %@", before ?? "")).element(boundBy: 0)
+        try guardedTap(other, "Another value in the option's menu")
+        sleep(1)
+        XCTAssertNotEqual(picker.value as? String, before, "The option did not change from \(place)")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'coreOptions.reset.'")).firstMatch.exists,
+                      "No Reset after changing an option from \(place)")
+    }
+
     /// Settings > About > Licences.
     func testOpenLicences() throws {
         let app = launchApp()

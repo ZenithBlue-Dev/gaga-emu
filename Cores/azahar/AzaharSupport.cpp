@@ -2,6 +2,7 @@
 // settings upstream's libretro frontend has no option for.
 #include <algorithm>
 #include <cerrno>
+#include <cstdlib>
 #include <memory>
 #include <netdb.h>
 #include <string>
@@ -11,6 +12,7 @@
 #include "core/cheats/cheats.h"
 #include "core/cheats/gateway_cheat.h"
 #include "core/core.h"
+#include "core/hle/service/cfg/cfg.h"
 #include "video_core/gpu.h"
 #include "video_core/renderer_vulkan/renderer_vulkan.h"
 
@@ -61,6 +63,13 @@ extern "C" void gaga_azahar_before_present(void) {
 // workers and skips a draw meanwhile. No CPU code is generated: these are GPU shaders.
 extern "C" const char* gaga_azahar_finish_load(void) {
     Settings::values.async_shader_compilation = true;
+    // The 3DS profile name, which games show, instead of upstream's "AZAHAR". The host sets GAGA_USERNAME to
+    // letters, digits, '_' and '-' only; a 3DS name holds 10 characters. Kept in memory, not written to the NAND.
+    if (auto cfg = Service::CFG::GetModule(Core::System::GetInstance())) {
+        const char* v = getenv("GAGA_USERNAME");
+        std::string name(v && *v ? v : "GagaEmu");
+        cfg->SetUsername(std::u16string(name.begin(), name.begin() + std::min<size_t>(name.size(), 10)));
+    }
     return nullptr;
 }
 

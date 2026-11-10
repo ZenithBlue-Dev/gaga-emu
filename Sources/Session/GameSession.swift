@@ -84,6 +84,17 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     private var stateLoadedBeforeSet = false
     /// A message for the player that does not end the session.
     @Published var notice: String?
+    /// The core's options as the running game holds them. Nil for a core that takes none.
+    @Published private(set) var coreOptions: CoreOptionSet?
+    /// Options changed in play that the running game did not take: they apply after a restart.
+    @Published private(set) var optionsNeedRestart: [String] = []
+    /// The player's values the core gets before the game loads. Set before `prepare`.
+    var coreOptionValues: [String: String] = [:]
+    /// The core's declaration once the game is loaded, and whether a running game took each changed key.
+    var onCoreOptions: ((CoreOptionSet) -> Void)?
+    var onOptionLearned: ((String, Bool) -> Void)?
+    /// Changed keys and the value each should reach, checked once play resumes.
+    private var pendingOptions: [String: String] = [:]
     let saves: SaveStore
     /// Off unless the player chose it and may use it. The owner of the session supplies both checks.
     var autoSaveEnabled: @MainActor () -> Bool = { false }
@@ -281,6 +292,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
         targetFPS = core.targetFPS
         wire(core)
+        for (key, value) in coreOptionValues { core.setOption(key, value) } // Before the game, which reads them as it loads.
+        setenv("GAGA_USERNAME", PlayerName.effective, 1) // RETRO_ENVIRONMENT_GET_USERNAME and Azahar's 3DS profile.
         do {
             try await core.loadROM(path: romPath)
         } catch {
@@ -292,6 +305,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
             return
         }
         self.core = core
+        coreOptions = core.options()
+        if let coreOptions { onCoreOptions?(coreOptions) }
         if rewindEnabled {
             rewindStatus = .checking
             core.onRewindVerdict = { [weak self] reason in
@@ -520,6 +535,43 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         rumble?.resume()
         runningSince = CACurrentMediaTime()
         phase = .running
+        if !pendingOptions.isEmpty { checkOptionsSoon() }
+    }
+
+    // MARK: - Core options
+
+    /// Hands the running core a new value, or the default for nil. The core reads it once play resumes. False when the
+    /// core refuses it.
+    @discardableResult
+    func setCoreOption(_ key: String, _ value: String?) -> Bool {
+        guard let core, core.setOption(key, value) else { return false }
+        coreOptions = core.options()
+        guard let option = coreOptions?.option(key) else { return true }
+        if option.restart == true {
+            if !optionsNeedRestart.contains(option.label) { optionsNeedRestart.append(option.label) }
+        } else if option.restart == nil, let expected = value ?? option.default {
+            pendingOptions[key] = expected
+        }
+        return true
+    }
+
+    /// Whether the core read each changed value in its first half second of play. One it did not read needs a restart.
+    private func checkOptionsSoon() {
+        let pending = pendingOptions
+        pendingOptions = [:]
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            guard let self, let core, phase == .running || phase == .paused else { return }
+            let now = core.options()
+            coreOptions = now
+            for (key, expected) in pending {
+                guard let option = now?.option(key) else { continue }
+                let live = option.served == expected
+                onOptionLearned?(key, live)
+                if !live, !optionsNeedRestart.contains(option.label) { optionsNeedRestart.append(option.label) }
+            }
+            if !optionsNeedRestart.isEmpty { show("Restart the game to apply core options. Pause, then Core Options.") }
+        }
     }
 
     /// It keeps ticking behind the menu, so a controller can close what it opened.

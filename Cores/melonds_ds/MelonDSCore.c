@@ -13,6 +13,7 @@ static const GagaLibretroVariable s_variables[] = {
     { "melonds_console_mode", "ds" },
     { "melonds_sysfile_mode", "builtin" },
     { "melonds_boot_mode", "direct" },
+    { "melonds_firmware_username", "guess_username" }, // Unset falls back to "melonDS DS"; this asks for the player name.
     { "melonds_render_mode", "software" },
     { "melonds_screen_layout1", "left-right" },
     { "melonds_number_of_screen_layouts", "1" },

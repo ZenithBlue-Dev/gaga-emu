@@ -137,14 +137,14 @@ final class NetplaySession: ObservableObject {
         hello = NetplayHello(nonce: UInt64.random(in: 1...UInt64.max), coreID: core.coreID, coreVersion: core.version,
                              stateVersion: core.stateVersion, stateSize: UInt32(size), contentHash: hash,
                              players: UInt8(min(game.netplayLocalPlayers, NetplayPorts.count)),
-                             maxPlayers: UInt8(min(max(game.maxPlayers, 1), NetplayPorts.count)), name: UIDevice.current.name)
+                             maxPlayers: UInt8(min(max(game.maxPlayers, 1), NetplayPorts.count)), name: PlayerName.effective)
         host ? advertise() : browse()
     }
 
     private func advertise() {
         do {
             let listener = try NWListener(using: NetplayTransport.parameters())
-            listener.service = NWListener.Service(name: UIDevice.current.name, type: NetplayWire.serviceType)
+            listener.service = NWListener.Service(name: PlayerName.effective, type: NetplayWire.serviceType)
             listener.newConnectionHandler = { [weak self] connection in
                 Task { @MainActor in self?.incoming(connection) }
             }

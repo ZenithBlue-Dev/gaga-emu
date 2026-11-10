@@ -16,7 +16,7 @@ struct SettingsView: View {
 
     enum Category: String, CaseIterable, Identifiable {
         case play = "Play", library = "Library", display = "Display", graphics = "Graphics", controls = "Controls",
-             storage = "Storage", gagaPlus = "Gaga Plus", about = "About"
+             cores = "Cores", storage = "Storage", gagaPlus = "Gaga Plus", about = "About"
         var id: String { rawValue }
         /// Gaga Plus stays out of the app while the paywall gate is closed (docs/06 section 4.5).
         static var visible: [Category] { allCases.filter { $0 != .gagaPlus || PaywallGate.isOpen } }
@@ -88,6 +88,7 @@ struct SettingsView: View {
         case .display: DisplayPane()
         case .graphics: GraphicsPane()
         case .controls: ControlsPane()
+        case .cores: CoresPane()
         case .storage: StoragePane()
         #if GAGA_SIDELOAD
         case .gagaPlus: EmptyView()
@@ -185,8 +186,20 @@ private struct PlayPane: View {
     @ObservedObject private var account = RetroAchievements.shared
     @State private var showPlans = false
     @State private var showAchievements = false
+    @AppStorage(PlayerName.key) private var playerName = ""
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextField("Player Name", text: $playerName, prompt: Text("Player Name"))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("playerName")
+            Text("The name games and Play Nearby show: \(PlayerName.effective). Letters, digits, _ and -, 3 to 16 of them. Empty uses your Game Center name, else GagaEmu. A change applies when the next game starts.")
+                .font(.footnote).foregroundStyle(AppTheme.muted)
+        }
+        .padding(.vertical, 6)
+        Rule()
         ValueRow(title: "Total play time", value: CoreCatalog.playTime(state.totalPlayTime))
         Rule()
         ValueRow(title: "Sessions", value: "\(state.history.count)")

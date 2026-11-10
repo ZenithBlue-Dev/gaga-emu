@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-// The core's options, frozen at the values GagaEmu ships. A key not listed reads as unset, which
-// sends the core to its own default.
+// The core's options at the values GagaEmu ships. A key not listed reads as unset, which sends the core to its own
+// default. The player's values from set_option win over this table, except for locked keys (LibretroAdapter.c).
 typedef struct {
     const char* key;
     const char* value;
@@ -109,6 +109,8 @@ void gaga_lr_resume(GagaInstance* inst);
 void gaga_lr_set_event_callback(GagaInstance* inst, void (*cb)(GagaEventSeverity, int32_t, const char*, void*), void* userdata);
 void* gaga_lr_memory_data(GagaInstance* inst, uint32_t region, size_t* size);
 const void* gaga_lr_memory_map(GagaInstance* inst);
+const char* gaga_lr_options(GagaInstance* inst);
+bool gaga_lr_set_option(GagaInstance* inst, const char* key, const char* value);
 
 // First in a core's GagaCoreInterface initialiser. The core adds its ID, names, rates and state_version.
 #define GAGA_LIBRETRO_ENTRY_POINTS \
@@ -129,7 +131,9 @@ const void* gaga_lr_memory_map(GagaInstance* inst);
     .resume = gaga_lr_resume, \
     .set_event_callback = gaga_lr_set_event_callback, \
     .memory_data = gaga_lr_memory_data, \
-    .memory_map = gaga_lr_memory_map
+    .memory_map = gaga_lr_memory_map, \
+    .options = gaga_lr_options, \
+    .set_option = gaga_lr_set_option
 
 // Add for a core whose retro_cheat_set does something, with is_cheat set. Without it the menu row hides.
 #define GAGA_LIBRETRO_CHEATS \

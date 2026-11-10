@@ -17,7 +17,7 @@ use jgenesis_common::frontend::{
 use jgenesis_common::input::Player;
 use std::collections::HashMap;
 use std::convert::Infallible;
-use std::ffi::{CStr, c_char, c_void};
+use std::ffi::{CStr, CString, c_char, c_void};
 use std::fs::{self, File};
 use std::io::{self, Write};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -264,6 +264,168 @@ pub struct Instance {
     audio_userdata: *mut c_void,
     event_cb: EventCallback,
     event_userdata: *mut c_void,
+    /// The player's option values, by key, from `jg_set_option`.
+    chosen: HashMap<&'static str, &'static str>,
+    /// The values the running game has, by key: set at load, and on each live change.
+    served: HashMap<&'static str, &'static str>,
+    options_json: Option<CString>,
+}
+
+// MARK: - Core options, GagaBridge.h's `options` and `set_option`
+
+/// One upstream `GenesisEmulatorConfig` setting. Region is read only when the machine is made; the rest reach the running
+/// game through `reload_config`. Europe is left out: the host paces at 60 Hz (JgenesisCore.c).
+struct CoreOption {
+    key: &'static str,
+    label: &'static str,
+    info: &'static str,
+    category: &'static str,
+    values: &'static [(&'static str, &'static str)],
+    restart: bool,
+    get: fn(&GenesisEmulatorConfig) -> &'static str,
+    set: fn(&mut GenesisEmulatorConfig, &str),
+}
+
+const ON_OFF: &[(&str, &str)] = &[("on", "On"), ("off", "Off")];
+
+macro_rules! flag {
+    ($key:literal, $field:ident, $label:literal, $info:literal, $category:literal) => {
+        CoreOption {
+            key: $key,
+            label: $label,
+            info: $info,
+            category: $category,
+            values: ON_OFF,
+            restart: false,
+            get: |c| if c.$field { "on" } else { "off" },
+            set: |c, v| c.$field = v == "on",
+        }
+    };
+}
+
+static CATEGORIES: &[(&str, &str)] =
+    &[("system", "System"), ("video", "Video"), ("audio", "Audio"), ("input", "Input"), ("layers", "Picture Layers")];
+
+static OPTIONS: &[CoreOption] = &[
+    CoreOption {
+        key: "region",
+        label: "Region",
+        info: "Which console the game sees. Auto reads it from the game.",
+        category: "system",
+        values: &[("auto", "Auto"), ("americas", "Americas"), ("japan", "Japan")],
+        restart: true,
+        get: |c| match c.forced_region {
+            None => "auto",
+            Some(GenesisRegion::Japan) => "japan",
+            Some(_) => "americas",
+        },
+        set: |c, v| {
+            c.forced_region = match v {
+                "americas" => Some(GenesisRegion::Americas),
+                "japan" => Some(GenesisRegion::Japan),
+                _ => None,
+            }
+        },
+    },
+    CoreOption {
+        key: "m68k_clock_divider",
+        label: "CPU Overclock",
+        info: "Runs the 68000 faster, which can smooth slowdown. Some games break.",
+        category: "system",
+        values: &[("7", "Off"), ("6", "1.17x"), ("5", "1.4x"), ("4", "1.75x")],
+        restart: false,
+        get: |c| match c.m68k_clock_divider {
+            6 => "6",
+            5 => "5",
+            4 => "4",
+            _ => "7",
+        },
+        set: |c, v| c.m68k_clock_divider = v.parse().unwrap_or(7),
+    },
+    flag!("remove_sprite_limits", remove_sprite_limits, "Remove Sprite Limit", "Draws every sprite on a line, so fewer flicker. Some games rely on the limit.", "video"),
+    flag!("non_linear_color_scale", non_linear_color_scale, "Console Colours", "The console's own brightness steps, not even ones.", "video"),
+    flag!("deinterlace", deinterlace, "Deinterlace", "Shows interlaced pictures whole rather than as alternate lines.", "video"),
+    flag!("render_vertical_border", render_vertical_border, "Top and Bottom Border", "Shows the border above and below the picture.", "video"),
+    flag!("render_horizontal_border", render_horizontal_border, "Side Border", "Shows the border left and right of the picture.", "video"),
+    flag!("quantize_ym2612_output", quantize_ym2612_output, "FM Output Steps", "Rounds the FM chip's output as the console's does.", "audio"),
+    flag!("emulate_ym2612_ladder_effect", emulate_ym2612_ladder_effect, "FM Ladder Effect", "The distortion of the first Mega Drive's FM chip.", "audio"),
+    flag!("genesis_lpf_enabled", genesis_lpf_enabled, "Low-Pass Filter", "Softens the sound as the console's output filter does.", "audio"),
+    flag!("ym2612_enabled", ym2612_enabled, "FM Sound", "The YM2612 FM chip.", "audio"),
+    flag!("psg_enabled", psg_enabled, "PSG Sound", "The square-wave sound chip.", "audio"),
+    flag!("auto_3_button_mode", auto_3_button_mode, "3-Button Pad for Old Games", "Plugs in a 3-button pad for games that misread a 6-button one.", "input"),
+    flag!("allow_opposing_joypad_directions", allow_opposing_joypad_directions, "Allow Opposing Directions", "Lets Left and Right, or Up and Down, be held at once.", "input"),
+    flag!("plane_a_enabled", plane_a_enabled, "Plane A", "The front background layer.", "layers"),
+    flag!("plane_b_enabled", plane_b_enabled, "Plane B", "The back background layer.", "layers"),
+    flag!("sprites_enabled", sprites_enabled, "Sprites", "Characters and objects.", "layers"),
+    flag!("window_enabled", window_enabled, "Window", "The fixed layer, often a status bar.", "layers"),
+];
+
+fn json_string(text: Option<&str>) -> String {
+    text.map_or_else(|| "null".to_owned(), |t| format!("\"{}\"", t.replace('\\', "\\\\").replace('"', "\\\"")))
+}
+
+/// The JSON GagaBridge.h describes. With no instance nothing runs, so nothing is chosen or served.
+fn options_json(m: Option<&Instance>) -> String {
+    let defaults = GenesisEmulatorConfig::default();
+    let categories: Vec<String> = CATEGORIES
+        .iter()
+        .map(|(key, label)| format!("{{\"key\":\"{key}\",\"label\":\"{label}\",\"info\":null}}"))
+        .collect();
+    let options: Vec<String> = OPTIONS
+        .iter()
+        .map(|o| {
+            let values: Vec<String> =
+                o.values.iter().map(|(value, label)| format!("{{\"value\":\"{value}\",\"label\":\"{label}\"}}")).collect();
+            format!(
+                "{{\"key\":\"{}\",\"label\":{},\"info\":{},\"category\":\"{}\",\"default\":\"{}\",\"value\":{},\"served\":{},\"visible\":true,\"locked\":false,\"restart\":{},\"values\":[{}]}}",
+                o.key,
+                json_string(Some(o.label)),
+                json_string(Some(o.info)),
+                o.category,
+                (o.get)(&defaults),
+                json_string(m.and_then(|m| m.chosen.get(o.key).copied())),
+                json_string(m.and_then(|m| m.served.get(o.key).copied())),
+                o.restart,
+                values.join(",")
+            )
+        })
+        .collect();
+    format!("{{\"categories\":[{}],\"options\":[{}]}}", categories.join(","), options.join(","))
+}
+
+impl Instance {
+    /// Every option's value as the machine was made with it.
+    fn serve_all(&mut self) {
+        for o in OPTIONS {
+            self.served.insert(o.key, (o.get)(&self.config));
+        }
+    }
+
+    fn set_option(&mut self, key: &str, value: Option<&str>) -> bool {
+        let Some(o) = OPTIONS.iter().find(|o| o.key == key) else { return false };
+        let chosen = match value {
+            None => None,
+            Some(v) => match o.values.iter().find(|(known, _)| *known == v) {
+                Some((known, _)) => Some(*known),
+                None => return false,
+            },
+        };
+        (o.set)(&mut self.config, chosen.unwrap_or_else(|| (o.get)(&GenesisEmulatorConfig::default())));
+        match chosen {
+            Some(v) => self.chosen.insert(o.key, v),
+            None => self.chosen.remove(o.key),
+        };
+        if !o.restart && self.emulator.is_some() {
+            let config = &self.config;
+            let reloaded = self.emulator.as_mut().is_some_and(|e| catch_unwind(AssertUnwindSafe(|| e.reload_config(config))).is_ok());
+            if !reloaded {
+                self.stop("JGenesis stopped this game.");
+                return true;
+            }
+            self.served.insert(o.key, (o.get)(&self.config));
+        }
+        true
+    }
 }
 
 impl Instance {
@@ -556,8 +718,40 @@ pub extern "C" fn jg_create(system_dir: *const c_char, save_dir: *const c_char) 
         audio_userdata: std::ptr::null_mut(),
         event_cb: None,
         event_userdata: std::ptr::null_mut(),
+        chosen: HashMap::new(),
+        served: HashMap::new(),
+        options_json: None,
     };
     Box::into_raw(Box::new(instance)).cast()
+}
+
+/// # Safety
+/// `inst` is NULL or as in `instance`. The text stays valid until the next call with the same `inst`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn jg_options(inst: *mut c_void) -> *const c_char {
+    static PROBE: std::sync::OnceLock<CString> = std::sync::OnceLock::new();
+    match unsafe { instance(inst) } {
+        Some(m) => {
+            let text = CString::new(options_json(Some(m))).ok();
+            m.options_json = text;
+            m.options_json.as_ref().map_or(std::ptr::null(), |t| t.as_ptr())
+        }
+        None => PROBE.get_or_init(|| CString::new(options_json(None)).unwrap_or_default()).as_ptr(),
+    }
+}
+
+/// # Safety
+/// See `instance`. `key` is NUL-terminated; `value` is NUL-terminated or NULL for the default.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn jg_set_option(inst: *mut c_void, key: *const c_char, value: *const c_char) -> bool {
+    let Some(m) = (unsafe { instance(inst) }) else { return false };
+    if key.is_null() {
+        return false;
+    }
+    // SAFETY: the host passes NUL-terminated strings.
+    let key = unsafe { CStr::from_ptr(key) }.to_string_lossy();
+    let value = (!value.is_null()).then(|| unsafe { CStr::from_ptr(value) }.to_string_lossy());
+    m.set_option(&key, value.as_deref())
 }
 
 /// # Safety
@@ -579,7 +773,11 @@ pub unsafe extern "C" fn jg_destroy(inst: *mut c_void) {
 pub unsafe extern "C" fn jg_load_rom(inst: *mut c_void, rom_path: *const c_char, _data: *const c_void, _size: usize) -> bool {
     let Some(m) = (unsafe { instance(inst) }) else { return false };
     let Some(path) = path_from(rom_path) else { return false };
-    m.emulator.is_none() && m.load(&path)
+    let loaded = m.emulator.is_none() && m.load(&path);
+    if loaded {
+        m.serve_all();
+    }
+    loaded
 }
 
 /// # Safety

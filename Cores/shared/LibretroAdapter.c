@@ -49,6 +49,47 @@ typedef struct {
 } LrCheat;
 
 typedef struct {
+    char* value;
+    char* label;
+} LrOptionValue;
+
+// One option as the core declared it, copied: cores build some tables on the stack.
+typedef struct {
+    char* key;
+    char* label;
+    char* info;
+    char* category;
+    LrOptionValue* values;
+    unsigned value_count;
+    char* declared_default;
+    bool visible;
+    char* served; // What GET_VARIABLE last handed the core for this key. NULL until it asks.
+} LrOption;
+
+typedef struct {
+    char* key;
+    char* label;
+    char* info;
+} LrCategory;
+
+typedef struct {
+    char* key;
+    char* value;
+} LrSetting; // The player's value, from set_option.
+
+typedef struct {
+    LrOption* options;
+    size_t count;
+    LrCategory* categories;
+    size_t category_count;
+    LrSetting* settings;
+    size_t setting_count;
+    bool (*update_display)(void); // SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK.
+    bool updating_display;        // The core's reads inside that callback are not the core taking a value.
+    char* json;
+} LrOptions;
+
+typedef struct {
     char system_dir[PATH_MAX];
     char save_dir[PATH_MAX];
     void (*video_cb)(const GagaFrameDescriptor*, void*);
@@ -58,6 +99,7 @@ typedef struct {
     void (*event_cb)(GagaEventSeverity, int32_t, const char*, void*);
     void* event_userdata;
 
+    bool initialized; // retro_init has run (load_rom), so destroy runs retro_deinit.
     bool loaded;
     bool save_write_failed;
     bool bad_video_reported;
@@ -80,6 +122,7 @@ typedef struct {
     bool variables_dirty;  // Options changed since the core last asked (GET_VARIABLE_UPDATE).
     struct retro_memory_descriptor* memory_descriptors; // Copied from SET_MEMORY_MAPS, for memory_map.
     struct retro_memory_map memory_map;
+    LrOptions options;
 } LrInstance;
 
 // The instance libretro's callbacks reach. Set before the core can call back and cleared before the
@@ -124,6 +167,436 @@ static void lr_emit(LrInstance* a, GagaEventSeverity severity, int32_t code, con
 
 static void lr_error(char* error, size_t capacity, const char* format, const char* detail) {
     if (error && capacity > 0) snprintf(error, capacity, format, detail);
+}
+
+// MARK: - Core options
+
+// libretro.h's option structs and commands, mirrored: a core's own libretro.h may predate them. Layouts are libretro's ABI.
+#define LR_OPTION_VALUES_MAX 128
+enum {
+    LR_ENV_GET_CORE_OPTIONS_VERSION = 52, LR_ENV_SET_CORE_OPTIONS = 53, LR_ENV_SET_CORE_OPTIONS_INTL = 54,
+    LR_ENV_SET_CORE_OPTIONS_DISPLAY = 55, LR_ENV_SET_CORE_OPTIONS_V2 = 67, LR_ENV_SET_CORE_OPTIONS_V2_INTL = 68,
+    LR_ENV_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK = 69, LR_ENV_SET_VARIABLE = 70,
+};
+typedef struct { const char* value; const char* label; } LrCoreOptionValue;
+typedef struct {
+    const char* key; const char* desc; const char* info;
+    LrCoreOptionValue values[LR_OPTION_VALUES_MAX];
+    const char* default_value;
+} LrCoreOptionV1;
+typedef struct { const char* key; const char* desc; const char* info; } LrCoreOptionCategory;
+typedef struct {
+    const char* key; const char* desc; const char* desc_categorized; const char* info; const char* info_categorized;
+    const char* category_key;
+    LrCoreOptionValue values[LR_OPTION_VALUES_MAX];
+    const char* default_value;
+} LrCoreOptionV2;
+typedef struct { const LrCoreOptionCategory* categories; const LrCoreOptionV2* definitions; } LrCoreOptionsV2;
+typedef struct { const void* us; const void* local; } LrCoreOptionsIntl; // English is always "us".
+typedef struct { const char* key; bool visible; } LrCoreOptionDisplay;
+typedef struct { bool (*callback)(void); } LrCoreOptionsUpdateDisplay;
+
+// Keys the player cannot change, by any of these words, case ignored: code generation (no JIT, docs/04), the renderer
+// and threads each core is built for, network, where saves go, and what the host itself drives (screen layout, touch,
+// the multiplayer adapter). The core still gets GagaEmu's value.
+static const char* const s_locked_words[] = {
+    // "dyna", not the whole word, which the no-JIT gate refuses in a binary.
+    "jit", "dyna", "drc", "cpucore", "cpu_core", "executionmode", "fastmem", "renderer", "render_mode", "backend",
+    "graphics_api", "rdp-plugin", "rsp-plugin", "thread", "wlan", "upnp", "bba", "dcnet", "netlink", "network", "gdb",
+    "voice_chat", "memcard", "card1type", "card2type", "save_method", "save_path", "bram", "shared_int", "shared_ext",
+    "nvram", "vmu", "write_redirect", "_config", "paths", "vicerc", "sysfile", "dump_textures", "replace_textures",
+    "custom_textures", "track_textures", "texture_dump", "texture_replace", "shader_cache", "cdimagecache", "cd_access",
+    "multitap", "screen_layout", "layout_option", "swap_screen", "screen_gap", "touch_mode", "show_cursor", "mouse",
+    "input_type", "analog_function", NULL,
+};
+
+// A core may read an option from its own thread while the host sets one. Recursive: the display callback that
+// set_option runs reads options too.
+static pthread_mutex_t s_options_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+
+static char* lr_strdup(const char* text) { return text ? strdup(text) : NULL; }
+
+static bool lr_option_locked(const char* key) {
+    for (const char* const* word = s_locked_words; *word; ++word) {
+        if (strcasestr(key, *word)) return true;
+    }
+    const GagaLibretroMultitap* tap = gaga_libretro_core.multitap;
+    for (const GagaLibretroVariable* v = tap ? tap->variables : NULL; v && v->key; ++v) {
+        if (strcmp(v->key, key) == 0) return true;
+    }
+    return false;
+}
+
+static const char* lr_lookup(const GagaLibretroVariable* table, const char* key) {
+    for (const GagaLibretroVariable* v = table; v && v->key; ++v) {
+        if (strcmp(v->key, key) == 0) return v->value;
+    }
+    return NULL;
+}
+
+static void lr_options_clear_declared(LrOptions* o) {
+    for (size_t i = 0; i < o->count; ++i) {
+        LrOption* option = &o->options[i];
+        for (unsigned v = 0; v < option->value_count; ++v) {
+            free(option->values[v].value);
+            free(option->values[v].label);
+        }
+        free(option->values);
+        free(option->key);
+        free(option->label);
+        free(option->info);
+        free(option->category);
+        free(option->declared_default);
+        free(option->served);
+    }
+    for (size_t i = 0; i < o->category_count; ++i) {
+        free(o->categories[i].key);
+        free(o->categories[i].label);
+        free(o->categories[i].info);
+    }
+    free(o->options);
+    free(o->categories);
+    o->options = NULL;
+    o->categories = NULL;
+    o->count = o->category_count = 0;
+    o->update_display = NULL;
+}
+
+static void lr_options_free(LrOptions* o) {
+    lr_options_clear_declared(o);
+    for (size_t i = 0; i < o->setting_count; ++i) {
+        free(o->settings[i].key);
+        free(o->settings[i].value);
+    }
+    free(o->settings);
+    free(o->json);
+    *o = (LrOptions){ 0 };
+}
+
+static LrOption* lr_option_find(LrOptions* o, const char* key) {
+    for (size_t i = 0; i < o->count; ++i) {
+        if (strcmp(o->options[i].key, key) == 0) return &o->options[i];
+    }
+    return NULL;
+}
+
+// The declared copy of value, or NULL when the core did not declare it. The core gets this copy, which stays put until the
+// core declares again, as RetroArch's does: a core may keep the pointer.
+static const char* lr_option_allows(const LrOption* option, const char* value) {
+    for (unsigned v = 0; v < option->value_count; ++v) {
+        if (strcmp(option->values[v].value, value) == 0) return option->values[v].value;
+    }
+    return NULL;
+}
+
+static LrSetting* lr_setting_find(LrOptions* o, const char* key) {
+    for (size_t i = 0; i < o->setting_count; ++i) {
+        if (strcmp(o->settings[i].key, key) == 0) return &o->settings[i];
+    }
+    return NULL;
+}
+
+// GagaEmu's value when the player sets none: the core's shipped table, else what the core declared.
+static const char* lr_option_default(const LrOption* option) {
+    const char* shipped = lr_lookup(gaga_libretro_core.variables, option->key);
+    if (shipped) return shipped;
+    if (option->declared_default) return option->declared_default;
+    return option->value_count ? option->values[0].value : NULL;
+}
+
+// values ends at a NULL value or after LR_OPTION_VALUES_MAX. A replaced declaration keeps any key declared twice once.
+static void lr_option_add(LrOptions* o, const char* key, const char* label, const char* info, const char* category,
+                          const LrCoreOptionValue* values, unsigned max_values, const char* declared_default) {
+    if (!key || lr_option_find(o, key)) return;
+    LrOption* grown = realloc(o->options, (o->count + 1) * sizeof(LrOption));
+    if (!grown) return;
+    o->options = grown;
+    LrOption* option = &o->options[o->count];
+    *option = (LrOption){ .key = lr_strdup(key), .label = lr_strdup(label ? label : key), .info = lr_strdup(info),
+                          .category = lr_strdup(category), .declared_default = lr_strdup(declared_default), .visible = true };
+    unsigned count = 0;
+    while (count < max_values && values[count].value) ++count;
+    option->values = count ? calloc(count, sizeof(LrOptionValue)) : NULL;
+    for (unsigned v = 0; option->values && v < count; ++v) {
+        option->values[v].value = lr_strdup(values[v].value);
+        option->values[v].label = lr_strdup(values[v].label ? values[v].label : values[v].value);
+    }
+    option->value_count = option->values ? count : 0;
+    if (!option->key || !option->label) return; // Out of memory: the slot is not counted, and its strings leak.
+    ++o->count;
+}
+
+// RETRO_ENVIRONMENT_SET_VARIABLES: "Label; first|second|third", the first value the default.
+static void lr_options_declare_variables(LrOptions* o, const struct retro_variable* variables) {
+    lr_options_clear_declared(o);
+    for (const struct retro_variable* v = variables; v && v->key; ++v) {
+        const char* split = v->value ? strstr(v->value, "; ") : NULL;
+        if (!split) continue;
+        char* label = strndup(v->value, (size_t)(split - v->value));
+        char* list = strdup(split + 2);
+        LrCoreOptionValue values[LR_OPTION_VALUES_MAX] = { { 0 } };
+        unsigned count = 0;
+        char* cursor = NULL;
+        for (char* item = list ? strtok_r(list, "|", &cursor) : NULL; item && count < LR_OPTION_VALUES_MAX; item = strtok_r(NULL, "|", &cursor)) {
+            values[count++].value = item;
+        }
+        if (label && count) lr_option_add(o, v->key, label, NULL, NULL, values, count, values[0].value);
+        free(label);
+        free(list);
+    }
+}
+
+static void lr_options_declare_v1(LrOptions* o, const LrCoreOptionV1* definitions) {
+    lr_options_clear_declared(o);
+    for (const LrCoreOptionV1* d = definitions; d && d->key; ++d) {
+        lr_option_add(o, d->key, d->desc, d->info, NULL, d->values, LR_OPTION_VALUES_MAX, d->default_value);
+    }
+}
+
+static void lr_options_declare_v2(LrOptions* o, const LrCoreOptionsV2* options) {
+    lr_options_clear_declared(o);
+    if (!options) return;
+    for (const LrCoreOptionCategory* c = options->categories; c && c->key; ++c) {
+        LrCategory* grown = realloc(o->categories, (o->category_count + 1) * sizeof(LrCategory));
+        if (!grown) break;
+        o->categories = grown;
+        o->categories[o->category_count++] = (LrCategory){ lr_strdup(c->key), lr_strdup(c->desc ? c->desc : c->key), lr_strdup(c->info) };
+    }
+    for (const LrCoreOptionV2* d = options->definitions; d && d->key; ++d) {
+        // Shown under its category, as RetroArch shows it there.
+        const char* label = d->category_key && d->desc_categorized ? d->desc_categorized : d->desc;
+        const char* info = d->category_key && d->info_categorized ? d->info_categorized : d->info;
+        lr_option_add(o, d->key, label, info, d->category_key, d->values, LR_OPTION_VALUES_MAX, d->default_value);
+    }
+}
+
+// What GET_VARIABLE hands the core: the multiplayer adapter's table while it is in, else the player's value when it is
+// one the core declared, else the shipped table, else nothing, which sends the core to its own default.
+static const char* lr_option_value(LrInstance* a, const char* key) {
+    const GagaLibretroMultitap* tap = gaga_libretro_core.multitap;
+    const char* value = a->multitap_in && tap ? lr_lookup(tap->variables, key) : NULL;
+    LrOption* option = lr_option_find(&a->options, key);
+    LrSetting* setting = value ? NULL : lr_setting_find(&a->options, key);
+    if (setting && option && !lr_option_locked(key)) value = lr_option_allows(option, setting->value);
+    if (!value) value = lr_lookup(gaga_libretro_core.variables, key);
+    const char* served = option ? (value ? value : lr_option_default(option)) : NULL;
+    if (served && !a->options.updating_display && (!option->served || strcmp(option->served, served) != 0)) {
+        free(option->served);
+        option->served = strdup(served);
+    }
+    return value;
+}
+
+static void lr_options_update_display(LrInstance* a) {
+    if (!a->options.update_display) return;
+    a->options.updating_display = true;
+    a->options.update_display();
+    a->options.updating_display = false;
+}
+
+typedef struct {
+    char* text;
+    size_t length;
+    size_t capacity;
+    bool failed;
+} LrJson;
+
+static void lr_json_raw(LrJson* j, const char* text, size_t length) {
+    if (j->failed) return;
+    if (j->length + length + 1 > j->capacity) {
+        size_t capacity = (j->length + length + 1) * 2;
+        char* grown = realloc(j->text, capacity);
+        if (!grown) {
+            j->failed = true;
+            return;
+        }
+        j->text = grown;
+        j->capacity = capacity;
+    }
+    memcpy(j->text + j->length, text, length);
+    j->length += length;
+    j->text[j->length] = '\0';
+}
+
+static void lr_json_text(LrJson* j, const char* text) { lr_json_raw(j, text, strlen(text)); }
+
+// A JSON string, or null. Control characters are escaped; other bytes pass as the core's UTF-8.
+static void lr_json_string(LrJson* j, const char* text) {
+    if (!text) {
+        lr_json_text(j, "null");
+        return;
+    }
+    lr_json_text(j, "\"");
+    for (const unsigned char* c = (const unsigned char*)text; *c; ++c) {
+        char escaped[8];
+        if (*c == '"' || *c == '\\') {
+            snprintf(escaped, sizeof(escaped), "\\%c", *c);
+            lr_json_text(j, escaped);
+        } else if (*c < 0x20) {
+            snprintf(escaped, sizeof(escaped), "\\u%04x", *c);
+            lr_json_text(j, escaped);
+        } else {
+            lr_json_raw(j, (const char*)c, 1);
+        }
+    }
+    lr_json_text(j, "\"");
+}
+
+static void lr_json_field(LrJson* j, const char* name, const char* value, bool first) {
+    lr_json_text(j, first ? "\"" : ",\"");
+    lr_json_text(j, name);
+    lr_json_text(j, "\":");
+    lr_json_string(j, value);
+}
+
+// The text GagaBridge.h describes, or NULL when the core declared no options.
+static char* lr_options_json(LrOptions* o) {
+    if (o->count == 0) return NULL;
+    LrJson j = { 0 };
+    lr_json_text(&j, "{\"categories\":[");
+    for (size_t i = 0; i < o->category_count; ++i) {
+        lr_json_text(&j, i ? ",{" : "{");
+        lr_json_field(&j, "key", o->categories[i].key, true);
+        lr_json_field(&j, "label", o->categories[i].label, false);
+        lr_json_field(&j, "info", o->categories[i].info, false);
+        lr_json_text(&j, "}");
+    }
+    lr_json_text(&j, "],\"options\":[");
+    for (size_t i = 0; i < o->count; ++i) {
+        const LrOption* option = &o->options[i];
+        LrSetting* setting = lr_setting_find(o, option->key);
+        lr_json_text(&j, i ? ",{" : "{");
+        lr_json_field(&j, "key", option->key, true);
+        lr_json_field(&j, "label", option->label, false);
+        lr_json_field(&j, "info", option->info, false);
+        lr_json_field(&j, "category", option->category, false);
+        lr_json_field(&j, "default", lr_option_default(option), false);
+        lr_json_field(&j, "value", setting ? setting->value : NULL, false);
+        lr_json_field(&j, "served", option->served, false);
+        lr_json_text(&j, option->visible ? ",\"visible\":true" : ",\"visible\":false");
+        lr_json_text(&j, lr_option_locked(option->key) ? ",\"locked\":true" : ",\"locked\":false");
+        lr_json_text(&j, ",\"values\":[");
+        for (unsigned v = 0; v < option->value_count; ++v) {
+            lr_json_text(&j, v ? ",{" : "{");
+            lr_json_field(&j, "value", option->values[v].value, true);
+            lr_json_field(&j, "label", option->values[v].label, false);
+            lr_json_text(&j, "}");
+        }
+        lr_json_text(&j, "]}");
+    }
+    lr_json_text(&j, "]}");
+    if (j.failed) {
+        free(j.text);
+        return NULL;
+    }
+    return j.text;
+}
+
+// Handles the option commands; false for any other.
+static bool lr_options_environment(LrInstance* a, unsigned command, void* data, bool* result) {
+    LrOptions* o = &a->options;
+    switch (command) {
+    case RETRO_ENVIRONMENT_SET_VARIABLES:
+        lr_options_declare_variables(o, data);
+        break;
+    case LR_ENV_GET_CORE_OPTIONS_VERSION:
+        *(unsigned*)data = 2;
+        break;
+    case LR_ENV_SET_CORE_OPTIONS:
+        lr_options_declare_v1(o, data);
+        break;
+    case LR_ENV_SET_CORE_OPTIONS_INTL:
+        lr_options_declare_v1(o, data ? ((const LrCoreOptionsIntl*)data)->us : NULL);
+        break;
+    case LR_ENV_SET_CORE_OPTIONS_V2:
+        lr_options_declare_v2(o, data);
+        break;
+    case LR_ENV_SET_CORE_OPTIONS_V2_INTL:
+        lr_options_declare_v2(o, data ? ((const LrCoreOptionsIntl*)data)->us : NULL);
+        break;
+    case LR_ENV_SET_CORE_OPTIONS_DISPLAY: {
+        const LrCoreOptionDisplay* display = data;
+        LrOption* option = display && display->key ? lr_option_find(o, display->key) : NULL;
+        if (option) option->visible = display->visible;
+        break;
+    }
+    case LR_ENV_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK:
+        o->update_display = data ? ((const LrCoreOptionsUpdateDisplay*)data)->callback : NULL;
+        break;
+    case LR_ENV_SET_VARIABLE: { // The core changes one of its own values, as a frontend menu would.
+        const struct retro_variable* variable = data;
+        if (!variable) break; // NULL asks whether the frontend supports this.
+        LrOption* option = variable->key ? lr_option_find(o, variable->key) : NULL;
+        if (!option || !variable->value || !lr_option_allows(option, variable->value)) {
+            *result = false;
+            return true;
+        }
+        LrSetting* setting = lr_setting_find(o, variable->key);
+        char* value = strdup(variable->value);
+        if (setting && value) {
+            free(setting->value);
+            setting->value = value;
+        } else if (value) {
+            LrSetting* grown = realloc(o->settings, (o->setting_count + 1) * sizeof(LrSetting));
+            if (grown) {
+                o->settings = grown;
+                o->settings[o->setting_count++] = (LrSetting){ strdup(variable->key), value };
+            } else {
+                free(value);
+            }
+        }
+        break;
+    }
+    default:
+        return false;
+    }
+    *result = true;
+    return true;
+}
+
+static bool lr_set_option(LrInstance* a, const char* key, const char* value) {
+    if (!a || !key || lr_option_locked(key)) return false;
+    LrOptions* o = &a->options;
+    LrOption* option = lr_option_find(o, key);
+    if (value && option && !lr_option_allows(option, value)) return false;
+    LrSetting* setting = lr_setting_find(o, key);
+    if (!value) {
+        if (setting) {
+            free(setting->key);
+            free(setting->value);
+            *setting = o->settings[--o->setting_count];
+        }
+    } else {
+        char* copy = strdup(value);
+        if (!copy) return false;
+        if (setting) {
+            free(setting->value);
+            setting->value = copy;
+        } else {
+            LrSetting* grown = realloc(o->settings, (o->setting_count + 1) * sizeof(LrSetting));
+            char* key_copy = strdup(key);
+            if (!grown || !key_copy) {
+                if (grown) o->settings = grown;
+                free(copy);
+                free(key_copy);
+                return false;
+            }
+            o->settings = grown;
+            o->settings[o->setting_count++] = (LrSetting){ key_copy, copy };
+        }
+    }
+    a->variables_dirty = true;
+    // Before a game is loaded a core's display callback may reach state that is not there yet.
+    if (a->loaded) lr_options_update_display(a);
+    return true;
+}
+
+bool gaga_lr_set_option(GagaInstance* inst, const char* key, const char* value) {
+    LR_CORE_FENV;
+    pthread_mutex_lock(&s_options_lock);
+    bool set = lr_set_option((LrInstance*)inst, key, value);
+    pthread_mutex_unlock(&s_options_lock);
+    return set;
 }
 
 // MARK: - Environment
@@ -180,6 +653,15 @@ static bool lr_environment(unsigned command, void* data) {
     case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
         *(const char**)data = a->system_dir;
         return true;
+    case RETRO_ENVIRONMENT_GET_USERNAME: {
+        // The player's name, set and sanitised by the host before load (AppState.playerName). A copy, so a later
+        // setenv cannot pull the pointer from under the core.
+        static char name[33];
+        const char* v = getenv("GAGA_USERNAME");
+        snprintf(name, sizeof name, "%s", v && *v ? v : "GagaEmu");
+        *(const char**)data = name;
+        return true;
+    }
     case RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY:
         *(const char**)data = a->save_dir;
         return true;
@@ -191,21 +673,10 @@ static bool lr_environment(unsigned command, void* data) {
     }
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
         struct retro_variable* variable = data;
-        variable->value = NULL;
-        const GagaLibretroMultitap* tap = gaga_libretro_core.multitap;
-        for (const GagaLibretroVariable* v = a->multitap_in && tap ? tap->variables : NULL; v && v->key; ++v) {
-            if (strcmp(v->key, variable->key) == 0) {
-                variable->value = v->value;
-                return true;
-            }
-        }
-        for (const GagaLibretroVariable* v = gaga_libretro_core.variables; v && v->key; ++v) {
-            if (strcmp(v->key, variable->key) == 0) {
-                variable->value = v->value;
-                return true;
-            }
-        }
-        return false;
+        pthread_mutex_lock(&s_options_lock);
+        variable->value = variable->key ? lr_option_value(a, variable->key) : NULL;
+        pthread_mutex_unlock(&s_options_lock);
+        return variable->value != NULL;
     }
     case RETRO_ENVIRONMENT_SET_MEMORY_MAPS: {
         // A copy: a core may build the table on its stack. The regions it points to live until unload.
@@ -220,8 +691,6 @@ static bool lr_environment(unsigned command, void* data) {
         a->memory_map.num_descriptors = map->num_descriptors;
         return true;
     }
-    case RETRO_ENVIRONMENT_SET_VARIABLES:
-        return true; // Values come from the table above, but melonDS DS reads none until this succeeds.
     case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
         *(bool*)data = a->variables_dirty;
         a->variables_dirty = false;
@@ -250,12 +719,18 @@ static bool lr_environment(unsigned command, void* data) {
     case RETRO_ENVIRONMENT_GET_RUMBLE_INTERFACE:
         ((struct retro_rumble_interface*)data)->set_rumble_state = lr_set_rumble;
         return true;
-    default:
+    default: {
+        bool result = false;
+        pthread_mutex_lock(&s_options_lock);
+        bool handled = lr_options_environment(a, command, data, &result);
+        pthread_mutex_unlock(&s_options_lock);
+        if (handled) return result;
 #ifdef GAGA_LIBRETRO_VULKAN
         return lr_vk_environment(command, data);
 #else
-        return false; // No messages, VFS, core options UI, hardware rendering or other frontend extras.
+        return false; // No messages, VFS, hardware rendering or other frontend extras.
 #endif
+    }
     }
 }
 
@@ -530,7 +1005,8 @@ GagaInstance* gaga_lr_create(const char* system_dir, const char* save_dir) {
     retro_set_audio_sample_batch(lr_audio_batch);
     retro_set_input_poll(lr_input_poll);
     retro_set_input_state(lr_input_state);
-    retro_init();
+    // retro_init waits for load_rom, so the player's options, set between the two, are there when the core first reads
+    // them, as RetroArch has them from its options file by then.
     return (GagaInstance*)a;
 }
 
@@ -558,14 +1034,17 @@ void gaga_lr_destroy(GagaInstance* inst) {
         retro_unload_game();
 #endif
     }
-    retro_deinit();
-    if (gaga_libretro_core.after_deinit) gaga_libretro_core.after_deinit();
+    if (a->initialized) {
+        retro_deinit();
+        if (gaga_libretro_core.after_deinit) gaga_libretro_core.after_deinit();
+    }
     lr_release();
     for (size_t i = 0; i < 2; ++i) free(a->batteries[i].written);
     for (size_t i = 0; i < a->cheat_count; ++i) free(a->cheats[i].code);
     free(a->cheats);
     free(a->opaque);
     free(a->memory_descriptors);
+    lr_options_free(&a->options);
     free(a);
 }
 
@@ -624,6 +1103,10 @@ bool gaga_lr_load_rom(GagaInstance* inst, const char* rom_path, const void* rom_
     if (refusal) {
         lr_emit(a, GAGA_EVENT_FATAL, LR_EVENT_BAD_ROM, refusal);
         return false;
+    }
+    if (!a->initialized) {
+        a->initialized = true;
+        retro_init();
     }
 
     struct retro_system_info system = { 0 };
@@ -954,8 +1437,36 @@ bool gaga_lr_self_test(char* error, size_t error_capacity) {
         retro_init();
         retro_deinit();
         if (gaga_libretro_core.after_deinit) gaga_libretro_core.after_deinit();
+        lr_options_free(&s_probe.options);
         lr_release();
     }
     if (!api) lr_error(error, error_capacity, "%s was built for another libretro version.", gaga_libretro_core.name);
     return api;
+}
+
+// With an instance: its options now. Without: the core comes up with no game, as in the self-test, says what it
+// declares, and goes down again. Options a core declares only once a game loads appear only with an instance.
+const char* gaga_lr_options(GagaInstance* inst) {
+    LR_CORE_FENV;
+    LrInstance* a = (LrInstance*)inst;
+    if (a) {
+        pthread_mutex_lock(&s_options_lock);
+        if (a->loaded) lr_options_update_display(a);
+        free(a->options.json);
+        a->options.json = lr_options_json(&a->options);
+        pthread_mutex_unlock(&s_options_lock);
+        return a->options.json;
+    }
+    static char* s_probe_json; // Kept until the next probe, as GagaBridge.h promises.
+    if (retro_api_version() != RETRO_API_VERSION || !lr_claim(&s_probe)) return NULL;
+    free(s_probe_json);
+    retro_set_environment(lr_environment);
+    retro_init();
+    lr_options_update_display(&s_probe);
+    s_probe_json = lr_options_json(&s_probe.options);
+    retro_deinit();
+    if (gaga_libretro_core.after_deinit) gaga_libretro_core.after_deinit();
+    lr_options_free(&s_probe.options);
+    lr_release();
+    return s_probe_json;
 }
