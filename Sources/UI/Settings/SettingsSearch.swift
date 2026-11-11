@@ -22,12 +22,49 @@ private struct OpenSettingKey: EnvironmentKey {
     static let defaultValue: (SettingsTarget) -> Void = { _ in }
 }
 
+private struct SettingHighlightKey: EnvironmentKey {
+    static let defaultValue: String? = nil
+}
+
 extension EnvironmentValues {
     /// Opens a Settings sheet. Set by `SettingsView`.
     var openSetting: (SettingsTarget) -> Void {
         get { self[OpenSettingKey.self] }
         set { self[OpenSettingKey.self] = newValue }
     }
+
+    /// The title of the row a search result just opened, which flashes once. Set by `SettingsView`.
+    var settingHighlight: String? {
+        get { self[SettingHighlightKey.self] }
+        set { self[SettingHighlightKey.self] = newValue }
+    }
+}
+
+/// Flashes a row when a search result opens it, so the eye finds it. Skipped under Reduce Motion. The row's title is
+/// also its scroll target.
+private struct SearchHighlight: ViewModifier {
+    let title: String
+    @Environment(\.settingHighlight) private var target
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var lit = false
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                RoundedRectangle(cornerRadius: AppTheme.corner).fill(AppTheme.accent.opacity(lit ? 0.18 : 0)).padding(-6)
+            }
+            .id(title)
+            .task(id: target) {
+                guard target == title, !reduceMotion else { return }
+                withAnimation(.easeIn(duration: 0.2)) { lit = true }
+                try? await Task.sleep(for: .seconds(1.2))
+                withAnimation(.easeOut(duration: 0.6)) { lit = false }
+            }
+    }
+}
+
+extension View {
+    func searchHighlight(_ title: String) -> some View { modifier(SearchHighlight(title: title)) }
 }
 
 /// One searchable setting: what it is called, the words people use for it, and where it lives.
@@ -131,6 +168,8 @@ struct SettingsSearchField: View {
 struct SettingsSearchResults: View {
     let query: String
     let recent: [String]
+    /// The area the results are limited to; nil for all.
+    @Binding var scope: SettingsCategory?
     let pickRecent: (String) -> Void
     let pick: (SettingEntry) -> Void
 
@@ -149,7 +188,10 @@ struct SettingsSearchResults: View {
                 }
             }
         } else {
-            let found = SettingEntry.search(query)
+            let all = SettingEntry.search(query)
+            let found = all.filter { scope == nil || $0.category == scope }
+            let areas = SettingsCategory.visible.filter { area in area == scope || all.contains { $0.category == area } }
+            if !all.isEmpty { scopeBar(areas) }
             if found.isEmpty {
                 Text("No settings match \u{201C}\(query)\u{201D}.").foregroundStyle(AppTheme.muted).padding(.vertical, 8)
             }
@@ -175,5 +217,36 @@ struct SettingsSearchResults: View {
                 Rule()
             }
         }
+    }
+
+    /// All, then each area with a match: a tap limits the results to that area.
+    private func scopeBar(_ areas: [SettingsCategory]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                scopeChip("All", symbol: "square.grid.2x2", id: "all", selected: scope == nil) { scope = nil }
+                ForEach(areas) { area in
+                    scopeChip(area.title, symbol: area.symbol, id: area.rawValue, selected: scope == area) { scope = area }
+                }
+            }
+        }
+        .padding(.bottom, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Search in")
+    }
+
+    private func scopeChip(_ title: String, symbol: String, id: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(LocalizedStringKey(title), systemImage: symbol)
+                .font(.footnote.weight(selected ? .bold : .regular))
+                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .frame(minHeight: 44)
+                .foregroundStyle(selected ? AppTheme.accent : AppTheme.ink)
+                .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(selected ? AppTheme.accent : AppTheme.rule, lineWidth: 1))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("searchScope.\(id)")
     }
 }

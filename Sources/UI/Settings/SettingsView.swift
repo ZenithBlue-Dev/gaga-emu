@@ -35,6 +35,13 @@ struct SettingsView: View {
     @State private var query = ""
     @FocusState private var searching: Bool
     @State private var target: SettingsTarget?
+    /// The area search results are limited to; nil for all of Settings.
+    @State private var scope: SettingsCategory?
+    /// The row a search result opened, which flashes.
+    @State private var highlight: String?
+    /// The on-screen keyboard is up, and the Style page a result opens once it has gone.
+    @State private var keyboardUp = false
+    @State private var pendingStyle: StyleSection?
     /// The last five searches that led somewhere, newest first, one per line.
     @AppStorage("settingsRecentSearches") private var recentText = ""
 
@@ -47,15 +54,30 @@ struct SettingsView: View {
             SettingsSearchField(query: $query, focused: $searching)
         } detail: {
             if showsResults {
-                SettingsSearchResults(query: query, recent: recent, pickRecent: { query = $0 }, pick: open)
+                SettingsSearchResults(query: query, recent: recent, scope: $scope, pickRecent: { query = $0 }, pick: open)
             } else {
                 detail
             }
         }
         .onChange(of: category) { query = ""; searching = false }
         .environment(\.openSetting, show)
+        .environment(\.settingHighlight, highlight)
+        .task(id: highlight) {
+            // Once it has flashed, so the row does not flash again when its category is next opened.
+            guard highlight != nil else { return }
+            try? await Task.sleep(for: .seconds(2))
+            highlight = nil
+        }
         .sheet(item: Binding(get: { target?.fullScreen == false ? target : nil }, set: { target = $0 })) { sheet($0) }
         .fullScreenCover(item: Binding(get: { target?.fullScreen == true ? target : nil }, set: { target = $0 })) { sheet($0) }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardUp = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+            keyboardUp = false
+            if let section = pendingStyle {
+                pendingStyle = nil
+                state.showStyle(section)
+            }
+        }
     }
 
     /// A result opens its category, and its sheet or Style page when it has one.
@@ -65,16 +87,24 @@ struct SettingsView: View {
         query = ""
         searching = false
         category = entry.category
-        if let next = entry.target { show(next) }
+        if let next = entry.target {
+            show(next)
+        } else {
+            highlight = entry.title
+        }
     }
 
     /// The visual choices open their page in the Style tab; the rest open as sheets here.
     private func show(_ next: SettingsTarget) {
         if let section = next.style {
-            // The keyboard goes first: switching tabs under it left the app busy on the device.
-            searching = false
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { state.showStyle(section) }
+            // Style opens once the keyboard has gone. Opened while the keyboard's hide animation ran, the Skins page
+            // left an animation that never finished, and the app stayed busy (`testSettingsSearchRepeat`).
+            if keyboardUp {
+                pendingStyle = section
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            } else {
+                state.showStyle(section)
+            }
         } else {
             target = next
         }
@@ -129,6 +159,7 @@ struct ValueRow: View {
         .padding(.vertical, 6)
         .frame(minHeight: 44)
         .accessibilityElement(children: .combine)
+        .searchHighlight(title)
     }
 }
 
@@ -178,6 +209,7 @@ struct ActionRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .searchHighlight(title)
     }
 }
 
@@ -222,6 +254,7 @@ struct ToggleRow: View {
         .accessibilityHint(Text(LocalizedStringKey(note)))
         .padding(.vertical, 6)
         .frame(minHeight: 44)
+        .searchHighlight(title)
     }
 }
 
@@ -279,6 +312,7 @@ private struct ProfilePane: View {
             }
         }
         .padding(.vertical, 6)
+        .searchHighlight("Player Name")
         Rule()
         ValueRow(title: "Game Center", value: PlayerName.gameCenterStatus, tile: .symbol("person.2.circle"))
         Rule()

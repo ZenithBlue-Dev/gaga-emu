@@ -18,6 +18,7 @@ struct CategoryShell<Item: ShellCategory, Accessory: View, Detail: View>: View {
     @ViewBuilder var detail: Detail
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.settingHighlight) private var highlight
     /// The category column widens with Dynamic Type so names do not break mid-word.
     @ScaledMetric(relativeTo: .body) private var columnScale: CGFloat = 1
 
@@ -53,14 +54,21 @@ struct CategoryShell<Item: ShellCategory, Accessory: View, Detail: View>: View {
                 .frame(width: (verticalSize == .compact ? 200 : 260) * min(columnScale, 1.5))
                 Rule(vertical: true).ignoresSafeArea(edges: .vertical)
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(LocalizedStringKey(detailTitle)).font(.gameTitle).accessibilityAddTraits(.isHeader)
-                        .padding(.bottom, 8)
-                    detail
+            ScrollViewReader { reader in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(LocalizedStringKey(detailTitle)).font(.gameTitle).accessibilityAddTraits(.isHeader)
+                            .padding(.bottom, 8)
+                        detail
+                    }
+                    .padding(.horizontal, 20).padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.horizontal, 20).padding(.vertical, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                // A row a search result opened is brought into view (`searchHighlight`).
+                .task(id: highlight) {
+                    guard let highlight else { return }
+                    reader.scrollTo(highlight, anchor: .center)
+                }
             }
             .id(detailTitle)
         }
