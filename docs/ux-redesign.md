@@ -314,7 +314,7 @@ Where it differs from the plan:
 - Upright on a phone the categories are a sideways strip of icons; in landscape and on iPad they are a sidebar list.
 - Cheats on the game page opens the game's saved cheats without starting it: switch them on or off, or remove them. Adding a code needs the running game, as its core checks each one, so the sheet offers Play.
 - Play Nearby is a row on every system's game page and pause menu. Where it cannot play nearby (one-player handhelds: GB, GBC, GBA, DS, 3DS, PSP), the row says "Not available" and opens the reason.
-- The new strings have no Spanish translations yet.
+- The new strings have Spanish and French translations, marked needs_review. "Play" is now only the button, so it reads "Jugar" / "Jouer" instead of the old category name.
 - The iPad sidebar (`.sidebarAdaptable`, iOS 18) is built but not run on an iPad.
 
 ### Skin pictures
