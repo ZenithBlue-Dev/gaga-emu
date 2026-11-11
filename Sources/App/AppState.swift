@@ -1042,6 +1042,8 @@ final class AppState: ObservableObject {
     /// Nil is the standard vermilion.
     @Published var accentHex: Int? { didSet { ThemeStore.shared.accentHex = accentHex; save() } }
     @Published var libraryDisplay: LibraryDisplay { didSet { save() } }
+    /// The saved Layout while a walk's launch Layout is shown, so save() never writes the walk's one.
+    private var walkSavedDisplay: LibraryDisplay?
     @Published var quickStart: Bool { didSet { save() } }
     @Published var autoSaveStates: Bool { didSet { save() } }
     /// Off by default: it keeps up to `RewindPolicy.budgetBytes` of snapshots while a game runs.
@@ -1201,10 +1203,17 @@ final class AppState: ObservableObject {
         appearance = snapshot?.appearance ?? .dark
         appearanceChoice = snapshot?.appearanceChoice ?? .system
         accentHex = snapshot?.accentHex
-        // -GagaDefaultDisplay: walks start from the default Library Layout, whatever an earlier walk left.
-        var display = ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") ? LibraryDisplay() : snapshot?.libraryDisplay ?? LibraryDisplay()
-        // -GagaPerRow <n>: a walk's grid Library.
-        if UserDefaults.standard.object(forKey: "GagaPerRow") != nil { display.perRow = UserDefaults.standard.integer(forKey: "GagaPerRow") }
+        let savedDisplay = snapshot?.libraryDisplay ?? LibraryDisplay()
+        var display = savedDisplay
+        #if DEBUG
+        // Walks only, never in Release: -GagaDefaultDisplay starts from the default Library Layout and
+        // -GagaPerRow <n> shows a grid. Both stay in memory: save() keeps writing the saved Layout.
+        let defaults = UserDefaults.standard
+        let walkLayout = ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") || defaults.object(forKey: "GagaPerRow") != nil
+        if ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") { display = LibraryDisplay() }
+        if defaults.object(forKey: "GagaPerRow") != nil { display.perRow = defaults.integer(forKey: "GagaPerRow") }
+        if walkLayout { walkSavedDisplay = savedDisplay }
+        #endif
         libraryDisplay = display
         ThemeStore.shared.accentHex = snapshot?.accentHex
         quickStart = snapshot?.quickStart ?? false
@@ -1978,7 +1987,7 @@ final class AppState: ObservableObject {
                                 autoFullScreen: autoFullScreen, respectSilentMode: respectSilentMode,
                                 rumble: rumble, rumbleStrength: rumbleStrength, skinSoundEffects: skinSoundEffects, language: language,
                                 shaderID: shaderID, defaultCores: defaultCores,
-                                appearanceChoice: appearanceChoice, accentHex: accentHex, libraryDisplay: libraryDisplay,
+                                appearanceChoice: appearanceChoice, accentHex: accentHex, libraryDisplay: walkSavedDisplay ?? libraryDisplay,
                                 systemShaders: systemShaders, favouriteShaders: favouriteShaders)
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         try? data.write(to: storeURL, options: .atomic)
