@@ -15,9 +15,10 @@ struct GamePage: View {
     let start: (GamePageStart) -> Void
     @State private var sheet: Sheet?
     @State private var filtering = false
+    @State private var nearbyReason: String?
 
     private enum Sheet: String, Identifiable {
-        case core, skin, saves, controls, edit, delete
+        case core, skin, saves, cheats, controls, edit, delete
         var id: String { rawValue }
     }
 
@@ -46,13 +47,16 @@ struct GamePage: View {
                     SaveStatePicture(slot: slots.first)
                 }) { sheet = .saves }
                 if slots.count > 1 { saveStrip(Array(slots.prefix(3))) }
-                pictureRow("Cheats", value: "In the pause menu", id: "cheats", tile: .symbol("wand.and.stars")) { start(.play); dismiss() }
-                    .accessibilityHint("Starts the game. Pause it, then choose Cheats.")
+                let cheats = store.cheats()
+                pictureRow("Cheats", value: cheats.isEmpty ? "None yet" : "\(cheats.filter(\.enabled).count) of \(cheats.count) on", id: "cheats", tile: .symbol("wand.and.stars")) { sheet = .cheats }
                 pictureRow("Controls for This Game", value: nil, id: "controls", tile: .symbol("gamecontroller")) { sheet = .controls }
-                if CoreCatalog.playNearbyAllowed(platformID: game.platformID, coreID: game.resolvedCoreID(defaults: state.defaultCores)) {
-                    pictureRow("Play Nearby", value: nil, id: "nearby", tile: .symbol("person.2")) {
+                let nearby = CoreCatalog.playNearbyAllowed(platformID: game.platformID, coreID: game.resolvedCoreID(defaults: state.defaultCores))
+                pictureRow("Play Nearby", value: nearby ? nil : "Not available", id: "nearby", tile: .symbol("person.2")) {
+                    if nearby {
                         start(.nearby)
                         dismiss()
+                    } else {
+                        nearbyReason = CoreCatalog.playNearbyReason(platformID: game.platformID)
                     }
                 }
                 pictureRow("Edit Details", value: nil, id: "edit", tile: .symbol("pencil")) { sheet = .edit }
@@ -73,10 +77,20 @@ struct GamePage: View {
                     start(.slot(slot))
                     dismiss()
                 }
+            case .cheats:
+                GameCheatsSheet(title: game.title, store: store) {
+                    start(.play)
+                    dismiss()
+                }
             case .controls: ControlsSheet(game: game)
             case .edit: EditDetailsSheet(game: game)
             case .delete: DeleteGameSheet(game: game)
             }
+        }
+        .alert("Play Nearby", isPresented: Binding(get: { nearbyReason != nil }, set: { if !$0 { nearbyReason = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(nearbyReason ?? "")
         }
         .fullScreenCover(isPresented: $filtering) { FilterPickerView(game: game) }
         // Deleted from its own page: nothing is left to show.
@@ -153,5 +167,64 @@ struct GamePage: View {
     private func filterName(_ game: GameItem) -> String {
         let id = state.effectiveShaderID(game)
         return ShaderCatalog.all.first { $0.id == id }?.name ?? state.filters.name(of: id) ?? "Original"
+    }
+}
+
+/// A game's saved cheats from its page, without starting it: switch them on or off, or remove them. New codes need
+/// the running game, as its core checks each one, so Play is offered for that.
+struct GameCheatsSheet: View {
+    let title: String
+    let store: SaveStore
+    let play: () -> Void
+    @State private var cheats: [CheatEntry] = []
+    @State private var failure: String?
+
+    var body: some View {
+        PaperSheet(title: "Cheats", subtitle: title) {
+            VStack(alignment: .leading, spacing: 0) {
+                if cheats.isEmpty {
+                    Text("No cheats yet.").foregroundStyle(AppTheme.muted).padding(.vertical, 12)
+                }
+                ForEach(cheats) { cheat in
+                    HStack {
+                        Toggle(cheat.name, isOn: Binding(get: { cheat.enabled }, set: { on in
+                            change { list in list.indices.filter { list[$0].id == cheat.id }.forEach { list[$0].enabled = on } }
+                        }))
+                        .tint(AppTheme.accentFill)
+                        Button { change { $0.removeAll { $0.id == cheat.id } } } label: {
+                            Image(systemName: "trash").frame(width: 44, height: 44).contentShape(Rectangle())
+                        }
+                        .foregroundStyle(AppTheme.muted)
+                        .accessibilityLabel("Remove \(cheat.name)")
+                    }
+                    .frame(minHeight: 44)
+                    Rule()
+                }
+                if let failure {
+                    Text(failure).font(.footnote).foregroundStyle(AppTheme.accent).padding(.top, 8)
+                }
+                Text("To add a code, play the game, pause it and choose Cheats: the game checks each code.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 12)
+                Button { play() } label: { Label("Play", systemImage: "play.fill") }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .accessibilityIdentifier("gameCheats.play")
+            }
+        }
+        .onAppear { cheats = store.cheats() }
+    }
+
+    /// Saved first; the list shows the change only once it is stored.
+    private func change(_ edit: (inout [CheatEntry]) -> Void) {
+        var next = cheats
+        edit(&next)
+        do {
+            try store.saveCheats(next)
+            cheats = next
+            failure = nil
+        } catch {
+            failure = error.localizedDescription
+        }
     }
 }
