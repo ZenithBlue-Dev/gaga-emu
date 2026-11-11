@@ -389,6 +389,13 @@ final class GagaEmuWalkTests: XCTestCase {
         shoot("09 Pause menu")
         app.swipeUp()
         shoot("09 Pause menu scrolled")
+        // A grid Library at this size: one column, each card a row beside its cover.
+        app.terminate()
+        app.launchArguments += ["-GagaPerRow", "3"]
+        app.launch()
+        let card = importedGame(app, "The \(title) game in a grid")
+        shoot("10 Library grid")
+        XCTAssertGreaterThan(card.frame.width, app.windows.firstMatch.frame.width * 0.6, "The grid card is not one full-width row")
     }
 
     /// Batch 2: Settings search finds a setting by the word people use, and opens it.

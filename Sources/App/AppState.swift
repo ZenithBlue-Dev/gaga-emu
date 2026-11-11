@@ -1203,6 +1203,8 @@ final class AppState: ObservableObject {
         accentHex = snapshot?.accentHex
         // -GagaDefaultDisplay: walks start from the default Library Layout, whatever an earlier walk left.
         libraryDisplay = ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") ? LibraryDisplay() : snapshot?.libraryDisplay ?? LibraryDisplay()
+        // -GagaPerRow <n>: a walk's grid Library.
+        if UserDefaults.standard.object(forKey: "GagaPerRow") != nil { libraryDisplay.perRow = UserDefaults.standard.integer(forKey: "GagaPerRow") }
         ThemeStore.shared.accentHex = snapshot?.accentHex
         quickStart = snapshot?.quickStart ?? false
         autoSaveStates = snapshot?.autoSaveStates ?? false
