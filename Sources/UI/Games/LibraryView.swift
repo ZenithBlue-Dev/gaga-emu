@@ -5,6 +5,7 @@ struct LibraryView: View {
     @EnvironmentObject private var state: AppState
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.dynamicTypeSize) private var typeSize
     var onAdd: () -> Void
     @State private var sheet: GameSheet?
     @State private var filterGame: GameItem?
@@ -347,7 +348,9 @@ struct LibraryView: View {
                             .padding(.leading, lead).padding(.trailing, trail)
                         }
                         if display.perRow > 0 {
-                            LazyVGrid(columns: Array(repeating: GridItem(.fixed(gridTile), spacing: 12, alignment: .top), count: display.perRow),
+                            // One column of rows at accessibility sizes, as every card grid (`choiceColumns`).
+                            LazyVGrid(columns: typeSize.isAccessibilitySize ? choiceColumns(minimum: 0, large: true)
+                                          : Array(repeating: GridItem(.fixed(gridTile), spacing: 12, alignment: .top), count: display.perRow),
                                       alignment: .leading, spacing: 12) {
                                 ForEach(shelf.games) { tile($0) }
                             }
@@ -370,23 +373,30 @@ struct LibraryView: View {
     }
 
     private func tile(_ game: GameItem) -> some View {
-        let width = display.perRow > 0 ? gridTile : (compact ? 120 : 140) * min(tileScale, 1.8)
+        let row = display.perRow > 0 && typeSize.isAccessibilitySize
+        let width = row ? 96 : display.perRow > 0 ? gridTile : (compact ? 120 : 140) * min(tileScale, 1.8)
         return Button { sheet = .page(game) } label: {
-            VStack(alignment: .leading, spacing: 4) {
+            // As `ChoiceCard`: one cover shape, two title lines and one detail line even when shorter, so every card
+            // on a shelf is the same size. A row beside the cover at accessibility sizes.
+            AnyLayout(row ? AnyLayout(HStackLayout(alignment: .center, spacing: 12)) : AnyLayout(VStackLayout(alignment: .leading, spacing: 4))) {
                 CoverArt(game: game, width: width)
-                if !display.hideTitle {
-                    Text(game.title).font(.footnote.weight(.medium)).lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-                if !display.hideDetails {
-                    HStack(spacing: 4) {
-                        if game.isFavorite { Image(systemName: "star.fill").imageScale(.small) }
-                        Text(tileMeta(game)).font(.system(.caption2, design: .monospaced)).lineLimit(2)
+                VStack(alignment: .leading, spacing: 4) {
+                    if !display.hideTitle {
+                        Text(game.title).font(.footnote.weight(.medium)).lineLimit(2, reservesSpace: !row)
+                            .multilineTextAlignment(.leading)
                     }
-                    .foregroundStyle(AppTheme.muted)
+                    if !display.hideDetails {
+                        HStack(spacing: 4) {
+                            if game.isFavorite { Image(systemName: "star.fill").imageScale(.small) }
+                            Text(tileMeta(game)).font(.system(.caption2, design: .monospaced)).lineLimit(1, reservesSpace: !row)
+                        }
+                        .foregroundStyle(AppTheme.muted)
+                    }
                 }
+                .frame(maxWidth: row ? .infinity : nil, alignment: .leading)
             }
-            .frame(width: width, alignment: .leading)
+            .frame(width: row ? nil : width, alignment: .topLeading)
+            .frame(maxWidth: row ? .infinity : nil, minHeight: 44, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
