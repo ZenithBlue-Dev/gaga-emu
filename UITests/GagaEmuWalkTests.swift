@@ -259,11 +259,12 @@ final class GagaEmuWalkTests: XCTestCase {
             sleep(1)
             if app.buttons["gamePage.play"].waitForExistence(timeout: 6) || app.buttons["gamePage.resume"].exists {
                 audit("02 Game page")
-                for (entry, name) in [("gamePage.skin", "Skin"), ("gamePage.core", "Core"), ("gamePage.saves", "Save States"), ("gamePage.controls", "Controls")] {
+                for (entry, name) in [("gamePage.skin", "Skin"), ("gamePage.core", "Core"), ("gamePage.saves", "Save States"), ("gamePage.cheats", "Cheats"), ("gamePage.controls", "Controls")] {
                     let row = app.buttons[entry].firstMatch
                     guard !promptUp(), row.waitForExistence(timeout: 4) else { snapshot("MISSING \(entry)"); continue }
                     row.tap()
                     sleep(1)
+                    XCTAssertFalse(app.buttons["Pause game"].exists, "\(name) on the game's page started the game")
                     audit("02 Game page \(name)")
                     close(app)
                 }
@@ -405,6 +406,56 @@ final class GagaEmuWalkTests: XCTestCase {
         try enter(app, field, "username", "The settings search field for a username")
         try arrive(app.buttons["settingsResult.Player Name"].firstMatch, "The Player Name result")
         snapshot("82 Search username")
+    }
+
+    /// Search, open a result, back to Settings, ten times, with the keyboard up each time a result is picked. Opening
+    /// Style from a result once left the app busy for good, so every round must finish in well under a minute. Odd
+    /// rounds open a Style page; even rounds a Settings row, which flashes. The first rounds also try the area chips.
+    func testSettingsSearchRepeat() throws {
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        _ = importedGame(app, "The \(title) game")
+        sleep(2)
+        let field = app.textFields["Search settings"].firstMatch
+        var laps: [String] = []
+        for round in 1...10 {
+            let lap = Date()
+            try guardedTap(app.buttons["Settings"].firstMatch, "Settings, round \(round)")
+            if round.isMultiple(of: 2) {
+                try enter(app, field, "rewind", "The search field, round \(round)")
+                if round == 2 {
+                    // The area chips: Gameplay keeps Rewind, Controllers has no match for it.
+                    try arrive(app.buttons["searchScope.Gameplay"].firstMatch, "The Gameplay area chip")
+                    snapshot("83 Search areas")
+                    app.buttons["searchScope.Gameplay"].firstMatch.tap()
+                    XCTAssertTrue(app.buttons["settingsResult.Rewind"].firstMatch.waitForExistence(timeout: 4), "Rewind left the Gameplay area")
+                    app.buttons["searchScope.all"].firstMatch.tap()
+                }
+                try guardedTap(app.buttons["settingsResult.Rewind"].firstMatch, "The Rewind result, round \(round)")
+                try arrive(app.switches.matching(NSPredicate(format: "label BEGINSWITH %@", "Rewind")).firstMatch, "The Rewind row, round \(round)")
+                XCTAssertTrue(app.buttons["settings.Gameplay"].firstMatch.isSelected, "Round \(round) did not open Gameplay")
+                if round == 2 { snapshot("84 Search result flashes") }
+            } else {
+                try enter(app, field, "skin", "The search field, round \(round)")
+                try guardedTap(app.buttons["settingsResult.Skins"].firstMatch, "The Skins result, round \(round)")
+                try arrive(app.buttons.matching(NSPredicate(format: "label ENDSWITH %@", "skin")).firstMatch, "Style > Skins, round \(round)")
+                XCTAssertTrue(app.buttons["style.Skins"].firstMatch.isSelected, "Round \(round) did not open Style > Skins")
+                XCTAssertFalse(app.keyboards.firstMatch.exists, "Round \(round): the keyboard stayed up over Style")
+                if round == 1 {
+                    snapshot("86 Search opened Style")
+                    dumpTree(app, "86 hierarchy")
+                }
+            }
+            let seconds = Date().timeIntervalSince(lap)
+            laps.append("round \(round)\t\(String(format: "%.1f", seconds)) s")
+            XCTAssertLessThan(seconds, 30, "Round \(round) took \(Int(seconds)) s: the app stayed busy")
+        }
+        let report = XCTAttachment(string: laps.joined(separator: "\n"))
+        report.name = "LAPS"
+        report.lifetime = .keepAlways
+        add(report)
+        print("LAPS\n" + laps.joined(separator: "\n"))
+        snapshot("85 Search after ten rounds")
     }
 
     /// The 20 most-used features of docs/ux-redesign.md section 1, each reached from the Library and its taps
@@ -686,6 +737,35 @@ final class GagaEmuWalkTests: XCTestCase {
         }
     }
 
+    /// The pause menu's Play Nearby, on every system. Where it can play nearby, Host must reach the waiting screen,
+    /// with no second phone; elsewhere the sheet must say why not. A local network prompt stops it untouched.
+    private func auditNearby(_ app: XCUIApplication, tag: String) {
+        let row = app.buttons["playNearby"].firstMatch
+        guard !promptUp(), row.waitForExistence(timeout: 6) else {
+            snapshot("MISSING \(tag) Play Nearby")
+            XCTFail("\(tag): no Play Nearby row in the pause menu")
+            return
+        }
+        row.tap()
+        sleep(1)
+        audit("\(tag) Play Nearby")
+        let host = app.buttons["Host"].firstMatch
+        if host.exists {
+            host.tap()
+            let waiting = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Waiting for a nearby phone")).firstMatch
+            let reached = waiting.waitForExistence(timeout: 15)
+            snapshot("\(tag) Play Nearby hosting")
+            guard !promptUp() else { return }
+            XCTAssertTrue(reached, "\(tag): Host did not reach the waiting screen")
+            if app.buttons["Cancel"].firstMatch.exists { app.buttons["Cancel"].firstMatch.tap() } // Stops hosting.
+            sleep(1)
+        } else {
+            let why = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "not available")).firstMatch
+            XCTAssertTrue(why.exists, "\(tag): Play Nearby is off with no reason given")
+        }
+        close(app)
+    }
+
     /// Playing, the pause menu and its pages, upright and in landscape.
     private func auditGame(_ core: String, platform: String, tag: String) {
         continueAfterFailure = true
@@ -729,7 +809,7 @@ final class GagaEmuWalkTests: XCTestCase {
             close(app)
         }
         auditPage(app, "Cheats", as: "\(tag) Cheats")
-        auditPage(app, "Play Nearby", as: "\(tag) Play Nearby")
+        auditNearby(app, tag: tag)
         // The Device skin style, on systems that have one.
         guard open(app, "Controls") else { return }
         let style = button(app, "Skin Style, This System")
