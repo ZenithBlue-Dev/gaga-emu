@@ -59,11 +59,16 @@ struct LibraryView: View {
                     if upright {
                         uprightContinue
                         Rule()
-                    } else {
+                    } else if !compact {
                         continuePanel.frame(width: metrics.panel)
                         Rule(vertical: true).ignoresSafeArea(edges: .vertical)
                     }
                     VStack(spacing: 0) {
+                        // Landscape on a phone: Continue is one strip of recent games, so the shelves keep the width.
+                        if compact && !upright {
+                            continueStrip
+                            Rule()
+                        }
                         ImportProgressRows().padding(.leading, lead).padding(.trailing, trail)
                         filterRow
                         Rule()
@@ -178,6 +183,46 @@ struct LibraryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1) // Above this the row would take the shelves' height.
+        }
+    }
+
+    /// Recent games in one sideways row, newest first, each with Play. The newest import when nothing has been played.
+    @ViewBuilder private var continueStrip: some View {
+        let games = state.recentGames.isEmpty ? continueGame.map { [$0] } ?? [] : Array(state.recentGames.prefix(8))
+        if !games.isEmpty {
+            HStack(spacing: 12) {
+                Text("Continue").font(.headline).accessibilityAddTraits(.isHeader)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(games) { game in
+                            Button { state.launch(game) } label: {
+                                HStack(spacing: 8) {
+                                    CoverArt(game: game, width: 36)
+                                    VStack(alignment: .leading, spacing: 0) {
+                                        Text(game.title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                                        Text(CoreCatalog.platformCode(game.platformID)).font(.meta).foregroundStyle(AppTheme.muted)
+                                    }
+                                    .frame(maxWidth: 160, alignment: .leading)
+                                    Image(systemName: "play.fill").foregroundStyle(AppTheme.accent).accessibilityHidden(true)
+                                }
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .frame(minHeight: 44)
+                                .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
+                                .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu { menu(game) }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("Play \(game.title)")
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityIdentifier("continue.\(game.id)")
+                        }
+                    }
+                }
+            }
+            .padding(.leading, lead).padding(.trailing, trail).padding(.vertical, 6)
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1) // One row: larger text would take the shelves' height.
         }
     }
 
