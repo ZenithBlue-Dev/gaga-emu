@@ -708,11 +708,13 @@ private struct PauseMenu: View {
                     .onTapGesture(perform: resume)
                     .accessibilityHidden(true)
                 Rule(vertical: !upright)
-                ScrollView {
-                    if showScreen { screenPage } else { mainPage }
-                }
                 // Wide enough in landscape for two tiles across with their names on one or two lines.
-                .frame(width: upright ? nil : min(360, geometry.size.width * 0.48), height: upright ? geometry.size.height * (1 - TouchSkinEngine.portraitControlTop) : nil)
+                let panel = upright ? geometry.size.width : min(360, geometry.size.width * 0.48)
+                ScrollView {
+                    // Tiles at least 140 pt wide, with the page's 16 pt margins and 8 pt gaps.
+                    if showScreen { screenPage } else { mainPage(columns: max(1, Int((panel - 24) / 148))) }
+                }
+                .frame(width: upright ? nil : panel, height: upright ? geometry.size.height * (1 - TouchSkinEngine.portraitControlTop) : nil)
                 .foregroundStyle(AppTheme.ink)
                 .background(AppTheme.paper.ignoresSafeArea())
                 .accessibilityAddTraits(.isModal)
@@ -880,7 +882,7 @@ private struct PauseMenu: View {
 
     /// Resume first and alone as the one filled button, then the tiles in their parts, each under a header, then the
     /// speed and the rest in cards, and Quit last.
-    private var mainPage: some View {
+    private func mainPage(columns: Int) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
@@ -904,7 +906,7 @@ private struct PauseMenu: View {
                     if !shown.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             partHeader(part.rawValue)
-                            grid(shown)
+                            grid(shown, columns: columns)
                             if part == .saves, session.supportsSaveStates {
                                 Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
                                     Text("Quick Slot \(session.quickSlot)")
@@ -920,7 +922,7 @@ private struct PauseMenu: View {
                 }
                 more
             } else {
-                grid(entries.filter(matches))
+                grid(entries.filter(matches), columns: columns)
             }
             Button("Quit to Library", action: { session.stop() })
                 .buttonStyle(QuietButtonStyle())
@@ -934,10 +936,18 @@ private struct PauseMenu: View {
             .accessibilityAddTraits(.isHeader)
     }
 
-    /// Equal columns that keep each tile at least 140 pt wide; one column at accessibility sizes.
-    private func grid(_ shown: [Entry]) -> some View {
-        LazyVGrid(columns: choiceColumns(minimum: 140, large: typeSize.isAccessibilitySize, spacing: 8), alignment: .leading, spacing: 8) {
-            ForEach(shown) { tile($0) }
+    /// Equal columns, one at accessibility sizes. Not lazy: every tile exists, so VoiceOver and the walks reach a
+    /// tile below the panel's fold, and a short last row keeps the others' width.
+    private func grid(_ shown: [Entry], columns: Int) -> some View {
+        let count = typeSize.isAccessibilitySize ? 1 : columns
+        return Grid(alignment: .topLeading, horizontalSpacing: 8, verticalSpacing: 8) {
+            ForEach(Array(stride(from: 0, to: shown.count, by: count)), id: \.self) { start in
+                let row = shown[start..<min(start + count, shown.count)]
+                GridRow(alignment: .top) {
+                    ForEach(row) { tile($0) }
+                    ForEach(0..<(count - row.count), id: \.self) { _ in Color.clear.frame(maxWidth: .infinity, maxHeight: 0) }
+                }
+            }
         }
     }
 
