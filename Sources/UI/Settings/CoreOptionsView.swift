@@ -97,15 +97,22 @@ struct CoreOptionsView: View {
                 if loading && declared == nil {
                     ProgressView().frame(maxWidth: .infinity, minHeight: 88)
                 } else if let declared, !declared.options.isEmpty {
-                    if gameID != nil { scopeToggle }
-                    ForEach(declared.sections, id: \.key) { section in
-                        Text(section.title).font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
-                            .padding(.top, 16).padding(.bottom, 4)
-                        if let info = section.info { Text(info).font(.footnote).foregroundStyle(AppTheme.muted) }
-                        Rule()
-                        ForEach(section.options) { option in
-                            row(option)
-                            Rule()
+                    // Each of the core's groups is one card under its header; rows inside are split by rules.
+                    VStack(alignment: .leading, spacing: 20) {
+                        if gameID != nil { GroupCard { scopeToggle } }
+                        ForEach(declared.sections, id: \.key) { section in
+                            VStack(alignment: .leading, spacing: 6) {
+                                GroupCard(title: section.title) {
+                                    ForEach(Array(section.options.enumerated()), id: \.element.id) { index, option in
+                                        if index > 0 { Rule() }
+                                        row(option)
+                                    }
+                                }
+                                if let info = section.info {
+                                    Text(info).font(.footnote).foregroundStyle(AppTheme.muted).padding(.horizontal, 4)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
                         }
                     }
                     Button("Reset All to Defaults") { resetAll(declared) }
@@ -180,8 +187,11 @@ struct CoreOptionsView: View {
             : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
         VStack(alignment: .leading, spacing: 4) {
             line {
-                line {
-                    OptionTile(symbol: Self.symbol(key: option.key, label: option.label), dimmed: option.locked)
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: Self.symbol(key: option.key, label: option.label))
+                        .font(.body).foregroundStyle(AppTheme.accent).frame(width: 24)
+                        .opacity(option.locked ? 0.45 : 1)
+                        .accessibilityHidden(true)
                     Text(option.label).fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -199,22 +209,23 @@ struct CoreOptionsView: View {
                     .accessibilityIdentifier("coreOption.\(option.key)")
                 }
             }
-            if let info = option.info, !info.isEmpty {
-                Text(info).font(.footnote).foregroundStyle(AppTheme.muted).fixedSize(horizontal: false, vertical: true)
-            }
-            HStack(spacing: 12) {
+            // Under the name, past the icon's column, so each row reads as one block.
+            VStack(alignment: .leading, spacing: 4) {
+                if let info = option.info, !info.isEmpty {
+                    Text(info).font(.footnote).foregroundStyle(AppTheme.muted).fixedSize(horizontal: false, vertical: true)
+                }
                 if let note = note(option) {
-                    Text(note).font(.footnote.weight(.semibold)).foregroundStyle(AppTheme.accent)
+                    Text(note).font(.caption.weight(.semibold)).foregroundStyle(AppTheme.accent)
                 }
-                Spacer(minLength: 0)
-                if chosen, !option.locked {
-                    Button("Reset") { choose(nil, option) }
-                        .buttonStyle(QuietButtonStyle())
-                        .disabled(locked != nil)
-                        .frame(minHeight: 44)
-                        .accessibilityLabel("Reset \(option.label) to default, \(option.label(of: option.default))")
-                        .accessibilityIdentifier("coreOptions.reset.\(option.key)")
-                }
+            }
+            .padding(.leading, typeSize.isAccessibilitySize ? 0 : 34)
+            if chosen, !option.locked {
+                Button("Reset") { choose(nil, option) }
+                    .buttonStyle(QuietButtonStyle())
+                    .disabled(locked != nil)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .trailing)
+                    .accessibilityLabel("Reset \(option.label) to default, \(option.label(of: option.default))")
+                    .accessibilityIdentifier("coreOptions.reset.\(option.key)")
             }
         }
         .padding(.vertical, 8)

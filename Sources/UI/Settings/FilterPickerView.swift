@@ -10,6 +10,7 @@ struct FilterPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.horizontalSizeClass) private var horizontalSize
+    @Environment(\.dynamicTypeSize) private var typeSize
     var game: GameItem?
     @State private var showPlans = false
     @State private var showImporter = false
@@ -125,7 +126,7 @@ struct FilterPickerView: View {
             scopePicker
             categoryStrip
             Group {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 10) {
+                LazyVGrid(columns: choiceColumns(minimum: 96, large: typeSize.isAccessibilitySize, spacing: 8), spacing: 10) {
                     ForEach(shown) { tile($0) }
                 }
                 .padding(.top, 8)
@@ -195,14 +196,15 @@ struct FilterPickerView: View {
         let pick = { if locked { showPlans = true } else { select(shader.id) } }
         return VStack(alignment: .leading, spacing: 0) {
             Button(action: pick) {
-                Group {
+                // One shape for every tile; the picture fits inside it.
+                Color.clear
+                .aspectRatio(4.0 / 3.0, contentMode: .fit)
+                .overlay {
                     if let image = tiles[shader.id] {
-                        Image(uiImage: image).interpolation(.none).resizable()
-                    } else {
-                        AppTheme.surface
+                        Image(uiImage: image).interpolation(.none).resizable().scaledToFit()
                     }
                 }
-                .aspectRatio(4.0 / 3.0, contentMode: .fit)
+                .background(AppTheme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
                 .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(isSelected ? AppTheme.ink : AppTheme.rule, lineWidth: isSelected ? 2 : 1))
                 .contentShape(Rectangle())
@@ -214,14 +216,17 @@ struct FilterPickerView: View {
             HStack(alignment: .top, spacing: 0) {
                 Button(action: pick) {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 2) {
+                        // Lines keep their space on every tile, so the grid's tiles match.
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
                             if isSelected { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
-                            Text(shader.name).font(.caption).fontWeight(isSelected ? .bold : .regular).lineLimit(2)
+                            if shader.premium && PaywallGate.isOpen {
+                                Image(systemName: locked ? "lock" : "checkmark.seal").font(.caption2).accessibilityHidden(true)
+                            }
+                            Text(shader.name).font(.caption).fontWeight(isSelected ? .bold : .regular)
+                                .lineLimit(2, reservesSpace: !typeSize.isAccessibilitySize)
                         }
-                        if let credit = shader.credit { Text(credit).font(.caption2).foregroundStyle(AppTheme.muted).lineLimit(1) }
-                        if shader.premium && PaywallGate.isOpen {
-                            Label("Plus", systemImage: locked ? "lock" : "checkmark.seal").font(.caption2).foregroundStyle(AppTheme.muted)
-                        }
+                        Text(shader.credit ?? " ").font(.caption2).foregroundStyle(AppTheme.muted)
+                            .lineLimit(1, reservesSpace: !typeSize.isAccessibilitySize)
                     }
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
                     .padding(.top, 3)

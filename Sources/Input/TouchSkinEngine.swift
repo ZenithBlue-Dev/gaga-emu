@@ -245,7 +245,8 @@ public final class TouchSkinEngine: ObservableObject {
     /// Flex skin: one JSON document with normalized frames and an inline SVG. Its opacity, when it has one,
     /// replaces the drawn controls' opacity.
     public func loadFlex(from url: URL) throws {
-        let loaded = try Self.decodeFlex(Data(contentsOf: url), id: url.lastPathComponent)
+        var loaded = try Self.decodeFlex(Data(contentsOf: url), id: url.lastPathComponent)
+        loaded.assets = Self.savedArt(beside: url)
         opacity = loaded.opacity
         skin = loaded
     }

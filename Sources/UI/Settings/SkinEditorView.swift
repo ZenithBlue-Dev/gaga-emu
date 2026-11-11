@@ -107,6 +107,8 @@ struct SkinEditorView: View {
     @State private var editingPortrait = false
     @State private var opacity = TouchSkinEngine.defaultOpacity
     @State private var overlay = false
+    /// An imported package's own art, kept with the layout when it is saved.
+    @State private var art: [String: Data] = [:]
     @State private var selected: String?
     @State private var dragStart: [TouchSkinEngine.Button]?
     @State private var saveError: String?
@@ -195,6 +197,7 @@ struct SkinEditorView: View {
         }
         opacity = saved?.opacity ?? TouchSkinEngine.defaultOpacity
         overlay = saved?.overlay ?? false
+        art = saved == nil ? [:] : TouchSkinEngine.savedArt(beside: fallback)
         editingPortrait = UIScreen.main.bounds.height > UIScreen.main.bounds.width
     }
 
@@ -215,6 +218,7 @@ struct SkinEditorView: View {
                 upright = layout.portrait ?? TouchSkinEngine.portrait(from: landscape)
                 // These skins lay controls over the picture.
                 overlay = true
+                art = TouchSkinEngine.skinPackageArt(at: url)
                 selected = nil
                 saveError = nil
                 return
@@ -226,6 +230,7 @@ struct SkinEditorView: View {
             upright = skin.portraitButtons
             opacity = skin.opacity
             overlay = skin.overlay
+            art = [:]
             selected = nil
             saveError = nil
         } catch {
@@ -388,7 +393,7 @@ struct SkinEditorView: View {
 
     private func save() {
         do {
-            try state.saveCustomSkin(landscape, portraitButtons: upright, opacity: opacity, overlay: overlay,
+            try state.saveCustomSkin(landscape, portraitButtons: upright, opacity: opacity, overlay: overlay, art: art,
                                      platformID: platformID, gameID: gameID)
             dismiss()
         } catch {

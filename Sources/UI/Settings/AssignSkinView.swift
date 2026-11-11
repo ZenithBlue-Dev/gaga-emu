@@ -5,10 +5,20 @@ import SwiftUI
 /// a device skin look as they play.
 struct SkinDrawing: Equatable {
     var buttons: [TouchSkinEngine.Button]
-    /// The canvas's width over its height.
-    var aspect: CGFloat
+    /// The canvas in points: the smallest phone's safe area for a classic skin, a device skin's own canvas.
+    var canvas: CGSize
     /// The game picture's place, normalised to the canvas.
     var screens: [CGRect]
+    /// The controls' opacity in game.
+    var opacity = TouchSkinEngine.defaultOpacity
+    /// A device skin's face in its chosen colourway, and the folder its PDFs are in.
+    var face: TouchSkinEngine.DeviceArt.Face?
+    var folder: URL?
+    /// An imported package's own art for this orientation, drawn in place of the controls.
+    var art: UIImage?
+
+    /// The canvas's width over its height.
+    var aspect: CGFloat { canvas.width / max(canvas.height, 1) }
 
     /// A built-in layout on a platform, with that platform's sticks, C buttons or keyboard key.
     static func layout(_ layout: TouchSkinEngine.Layout, platformID: String, portrait: Bool) -> SkinDrawing {
@@ -21,24 +31,58 @@ struct SkinDrawing: Equatable {
         let buttons = portrait && !skin.portraitButtons.isEmpty ? skin.portraitButtons : skin.buttons
         if let device = skin.device {
             let face = device.face(portrait: portrait)
-            return SkinDrawing(buttons: buttons, aspect: face.canvas.width / max(face.canvas.height, 1), screens: face.screens)
+            return SkinDrawing(buttons: buttons, canvas: face.canvas, screens: face.screens, opacity: 1, face: face, folder: device.folder)
         }
-        return classic(buttons, portrait: portrait)
+        var drawing = classic(buttons, portrait: portrait)
+        drawing.opacity = skin.opacity
+        drawing.art = skin.artImage(portrait: portrait)
+        return drawing
     }
 
-    /// The smallest phone's canvas, with the picture between the side bands, or above the controls upright.
+    /// The smallest phone's canvas, with the picture between the side bands, or above the controls upright, as
+    /// `GameView` places it.
     private static func classic(_ buttons: [TouchSkinEngine.Button], portrait: Bool) -> SkinDrawing {
         let canvas = portrait ? TouchSkinEngine.smallestPortraitCanvas : TouchSkinEngine.smallestCanvas
         let band = TouchSkinEngine.controlBand
         let screen = portrait
-            ? CGRect(x: 0, y: 0.04, width: 1, height: TouchSkinEngine.portraitControlTop - 0.08)
-            : CGRect(x: band, y: 0.03, width: 1 - 2 * band, height: 0.94)
-        return SkinDrawing(buttons: buttons, aspect: canvas.width / canvas.height, screens: [screen])
+            ? CGRect(x: 0, y: 0, width: 1, height: TouchSkinEngine.portraitControlTop)
+            : CGRect(x: band, y: 0, width: 1 - 2 * band, height: 1)
+        return SkinDrawing(buttons: buttons, canvas: canvas, screens: [screen])
     }
 }
 
-/// A miniature of a touch skin: each button, D-pad arm, stick and shoulder at its real place and shape, and the
-/// game picture's area, drawn with Canvas so it stays sharp at tile size. Labels show once a button is big enough.
+/// A made-up game scene for skin pictures: sky, sun, hills, ground and a figure, drawn here, at a 3:2 screen's shape.
+struct SampleGamePicture: View {
+    var body: some View {
+        Canvas { context, size in
+            let w = size.width, h = size.height
+            context.fill(Path(CGRect(origin: .zero, size: size)),
+                         with: .linearGradient(Gradient(colors: [Color(rgb: 0x3A7BD5), Color(rgb: 0x8FD3F4)]),
+                                               startPoint: .zero, endPoint: CGPoint(x: 0, y: h * 0.7)))
+            context.fill(Path(ellipseIn: CGRect(x: w * 0.74, y: h * 0.1, width: h * 0.16, height: h * 0.16)), with: .color(Color(rgb: 0xFFE066)))
+            var hills = Path()
+            hills.move(to: CGPoint(x: 0, y: h * 0.72))
+            hills.addCurve(to: CGPoint(x: w, y: h * 0.66), control1: CGPoint(x: w * 0.3, y: h * 0.48), control2: CGPoint(x: w * 0.6, y: h * 0.8))
+            hills.addLine(to: CGPoint(x: w, y: h)); hills.addLine(to: CGPoint(x: 0, y: h)); hills.closeSubpath()
+            context.fill(hills, with: .color(Color(rgb: 0x4CAF50)))
+            let ground = h * 0.8, block = h * 0.1
+            for i in 0..<Int(w / block + 1) {
+                context.fill(Path(CGRect(x: CGFloat(i) * block, y: ground, width: block, height: h - ground)),
+                             with: .color(Color(rgb: i % 2 == 0 ? 0xA0522D : 0x8B4513)))
+            }
+            context.fill(Path(roundedRect: CGRect(x: w * 0.3, y: ground - block * 1.6, width: block, height: block * 1.6), cornerRadius: block * 0.2),
+                         with: .color(Color(rgb: 0xE4572E)))
+            for i in 0..<3 {
+                context.fill(Path(CGRect(x: w * (0.52 + 0.08 * CGFloat(i)), y: h * 0.42, width: block, height: block)), with: .color(Color(rgb: 0xF2C14E)))
+            }
+        }
+        .aspectRatio(3.0 / 2.0, contentMode: .fit)
+    }
+}
+
+/// A touch skin as it looks in game, at picture size: the game's own touch controls (`TouchButtonFace`) at the skin's
+/// opacity over a sample game picture, laid out on the skin's canvas and scaled down; a device skin's shell, colourway
+/// and labels; or an imported skin's own art.
 struct SkinThumbnail: View {
     let drawing: SkinDrawing
     /// "<skin> skin for <system>, portrait"; nil when the row around it already says so.
@@ -55,76 +99,79 @@ struct SkinThumbnail: View {
     }
 
     var body: some View {
-        Canvas { context, size in
-            let ink = GraphicsContext.Shading.color(AppTheme.onLetterbox)
-            let line = max(1, size.width / 160)
-            for screen in drawing.screens {
-                let rect = scaled(screen, size).insetBy(dx: line, dy: line)
-                let shape = Path(roundedRect: rect, cornerRadius: min(rect.width, rect.height) * 0.06)
-                context.fill(shape, with: .color(AppTheme.onLetterbox.opacity(0.1)))
-                context.stroke(shape, with: .color(AppTheme.onLetterbox.opacity(0.3)), lineWidth: line)
-            }
-            for button in drawing.buttons where button.shape != .hidden {
-                let rect = scaled(button.frame, size).insetBy(dx: line / 2, dy: line / 2)
-                guard rect.width > 0.5, rect.height > 0.5 else { continue }
-                let face = GraphicsContext.Shading.color(AppTheme.onLetterbox.opacity(0.22))
-                switch button.shape {
-                case .circle:
-                    context.fill(Path(ellipseIn: rect), with: face)
-                    context.stroke(Path(ellipseIn: rect), with: ink, lineWidth: line)
-                case .stick:
-                    let ring = Path(ellipseIn: rect)
-                    context.fill(ring, with: .color(AppTheme.onLetterbox.opacity(0.1)))
-                    context.stroke(ring, with: ink, lineWidth: line)
-                    context.fill(Path(ellipseIn: rect.insetBy(dx: rect.width * 0.28, dy: rect.height * 0.28)), with: face)
-                case .dpup, .dpdown, .dpleft, .dpright:
-                    let arm = Path(roundedRect: rect, cornerRadius: min(rect.width, rect.height) * 0.18)
-                    context.fill(arm, with: face)
-                    context.stroke(arm, with: ink, lineWidth: line)
-                    context.fill(arrow(button.shape, in: rect), with: ink)
-                default:
-                    let key = Path(roundedRect: rect, cornerRadius: min(rect.width, rect.height) * 0.3)
-                    context.fill(key, with: face)
-                    context.stroke(key, with: ink, lineWidth: line)
-                }
-                // Text only where it can be read; a tile shows the shapes alone.
-                if rect.height >= 11, let glyph = TouchSkinEngine.label(for: button).glyph {
-                    let text = Text(glyph).font(.system(size: rect.height * 0.42, weight: .semibold)).foregroundColor(AppTheme.onLetterbox)
-                    let resolved = context.resolve(text)
-                    if resolved.measure(in: rect.size).width <= rect.width * 0.95 {
-                        context.draw(resolved, at: CGPoint(x: rect.midX, y: rect.midY))
-                    }
+        GeometryReader { box in
+            Group {
+                if let face = drawing.face, let folder = drawing.folder {
+                    device(face, folder: folder, size: box.size)
+                } else {
+                    // Laid out at the phone's size, so every font and stroke is the game's, then scaled to the box.
+                    classic
+                        .frame(width: drawing.canvas.width, height: drawing.canvas.height)
+                        .scaleEffect(box.size.width / max(drawing.canvas.width, 1), anchor: .topLeading)
                 }
             }
+            .frame(width: box.size.width, height: box.size.height, alignment: .topLeading)
         }
         .aspectRatio(drawing.aspect, contentMode: .fit)
         .background(AppTheme.letterbox)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
+        .drawingGroup()
         .accessibilityElement()
         .accessibilityLabel(label ?? "")
         .accessibilityAddTraits(.isImage)
         .accessibilityHidden(label == nil)
     }
 
-    private func scaled(_ frame: CGRect, _ size: CGSize) -> CGRect {
-        CGRect(x: frame.minX * size.width, y: frame.minY * size.height, width: frame.width * size.width, height: frame.height * size.height)
+    private var classic: some View {
+        let size = drawing.canvas
+        return ZStack(alignment: .topLeading) {
+            if let art = drawing.art {
+                Image(uiImage: art).resizable().frame(width: size.width, height: size.height)
+            }
+            ForEach(drawing.screens.indices, id: \.self) { index in
+                let r = Self.place(drawing.screens[index], in: CGRect(origin: .zero, size: size))
+                SampleGamePicture().frame(width: r.width, height: r.height).position(x: r.midX, y: r.midY)
+            }
+            // An imported skin's art carries its own buttons.
+            if drawing.art == nil {
+                ForEach(drawing.buttons.filter { $0.shape != .hidden }) { button in
+                    TouchButtonFace(button: button, label: button.showsLabel ? TouchSkinEngine.label(for: button).glyph : nil)
+                        .opacity(drawing.opacity * (button.opacity ?? 1))
+                        .frame(width: button.frame.width * size.width, height: button.frame.height * size.height)
+                        .position(x: button.frame.midX * size.width, y: button.frame.midY * size.height)
+                }
+            }
+        }
     }
 
-    /// The small triangle on a D-pad arm, pointing out from the centre.
-    private func arrow(_ shape: TouchSkinEngine.Button.Shape, in rect: CGRect) -> Path {
-        let s = min(rect.width, rect.height) * 0.22
-        let c = CGPoint(x: rect.midX, y: rect.midY)
-        let (tip, a, b): (CGPoint, CGPoint, CGPoint)
-        switch shape {
-        case .dpup: (tip, a, b) = (CGPoint(x: c.x, y: c.y - s), CGPoint(x: c.x - s, y: c.y + s * 0.6), CGPoint(x: c.x + s, y: c.y + s * 0.6))
-        case .dpdown: (tip, a, b) = (CGPoint(x: c.x, y: c.y + s), CGPoint(x: c.x - s, y: c.y - s * 0.6), CGPoint(x: c.x + s, y: c.y - s * 0.6))
-        case .dpleft: (tip, a, b) = (CGPoint(x: c.x - s, y: c.y), CGPoint(x: c.x + s * 0.6, y: c.y - s), CGPoint(x: c.x + s * 0.6, y: c.y + s))
-        default: (tip, a, b) = (CGPoint(x: c.x + s, y: c.y), CGPoint(x: c.x - s * 0.6, y: c.y - s), CGPoint(x: c.x - s * 0.6, y: c.y + s))
+    /// The shell PDF in its colourway on the fill colour, the picture in its screens and the labels, as `DeviceSkinView` draws them.
+    private func device(_ face: TouchSkinEngine.DeviceArt.Face, folder: URL, size: CGSize) -> some View {
+        let box = CGRect(origin: .zero, size: size)
+        let k = size.width / max(face.canvas.width, 1)
+        return ZStack(alignment: .topLeading) {
+            DeviceSkinView.color(face.fill)
+            if let image = DevicePDF.image(folder.appendingPathComponent(face.background), size: size) {
+                Image(uiImage: image).resizable().frame(width: size.width, height: size.height)
+            }
+            ForEach(face.screens.indices, id: \.self) { index in
+                let r = Self.place(face.screens[index], in: box)
+                ZStack { AppTheme.letterbox; SampleGamePicture() }
+                    .frame(width: r.width, height: r.height).position(x: r.midX, y: r.midY)
+            }
+            ForEach(face.labels.indices, id: \.self) { index in
+                let label = face.labels[index]
+                Text(label.text)
+                    .font(.system(size: label.size * k, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DeviceSkinView.color(label.onBody == true ? face.ink : label.color))
+                    .fixedSize()
+                    .position(x: label.x * size.width, y: label.y * size.height)
+            }
         }
-        var path = Path()
-        path.addLines([tip, a, b])
-        path.closeSubpath()
-        return path
+    }
+
+    private static func place(_ rect: CGRect, in box: CGRect) -> CGRect {
+        CGRect(x: box.minX + rect.minX * box.width, y: box.minY + rect.minY * box.height,
+               width: rect.width * box.width, height: rect.height * box.height)
     }
 }
 
@@ -133,9 +180,8 @@ extension AppState {
     /// skin, the game's own edit, the custom layout, then the built-in choice. Also its name.
     func skinDrawing(platformID: String, game: GameItem?, portrait: Bool) -> (drawing: SkinDrawing, name: String) {
         if controls.file.style(platformID: platformID, gameID: game?.id) == .device,
-           let root = TouchSkinEngine.deviceRoot,
-           let skin = try? TouchSkinEngine.decodeDevice(folder: root.appendingPathComponent(platformID)) {
-            return (.skin(skin, portrait: portrait), "Device")
+           let device = deviceDrawing(platformID: platformID, portrait: portrait) {
+            return (device, "Device")
         }
         if let game, hasCustomSkin(platformID, gameID: game.id), let skin = flexSkin(customSkinURL(platformID, gameID: game.id)) {
             return (.skin(skin, portrait: portrait), "This game's own")
@@ -150,8 +196,18 @@ extension AppState {
         return (.layout(layout, platformID: platformID, portrait: portrait), layout.name)
     }
 
+    /// A platform's device skin in the colourway its players chose. Nil where the platform has none.
+    func deviceDrawing(platformID: String, portrait: Bool) -> SkinDrawing? {
+        guard let root = TouchSkinEngine.deviceRoot, TouchSkinEngine.hasDevice(platformID, root: root),
+              var skin = try? TouchSkinEngine.decodeDevice(folder: root.appendingPathComponent(platformID)) else { return nil }
+        skin.device?.variant = controls.file.skinVariant[platformID]
+        return .skin(skin, portrait: portrait)
+    }
+
     func flexSkin(_ url: URL) -> TouchSkinEngine.Skin? {
-        (try? Data(contentsOf: url)).flatMap { try? TouchSkinEngine.decodeFlex($0, id: url.lastPathComponent) }
+        guard var skin = (try? Data(contentsOf: url)).flatMap({ try? TouchSkinEngine.decodeFlex($0, id: url.lastPathComponent) }) else { return nil }
+        skin.assets = TouchSkinEngine.savedArt(beside: url)
+        return skin
     }
 }
 

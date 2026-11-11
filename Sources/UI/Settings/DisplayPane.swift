@@ -14,7 +14,7 @@ struct AppIconPicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("App Icon")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 8, alignment: .top)], alignment: .leading, spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 64, maximum: 64), spacing: 8, alignment: .top)], alignment: .leading, spacing: 8) {
                 ForEach(Self.choices, id: \.name) { choice in
                     let selected = current == choice.icon
                     Button { set(choice.icon) } label: {
@@ -26,7 +26,8 @@ struct AppIconPicker: View {
                                 .font(.caption2.weight(selected ? .bold : .regular))
                                 .lineLimit(1).minimumScaleFactor(0.7)
                         }
-                        .frame(minWidth: 64, minHeight: 44)
+                        .frame(width: 64, alignment: .top)
+                        .frame(minHeight: 44)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -56,6 +57,7 @@ struct AppIconPicker: View {
 /// Style > Icon and Colours: appearance, accent colour and app icon, each chosen from a picture.
 struct AppearancePane: View {
     @EnvironmentObject private var state: AppState
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// `nil` hex is the standard vermilion.
     private static let swatches: [(name: String, hex: Int?)] = [
@@ -85,8 +87,11 @@ struct AppearancePane: View {
                             OptionTile { AppearancePicture(mode: mode) }
                                 .overlay(RoundedRectangle(cornerRadius: AppTheme.corner + 4).stroke(selected ? AppTheme.ink : Color.clear, lineWidth: 2))
                             Text(LocalizedStringKey(name)).font(.caption.weight(selected ? .bold : .regular))
+                                .lineLimit(2, reservesSpace: true).multilineTextAlignment(.center)
                         }
-                        .frame(minWidth: 64, minHeight: 44)
+                        // One width for all three, so the pictures line up.
+                        .frame(width: typeSize.isAccessibilitySize ? nil : 80, alignment: .top)
+                        .frame(minHeight: 44)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

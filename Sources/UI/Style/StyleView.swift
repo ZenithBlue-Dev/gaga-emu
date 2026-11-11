@@ -41,9 +41,11 @@ struct SkinsGallery: View {
     @State private var editing: EditTarget?
     @Environment(\.verticalSizeClass) private var vertical
     @Environment(\.horizontalSizeClass) private var horizontal
-    @ScaledMetric(relativeTo: .footnote) private var thumbWidth: CGFloat = 132
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @ScaledMetric(relativeTo: .footnote) private var thumbWidth: CGFloat = 150
 
     private struct EditTarget: Identifiable { let id: String }
+    private static let deviceID = "device"
 
     var body: some View {
         Text("Tap a picture to use that skin for every game on the system. A game's page chooses one for that game only.")
@@ -60,22 +62,13 @@ struct SkinsGallery: View {
                             .buttonStyle(QuietButtonStyle())
                             .accessibilityLabel("Edit \(platform.name) skin")
                     }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(alignment: .top, spacing: 10) {
-                            ForEach(TouchSkinEngine.Layout.choices(for: platform.id)) { layout in
-                                choice(platform, id: layout.id, name: layout.name) {
-                                    SkinThumbnail(layout: layout, platformID: platform.id, portrait: upright)
-                                }
-                            }
-                            if state.hasCustomSkin(platform.id) {
-                                if let skin = state.flexSkin(state.customSkinURL(platform.id)) {
-                                    choice(platform, id: TouchSkinEngine.customID, name: "Custom") {
-                                        SkinThumbnail(drawing: .skin(skin, portrait: upright))
-                                    }
-                                }
-                            }
+                    // At accessibility sizes a list, so no card grows past the others.
+                    if typeSize.isAccessibilitySize {
+                        VStack(alignment: .leading, spacing: 8) { choices(platform) }
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 10) { choices(platform) }.padding(.vertical, 2)
                         }
-                        .padding(.vertical, 2)
                     }
                     SkinStyleRows(platformID: platform.id)
                 }
@@ -86,22 +79,30 @@ struct SkinsGallery: View {
         .fullScreenCover(item: $editing) { SkinEditorView(platformID: $0.id) }
     }
 
+    @ViewBuilder private func choices(_ platform: PlatformInfo) -> some View {
+        ForEach(TouchSkinEngine.Layout.choices(for: platform.id)) { layout in
+            choice(platform, id: layout.id, name: layout.name) {
+                SkinThumbnail(layout: layout, platformID: platform.id, portrait: upright)
+            }
+        }
+        if state.hasCustomSkin(platform.id), let skin = state.flexSkin(state.customSkinURL(platform.id)) {
+            choice(platform, id: TouchSkinEngine.customID, name: "Custom") {
+                SkinThumbnail(drawing: .skin(skin, portrait: upright))
+            }
+        }
+        if let device = state.deviceDrawing(platformID: platform.id, portrait: upright) {
+            choice(platform, id: Self.deviceID, name: "Device") { SkinThumbnail(drawing: device) }
+        }
+    }
+
     private func choice<Picture: View>(_ platform: PlatformInfo, id: String, name: String, @ViewBuilder picture: () -> Picture) -> some View {
         let selected = current(platform.id) == id
-        return Button { state.platformSkins[platform.id] = id } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                // Upright the box is tall, as the upright layouts are.
-                picture()
-                    .frame(width: min(thumbWidth, 220), height: min(thumbWidth, 220) * (upright ? 1.2 : 0.6))
-                    .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
-                HStack(spacing: 2) {
-                    if selected { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
-                    Text(name).font(.caption).fontWeight(selected ? .bold : .regular).lineLimit(2)
-                }
-            }
-            .frame(width: min(thumbWidth, 220), alignment: .leading)
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
+        return Button { choose(id, platformID: platform.id) } label: {
+            // Upright the frame is tall, as the upright layouts are. Every card on the strip has this one shape.
+            ChoiceCard(title: name, aspect: upright ? 0.55 : 2, selected: selected, picture: picture)
+                .frame(width: typeSize.isAccessibilitySize ? nil : min(thumbWidth, 220) * (upright ? 0.7 : 1))
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -109,10 +110,22 @@ struct SkinsGallery: View {
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 
+    /// Device sets the system's Skin Style; a layout sets Classic and that layout.
+    private func choose(_ id: String, platformID: String) {
+        let key = "platform:\(platformID)"
+        if id == Self.deviceID {
+            state.controls.file.skinStyle[key] = SkinStyle.device.rawValue
+        } else {
+            state.controls.file.skinStyle[key] = nil
+            state.platformSkins[platformID] = id
+        }
+    }
+
     private var upright: Bool { SkinThumbnail.upright(horizontal, vertical) }
 
-    /// Custom shows only while its file exists; otherwise the platform's built-in choice.
+    /// Device while the system uses it; Custom only while its file exists; otherwise the platform's built-in choice.
     private func current(_ platformID: String) -> String {
+        if state.controls.file.style(platformID: platformID, gameID: nil) == .device { return Self.deviceID }
         let chosen = state.platformSkins[platformID]
         return chosen == TouchSkinEngine.customID && state.hasCustomSkin(platformID)
             ? TouchSkinEngine.customID
@@ -125,6 +138,7 @@ struct FiltersGallery: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var store: StoreKitManager
     @State private var studio = false
+    @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .caption) private var tileMin: CGFloat = 104
 
     private var currentName: String {
@@ -148,7 +162,7 @@ struct FiltersGallery: View {
         Text("New games start with this filter. A game's page and its pause menu choose one for that game.")
             .font(.footnote).foregroundStyle(AppTheme.muted).padding(.bottom, 8)
         Rule()
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: min(tileMin, 180)), spacing: 10)], spacing: 12) {
+        LazyVGrid(columns: choiceColumns(minimum: min(tileMin, 180), large: typeSize.isAccessibilitySize), spacing: 12) {
             ForEach(ShaderCatalog.all) { tile($0) }
         }
         .padding(.top, 10)
@@ -159,18 +173,9 @@ struct FiltersGallery: View {
         let locked = shader.premium && !store.canUseShader(shader.id)
         let selected = state.shaderID == shader.id
         return Button { if locked { studio = true } else { state.shaderID = shader.id } } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                FilterPicture(shaderID: shader.id)
-                    .aspectRatio(4.0 / 3.0, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
-                    .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
-                HStack(spacing: 2) {
-                    if selected { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
-                    if locked { Image(systemName: "lock").font(.caption2) }
-                    Text(shader.name).font(.caption).fontWeight(selected ? .bold : .regular).lineLimit(2)
-                }
-            }
-            .contentShape(Rectangle())
+            ChoiceCard(title: shader.name, detail: locked ? "Gaga Plus" : nil, reservesDetail: PaywallGate.isOpen,
+                       aspect: 4.0 / 3.0, selected: selected) { FilterPicture(shaderID: shader.id) }
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)

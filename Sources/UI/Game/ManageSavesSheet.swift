@@ -13,15 +13,20 @@ struct ManageSavesSheet: View {
 
     var body: some View {
         PaperSheet(title: "Manage Saves", subtitle: title) {
-            VStack(alignment: .leading, spacing: 0) {
-                battery
-                Rule()
-                if slots.isEmpty {
-                    Text("No save states yet. Use Save State in the pause menu while you play.")
-                        .foregroundStyle(AppTheme.muted)
-                        .padding(.vertical, 12)
+            VStack(alignment: .leading, spacing: 20) {
+                GroupCard(title: "Save States") {
+                    if slots.isEmpty {
+                        Text("No save states yet. Use Save State in the pause menu while you play.")
+                            .foregroundStyle(AppTheme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.vertical, 12)
+                    }
+                    ForEach(Array(slots.enumerated()), id: \.element.id) { index, slot in
+                        if index > 0 { Rule() }
+                        row(slot)
+                    }
                 }
-                ForEach(slots) { row($0) }
+                GroupCard(title: "Game Save") { battery }
             }
         }
         .onAppear(perform: reload)
@@ -88,7 +93,6 @@ struct ManageSavesSheet: View {
                 .accessibilityLabel("Delete \(name(slot))")
             }
             .padding(.vertical, 6)
-            Rule()
         }
     }
 

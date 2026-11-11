@@ -1309,8 +1309,10 @@ final class AppState: ObservableObject {
     /// Saves the skin editor's layout as the platform's custom skin and chooses it. Throws, saving nothing,
     /// when the layout fails `TouchSkinEngine.problems`.
     /// With `gameID`, the layout is that game's alone and the platform's choice is left as it was.
+    /// `art` is an imported package's own art (`TouchSkinEngine.skinPackageArt`), saved beside the layout; empty
+    /// removes any the layout had.
     func saveCustomSkin(_ buttons: [TouchSkinEngine.Button], portraitButtons: [TouchSkinEngine.Button]? = nil, opacity: Double,
-                        overlay: Bool = false, platformID: String, gameID: UUID? = nil) throws {
+                        overlay: Bool = false, art: [String: Data] = [:], platformID: String, gameID: UUID? = nil) throws {
         let upright = portraitButtons ?? TouchSkinEngine.portrait(from: buttons)
         if let problem = TouchSkinEngine.problems(in: buttons, overlay: overlay).first
             ?? TouchSkinEngine.problems(in: upright, portrait: true, overlay: overlay).first.map({ "Upright: \($0)" }) {
@@ -1319,12 +1321,14 @@ final class AppState: ObservableObject {
         let data = try TouchSkinEngine.encodeFlex(name: "Custom", buttons: buttons, portraitButtons: upright, opacity: opacity, overlay: overlay)
         try FileManager.default.createDirectory(at: skinDirectory, withIntermediateDirectories: true)
         try data.write(to: customSkinURL(platformID, gameID: gameID), options: .atomic)
+        try TouchSkinEngine.writeArt(art, beside: customSkinURL(platformID, gameID: gameID))
         if gameID == nil { platformSkins[platformID] = TouchSkinEngine.customID }
     }
 
     /// Deletes the platform's custom skin, or the game's own, and returns it to its default layout.
     func resetCustomSkin(_ platformID: String, gameID: UUID? = nil) {
         try? FileManager.default.removeItem(at: customSkinURL(platformID, gameID: gameID))
+        try? TouchSkinEngine.writeArt([:], beside: customSkinURL(platformID, gameID: gameID))
         if gameID == nil, platformSkins[platformID] == TouchSkinEngine.customID { platformSkins[platformID] = nil }
     }
 

@@ -82,6 +82,87 @@ struct TiledRow<Content: View>: View {
     }
 }
 
+/// One card in a grid of choices. The picture sits in a frame of the grid's one shape and fits inside it; the title
+/// keeps two lines and the detail one, even when shorter, so every card in a grid is the same size and its content
+/// starts at the top. At accessibility text sizes the card is a row instead: the grid becomes a one-column list.
+struct ChoiceCard<Picture: View>: View {
+    let title: String
+    var detail: String?
+    /// Keeps the detail line on every card of a grid where any card has one.
+    var reservesDetail = false
+    /// The picture frame's width over its height, the same for the whole grid.
+    let aspect: CGFloat
+    var selected = false
+    @ViewBuilder var picture: Picture
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    var body: some View {
+        if typeSize.isAccessibilitySize {
+            HStack(alignment: .center, spacing: 12) {
+                frame.frame(width: 96)
+                text.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(minHeight: 44)
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                frame
+                text
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private var frame: some View {
+        let shape = RoundedRectangle(cornerRadius: AppTheme.corner)
+        return Color.clear
+            .aspectRatio(aspect, contentMode: .fit)
+            .overlay { picture }
+            .background(AppTheme.letterbox)
+            .clipShape(shape)
+            .overlay(shape.stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
+    }
+
+    private var text: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                if selected { Image(systemName: "checkmark").font(.caption2.weight(.bold)) }
+                Text(LocalizedStringKey(title)).font(.caption).fontWeight(selected ? .bold : .regular)
+                    .lineLimit(2, reservesSpace: !typeSize.isAccessibilitySize)
+            }
+            if detail != nil || reservesDetail {
+                Text(detail ?? " ").font(.caption2).foregroundStyle(AppTheme.muted)
+                    .lineLimit(1, reservesSpace: !typeSize.isAccessibilitySize)
+            }
+        }
+    }
+}
+
+/// A grid's columns: equal flexible ones that fit `minimum`, or one at accessibility text sizes.
+func choiceColumns(minimum: CGFloat, large: Bool, spacing: CGFloat = 10) -> [GridItem] {
+    large ? [GridItem(.flexible(), alignment: .top)] : [GridItem(.adaptive(minimum: minimum), spacing: spacing, alignment: .top)]
+}
+
+/// A titled group of rows on the surface colour, so a page reads as a few clear parts. The title is a header.
+struct GroupCard<Content: View>: View {
+    var title: String?
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let title {
+                Text(LocalizedStringKey(title)).font(.footnote.weight(.semibold)).foregroundStyle(AppTheme.muted)
+                    .accessibilityAddTraits(.isHeader)
+                    .padding(.horizontal, 4)
+            }
+            VStack(alignment: .leading, spacing: 0) { content }
+                .padding(.horizontal, 12).padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner + 4))
+                .overlay(RoundedRectangle(cornerRadius: AppTheme.corner + 4).stroke(AppTheme.rule, lineWidth: 1))
+        }
+    }
+}
+
 // MARK: - Drawings
 
 /// A paper frame with the game picture drawn at a scaling mode: Fit, Stretch, Whole Pixels or Zoom.

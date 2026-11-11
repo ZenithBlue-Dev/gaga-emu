@@ -1109,6 +1109,78 @@ final class GagaEmuWalkTests: XCTestCase {
         sleep(1)
     }
 
+    /// Every skin picture, Core Options from Settings and from the game, and the pause menu with each of its sheets,
+    /// upright and in landscape, so a redesign of them is shot before and after in one walk.
+    func testAuditSkinsAndMenus() {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = launchApp()
+        _ = importedGame(app, "The \(title) game")
+        sleep(2)
+        if styleSection(app, "Skins") { audit("R2 01 Style Skins") }
+        goTo(app, "Library")
+        let cover = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        if !promptUp(), cover.waitForExistence(timeout: 6) {
+            cover.tap()
+            sleep(1)
+            if startOnPage(app).waitForExistence(timeout: 6) {
+                audit("R2 02 Game page")
+                let row = app.buttons["gamePage.skin"].firstMatch
+                if !promptUp(), row.waitForExistence(timeout: 4) {
+                    row.tap()
+                    sleep(1)
+                    audit("R2 03 Game page Skin")
+                    close(app)
+                }
+                for _ in 0..<3 where app.buttons["gamePage.delete"].exists { close(app) }
+            }
+        }
+        goTo(app, "Settings")
+        if selectTab(app, "Controllers") { audit("R2 04 Settings Controllers") }
+        if selectTab(app, "Systems") {
+            let row = app.buttons["core.\(core)"].firstMatch
+            if !promptUp(), row.waitForExistence(timeout: 6) {
+                row.tap()
+                sleep(1)
+                audit("R2 05 Settings Core Options")
+                close(app)
+            }
+        }
+        goTo(app, "Library")
+        guard !promptUp(), cover.waitForExistence(timeout: 6) else { return }
+        play(app, cover)
+        let pause = app.buttons["Pause game"]
+        guard pause.waitForExistence(timeout: timeout) else {
+            snapshot("R2 game did not start")
+            return
+        }
+        sleep(4)
+        audit("R2 06 Playing")
+        guard !promptUp() else { return }
+        pause.tap()
+        sleep(1)
+        audit("R2 07 Pause")
+        app.swipeUp()
+        sleep(1)
+        snapshot("R2 07 Pause scrolled portrait")
+        app.swipeDown()
+        if !promptUp(), app.buttons["pause.coreOptions"].firstMatch.waitForExistence(timeout: 4) {
+            app.buttons["pause.coreOptions"].firstMatch.tap()
+            sleep(1)
+            audit("R2 08 Game Core Options")
+            close(app)
+        }
+        auditPage(app, "Load State", as: "R2 09 Save States")
+        auditPage(app, "Skin", as: "R2 10 Pause Skin")
+        if open(app, "Filter") {
+            sleep(2)
+            audit("R2 11 Pause Filter")
+            close(app)
+        }
+        auditPage(app, "Controls", as: "R2 12 Controls")
+        auditPage(app, "Cheats", as: "R2 13 Cheats")
+    }
+
     func testAuditGameGBA() { auditGame("mgba", platform: "Game Boy Advance", tag: "10 GBA") }
     func testAuditGameNES() { auditGame("nestopia", platform: "NES", tag: "11 NES") }
     func testAuditGameNDS() { auditGame("melonds_ds", platform: "Nintendo DS", tag: "12 NDS") }

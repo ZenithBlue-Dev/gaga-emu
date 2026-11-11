@@ -14,24 +14,32 @@ struct ControlsSheet: View {
 
     var body: some View {
         PaperSheet(title: "Controls", subtitle: game?.title) {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 20) {
                 if let game {
-                    row("Touch Layout", "This system") { editing = EditTarget(id: game.platformID, gameID: nil) }
-                    Rule()
-                    row("Touch Layout", state.hasCustomSkin(game.platformID, gameID: game.id) ? "This game, edited" : "This game only") {
-                        editing = EditTarget(id: game.platformID, gameID: game.id)
+                    GroupCard(title: "Touch Controls") {
+                        // The skin this game plays with, drawn as it shows in game.
+                        CurrentSkinPicture(platformID: game.platformID, game: game, labelled: true)
+                            .frame(maxWidth: 320, maxHeight: 160)
+                            .padding(.vertical, 8)
+                        Rule()
+                        row("Touch Layout", "This system") { editing = EditTarget(id: game.platformID, gameID: nil) }
+                        Rule()
+                        row("Touch Layout", state.hasCustomSkin(game.platformID, gameID: game.id) ? "This game, edited" : "This game only") {
+                            editing = EditTarget(id: game.platformID, gameID: game.id)
+                        }
                     }
-                    Rule()
                 }
-                row("Controller Mapping", nil) { page = .mapping }
-                Rule()
-                row("Macros", "\(state.controls.file.macros.count)") { page = .macros }
-                Rule()
-                row("Turbo", "\(Int(state.controls.file.turboHertz)) per second") { page = .turbo }
-                Rule()
-                row("Players", nil) { page = .players }
-                Rule()
-                ControlOptions(game: game)
+                GroupCard(title: "Controllers") {
+                    row("Controller Mapping", nil) { page = .mapping }
+                    Rule()
+                    row("Players", nil) { page = .players }
+                }
+                GroupCard(title: "Macros and Turbo") {
+                    row("Macros", "\(state.controls.file.macros.count)") { page = .macros }
+                    Rule()
+                    row("Turbo", "\(Int(state.controls.file.turboHertz)) per second") { page = .turbo }
+                }
+                GroupCard(title: "Feel and Style") { ControlOptions(game: game).padding(.vertical, 4) }
             }
         }
         .sheet(item: $page) { page in

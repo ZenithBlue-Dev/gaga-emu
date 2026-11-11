@@ -22,7 +22,11 @@ struct GameView: View {
             let upright = geometry.size.height > geometry.size.width
             let custom = session.isDualScreen && session.screen.preset == .custom
             let reserve = (touchVisible || !state.autoFullScreen) && session.screen.area == .betweenControls && !custom
+            // An imported skin's own art: under the picture while the picture keeps out of the controls' area, else
+            // over it at the skin's opacity, as the drawn controls are.
+            let packageArt = touchVisible && skins.skin?.device == nil ? skins.skin?.artImage(portrait: upright) : nil
             ZStack(alignment: .topLeading) {
+                if let packageArt, reserve { artLayer(packageArt, geometry.size) }
                 if let art = skins.skin?.device, touchVisible, !external.showsPicture {
                     DeviceSkinView(session: session, skins: skins, art: art, macros: state.controls.file.macros)
                 } else if external.showsPicture {
@@ -49,6 +53,7 @@ struct GameView: View {
                         .accessibilityLabel("\(session.game.title), game picture")
                         .accessibilityAddTraits(.isImage)
                 }
+                if let packageArt, !reserve { artLayer(packageArt, geometry.size).opacity(skins.opacity) }
                 // With the picture on another screen, a device skin's buttons draw as outlines.
                 if touchVisible && (skins.skin?.device == nil || external.showsPicture) { TouchControls(session: session, skins: skins, macros: state.controls.file.macros) }
                 HStack(spacing: 0) {
@@ -119,6 +124,13 @@ struct GameView: View {
             OrientationLock.set(nil)
             external.present(nil)
         }
+    }
+
+    private func artLayer(_ image: UIImage, _ size: CGSize) -> some View {
+        Image(uiImage: image).resizable()
+            .frame(width: size.width, height: size.height)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     private var stopRecordingButton: some View {
@@ -381,20 +393,40 @@ private struct TouchControls: View {
 
     @ViewBuilder private func glyph(_ button: TouchSkinEngine.Button, on: Bool?) -> some View {
         let held = skins.pressed.contains(button.id) || on == true
-        let content = held ? AppTheme.onAccent : AppTheme.onLetterbox
         // Text says a toggle is on, so colour is not the only cue.
         let base = button.showsLabel ? TouchSkinEngine.label(for: button, macros: macros).glyph : nil
         let label = on == true ? (base ?? "").isEmpty ? "On" : "\(base ?? "") On" : base
+        let right = button.id != "lstick"
+        let stick = CGPoint(x: CGFloat(right ? skins.analog.rx : skins.analog.lx) / 32767, y: -CGFloat(right ? skins.analog.ry : skins.analog.ly) / 32767)
+        if skins.skin?.artImage(portrait: skins.portrait) != nil {
+            // The skin's own art draws the buttons; a press shows as a light fill over it.
+            (button.shape == .circle || button.shape == .stick ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: AppTheme.corner)))
+                .fill(held ? AppTheme.accentFill.opacity(0.45) : Color.clear)
+        } else {
+            TouchButtonFace(button: button, held: held, label: label, stick: stick)
+        }
+    }
+}
+
+/// One touch control as the game draws it: outline, fill while held, glyph, and a stick's cap at its position. Skin
+/// pictures draw the same view, so they look as the game does.
+struct TouchButtonFace: View {
+    let button: TouchSkinEngine.Button
+    var held = false
+    var label: String?
+    /// The stick's position, -1...1 each way, y up.
+    var stick: CGPoint = .zero
+
+    var body: some View {
+        let content = held ? AppTheme.onAccent : AppTheme.onLetterbox
         switch button.shape {
         case .stick:
-            let right = button.id != "lstick"
-            let x = CGFloat(right ? skins.analog.rx : skins.analog.lx) / 32767, y = -CGFloat(right ? skins.analog.ry : skins.analog.ly) / 32767
             GeometryReader { box in
                 Circle().stroke(AppTheme.onLetterbox, lineWidth: 1)
                     .overlay(
                         Circle().fill(held ? AppTheme.accentFill : AppTheme.onLetterbox.opacity(0.35))
                             .frame(width: box.size.width * 0.45, height: box.size.height * 0.45)
-                            .offset(x: x * box.size.width * 0.275, y: y * box.size.height * 0.275)
+                            .offset(x: stick.x * box.size.width * 0.275, y: stick.y * box.size.height * 0.275)
                     )
             }
         case .circle:
@@ -453,7 +485,7 @@ private struct StickActions: ViewModifier {
 /// A console-style skin (docs/06 section 3.8), fitted to the whole screen and centred on its fill colour. Drawn in
 /// order: the shell PDF, the picture in the screen rects, the pressed PDF clipped to each held button, the stick caps
 /// moved with the sticks, then the labels in the system font. Fingers land through the same fitted canvas.
-private struct DeviceSkinView: View {
+struct DeviceSkinView: View {
     @ObservedObject var session: GameSession
     @ObservedObject var skins: TouchSkinEngine
     let art: TouchSkinEngine.DeviceArt
@@ -679,7 +711,8 @@ private struct PauseMenu: View {
                 ScrollView {
                     if showScreen { screenPage } else { mainPage }
                 }
-                .frame(width: upright ? nil : 280, height: upright ? geometry.size.height * (1 - TouchSkinEngine.portraitControlTop) : nil)
+                // Wide enough in landscape for two tiles across with their names on one or two lines.
+                .frame(width: upright ? nil : min(360, geometry.size.width * 0.48), height: upright ? geometry.size.height * (1 - TouchSkinEngine.portraitControlTop) : nil)
                 .foregroundStyle(AppTheme.ink)
                 .background(AppTheme.paper.ignoresSafeArea())
                 .accessibilityAddTraits(.isModal)
@@ -713,12 +746,18 @@ private struct PauseMenu: View {
         state.skins.portrait = upright
     }
 
+    /// The menu's parts, in order, each under its own header.
+    private enum Part: String, CaseIterable {
+        case saves = "Save and Load", look = "Look", game = "Game"
+    }
+
     /// One tile in the grid.
     private struct Entry: Identifiable {
         let id: String
         let title: String
         var value: String?
         var keywords = ""
+        var part = Part.game
         let picture: AnyView
         let action: () -> Void
     }
@@ -734,16 +773,17 @@ private struct PauseMenu: View {
         let symbol = { (name: String) in AnyView(SymbolPicture(symbol: name)) }
         if session.supportsSaveStates {
             list.append(Entry(id: "pause.saveState", title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" },
-                              keywords: "save slot", picture: symbol("square.and.arrow.down"), action: saveState))
-            list.append(Entry(id: "pause.loadState", title: "Load State", keywords: "load slot restore",
+                              keywords: "save slot", part: .saves, picture: symbol("square.and.arrow.down"), action: saveState))
+            list.append(Entry(id: "pause.loadState", title: "Load State", value: session.saves.slots().isEmpty ? "None yet" : "\(session.saves.slots().count) saved",
+                              keywords: "load slot restore", part: .saves,
                               picture: AnyView(SaveStatePicture(slot: session.saves.slots().first)), action: { showSaves = true }))
         }
-        list.append(Entry(id: "pause.filter", title: "Filter", value: filterName, keywords: "shader crt lcd scanlines look",
+        list.append(Entry(id: "pause.filter", title: "Filter", value: filterName, keywords: "shader crt lcd scanlines look", part: .look,
                           picture: AnyView(FilterPicture(shaderID: state.effectiveShaderID(liveGame))), action: { showFilter = true }))
-        list.append(Entry(id: "pause.skin", title: "Skin", value: state.skinDrawing(platformID: liveGame.platformID, game: liveGame, portrait: false).name, keywords: "touch layout buttons",
+        list.append(Entry(id: "pause.skin", title: "Skin", value: state.skinDrawing(platformID: liveGame.platformID, game: liveGame, portrait: false).name, keywords: "touch layout buttons", part: .look,
                           picture: AnyView(CurrentSkinPicture(platformID: liveGame.platformID, game: liveGame).padding(3)), action: { showSkin = true }))
         list.append(Entry(id: "pause.screen", title: "Screen", value: session.isDualScreen ? session.screen.preset.title : session.screen.scaling.title,
-                          keywords: "scaling fit stretch zoom layout dual",
+                          keywords: "scaling fit stretch zoom layout dual", part: .look,
                           picture: session.isDualScreen ? AnyView(DualLayoutPicture(preset: session.screen.preset)) : AnyView(ScalingPicture(mode: session.screen.scaling)),
                           action: { showScreen = true }))
         list.append(Entry(id: "pause.controls", title: "Controls", value: "Layout, mapping, macros", keywords: "controller mapping macros turbo players",
@@ -777,14 +817,23 @@ private struct PauseMenu: View {
         return words.allSatisfy { text.contains($0) }
     }
 
+    /// Every tile has one size: a 48 pt picture, a name kept to two lines and a value line, each holding its space.
     private func tile(_ entry: Entry) -> some View {
-        Button(action: entry.action) {
-            VStack(alignment: .leading, spacing: 6) {
-                OptionTile { entry.picture }
-                Text(entry.title).font(.subheadline.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
-                if let value = entry.value {
-                    Text(value).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2)
+        let large = typeSize.isAccessibilitySize
+        return Button(action: entry.action) {
+            HStack(alignment: .top, spacing: 10) {
+                entry.picture
+                    .frame(width: 48, height: 48)
+                    .background(AppTheme.paper)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.corner))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(entry.title)).font(.subheadline.weight(.semibold))
+                        .lineLimit(2, reservesSpace: !large)
+                    Text(entry.value ?? " ").font(.meta).foregroundStyle(AppTheme.muted)
+                        .lineLimit(1, reservesSpace: !large)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(10)
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .topLeading)
@@ -829,11 +878,16 @@ private struct PauseMenu: View {
                        })
     }
 
+    /// Resume first and alone as the one filled button, then the tiles in their parts, each under a header, then the
+    /// speed and the rest in cards, and Quit last.
     private var mainPage: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
-            Text(session.game.title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(3)
-            HStack(spacing: 4) {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Paused").font(.screenTitle).accessibilityAddTraits(.isHeader)
+                Text(session.game.title).font(.meta).foregroundStyle(AppTheme.muted).lineLimit(2)
+            }
+            Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
+            HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(AppTheme.muted).accessibilityHidden(true)
                 TextField("Search this game", text: $query)
                     .submitLabel(.search)
@@ -841,50 +895,77 @@ private struct PauseMenu: View {
                     .textInputAutocapitalization(.never)
                     .accessibilityLabel("Search this game's options")
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 10)
             .frame(minHeight: 44)
-            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner).stroke(AppTheme.rule, lineWidth: 1))
-            Rule().padding(.vertical, 4)
-            Button("Resume", action: resume).buttonStyle(PrimaryButtonStyle())
-            // One column at accessibility sizes, so tile names never break mid-word.
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8, alignment: .top), count: typeSize.isAccessibilitySize ? 1 : 2),
-                      alignment: .leading, spacing: 8) {
-                ForEach(entries.filter(matches)) { tile($0) }
-            }
+            .background(AppTheme.surface, in: RoundedRectangle(cornerRadius: AppTheme.corner))
             if query.isEmpty {
-                if session.supportsSaveStates {
-                    Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
-                        Text("Quick Slot \(session.quickSlot)")
+                ForEach(Part.allCases, id: \.self) { part in
+                    let shown = entries.filter { $0.part == part }
+                    if !shown.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            partHeader(part.rawValue)
+                            grid(shown)
+                            if part == .saves, session.supportsSaveStates {
+                                Stepper(value: Binding(get: { session.quickSlot }, set: { session.setQuickSlot($0) }), in: ControlsStore.quickSlots) {
+                                    Text("Quick Slot \(session.quickSlot)")
+                                }
+                                .frame(minHeight: 44)
+                            }
+                        }
                     }
-                    .frame(minHeight: 44)
                 }
-                fastForward
-                rewindNote
-                if session.achievementsLoaded {
-                    ToggleRow(title: "Hardcore", note: "Turning it on resets the game.",
-                              isOn: Binding(get: { session.achievements?.hardcore ?? false }, set: { session.setHardcore($0) }))
+                GroupCard(title: "Speed") {
+                    fastForward
+                    rewindNote.padding(.bottom, 8)
                 }
-                if session.hardcoreActive {
-                    Text("Hardcore: state loading, cheats and rewind are off.")
-                        .font(.footnote).foregroundStyle(AppTheme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("hardcoreNote")
-                } else {
-                    PlayNearbyRow(session: session)
-                }
-                if !session.hardcoreActive, !session.supportsCheats, let note = session.noCheatsNote {
-                    Text(note)
-                        .font(.footnote).foregroundStyle(AppTheme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("noCheatsNote")
-                }
+                more
+            } else {
+                grid(entries.filter(matches))
             }
-            Rule().padding(.vertical, 4)
             Button("Quit to Library", action: { session.stop() })
                 .buttonStyle(QuietButtonStyle())
                 .frame(maxWidth: .infinity)
         }
         .padding(16)
+    }
+
+    private func partHeader(_ title: String) -> some View {
+        Text(LocalizedStringKey(title)).font(.footnote.weight(.semibold)).foregroundStyle(AppTheme.muted)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    /// Equal columns that keep each tile at least 140 pt wide; one column at accessibility sizes.
+    private func grid(_ shown: [Entry]) -> some View {
+        LazyVGrid(columns: choiceColumns(minimum: 140, large: typeSize.isAccessibilitySize, spacing: 8), alignment: .leading, spacing: 8) {
+            ForEach(shown) { tile($0) }
+        }
+    }
+
+    /// Hardcore, playing together and why cheats are missing, when any applies.
+    @ViewBuilder private var more: some View {
+        let noCheats = !session.hardcoreActive && !session.supportsCheats ? session.noCheatsNote : nil
+        GroupCard(title: "More") {
+            if session.achievementsLoaded {
+                ToggleRow(title: "Hardcore", note: "Turning it on resets the game.",
+                          isOn: Binding(get: { session.achievements?.hardcore ?? false }, set: { session.setHardcore($0) }))
+            }
+            if session.hardcoreActive {
+                Text("Hardcore: state loading, cheats and rewind are off.")
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 8)
+                    .accessibilityIdentifier("hardcoreNote")
+            } else {
+                PlayNearbyRow(session: session)
+            }
+            if let noCheats {
+                Text(noCheats)
+                    .font(.footnote).foregroundStyle(AppTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 8)
+                    .accessibilityIdentifier("noCheatsNote")
+            }
+        }
     }
 
     private func saveState() {

@@ -1,3 +1,4 @@
+import ImageIO
 import XCTest
 @testable import GagaEmu
 
@@ -165,6 +166,62 @@ final class Manic2Tests: GagaTestCase {
         XCTAssertThrowsError(try TouchSkinEngine.skinPackageLayout(at: zip([("info.json", Data(count: 2 << 20), nil)])), "Over the size limit")
         XCTAssertThrowsError(try TouchSkinEngine.skinPackageLayout(at: zip([("info.json", Data("{}".utf8), nil)])))
         XCTAssertThrowsError(try TouchSkinEngine.skinPackageLayout(info: Data("not json".utf8)))
+    }
+
+    /// The package's art comes across as a new PNG: a bitmap downsampled, a PDF drawn at the layout's shape. A name
+    /// with a folder, or bytes that are no image, give no art, and the layout still imports. Art made here, none copied.
+    func testSkinPackageArtIsReencoded() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("art-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let context = try XCTUnwrap(CGContext(data: nil, width: 64, height: 32, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(red: 1, green: 0, blue: 0, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 64, height: 32))
+        let png = NSMutableData()
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(png, "public.png" as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, try XCTUnwrap(context.makeImage()), nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let pdf = NSMutableData()
+        var box = CGRect(x: 0, y: 0, width: 200, height: 300)
+        let pdfContext = try XCTUnwrap(CGContext(consumer: try XCTUnwrap(CGDataConsumer(data: pdf)), mediaBox: &box, nil))
+        pdfContext.beginPDFPage(nil)
+        pdfContext.setFillColor(red: 0, green: 0, blue: 1, alpha: 1)
+        pdfContext.fill(CGRect(x: 20, y: 20, width: 100, height: 100))
+        pdfContext.endPDFPage()
+        pdfContext.closePDF()
+        func package(landscape: String, portrait: String, files: [(String, Data)]) throws -> URL {
+            let withArt = info
+                .replacingOccurrences(of: #""landscape":{"mappingSize""#, with: #""landscape":{"assets":{"large":"\#(landscape)"},"mappingSize""#)
+                .replacingOccurrences(of: #""portrait":{"mappingSize""#, with: #""portrait":{"assets":{"resizable":"\#(portrait)"},"mappingSize""#)
+            let url = folder.appendingPathComponent("\(UUID().uuidString).deltaskin")
+            let entries: [(name: String, data: Data, size: Int?)] = [(name: "info.json", data: Data(withArt.utf8), size: nil)]
+                + files.map { (name: $0.0, data: $0.1, size: nil) }
+            try ZipImportTests.deflatedZip(entries).write(to: url)
+            return url
+        }
+        func size(_ data: Data?) -> CGSize? {
+            guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil),
+                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }
+            return CGSize(width: image.width, height: image.height)
+        }
+        let good = try package(landscape: "land.png", portrait: "port.pdf", files: [("land.png", png as Data), ("port.pdf", pdf as Data)])
+        let art = TouchSkinEngine.skinPackageArt(at: good)
+        XCTAssertEqual(art["landscape"]?.prefix(4), Data([0x89, 0x50, 0x4E, 0x47]), "Kept as a new PNG")
+        XCTAssertEqual(size(art["landscape"]), CGSize(width: 64, height: 32), "A small bitmap keeps its size")
+        XCTAssertEqual(size(art["portrait"]), CGSize(width: 1024, height: 2048), "The PDF is drawn at the 400x800 layout's shape")
+
+        let bad = try package(landscape: "../land.png", portrait: "port.pdf", files: [("../land.png", png as Data), ("port.pdf", Data("%PDF-junk".utf8))])
+        XCTAssertTrue(TouchSkinEngine.skinPackageArt(at: bad).isEmpty, "A name with a folder and a broken PDF give no art")
+        XCTAssertNotNil(try TouchSkinEngine.skinPackageLayout(at: bad).landscape, "The layout still imports")
+        let junk = try package(landscape: "land.png", portrait: "none.pdf", files: [("land.png", Data(repeating: 7, count: 4096))])
+        XCTAssertTrue(TouchSkinEngine.skinPackageArt(at: junk).isEmpty, "Bytes that are no image give no art")
+
+        let json = folder.appendingPathComponent("gba.json")
+        try TouchSkinEngine.writeArt(art, beside: json)
+        XCTAssertEqual(TouchSkinEngine.savedArt(beside: json), art)
+        try TouchSkinEngine.writeArt([:], beside: json)
+        XCTAssertTrue(TouchSkinEngine.savedArt(beside: json).isEmpty, "Saving without art removes the old art")
     }
 
     func testDiscFilesSkipsTracksBesideSheets() throws {
