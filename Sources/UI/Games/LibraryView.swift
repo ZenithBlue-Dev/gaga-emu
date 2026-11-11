@@ -221,6 +221,7 @@ struct LibraryView: View {
                         }
                     }
                 }
+                .accessibilityIdentifier("continueStrip")
             }
             .padding(.leading, lead).padding(.trailing, trail).padding(.vertical, 6)
             .dynamicTypeSize(...DynamicTypeSize.accessibility1) // One row: larger text would take the shelves' height.

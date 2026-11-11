@@ -64,11 +64,19 @@ final class GagaEmuWalkTests: XCTestCase {
     /// shows an alert instead, and its text is the failure.
     private func importedGame(_ app: XCUIApplication, _ what: String) -> XCUIElement {
         // BEGINSWITH: the cover, not the Continue panel's "Play <title>".
-        let game = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", title)).firstMatch
+        let matches = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND NOT (identifier BEGINSWITH 'continue')", title))
+        let game = matches.firstMatch
+        let strip = app.scrollViews["continueStrip"]
         let alert = app.alerts.firstMatch
         let deadline = Date().addingTimeInterval(importTimeout)
         while Date() < deadline {
-            if game.exists || promptUp() { return game }
+            // A Continue strip tap starts the game; the walks want the cover, which opens its page.
+            if strip.exists {
+                if let cover = matches.allElementsBoundByIndex.first(where: {
+                    !strip.frame.contains(CGPoint(x: $0.frame.midX, y: $0.frame.midY))
+                }) { return cover }
+            } else if game.exists { return game }
+            if promptUp() { return game }
             if alert.exists {
                 snapshot("Import alert")
                 XCTFail("\(what): the import failed: " + ([alert.label] + alert.staticTexts.allElementsBoundByIndex.map(\.label)).joined(separator: " | "))
