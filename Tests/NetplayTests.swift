@@ -472,6 +472,11 @@ final class NetplayTests: XCTestCase {
                 XCTAssertTrue(all.contains(core), "\(platform) \(core)")
             }
         }
+        // One-player handhelds say why; any other system gets the plain line.
+        for platform in ["gba", "nds", "n3ds", "psp"] {
+            XCTAssertTrue(CoreCatalog.playNearbyReason(platformID: platform).contains("one player per console"), platform)
+        }
+        XCTAssertEqual(CoreCatalog.playNearbyReason(platformID: "gamegear"), CoreCatalog.playNearbyUnavailable)
         XCTAssertNil(CoreCatalog.playNearbyRefusal(stateSize: 1 << 20, saveNanos: 1_000_000))
         XCTAssertNotNil(CoreCatalog.playNearbyRefusal(stateSize: 0, saveNanos: 0))
         XCTAssertNotNil(CoreCatalog.playNearbyRefusal(stateSize: CoreCatalog.playNearbyMaxStateBytes + 1, saveNanos: 0))

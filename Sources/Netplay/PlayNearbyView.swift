@@ -1,41 +1,37 @@
 import SwiftUI
 
-/// The pause menu's Play Nearby row and its sheet. Says why when this system cannot play nearby.
+/// The pause menu's Play Nearby row and its sheet. On every system: where it cannot play nearby, the sheet says why.
 struct PlayNearbyRow: View {
     @ObservedObject var session: GameSession
     @EnvironmentObject private var state: AppState
     @State private var shown: NetplaySession?
 
     var body: some View {
-        if let core = session.netplayCore, CoreCatalog.playNearbyAllowed(platformID: session.game.platformID, coreID: core.coreID) {
-            Button(action: open) {
-                HStack {
-                    Text("Play Nearby")
-                    Spacer(minLength: 8)
-                    if let current = NetplaySession.current, current.game === session, case .connected = current.phase {
-                        Text("On").font(.meta).foregroundStyle(AppTheme.muted)
-                    }
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("playNearby")
-            .sheet(item: $shown) { PlayNearbySheet(net: $0) }
-            .onAppear {
-                // From the Library's Play Nearby: open once this game is paused for it.
-                if NetplaySession.openOnStart == session.game.id {
-                    NetplaySession.openOnStart = nil
-                    open()
+        let allowed = session.netplayCore.map { CoreCatalog.playNearbyAllowed(platformID: session.game.platformID, coreID: $0.coreID) } ?? false
+        Button(action: open) {
+            HStack {
+                Text("Play Nearby")
+                Spacer(minLength: 8)
+                if !allowed {
+                    Text("Not available").font(.meta).foregroundStyle(AppTheme.muted)
+                } else if let current = NetplaySession.current, current.game === session, case .connected = current.phase {
+                    Text("On").font(.meta).foregroundStyle(AppTheme.muted)
                 }
             }
-        } else {
-            Text(CoreCatalog.playNearbyUnavailable)
-                .font(.footnote).foregroundStyle(AppTheme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("playNearbyNote")
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("playNearby")
+        .sheet(item: $shown) { PlayNearbySheet(net: $0) }
+        .onAppear {
+            // From the Library's Play Nearby: open once this game is paused for it.
+            if allowed, NetplaySession.openOnStart == session.game.id {
+                NetplaySession.openOnStart = nil
+                open()
+            }
         }
     }
 
@@ -63,7 +59,7 @@ struct PlayNearbyMenuItem: View {
     /// Starts the game, pauses it once running, and the pause menu opens Play Nearby. Also from the game's page.
     @MainActor static func begin(_ game: GameItem, state: AppState) {
         guard CoreCatalog.playNearbyAllowed(platformID: game.platformID, coreID: game.resolvedCoreID(defaults: state.defaultCores)) else {
-            state.launchFailure = .init(title: "Play Nearby", message: CoreCatalog.playNearbyUnavailable)
+            state.launchFailure = .init(title: "Play Nearby", message: CoreCatalog.playNearbyReason(platformID: game.platformID))
             return
         }
         NetplaySession.openOnStart = game.id

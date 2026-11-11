@@ -103,7 +103,7 @@ final class NetplaySession: ObservableObject {
     var unavailableReason: String? {
         guard let core = game.netplayCore,
               CoreCatalog.playNearbyAllowed(platformID: game.game.platformID, coreID: core.coreID) else {
-            return CoreCatalog.playNearbyUnavailable
+            return CoreCatalog.playNearbyReason(platformID: game.game.platformID)
         }
         return nil
     }

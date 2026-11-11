@@ -216,6 +216,13 @@ extension CoreCatalog {
         playNearbyCores[platformID]?.contains(coreID) == true
     }
 
+    /// Why this system cannot play nearby, for its Play Nearby row and sheet.
+    static func playNearbyReason(platformID: String) -> String {
+        ["gb", "gbc", "gba", "nds", "n3ds", "psp"].contains(platformID)
+            ? "\(playNearbyUnavailable) It has one player per console, and GagaEmu cannot link two consoles."
+            : playNearbyUnavailable
+    }
+
     /// Nil when this core's measured state fits, otherwise why not.
     static func playNearbyRefusal(stateSize: Int, saveNanos: UInt64) -> String? {
         stateSize > 0 && stateSize <= playNearbyMaxStateBytes && saveNanos <= playNearbyMaxSaveNanos ? nil
