@@ -308,10 +308,12 @@ All ten batches are on `main`. `UITests/GagaEmuWalkTests.swift` `testTopFeatureT
 
 Where it differs from the plan:
 
-- Settings search is a field above the categories, not `.searchable`, as Settings has no navigation stack. There is no scope bar, and the pause menu's search covers this game only. A result opens its page; it does not highlight the row.
-- Library search stays where it was, and the landscape Continue strip is not built.
+- Settings search is a field above the categories, not `.searchable`, as Settings has no navigation stack. Instead of the All, This Game and App scopes, the results have area chips: All, then each Settings area with a match. The pause menu's search covers this game only. A result opens its page, and a row in Settings flashes once (not under Reduce Motion) and scrolls into view.
+- A Style result opens once the keyboard has gone (`keyboardDidHideNotification`). Opened while the keyboard's hide animation ran, the Skins page left an animation that never finished, and every UI test step then waited 60 s. `testSettingsSearchRepeat` opens a result ten times.
+- Library search stays where it was. In landscape on a phone, Continue is one strip of recent games above the shelves; on iPad it stays a side panel.
 - Upright on a phone the categories are a sideways strip of icons; in landscape and on iPad they are a sidebar list.
-- Cheats on the game page starts the game, since cheats live in the pause menu.
+- Cheats on the game page opens the game's saved cheats without starting it: switch them on or off, or remove them. Adding a code needs the running game, as its core checks each one, so the sheet offers Play.
+- Play Nearby is a row on every system's game page and pause menu. Where it cannot play nearby (one-player handhelds: GB, GBC, GBA, DS, 3DS, PSP), the row says "Not available" and opens the reason.
 - The new strings have no Spanish translations yet.
 - The iPad sidebar (`.sidebarAdaptable`, iOS 18) is built but not run on an iPad.
 
