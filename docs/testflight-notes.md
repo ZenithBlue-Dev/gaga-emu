@@ -2,6 +2,21 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611120209), 2026-11-12
+
+Settings, Library and skin polish.
+
+- Settings search no longer freezes when you open Style, Skins. Search has area filters, and the setting you open briefly highlights.
+- Landscape Library shows a Continue strip of your recent games.
+- Cheats on a game's page open its saved cheats without starting the game.
+- The Play Nearby row shows on every system. Handhelds say why it is not available.
+- Grid cards in Library, Style, filters and the pause menu are all one size.
+- Skin pictures show the real buttons. Imported .deltaskin and .manicskin art shows in previews and in game.
+- The pause menu, Core Options, Controls and Save States sheets are regrouped into cards.
+- Large text fixes. New Spanish and French text (needs review).
+
+To test: search Settings and open Style, Skins; open a game's page and its cheats; import a skin and check it in a game. Tell us anything that looks off.
+
 ## 1.0.0 (202611101512), 2026-11-10
 
 New look, easier to find things. Four tabs: Library, Import, Style and Settings.
