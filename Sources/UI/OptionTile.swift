@@ -373,7 +373,8 @@ struct FilterPicture: View {
     var body: some View {
         Group {
             if let image {
-                Image(uiImage: image).interpolation(.none).resizable().scaledToFill()
+                // Hidden: the row names the picture, and the filled image's frame runs past its clipped tile.
+                Image(uiImage: image).interpolation(.none).resizable().scaledToFill().accessibilityHidden(true)
             } else {
                 SymbolPicture(symbol: "camera.filters")
             }
@@ -391,7 +392,8 @@ struct SaveStatePicture: View {
 
     var body: some View {
         if let slot, let image = UIImage(contentsOfFile: slot.thumbnailURL.path) {
-            Image(uiImage: image).interpolation(.none).resizable().scaledToFill()
+            // Hidden: the row names the picture, and the filled image's frame runs past its clipped tile.
+            Image(uiImage: image).interpolation(.none).resizable().scaledToFill().accessibilityHidden(true)
         } else {
             SymbolPicture(symbol: "tray.full")
         }

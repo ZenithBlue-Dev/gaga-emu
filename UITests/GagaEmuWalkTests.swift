@@ -341,7 +341,7 @@ final class GagaEmuWalkTests: XCTestCase {
         continueAfterFailure = true
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launchArguments = ["-GagaImportTestROM", core, "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launchArguments = ["-GagaImportTestROM", core, "-GagaDefaultDisplay", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         app.launch()
         let cover = importedGame(app, "The \(title) game")
         sleep(3)

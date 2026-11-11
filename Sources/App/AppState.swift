@@ -1201,7 +1201,8 @@ final class AppState: ObservableObject {
         appearance = snapshot?.appearance ?? .dark
         appearanceChoice = snapshot?.appearanceChoice ?? .system
         accentHex = snapshot?.accentHex
-        libraryDisplay = snapshot?.libraryDisplay ?? LibraryDisplay()
+        // -GagaDefaultDisplay: walks start from the default Library Layout, whatever an earlier walk left.
+        libraryDisplay = ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") ? LibraryDisplay() : snapshot?.libraryDisplay ?? LibraryDisplay()
         ThemeStore.shared.accentHex = snapshot?.accentHex
         quickStart = snapshot?.quickStart ?? false
         autoSaveStates = snapshot?.autoSaveStates ?? false
