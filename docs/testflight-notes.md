@@ -2,6 +2,17 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611122356), 2026-11-12
+
+Open source and a new Game Boy core.
+
+- GagaEmu is now open source under AGPL-3.0. Settings, About has a Source Code link.
+- Game Boy and Game Boy Color now run on mGBA.
+- New App Store screenshots.
+- The lock badge on Pro options has better padding.
+
+To test: play a Game Boy and a Game Boy Color game, check saves and save states still load, and open Settings, About, Source Code.
+
 ## 1.0.0 (202611121425), 2026-11-12
 
 New: GagaEmu Pro.
