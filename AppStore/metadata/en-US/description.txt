@@ -1,4 +1,4 @@
-GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, on iPhone and iPad, in landscape.
+GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, on iPhone and iPad, in portrait or landscape.
 
 You provide every game and every BIOS file yourself, and they must be legally obtained. GagaEmu does not include any games, ROMs or BIOS, and it does not sell, link to or help you obtain them.
 
