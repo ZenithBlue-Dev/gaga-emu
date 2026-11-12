@@ -1,0 +1,198 @@
+<!doctype html>
+<!--
+  GagaEmu App Store art, laid out in Paper and Ink with the owner's generated art (design/store/source) and real
+  device screens (design/store/screens). scripts/store/render.py opens it in headless Chrome:
+    ?w=1320&h=2868&shot=1..9      one store screenshot: the nine sit side by side on one panorama, so the pairs
+                                   1-2 and 4-5 share pieces across their edge
+    ?w=5244&h=2950&art=header     header, search and retention artwork
+  Device frames are plain CSS. Positions: x as a fraction of the shot width (1.0 is the next shot's edge),
+  y and sizes as fractions of the height, so one layout serves every size.
+-->
+<html><head><meta charset="utf-8">
+<style>
+  :root { --paper:#F4EFE6; --surface:#FBF8F2; --ink:#1C1A17; --muted:#6B655B; --rule:#D9D1C2; --accent:#BF3D18; --fill:#E4572E; }
+  html, body { margin:0; padding:0; overflow:hidden; background:var(--paper); }
+  #pano { position:absolute; left:0; top:0; }
+  .abs { position:absolute; }
+  .bg { position:absolute; top:0; background-size:cover; background-position:center; }
+  .dev { position:absolute; background:#0e0e10; box-shadow:0 0 0 2px #2c2c30 inset, 0 3.2vh 6vh rgba(28,26,23,.38); }
+  .dev img { position:absolute; display:block; object-fit:cover; }
+  .card { position:absolute; display:block; object-fit:cover; box-shadow:0 1.8vh 4vh rgba(0,0,0,.35); }
+  .head { position:absolute; font-family:ui-serif, "New York", Georgia, serif; font-weight:600; letter-spacing:-.01em; line-height:1.08; }
+  .sub { position:absolute; font-family:-apple-system, system-ui, sans-serif; line-height:1.3; }
+  .rule { position:absolute; height:.32vh; background:var(--fill); }
+  .chip { position:absolute; font-family:ui-monospace, Menlo, monospace; border-radius:999px; white-space:nowrap; }
+</style></head>
+<body><div id="pano"></div>
+<script>
+const q = new URLSearchParams(location.search);
+const W = +q.get("w") || 1320, H = +q.get("h") || 2868;
+const shot = +q.get("shot") || 1, artKind = q.get("art");
+const pano = document.getElementById("pano");
+const SCREEN = 2622 / 1206;   // the iPhone captures: height / width
+
+function el(tag, cls, css, html) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  Object.assign(e.style, css);
+  if (html !== undefined) e.innerHTML = html;
+  pano.appendChild(e);
+  return e;
+}
+const px = v => v + "px";
+// x: fraction of a shot's width on shot s (1-based); y and sizes: fractions of H.
+const X = (s, x) => (s - 1 + x) * W;
+
+function background(s, n, css) { el("div", "bg", { left: px(X(s, 0)), width: px(n * W), height: px(H), ...css }); }
+
+/// An iPhone in a CSS frame. h: screen height (portrait) or screen width (landscape) as a fraction of H.
+function phone(s, x, y, h, src, { rot = 0, land = false, z = 3 } = {}) {
+  const long = h * H, short = long / SCREEN, bez = short * 0.045;
+  const sw = land ? long : short, sh = land ? short : long;
+  const fw = sw + 2 * bez, fh = sh + 2 * bez, r = Math.min(fw, fh) * 0.16;
+  const d = el("div", "dev", { left: px(X(s, x) - fw / 2), top: px(y * H - fh / 2), width: px(fw), height: px(fh),
+                               borderRadius: px(r), transform: `rotate(${rot}deg)`, zIndex: z });
+  const img = document.createElement("img");
+  img.src = src;
+  Object.assign(img.style, { left: px(bez), top: px(bez), width: px(sw), height: px(sh), borderRadius: px(r - bez) });
+  d.appendChild(img);
+  return d;
+}
+
+/// A picture card: w as a fraction of H, aspect w/h.
+function card(s, x, y, w, src, { rot = 0, aspect = 16 / 9, z = 2, radius = 0.012, shadow } = {}) {
+  const cw = w * H, ch = cw / aspect;
+  const c = el("img", "card", { left: px(X(s, x) - cw / 2), top: px(y * H - ch / 2), width: px(cw), height: px(ch),
+                                transform: `rotate(${rot}deg)`, zIndex: z, borderRadius: px(radius * H) });
+  if (shadow) c.style.boxShadow = shadow;
+  c.src = src;
+  return c;
+}
+
+/// The gamepad photo: on white, so it is multiplied into the paper.
+function gamepad(s, x, y, w, { rot = 0, z = 4 } = {}) {
+  const gw = w * H, gh = gw * 1493 / 2000;
+  el("img", "abs", { left: px(X(s, x) - gw / 2), top: px(y * H - gh / 2), width: px(gw), height: px(gh),
+                     transform: `rotate(${rot}deg)`, zIndex: z, mixBlendMode: "multiply" }).src = "source/gamepad.png";
+}
+
+/// The caption: a short vermilion rule, the headline and a quiet line under it.
+function caption(s, title, sub, { dark = false, size = 0.034, top = 0.062 } = {}) {
+  const left = X(s, 0.085), width = W * 0.83;
+  el("div", "rule", { left: px(left), top: px(H * top), width: px(H * 0.05) });
+  el("div", "head", { left: px(left), top: px(H * (top + 0.016)), width: px(width), fontSize: px(H * size),
+                      color: dark ? "var(--paper)" : "var(--ink)", zIndex: 6 }, title);
+  if (sub) el("div", "sub", { left: px(left), top: px(H * (top + 0.03 + size * 1.08 * title.split("<br>").length)), width: px(width),
+                             fontSize: px(H * 0.0135), color: dark ? "rgba(244,239,230,.78)" : "var(--muted)", zIndex: 6 }, sub);
+}
+
+function chip(s, x, y, text, { dark = false, z = 7 } = {}) {
+  const c = el("div", "chip", { left: px(X(s, x)), top: px(y * H), fontSize: px(H * 0.0115), padding: `${H * 0.006}px ${H * 0.013}px`,
+                                background: dark ? "var(--ink)" : "var(--surface)", color: dark ? "var(--paper)" : "var(--ink)",
+                                border: `${H * 0.0009}px solid ${dark ? "#3a362f" : "var(--rule)"}`, zIndex: z }, text);
+  c.style.transform = "translateX(-50%)";
+}
+
+function glow(s, x, y, r, color) {
+  el("div", "abs", { left: px(X(s, x) - r * H), top: px(y * H - r * H), width: px(2 * r * H), height: px(2 * r * H), borderRadius: "50%",
+                     background: `radial-gradient(circle, ${color} 0%, transparent 70%)`, zIndex: 1 });
+}
+
+const C = n => `source/cover-${String(n).padStart(2, "0")}.png`;
+const S = n => `screens/${n}.png`;
+
+function storeShots() {
+  pano.style.width = px(9 * W); pano.style.height = px(H);
+  pano.style.transform = `translateX(${-(shot - 1) * W}px)`;
+  document.body.style.width = px(W); document.body.style.height = px(H);
+
+  // 1-2: the hero pair on the starfield, one landscape phone across the edge.
+  background(1, 2, { backgroundImage: "url(source/background.png)" });
+  el("div", "bg", { left: "0px", width: px(2 * W), height: px(H), background: "linear-gradient(180deg, rgba(14,10,30,.78) 0%, rgba(14,10,30,.2) 30%, rgba(14,10,30,0) 55%, rgba(14,10,30,.55) 100%)", zIndex: 0 });
+  caption(1, "Your games.<br>One app.", "Play homebrew and the backups you own.", { dark: true, size: 0.05 });
+  [[0.29, 0.335, 1, -5], [0.72, 0.36, 3, 4], [0.26, 0.475, 6, 3], [0.73, 0.5, 2, -4], [0.3, 0.615, 9, -3]]
+    .forEach(([x, y, n, r]) => card(1, x, y, 0.165, C(n), { rot: r, z: 2 }));
+  phone(1, 1.0, 0.79, 0.58, S("play-landscape"), { land: true, rot: -5, z: 5 });
+  glow(1, 1.0, 0.79, 0.3, "rgba(228,87,46,.35)");
+  caption(2, "Landscape, with<br>the controls on top.", "Touch buttons sit over the picture, never in its way.", { dark: true });
+  card(2, 0.66, 0.36, 0.2, "source/game-3d.png", { rot: 5, z: 3 });
+  card(2, 0.3, 0.43, 0.17, "source/game-8bit.png", { rot: -6, aspect: 2000 / 1493, z: 2 });
+  card(2, 0.78, 0.56, 0.15, "source/game-shooter.png", { rot: -3, z: 2 });
+
+  // 3: the Library.
+  background(3, 1, { background: "var(--paper)" });
+  caption(3, "One shelf for the<br>games you own.", "Your own covers, sorted the way you like.");
+  phone(3, 0.5, 0.62, 0.68, S("library"), { rot: 0, z: 3 });
+  card(3, 0.17, 0.4, 0.12, C(8), { rot: -9, z: 2 });
+  card(3, 0.84, 0.8, 0.12, C(4), { rot: 7, z: 4 });
+
+  // 4-5: touch, then a controller; the pad sits across the edge.
+  background(4, 2, { background: "var(--paper)" });
+  caption(4, "Touch controls,<br>sized for thumbs.", "Move, resize and fade every button.");
+  phone(4, 0.42, 0.56, 0.62, S("play-portrait"), { z: 3 });
+  gamepad(4, 1.12, 0.8, 0.4, { rot: -8, z: 5 });
+  caption(5, "Or pick up<br>a controller.", "Map every button, with turbo and macros.");
+  phone(5, 0.5, 0.43, 0.45, S("play-landscape-3d"), { land: true, rot: 3, z: 3 });
+
+  // 6: skins.
+  background(6, 1, { background: "var(--ink)" });
+  caption(6, "A skin for<br>every grip.", "Standard, low reach or two big buttons.", { dark: true });
+  phone(6, 0.38, 0.62, 0.62, S("skin"), { rot: -3, z: 3 });
+  card(6, 0.8, 0.5, 0.14, "source/game-dual-top.png", { aspect: 1044 / 804, rot: 4, z: 4 });
+  card(6, 0.8, 0.61, 0.14, "source/game-dual-bottom.png", { aspect: 1044 / 779, rot: 4, z: 4 });
+  chip(6, 0.79, 0.69, "Two screens, too");
+
+  // 7: filters.
+  background(7, 1, { background: "var(--paper)" });
+  caption(7, "CRT and LCD<br>filters, live.", "Try each one on your game before you pick.");
+  card(7, 0.5, 0.31, 0.3, "source/game-16bit.png", { aspect: 2000 / 1493, rot: -4, z: 2 });
+  phone(7, 0.55, 0.66, 0.6, S("filter"), { rot: 2, z: 3 });
+
+  // 8: per-game options and cheats.
+  background(8, 1, { background: "var(--surface)" });
+  caption(8, "Options and cheats<br>for each game.", "Add a code or import a .cht file.");
+  card(8, 0.78, 0.33, 0.17, C(5), { rot: 6, z: 2 });
+  phone(8, 0.47, 0.64, 0.64, S("cheats"), { rot: -2, z: 3 });
+
+  // 9: saves, sync, nearby.
+  background(9, 1, { background: "var(--paper)" });
+  caption(9, "Saves, iCloud and<br>Play Nearby.", "Save states, game saves and sync across devices.");
+  phone(9, 0.36, 0.6, 0.56, S("saves"), { rot: -4, z: 3 });
+  phone(9, 0.69, 0.68, 0.56, S("sync"), { rot: 4, z: 4 });
+}
+
+function artwork(kind) {
+  pano.style.width = px(W); pano.style.height = px(H);
+  document.body.style.width = px(W); document.body.style.height = px(H);
+  const dark = kind !== "retention";
+  if (dark) {
+    background(1, 1, { backgroundImage: "url(source/background.png)" });
+    el("div", "bg", { left: "0px", width: px(W), height: px(H), background: "linear-gradient(90deg, rgba(14,10,30,.82) 0%, rgba(14,10,30,.35) 45%, rgba(14,10,30,.1) 100%)" });
+  } else {
+    background(1, 1, { background: "var(--paper)" });
+  }
+  const head = (x, y, size, text, color) => el("div", "head", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);
+  const sub = (x, y, size, text, color) => el("div", "sub", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);
+  if (kind === "header") {
+    el("div", "rule", { left: px(W * 0.07), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
+    head(0.07, 0.33, 0.12, "GagaEmu", "var(--paper)");
+    sub(0.072, 0.5, 0.04, "Your games. One app.", "rgba(244,239,230,.85)");
+    [[0.62, 0.22, 1, -6], [0.86, 0.2, 3, 5], [0.9, 0.8, 6, -4], [0.55, 0.82, 2, 4]].forEach(([x, y, n, r]) => card(1, x, y, 0.3, C(n), { rot: r }));
+    phone(1, 0.72, 0.52, 0.86, S("play-landscape"), { land: true, rot: -4, z: 5 });
+  } else if (kind === "search") {
+    [[0.17, 0.25, 3, -6], [0.83, 0.25, 1, 6], [0.15, 0.76, 9, 5], [0.85, 0.76, 6, -5]].forEach(([x, y, n, r]) => card(1, x, y, 0.3, C(n), { rot: r }));
+    phone(1, 0.5, 0.5, 0.95, S("play-landscape"), { land: true, rot: -3, z: 5 });
+  } else {
+    el("div", "rule", { left: px(W * 0.08), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
+    head(0.08, 0.33, 0.09, "Pick up where<br>you left off.", "var(--ink)");
+    sub(0.082, 0.58, 0.035, "Your shelf, your saves, your games.", "var(--muted)");
+    card(1, 0.86, 0.27, 0.26, C(2), { rot: 6 });
+    card(1, 0.88, 0.75, 0.26, C(8), { rot: -5 });
+    phone(1, 0.66, 0.52, 0.84, S("library"), { rot: -4, z: 5 });
+  }
+}
+
+artKind ? artwork(artKind) : storeShots();
+document.title = "ready";
+</script>
+</body></html>
