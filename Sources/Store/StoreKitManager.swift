@@ -6,34 +6,22 @@ import StoreKit
 // The sideload core set (GAGA_SIDELOAD, scripts/generate-project.sh) holds cores whose licences forbid
 // commercial use (docs/03 section 5), so that build sells nothing: StoreKit, the products and every purchase
 // path are compiled out, and every premium feature is free.
-#if GAGA_SIDELOAD && PAYWALL_ENABLED
-#error("A sideload build must not have a paywall: its non-commercial cores forbid selling it (docs/03 section 5).")
-#endif
 
-/// Paywall release gate (docs/06 section 4.5). Add the PAYWALL_ENABLED compilation condition in
-/// project.yml only when milestone 7.2 opens it. While closed: no Gaga Plus category, no premium labels, no limits.
+/// Whether this build sells GagaEmu Pro (docs/06 section 4.5): every App Store build, in every configuration, and
+/// never a sideload build. Pro locks apply in every build that sells it.
 public enum PaywallGate {
-    #if PAYWALL_ENABLED
-    public static let isOpen = true
-    #else
+    #if GAGA_SIDELOAD
     public static let isOpen = false
+    #else
+    public static let isOpen = true
     #endif
 
-    /// Settings shows GagaEmu Pro while the gate is open, and in Debug builds so the paywall can be checked and shot
-    /// before then. A Release build with the gate closed sells nothing, because nothing is held back yet.
-    public static var showsPro: Bool {
-        #if GAGA_SIDELOAD
-        return false
-        #elseif DEBUG
-        return true
-        #else
-        return isOpen
-        #endif
-    }
+    /// Settings shows GagaEmu Pro wherever it is sold.
+    public static var showsPro: Bool { isOpen }
 }
 
 /// StoreKit 2. GagaEmu Pro: monthly and yearly subscriptions in one group, and Forever, a one-time purchase.
-/// Premium unlocks the items in docs/06 section 4.3.
+/// Pro lifts the free limits below (docs/06 section 4.3). Every system and core plays free.
 @MainActor
 public final class StoreKitManager: ObservableObject {
 
@@ -70,30 +58,48 @@ public final class StoreKitManager: ObservableObject {
     }
     #endif
 
-    /// What a free account is allowed to do. Premium lifts every limit.
+    /// What a free account is allowed to do. Premium lifts every limit. Limits only stop making something new or
+    /// turning a locked feature on: saves, cheats and filters past a limit stay, and still load.
     public struct Entitlements: Equatable, Sendable {
         public var premium: Bool
         public var lifetime = false
-        public var maxSaveStates: Int { premium ? .max : 3 }
-        public var maxCheats: Int { premium ? .max : 3 }
+        /// Manual save states per game. The auto save and the game's own battery save never count.
+        public var maxSaveStates: Int { premium ? .max : 4 }
+        /// Saved cheats per game.
+        public var maxCheats: Int { premium ? .max : 5 }
         public var maxFastForward: Double { premium ? 5 : 2 }
+        /// Players 3 and 4, and the multitap that adds them.
+        public var maxPlayers: Int { premium ? .max : 2 }
         public var premiumShaders: Bool { premium }
-        public var autoSaveState: Bool { premium }
+        public var cloudSync: Bool { premium }
+        /// Alternate app icons and accent colours past the standard ones.
+        public var extraLooks: Bool { premium }
         /// Lifetime owners have nothing left to buy (docs/06 section 4.4).
         public var showsSubscribePrompts: Bool { !lifetime }
         public static let free = Entitlements(premium: false)
 
         public func canAddSaveState(current count: Int) -> Bool { count < maxSaveStates }
         public func canAddCheat(current count: Int) -> Bool { count < maxCheats }
+        public func allowsFastForward(_ speed: Int) -> Bool { Double(speed) <= maxFastForward }
 
-        /// What the app enforces: the purchases, or no limits at all while the gate is closed.
-        static func effective(_ purchased: Entitlements, gateOpen: Bool = PaywallGate.isOpen) -> Entitlements {
-            gateOpen ? purchased : Entitlements(premium: true)
+        /// What the app enforces: the purchases, or in a Debug build what `-GagaPro 1` or `-GagaPro 0` forces for walks.
+        static func effective(_ purchased: Entitlements, forced: Bool? = debugForcedPro) -> Entitlements {
+            guard let forced else { return purchased }
+            return Entitlements(premium: forced, lifetime: forced && purchased.lifetime)
+        }
+
+        /// `-GagaPro 1` or `-GagaPro 0` on the launch line. Always nil outside Debug builds.
+        static var debugForcedPro: Bool? {
+            #if DEBUG
+            return UserDefaults.standard.object(forKey: "GagaPro") == nil ? nil : UserDefaults.standard.bool(forKey: "GagaPro")
+            #else
+            return nil
+            #endif
         }
     }
 
-    /// Sell only what works. crt-deluxe replaces crt-royale, which is GPL (docs/05 section 5).
-    public static let premiumShaderIDs: Set<String> = ["geom-crt", "geom-crt-border", "crt-deluxe", "anime4k"]
+    /// Every filter in the catalogue past the free set. Imported filters and presets are the player's own and never locked.
+    public static let premiumShaderIDs: Set<String> = Set(ShaderCatalog.all.filter(\.premium).map(\.id))
 
     #if GAGA_SIDELOAD
     /// Everything, always, with nothing to buy and no subscribe prompts.
@@ -104,9 +110,9 @@ public final class StoreKitManager: ObservableObject {
     #else
     @Published public private(set) var offers: [Offer] = []
     @Published public private(set) var entitlements: Entitlements = .effective(.free)
-    /// What this Apple Account has bought, verified, whatever the gate says. Nothing reads it to lock a feature yet.
+    /// What this Apple Account has bought, verified. `entitlements` is what the app enforces.
     @Published public private(set) var purchased: Entitlements = .free
-    public var isPro: Bool { purchased.premium }
+    public var isPro: Bool { entitlements.premium }
     @Published public private(set) var isLoading = false
     @Published public var lastError: String?
 
@@ -175,7 +181,6 @@ public final class StoreKitManager: ObservableObject {
 
     // MARK: Gates
 
-    public var canUseAutoSaveState: Bool { entitlements.autoSaveState }
     public func canUseShader(_ id: String) -> Bool {
         entitlements.premiumShaders || !Self.premiumShaderIDs.contains(id)
     }
@@ -198,7 +203,7 @@ public final class StoreKitManager: ObservableObject {
         entitlements = .effective(purchased)
     }
 
-    /// What was bought, before the gate. Only verified transactions count; revoked, expired, or upgraded ones do not.
+    /// What was bought. Only verified transactions count; revoked, expired, or upgraded ones do not.
     static func currentEntitlements() async -> Entitlements {
         let ids = Set(ProductID.allCases.map(\.rawValue))
         var current = Entitlements.free
@@ -268,13 +273,14 @@ public final class StoreKitManager: ObservableObject {
 enum StoreKitManagerChecks {
     static func run() {
         let free = StoreKitManager.Entitlements.free
-        assert(free.maxSaveStates == 3)
-        assert(free.maxCheats == 3)
-        assert(!free.premiumShaders)
+        assert(free.maxSaveStates == 4)
+        assert(free.maxCheats == 5)
+        assert(free.maxPlayers == 2)
+        assert(!free.premiumShaders && !free.cloudSync && !free.extraLooks)
         let premium = StoreKitManager.Entitlements(premium: true)
         assert(premium.maxSaveStates == .max)
         assert(premium.maxFastForward == 5)
-        assert(!StoreKitManager.premiumShaderIDs.contains("original"))
+        assert(ShaderCatalog.freeIDs.isDisjoint(with: StoreKitManager.premiumShaderIDs))
         assert(StoreKitManager.premiumShaderIDs.contains("geom-crt"))
     }
 }

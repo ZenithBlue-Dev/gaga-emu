@@ -4,7 +4,7 @@ import StoreKit
 import SwiftUI
 
 /// GagaEmu Pro: what Pro adds on the left, the three plans on the right; upright on a phone, one scroll.
-/// Prices and periods are StoreKit's. Nothing is locked by Pro yet; `StoreKitManager.isPro` is for later.
+/// Prices and periods are StoreKit's. The benefits match `StoreKitManager.Entitlements`, the limits the app enforces.
 struct GagaPlusView: View {
     @EnvironmentObject private var store: StoreKitManager
     @Environment(\.dismiss) private var dismiss
@@ -28,9 +28,9 @@ struct GagaPlusView: View {
 
     private let benefits: [(String, String)] = [
         ("Fast forward above 2x", "Up to 5x."),
-        ("More save slots and cheats", "Per game, with no limit of 3."),
+        ("More save slots and cheats", "Free keeps 4 save slots and 5 cheats per game."),
         ("Players 3 and 4", "Four controllers on systems that have them."),
-        ("The full shader catalogue", "Every filter, including the CRT and Anime4K ones."),
+        ("The full shader catalogue", "Free keeps Original, Sharp Bilinear, Lottes CRT and LCD3x."),
         ("iCloud sync", "Saves and states on all your devices."),
         ("Extra app icons and themes", "More looks for GagaEmu.")
     ]
@@ -79,7 +79,7 @@ struct GagaPlusView: View {
     private var benefitsColumn: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("GagaEmu Pro").font(.screenTitle).accessibilityAddTraits(.isHeader)
-            Text("Every system and core play stay free.").foregroundStyle(AppTheme.muted)
+            Text("Every system and core stays free to play. No ads, no sign-in.").foregroundStyle(AppTheme.muted)
             Rule()
             ForEach(benefits, id: \.0) { title, detail in
                 VStack(alignment: .leading, spacing: 2) {
@@ -124,11 +124,13 @@ struct GagaPlusView: View {
             .disabled(buying || store.offers.isEmpty)
     }
 
-    private var buyTitle: LocalizedStringKey {
-        let offer = store.offers.first { $0.productID == selected }
-        if selected == .lifetime { return "Buy Forever" }
-        if offer?.intro == .freeTrial, let trial = offer?.trialPeriod { return "Start \(trial) Free" }
-        return "Subscribe"
+    private var buyTitle: String { Self.buyTitle(selected, offer: store.offers.first { $0.productID == selected }) }
+
+    /// Trial wording only when StoreKit says this product has a free trial this user can still have, in StoreKit's period.
+    static func buyTitle(_ id: StoreKitManager.ProductID, offer: StoreKitManager.Offer?) -> String {
+        if id == .lifetime { return String(localized: "Buy Forever") }
+        if offer?.intro == .freeTrial, let trial = offer?.trialPeriod { return String(localized: "Start \(trial) Free") }
+        return String(localized: "Subscribe")
     }
 
     /// Wraps at accessibility sizes; side by side would push the links off a phone.

@@ -130,7 +130,10 @@ struct CheatsSheet: View {
     @State private var importing = false
     @State private var imported: [CheatFormat.Block]?
     @State private var bundled: [CheatFormat.Block] = []
+    @State private var showPlans = false
     @FocusState private var editing: Bool
+    /// At the free limit, adding asks for GagaEmu Pro. Cheats already saved stay, and switch on and off.
+    private var full: Bool { !session.canAddCheat }
 
     private var trimmedCode: String { code.trimmingCharacters(in: .whitespacesAndNewlines) }
     /// A bundled cheat the player switched on moves to the list above, so it is not offered twice.
@@ -151,9 +154,11 @@ struct CheatsSheet: View {
                             .fixedSize(horizontal: false, vertical: true) // A core's reason wraps; it is never cut off.
                             .accessibilityAddTraits(.isHeader)
                         Spacer(minLength: 12)
-                        Button("Add Cheat", action: add)
+                        Button("Add Cheat") { if full { showPlans = true } else { add() } }
                             .buttonStyle(QuietButtonStyle())
-                            .disabled(trimmedCode.isEmpty)
+                            .disabled(trimmedCode.isEmpty && !full)
+                            .proLocked(full)
+                            .accessibilityIdentifier("addCheat")
                     }
                     TextField("Name", text: $name)
                         .frame(minHeight: 44)
@@ -212,6 +217,7 @@ struct CheatsSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .proPaywall(isPresented: $showPlans)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.data, .item]) { outcome in
             if case .success(let url) = outcome { load(url) }
         }
@@ -253,10 +259,11 @@ struct CheatsSheet: View {
             HStack {
                 Text(block.name).frame(maxWidth: .infinity, alignment: .leading)
                 Button("Add") {
-                    attempt { try session.addCheat(name: block.name, code: block.code, enabled: false) }
+                    if full { showPlans = true } else { attempt { try session.addCheat(name: block.name, code: block.code, enabled: false) } }
                 }
                 .buttonStyle(QuietButtonStyle())
                 .accessibilityLabel("Add \(block.name)")
+                .proLocked(full)
             }
             .frame(minHeight: 44)
             Rule()
@@ -267,10 +274,12 @@ struct CheatsSheet: View {
     private func bundledRow(_ block: CheatFormat.Block) -> some View {
         VStack(spacing: 0) {
             Toggle(block.name, isOn: Binding(get: { false }, set: { value in
-                if value { attempt { try session.addCheat(name: block.name, code: block.code, enabled: true) } }
+                guard value else { return }
+                if full { showPlans = true } else { attempt { try session.addCheat(name: block.name, code: block.code, enabled: true) } }
             }))
             .tint(AppTheme.accentFill)
             .frame(minHeight: 44)
+            .accessibilityHint(full ? Text("Requires GagaEmu Pro") : Text(verbatim: ""))
             Rule()
         }
     }

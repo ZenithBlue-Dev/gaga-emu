@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// Filter list left, live preview and its controls right. With a game it sets that game's filter,
-/// otherwise the default for new games. Premium filters stay locked without Gaga Plus.
+/// otherwise the default for new games. Premium filters stay locked without GagaEmu Pro.
 struct FilterPickerView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var store: StoreKitManager
@@ -210,8 +210,9 @@ struct FilterPickerView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(locked ? "\(shader.name), needs Gaga Plus" : shader.name)
+            .accessibilityLabel(shader.name)
             .accessibilityAddTraits(isSelected ? .isSelected : [])
+            .proLocked(locked)
             // Beside the name, not over the picture: a star on the tile took taps meant for the tile.
             HStack(alignment: .top, spacing: 0) {
                 Button(action: pick) {
@@ -457,7 +458,8 @@ struct FilterPickerView: View {
                         rowLabel(preset.name, credit: filterName(preset.shaderID), selected: isOn, locked: locked, premium: base?.premium ?? false)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(locked ? "\(preset.name), needs Gaga Plus" : "\(preset.name), \(filterName(preset.shaderID))")
+                    .accessibilityLabel("\(preset.name), \(filterName(preset.shaderID))")
+                    .accessibilityHint(locked ? Text("Requires GagaEmu Pro") : Text(verbatim: ""))
                     .accessibilityAddTraits(isOn ? .isSelected : [])
                     iconButton("pencil", label: "Rename \(preset.name)") { startNaming(preset) }
                     iconButton("trash", label: "Delete \(preset.name)") { deleting = preset }
@@ -550,8 +552,9 @@ struct FilterPickerView: View {
             }
             Spacer(minLength: 0)
             if premium && PaywallGate.isOpen {
-                Label("Plus", systemImage: locked ? "lock" : "checkmark.seal")
+                Label("Pro", systemImage: locked ? "lock.fill" : "checkmark.seal")
                     .font(.meta).foregroundStyle(AppTheme.muted)
+                    .accessibilityLabel(locked ? Text("Requires GagaEmu Pro") : Text("GagaEmu Pro"))
             }
         }
         .frame(minHeight: 44)

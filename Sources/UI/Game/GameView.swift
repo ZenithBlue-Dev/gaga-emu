@@ -693,7 +693,7 @@ private struct PauseMenu: View {
 
     private func resume() { session.resume(.menu) }
 
-    /// Only an open paywall gate can reach this, and never for someone who owns the app outright.
+    /// Never in a sideload build, and never for someone who has Pro.
     private var offersPlus: Bool { PaywallGate.isOpen && !store.entitlements.premium && store.entitlements.showsSubscribePrompts }
 
     var body: some View {
@@ -733,9 +733,7 @@ private struct PauseMenu: View {
         .sheet(item: $coreOptions) { CoreOptionsView(core: $0, session: session) }
         .sheet(isPresented: $showSkin, onDismiss: reloadSkin) { GameSkinSheet(game: liveGame) }
         .fullScreenCover(isPresented: $showFilter, onDismiss: { state.refilter(session) }) { FilterPickerView(game: liveGame) }
-        #if !GAGA_SIDELOAD
-        .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
-        #endif
+        .proPaywall(isPresented: $showPlans)
     }
 
     /// The Library's entry for this game, which the Filter and Skin pages change.
@@ -760,6 +758,8 @@ private struct PauseMenu: View {
         var value: String?
         var keywords = ""
         var part = Part.game
+        /// Needs GagaEmu Pro: shows the lock, and the action opens the paywall.
+        var locked = false
         let picture: AnyView
         let action: () -> Void
     }
@@ -774,8 +774,10 @@ private struct PauseMenu: View {
         var list: [Entry] = []
         let symbol = { (name: String) in AnyView(SymbolPicture(symbol: name)) }
         if session.supportsSaveStates {
+            let full = !session.canAddSaveState
             list.append(Entry(id: "pause.saveState", title: "Save State", value: saved.map { "Saved \($0.formatted(date: .omitted, time: .shortened))" },
-                              keywords: "save slot", part: .saves, picture: symbol("square.and.arrow.down"), action: saveState))
+                              keywords: "save slot", part: .saves, locked: full, picture: symbol("square.and.arrow.down"),
+                              action: full ? { showPlans = true } : saveState))
             list.append(Entry(id: "pause.loadState", title: "Load State", value: session.saves.slots().isEmpty ? "None yet" : "\(session.saves.slots().count) saved",
                               keywords: "load slot restore", part: .saves,
                               picture: AnyView(SaveStatePicture(slot: session.saves.slots().first)), action: { showSaves = true }))
@@ -808,7 +810,7 @@ private struct PauseMenu: View {
                               resume()
                           }))
         if offersPlus {
-            list.append(Entry(id: "pause.plus", title: "See Gaga Plus", keywords: "plus subscription", picture: symbol("star.circle"), action: { showPlans = true }))
+            list.append(Entry(id: "pause.plus", title: "See GagaEmu Pro", keywords: "pro plus subscription", picture: symbol("star.circle"), action: { showPlans = true }))
         }
         return list
     }
@@ -846,6 +848,7 @@ private struct PauseMenu: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
+        .proLocked(entry.locked)
         .accessibilityIdentifier(entry.id)
     }
 
@@ -1006,10 +1009,11 @@ private struct PauseMenu: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Fast Forward").accessibilityAddTraits(.isHeader)
             HStack(spacing: 6) {
-                ForEach(session.fastForwardSpeeds, id: \.self) { speed in
+                ForEach(GameSession.fastForwardChoices, id: \.self) { speed in
                     let selected = session.fastForward == speed
+                    let locked = session.fastForwardLocked(speed)
                     let label = speed == 1 ? "Off" : "\(speed)x"
-                    Button { session.setFastForward(speed) } label: {
+                    Button { if locked { showPlans = true } else { session.setFastForward(speed) } } label: {
                         Text(label)
                             .font(.footnote.weight(selected ? .bold : .regular))
                             .foregroundStyle(selected ? AppTheme.onAccent : AppTheme.ink)
@@ -1021,6 +1025,8 @@ private struct PauseMenu: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(speed == 1 ? "Normal speed" : "\(speed) times speed")
                     .accessibilityAddTraits(selected ? .isSelected : [])
+                    .proLocked(locked, alignment: .topTrailing)
+                    .accessibilityIdentifier("fastForward.\(speed)")
                 }
             }
         }

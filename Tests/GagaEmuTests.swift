@@ -580,9 +580,9 @@ final class GagaEmuTests: GagaTestCase {
 
     @MainActor
     func testPremiumListMatchesImplementedShaders() {
-        XCTAssertEqual(StoreKitManager.premiumShaderIDs, ["geom-crt", "geom-crt-border", "crt-deluxe", "anime4k"])
+        XCTAssertTrue(StoreKitManager.premiumShaderIDs.isSuperset(of: ["geom-crt", "geom-crt-border", "crt-deluxe", "anime4k"]))
         XCTAssertFalse(ShaderCatalog.all.contains { $0.id == "crt-royale" })
-        let premium = Set(ShaderCatalog.builtIn.filter(\.premium).map(\.id))
+        let premium = Set(ShaderCatalog.all.filter(\.premium).map(\.id))
         XCTAssertEqual(premium, StoreKitManager.premiumShaderIDs)
     }
 
@@ -595,6 +595,19 @@ final class GagaEmuTests: GagaTestCase {
         XCTAssertEqual(StoreKitManager.badge(for: .yearly, intro: .freeTrial), "Free Trial")
         XCTAssertEqual(StoreKitManager.badge(for: .yearly, intro: .freeTrial, trialPeriod: "1 week"), "1 week free")
         XCTAssertEqual(StoreKitManager.badge(for: .lifetime, intro: nil), "One payment")
+    }
+
+    /// Launch has no Yearly trial: with no offer, or one this user cannot have, there is no trial text anywhere.
+    @MainActor
+    func testNoIntroOfferShowsPlainSubscribe() {
+        let plain = StoreKitManager.Offer(productID: .yearly, displayPrice: "$9.99", period: "1 year", intro: nil, trialPeriod: nil)
+        XCTAssertNil(plain.badge)
+        XCTAssertEqual(GagaPlusView.buyTitle(.yearly, offer: plain), "Subscribe")
+        XCTAssertEqual(GagaPlusView.buyTitle(.yearly, offer: nil), "Subscribe")
+        let trial = StoreKitManager.Offer(productID: .yearly, displayPrice: "$9.99", period: "1 year", intro: .freeTrial, trialPeriod: "1 week")
+        XCTAssertEqual(trial.badge, "1 week free")
+        XCTAssertEqual(GagaPlusView.buyTitle(.yearly, offer: trial), "Start 1 week Free")
+        XCTAssertEqual(GagaPlusView.buyTitle(.lifetime, offer: nil), "Buy Forever")
     }
 
     /// The app asks App Store Connect for exactly the products the Debug StoreKit configuration sells.
@@ -792,32 +805,76 @@ final class GagaEmuTests: GagaTestCase {
         XCTAssertFalse(StoreKitManager.Entitlements(premium: true, lifetime: true).showsSubscribePrompts)
     }
 
+    /// What was bought is what is enforced; only a Debug `-GagaPro` launch argument changes it.
     @MainActor
-    func testPaywallGateClosedLiftsLimits() {
-        let closed = StoreKitManager.Entitlements.effective(.free, gateOpen: false)
-        XCTAssertEqual(closed.maxSaveStates, .max)
-        XCTAssertEqual(closed.maxCheats, .max)
-        XCTAssertEqual(closed.maxFastForward, 5)
-        XCTAssertTrue(closed.premiumShaders)
-        XCTAssertTrue(closed.autoSaveState)
-    }
-
-    @MainActor
-    func testPaywallGateOpenEnforcesPurchases() {
-        let free = StoreKitManager.Entitlements.effective(.free, gateOpen: true)
-        XCTAssertEqual(free, .free)
-        XCTAssertEqual(free.maxSaveStates, 3)
+    func testEffectiveEnforcesPurchases() {
+        XCTAssertEqual(StoreKitManager.Entitlements.effective(.free, forced: nil), .free)
         let lifetime = StoreKitManager.Entitlements(premium: true, lifetime: true)
-        XCTAssertEqual(StoreKitManager.Entitlements.effective(lifetime, gateOpen: true), lifetime)
+        XCTAssertEqual(StoreKitManager.Entitlements.effective(lifetime, forced: nil), lifetime)
+        XCTAssertTrue(StoreKitManager.Entitlements.effective(.free, forced: true).premium)
+        XCTAssertEqual(StoreKitManager.Entitlements.effective(lifetime, forced: false), .free)
     }
 
-    #if !PAYWALL_ENABLED
+    #if !GAGA_SIDELOAD
+    /// Every App Store build sells Pro and enforces the free limits, Release included.
     @MainActor
-    func testGateClosedInThisBuild() {
-        XCTAssertFalse(PaywallGate.isOpen)
-        XCTAssertTrue(StoreKitManager().canUseShader("geom-crt"))
+    func testProIsSoldAndLimitsApplyInThisBuild() {
+        XCTAssertTrue(PaywallGate.isOpen)
+        XCTAssertTrue(SettingsCategory.visible.contains(.gagaPlus))
+        XCTAssertFalse(StoreKitManager.Entitlements.free.premiumShaders)
     }
     #endif
+
+    /// Free vs Pro, rule by rule (docs/06 section 4.3).
+    @MainActor
+    func testFreeAndProLimits() {
+        let free = StoreKitManager.Entitlements.free, pro = StoreKitManager.Entitlements(premium: true)
+        // Fast forward: free up to 2x.
+        XCTAssertTrue(free.allowsFastForward(2))
+        XCTAssertFalse(free.allowsFastForward(3))
+        XCTAssertTrue(pro.allowsFastForward(5))
+        // Save states: 4 manual slots free.
+        XCTAssertTrue(free.canAddSaveState(current: 3))
+        XCTAssertFalse(free.canAddSaveState(current: 4))
+        XCTAssertTrue(pro.canAddSaveState(current: 400))
+        // Cheats: 5 free.
+        XCTAssertTrue(free.canAddCheat(current: 4))
+        XCTAssertFalse(free.canAddCheat(current: 5))
+        XCTAssertTrue(pro.canAddCheat(current: 500))
+        // Players 3 and 4.
+        XCTAssertEqual(free.maxPlayers, 2)
+        XCTAssertGreaterThanOrEqual(pro.maxPlayers, 4)
+        // iCloud, icons and themes.
+        XCTAssertFalse(free.cloudSync || free.extraLooks)
+        XCTAssertTrue(pro.cloudSync && pro.extraLooks)
+    }
+
+    /// Free filters: none, the smoothing one, one CRT and one LCD. Everything else in the catalogue is Pro; the
+    /// player's own imported filters never are.
+    @MainActor
+    func testFreeShaderSet() {
+        XCTAssertEqual(ShaderCatalog.freeIDs, ["original", "sharp-bilinear", "lottes-crt", "lcd3x"])
+        XCTAssertTrue(ShaderCatalog.freeIDs.allSatisfy { id in ShaderCatalog.all.contains { $0.id == id } })
+        XCTAssertEqual(Set(ShaderCatalog.all.map(\.id)).subtracting(ShaderCatalog.freeIDs), StoreKitManager.premiumShaderIDs)
+        XCTAssertTrue(ShaderCatalog.all.first { $0.id == "lottes-crt" }?.category == .crt)
+        XCTAssertTrue(ShaderCatalog.all.first { $0.id == "lcd3x" }?.category == .lcd)
+    }
+
+    /// A lapsed Pro keeps every save and cheat: only adding past the limit stops.
+    @MainActor
+    func testLapsedProKeepsData() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let saves = SaveStore(directory: folder)
+        for _ in 0..<6 { try saves.writeState(Data("state".utf8), thumbnail: nil) }
+        try saves.saveCheats((1...7).map { CheatEntry(id: UInt32($0), name: "C\($0)", code: "00", enabled: true) })
+        let free = StoreKitManager.Entitlements.free
+        XCTAssertEqual(saves.manualCount, 6, "Six states made with Pro all stay")
+        XCTAssertFalse(free.canAddSaveState(current: saves.manualCount))
+        XCTAssertTrue(saves.slots().allSatisfy { FileManager.default.fileExists(atPath: $0.url.path) })
+        XCTAssertEqual(saves.cheats().count, 7, "Seven cheats made with Pro all stay")
+        XCTAssertFalse(free.canAddCheat(current: 7))
+    }
 
     #if GAGA_SIDELOAD
     /// A sideload build sells nothing (docs/03 section 5): everything is unlocked and nothing prompts to subscribe.
@@ -828,16 +885,9 @@ final class GagaEmuTests: GagaTestCase {
         let store = StoreKitManager()
         XCTAssertTrue(store.entitlements.premium)
         XCTAssertFalse(store.entitlements.showsSubscribePrompts)
-        XCTAssertTrue(store.canUseAutoSaveState)
         XCTAssertTrue(StoreKitManager.premiumShaderIDs.allSatisfy(store.canUseShader))
     }
     #endif
-
-    @MainActor
-    func testAutoSaveStateIsPremium() {
-        XCTAssertFalse(StoreKitManager.Entitlements.free.autoSaveState)
-        XCTAssertTrue(StoreKitManager.Entitlements(premium: true).autoSaveState)
-    }
 
     // MARK: - StoreKit Entitlements Tests
 
@@ -845,8 +895,8 @@ final class GagaEmuTests: GagaTestCase {
     func testStoreKitEntitlementsGating() {
         let freeEntitlements = StoreKitManager.Entitlements.free
         XCTAssertFalse(freeEntitlements.premium)
-        XCTAssertEqual(freeEntitlements.maxSaveStates, 3)
-        XCTAssertEqual(freeEntitlements.maxCheats, 3)
+        XCTAssertEqual(freeEntitlements.maxSaveStates, 4)
+        XCTAssertEqual(freeEntitlements.maxCheats, 5)
         XCTAssertEqual(freeEntitlements.maxFastForward, 2.0)
         XCTAssertFalse(freeEntitlements.premiumShaders)
 

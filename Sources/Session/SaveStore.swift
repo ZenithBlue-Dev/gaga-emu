@@ -41,7 +41,7 @@ enum SaveStateError: LocalizedError, Equatable {
         case .damaged: return "This save state is damaged and cannot be loaded."
         case .otherCore(let core): return "This save state was made by \(CoreCatalog.coreName(core)), so this core cannot load it."
         case .otherVersion: return "This save state was made by a different version of this core."
-        case .limitReached(let limit): return "You have \(limit) save states, the most without Gaga Plus. Delete one to save another."
+        case .limitReached(let limit): return "You have \(limit) save states, the most without GagaEmu Pro. Delete one to save another."
         }
     }
 }

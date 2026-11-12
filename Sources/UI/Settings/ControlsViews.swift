@@ -602,13 +602,22 @@ struct TurboView: View {
 struct PlayersView: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var controllers: ControllerManager
+    @EnvironmentObject private var store: StoreKitManager
     var platformID: String?
     /// The running game, which takes a Multitap change from its next frame.
     var session: GameSession?
+    @State private var showPlans = false
 
     var body: some View {
         PaperSheet(title: "Players") {
             VStack(alignment: .leading, spacing: 0) {
+                if store.entitlements.maxPlayers < ControllerManager.slotCount {
+                    // Controllers past Player 2 stay connected and assigned; the game reads them once Pro is on.
+                    ActionRow(title: "Players 3 and 4", value: "GagaEmu Pro", symbol: "lock.fill", tile: .symbol("person.3")) { showPlans = true }
+                        .accessibilityHint(Text("Requires GagaEmu Pro"))
+                        .accessibilityIdentifier("playersLocked")
+                    Rule()
+                }
                 if let platformID {
                     let count = session?.maxPlayers ?? CoreCatalog.maxPlayers(platformID)
                     Text("\(CoreCatalog.platformName(platformID)) takes \(count) \(count == 1 ? "player" : "players"). Controllers past that are not read.")
@@ -664,6 +673,7 @@ struct PlayersView: View {
                 }
             }
         }
+        .proPaywall(isPresented: $showPlans)
     }
 
     /// Auto is stored as no entry.

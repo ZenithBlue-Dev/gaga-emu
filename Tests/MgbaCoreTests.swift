@@ -747,7 +747,7 @@ final class MgbaCoreTests: GagaTestCase {
 
     @MainActor
     private func mgbaSession(folder: String = "saves", rewind: Bool = false,
-                             entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .effective(.free, gateOpen: false) })
+                             entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .init(premium: true) })
     async throws -> GameSession {
         let skins = TouchSkinEngine()
         skins.loadDefault()
@@ -795,19 +795,23 @@ final class MgbaCoreTests: GagaTestCase {
     }
 
     @MainActor
-    func testFreeLimitsHoldWithTheGateOpen() async throws {
-        let session = try await mgbaSession(entitlements: { .effective(.free, gateOpen: true) })
+    func testFreeLimitsHold() async throws {
+        let session = try await mgbaSession(entitlements: { .free })
         defer { session.stop() }
         try await waitForFrames(session)
-        for _ in 0..<3 { try session.saveState() }
+        for _ in 0..<4 { try session.saveState() }
+        XCTAssertFalse(session.canAddSaveState)
         XCTAssertThrowsError(try session.saveState()) {
-            XCTAssertEqual($0 as? SaveStateError, .limitReached(3))
+            XCTAssertEqual($0 as? SaveStateError, .limitReached(4))
         }
-        XCTAssertEqual(session.saves.manualCount, 3)
+        XCTAssertEqual(session.saves.manualCount, 4)
         try session.saves.delete(try XCTUnwrap(session.saves.slots().first))
+        XCTAssertTrue(session.canAddSaveState)
         XCTAssertNoThrow(try session.saveState(), "deleting one frees a slot")
 
         XCTAssertEqual(session.fastForwardSpeeds, [1, 2])
+        XCTAssertTrue(session.fastForwardLocked(3))
+        XCTAssertFalse(session.fastForwardLocked(2))
         session.setFastForward(5)
         XCTAssertEqual(session.fastForward, 2, "clamped to the limit")
         session.toggleFastForward()
@@ -816,29 +820,28 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertEqual(session.fastForward, 2)
 
         let code = codes(1)[0]
-        for index in 0..<3 { try session.addCheat(name: "Cheat \(index)", code: code) }
+        for index in 0..<5 { try session.addCheat(name: "Cheat \(index)", code: code) }
         XCTAssertFalse(session.canAddCheat)
         XCTAssertThrowsError(try session.addCheat(name: "One more", code: code)) {
-            XCTAssertEqual($0.localizedDescription, "You have 3 cheats, the most without Gaga Plus. Remove one to add another.")
+            XCTAssertEqual($0.localizedDescription, "You have 5 cheats, the most without GagaEmu Pro. Remove one to add another.")
         }
-        XCTAssertEqual(session.cheats.count, 3)
-        XCTAssertFalse(StoreKitManager.Entitlements.effective(.free, gateOpen: true).autoSaveState)
+        XCTAssertEqual(session.cheats.count, 5)
+        XCTAssertNoThrow(try session.setCheat(session.cheats[0], enabled: false), "saved cheats still switch at the limit")
     }
 
     @MainActor
-    func testClosedGateLiftsTheLimits() async throws {
+    func testProLiftsTheLimits() async throws {
         let session = try await mgbaSession()
         defer { session.stop() }
         try await waitForFrames(session)
-        for _ in 0..<4 { try session.saveState() }
-        XCTAssertEqual(session.saves.manualCount, 4)
-        for index in 0..<4 { try session.addCheat(name: "Cheat \(index)", code: codes(1)[0]) }
+        for _ in 0..<6 { try session.saveState() }
+        XCTAssertEqual(session.saves.manualCount, 6)
+        for index in 0..<6 { try session.addCheat(name: "Cheat \(index)", code: codes(1)[0]) }
         XCTAssertEqual(session.fastForwardSpeeds, [1, 2, 3, 5])
         session.setFastForward(5)
         XCTAssertEqual(session.fastForward, 5)
         session.setFastForward(4)
         XCTAssertEqual(session.fastForward, 3, "only offered speeds")
-        XCTAssertTrue(StoreKitManager.Entitlements.effective(.free, gateOpen: false).autoSaveState)
     }
 
     @MainActor

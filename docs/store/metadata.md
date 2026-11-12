@@ -9,7 +9,7 @@ Voice and legal rules are in `docs/BRAND.md`. Every feature claimed below exists
 | Field | Status |
 |---|---|
 | Price | TODO-owner. `AppStore/app.json` says "Owner's choice". |
-| Paywall (Gaga Plus) | TODO-owner. Plans, prices and whether Gaga Plus is listed at all. The draft does not mention Gaga Plus, so the listing sells only the free app. If Gaga Plus ships, add a short, factual section from `Sources/UI/Settings/GagaPlusView.swift` and never a price. |
+| Paywall (GagaEmu Pro) | Decided 2026-11-12: shipped in every App Store build. The GAGAEMU PRO section matches `Sources/UI/Settings/GagaPlusView.swift` and `StoreKitManager.Entitlements` and names no price. Reviewers reach it from Settings > GagaEmu Pro (`review_notes.txt`). |
 | App Store ID | TODO-owner. Assigned by App Store Connect. Then set `SiteLinks.appStore` in `Sources/App/AppState.swift` to `https://apps.apple.com/app/id<ID>`. |
 | Trademark check on "GagaEmu" | TODO-owner, from `docs/BRAND.md`. |
 
@@ -53,6 +53,9 @@ PLAYING
 - Picture filters, from Original to CRT.
 - Custom skins for the touch controls.
 
+GAGAEMU PRO
+Every system and core is free to play, with no ads and no sign-in. GagaEmu Pro is an optional subscription or one-time purchase. It adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and colours.
+
 EARLY RELEASE
 GagaEmu is in early development. Speed depends on your device and the software you load. We make no promise that any particular title will run.
 
@@ -71,7 +74,8 @@ GagaEmu is an independent project. It is not affiliated with, endorsed by or spo
 | Zip unpacking | `CoreCatalog.unpackArchive` in `Sources/App/AppState.swift` |
 | Controllers | `Sources/Input/ControllerManager.swift` |
 | Save states, fast forward, rewind status | `Sources/UI/Game/GameView.swift`, `Sources/Session/GameSession.swift` |
-| Filters Original to CRT | `Shader.builtIn` in `Sources/App/AppState.swift` (free ones only) |
+| Filters Original to CRT | `ShaderCatalog.freeIDs` in `Sources/App/AppState.swift` (Lottes CRT is free) |
+| GagaEmu Pro items | `StoreKitManager.Entitlements` in `Sources/Store/StoreKitManager.swift`, `GagaPlusView.swift` |
 | Skins | `Sources/UI/Settings/AssignSkinView.swift`, `SkinEditorView.swift` |
 | Upright and landscape on iPhone and iPad | `Sources/App/Info.plist` |
 

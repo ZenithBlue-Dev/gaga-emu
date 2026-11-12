@@ -138,6 +138,7 @@ struct FiltersGallery: View {
     @EnvironmentObject private var state: AppState
     @EnvironmentObject private var store: StoreKitManager
     @State private var studio = false
+    @State private var showPlans = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @ScaledMetric(relativeTo: .caption) private var tileMin: CGFloat = 104
 
@@ -167,20 +168,22 @@ struct FiltersGallery: View {
         }
         .padding(.top, 10)
         .fullScreenCover(isPresented: $studio) { FilterPickerView() }
+        .proPaywall(isPresented: $showPlans)
     }
 
     private func tile(_ shader: ShaderCatalog.Shader) -> some View {
         let locked = shader.premium && !store.canUseShader(shader.id)
         let selected = state.shaderID == shader.id
-        return Button { if locked { studio = true } else { state.shaderID = shader.id } } label: {
-            ChoiceCard(title: shader.name, detail: locked ? "Gaga Plus" : nil, reservesDetail: PaywallGate.isOpen,
-                       aspect: 4.0 / 3.0, selected: selected) { FilterPicture(shaderID: shader.id) }
+        return Button { if locked { showPlans = true } else { state.shaderID = shader.id } } label: {
+            ChoiceCard(title: shader.name, detail: locked ? "GagaEmu Pro" : nil, reservesDetail: PaywallGate.isOpen,
+                       aspect: 4.0 / 3.0, selected: selected) { FilterPicture(shaderID: shader.id).proLocked(locked) }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Filter preview: \(shader.name)\(locked ? ", needs Gaga Plus" : "")")
+        .accessibilityLabel("Filter preview: \(shader.name)")
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityHint(locked ? Text("Requires GagaEmu Pro") : Text(verbatim: ""))
         .accessibilityIdentifier("styleFilter.\(shader.id)")
     }
 }

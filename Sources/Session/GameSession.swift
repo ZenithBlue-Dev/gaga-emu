@@ -214,7 +214,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     init(game: GameItem, interface: GagaCoreInterface, romPath: String, audio: AudioEngineManager = .shared,
          controllers: ControllerManager, skins: TouchSkinEngine, bindings: [TriggerProManager.Binding],
          shaderID: String, respectSilentMode: Bool, saveDirectory: URL? = nil, rumble: RumbleManager? = nil,
-         entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .effective(.free) }) throws {
+         entitlements: @escaping @MainActor () -> StoreKitManager.Entitlements = { .free }) throws {
         guard let device = MTLCreateSystemDefaultDevice(), let renderer = MetalRenderer(device: device) else {
             throw GameLaunchError.metalUnavailable
         }
@@ -643,6 +643,8 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     // MARK: - Save states
 
     var supportsSaveStates: Bool { core?.supportsSaveStates ?? false }
+    /// A new manual save state fits under this player's limit. Saves past it, from a lapsed Pro, stay and load.
+    var canAddSaveState: Bool { entitlements().canAddSaveState(current: saves.manualCount) }
     /// Play Nearby's hook (`Sources/Netplay`): the running core, for its lockstep and state checks.
     var netplayCore: GagaCoreWrapper? { core }
     /// Players on this phone for Play Nearby: up to the highest controller slot taken, at least 1 (touch).
@@ -695,8 +697,11 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
 
     // MARK: - Fast-forward
 
-    /// Speeds this player may pick, slowest first. 1 is off.
-    var fastForwardSpeeds: [Int] { [1, 2, 3, 5].filter { Double($0) <= entitlements().maxFastForward } }
+    /// Every speed the pause menu shows, slowest first. 1 is off.
+    static let fastForwardChoices = [1, 2, 3, 5]
+    /// Speeds this player may pick.
+    var fastForwardSpeeds: [Int] { Self.fastForwardChoices.filter(entitlements().allowsFastForward) }
+    func fastForwardLocked(_ speed: Int) -> Bool { !entitlements().allowsFastForward(speed) }
 
     /// Clamped here, so a caller cannot run past `maxFastForward`.
     func setFastForward(_ speed: Int) {
@@ -751,7 +756,7 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         if hardcoreActive { throw RetroAchievementsError.hardcoreBlocks("Cheats") }
         guard canAddCheat else {
             let limit = entitlements().maxCheats
-            throw EmulatorCoreError.cheatRejected("You have \(limit) cheats, the most without Gaga Plus. Remove one to add another.")
+            throw EmulatorCoreError.cheatRejected("You have \(limit) cheats, the most without GagaEmu Pro. Remove one to add another.")
         }
         let entry = CheatEntry(id: (cheats.map(\.id).max() ?? 0) + 1, name: name, code: code, enabled: enabled)
         try core.addCheat(id: entry.id, code: code, enabled: enabled)
@@ -937,8 +942,10 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
     /// Players and the multiplayer adapter for `mode` (Controls > Players). Applies from the next frame.
     func setMultitap(_ mode: MultitapMode) {
         let coreID = String(cString: interface.core_id)
-        maxPlayers = CoreCatalog.maxPlayers(game.platformID, coreID: coreID, multitap: mode)
-        multitapAlwaysOn = mode == .on && CoreCatalog.multitap["\(game.platformID):\(coreID)"] != nil
+        // Players 3 and up are GagaEmu Pro; without it the multitap stays out, as it only adds them.
+        let allowed = entitlements().maxPlayers
+        maxPlayers = min(CoreCatalog.maxPlayers(game.platformID, coreID: coreID, multitap: mode), allowed)
+        multitapAlwaysOn = mode == .on && allowed > 2 && CoreCatalog.multitap["\(game.platformID):\(coreID)"] != nil
     }
 
     /// Ports in use, the core's player_count: up to the highest player with a controller (touch is player 1), or every

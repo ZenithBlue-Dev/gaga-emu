@@ -23,7 +23,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable, ShellCategory {
         case .help: return "questionmark.circle"
         }
     }
-    /// GagaEmu Pro stays out of Release builds while the paywall gate is closed (docs/06 section 4.5).
+    /// GagaEmu Pro shows in every build that sells it, and never in a sideload build (docs/06 section 4.5).
     static var visible: [SettingsCategory] { allCases.filter { $0 != .gagaPlus || PaywallGate.showsPro } }
 }
 
@@ -339,22 +339,13 @@ private struct MonogramPicture: View {
 
 private struct GameplayPane: View {
     @EnvironmentObject private var state: AppState
-    @EnvironmentObject private var store: StoreKitManager
-    @State private var showPlans = false
 
     var body: some View {
         ToggleRow(title: "Quick Start", note: "Opens your most recent game when the app starts.", isOn: $state.quickStart, tile: .symbol("bolt"))
         Rule()
-        // Reaching the second branch needs an open paywall gate, because a closed one lifts the limit.
-        if store.canUseAutoSaveState {
-            ToggleRow(title: "Auto Save State", note: "Saves when you quit or leave the app, and offers to resume when you next play.",
-                      isOn: $state.autoSaveStates, tile: .symbol("square.and.arrow.down"))
-        } else {
-            ActionRow(title: "Auto Save State", value: "Plus", symbol: "lock", tile: .symbol("square.and.arrow.down")) { showPlans = true }
-                #if !GAGA_SIDELOAD
-                .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
-                #endif
-        }
+        // Always free, like the game's own save.
+        ToggleRow(title: "Auto Save State", note: "Saves when you quit or leave the app, and offers to resume when you next play.",
+                  isOn: $state.autoSaveStates, tile: .symbol("square.and.arrow.down"))
         Rule()
         ToggleRow(title: "Rewind",
                   note: "Hold the rewind button, or a controller input mapped to Rewind in Controllers, to step back through recent play. Uses up to \(RewindPolicy.standard.budgetBytes / 1_048_576) MB of memory while a game runs. Only systems with a small, quick save state can rewind; the pause menu says when one cannot.",
@@ -565,19 +556,29 @@ private struct CloudStatusRow: View {
 
 private struct StoragePane: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var store: StoreKitManager
     @State private var romBytes: Int64 = 0
     @State private var showClearConfirm = false
     @State private var cleared = false
+    @State private var showPlans = false
 
     var body: some View {
         ValueRow(title: "Game files", value: romBytes.formatted(.byteCount(style: .file)), tile: .symbol("internaldrive"))
             .task { romBytes = folderSize(state.romDirectory) }
         Rule()
-        ToggleRow(title: "iCloud Sync", note: "Keeps saves and save states the same on your devices, when you quit a game or leave the app. If two devices changed a save, the newest is used and the older stays as a copy. Deleting a save on one device does not delete it on another.",
-                  isOn: $state.iCloudSync, tile: .symbol("icloud"))
-            .accessibilityIdentifier("icloudSyncToggle")
+        if store.entitlements.cloudSync {
+            ToggleRow(title: "iCloud Sync", note: "Keeps saves and save states the same on your devices, when you quit a game or leave the app. If two devices changed a save, the newest is used and the older stays as a copy. Deleting a save on one device does not delete it on another.",
+                      isOn: $state.iCloudSync, tile: .symbol("icloud"))
+                .accessibilityIdentifier("icloudSyncToggle")
+        } else {
+            // Nothing in iCloud or on this device is removed; sync only pauses until Pro returns.
+            ActionRow(title: "iCloud Sync", value: "GagaEmu Pro", symbol: "lock.fill", tile: .symbol("icloud")) { showPlans = true }
+                .accessibilityHint(Text("Requires GagaEmu Pro"))
+                .accessibilityIdentifier("icloudSyncLocked")
+                .proPaywall(isPresented: $showPlans)
+        }
         Rule()
-        if state.iCloudSync {
+        if state.iCloudSync, store.entitlements.cloudSync {
             ToggleRow(title: "Include Game Files", note: "Game files are large and count against your iCloud storage.", isOn: $state.iCloudSyncROMs,
                       tile: .symbol("externaldrive.badge.icloud"))
             Rule()
@@ -610,7 +611,6 @@ private struct GagaPlusPane: View {
     @EnvironmentObject private var store: StoreKitManager
     @State private var showPlans = false
 
-    /// What was bought, not what the closed gate lets everyone use.
     private var status: String {
         if store.purchased.lifetime { return "Forever" }
         return store.isPro ? "Active" : "Not subscribed"
@@ -618,7 +618,7 @@ private struct GagaPlusPane: View {
 
     var body: some View {
         ValueRow(title: "Status", value: status, tile: .symbol("star.circle"))
-            .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
+            .proPaywall(isPresented: $showPlans)
         Rule()
         ActionRow(title: "GagaEmu Pro", value: store.isPro ? nil : "See Plans", tile: .symbol("star")) { showPlans = true }
         Rule()

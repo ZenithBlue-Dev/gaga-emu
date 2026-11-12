@@ -20,6 +20,9 @@ PLAYING
 - Picture filters, from Original to CRT.
 - Custom skins for the touch controls.
 
+GAGAEMU PRO
+Every system and core is free to play, with no ads and no sign-in. GagaEmu Pro is an optional subscription or one-time purchase. It adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and colours.
+
 EARLY RELEASE
 GagaEmu is in early development. Speed depends on your device and the software you load. We make no promise that any particular title will run.
 

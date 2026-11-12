@@ -8,8 +8,10 @@ struct AppIconPicker: View {
         ("Shelf", "AppIconShelf", "IconPreviewShelf"), ("Well", "AppIconWell", "IconPreviewWell"), ("Phosphor", "AppIconPhosphor", "IconPreviewPhosphor")
     ]
 
+    @EnvironmentObject private var store: StoreKitManager
     @State private var current = UIApplication.shared.alternateIconName
     @State private var failure: String?
+    @State private var showPlans = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -17,11 +19,14 @@ struct AppIconPicker: View {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 64, maximum: 64), spacing: 8, alignment: .top)], alignment: .leading, spacing: 8) {
                 ForEach(Self.choices, id: \.name) { choice in
                     let selected = current == choice.icon
-                    Button { set(choice.icon) } label: {
+                    // The standard icon is free. One already chosen stays if Pro lapses.
+                    let locked = choice.icon != nil && !selected && !store.entitlements.extraLooks
+                    Button { if locked { showPlans = true } else { set(choice.icon) } } label: {
                         VStack(spacing: 2) {
                             Image(choice.preview).resizable().frame(width: 56, height: 56)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
+                                .proLocked(locked)
                             Text(LocalizedStringKey(choice.name))
                                 .font(.caption2.weight(selected ? .bold : .regular))
                                 .lineLimit(1).minimumScaleFactor(0.7)
@@ -33,11 +38,13 @@ struct AppIconPicker: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("App icon, \(choice.name)")
                     .accessibilityAddTraits(selected ? .isSelected : [])
+                    .accessibilityHint(locked ? Text("Requires GagaEmu Pro") : Text(verbatim: ""))
                 }
             }
             if let failure { Text(failure).font(.footnote).foregroundStyle(AppTheme.accent) }
         }
         .padding(.vertical, 6)
+        .proPaywall(isPresented: $showPlans)
     }
 
     private func set(_ icon: String?) {
@@ -57,7 +64,11 @@ struct AppIconPicker: View {
 /// Style > Icon and Colours: appearance, accent colour and app icon, each chosen from a picture.
 struct AppearancePane: View {
     @EnvironmentObject private var state: AppState
+    @EnvironmentObject private var store: StoreKitManager
     @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var showPlans = false
+    /// Light, dark and the standard accent are free; the other accents and a custom one are GagaEmu Pro.
+    private var extraLooks: Bool { store.entitlements.extraLooks }
 
     /// `nil` hex is the standard vermilion.
     private static let swatches: [(name: String, hex: Int?)] = [
@@ -108,12 +119,24 @@ struct AppearancePane: View {
             HStack(spacing: 6) {
                 ForEach(Self.swatches, id: \.name) { swatch(name: $0.name, hex: $0.hex) }
                 Spacer(minLength: 0)
-                ColorPicker("Custom accent colour", selection: customColour, supportsOpacity: false)
-                    .labelsHidden()
-                    .frame(minWidth: 44, minHeight: 44)
+                if extraLooks {
+                    ColorPicker("Custom accent colour", selection: customColour, supportsOpacity: false)
+                        .labelsHidden()
+                        .frame(minWidth: 44, minHeight: 44)
+                } else {
+                    Button { showPlans = true } label: {
+                        Image(systemName: "paintpalette").foregroundStyle(AppTheme.muted)
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                            .proLocked(true, alignment: .topTrailing)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Custom accent colour")
+                    .accessibilityHint(Text("Requires GagaEmu Pro"))
+                }
             }
         }
         .padding(.vertical, 6)
+        .proPaywall(isPresented: $showPlans)
         Rule()
         AppIconPicker()
         Rule()
@@ -121,7 +144,9 @@ struct AppearancePane: View {
 
     private func swatch(name: String, hex: Int?) -> some View {
         let selected = state.accentHex == hex
-        return Button { state.accentHex = hex } label: {
+        // A colour already chosen stays if Pro lapses.
+        let locked = hex != nil && !selected && !extraLooks
+        return Button { if locked { showPlans = true } else { state.accentHex = hex } } label: {
             // A mini cover in the colour: the spine and a title bar, as the Library draws them.
             RoundedRectangle(cornerRadius: 4)
                 .fill(AppTheme.surface)
@@ -135,11 +160,13 @@ struct AppearancePane: View {
                 }
                 .overlay(RoundedRectangle(cornerRadius: 4).stroke(selected ? AppTheme.ink : AppTheme.rule, lineWidth: selected ? 2 : 1))
                 .frame(width: 44, height: 44)
+                .proLocked(locked)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(name)
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityHint(locked ? Text("Requires GagaEmu Pro") : Text(verbatim: ""))
     }
 }
 

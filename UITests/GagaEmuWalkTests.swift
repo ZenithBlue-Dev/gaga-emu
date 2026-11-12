@@ -10,6 +10,7 @@ import XCTest
 /// - `GAGA_WALK_ROM`: optional ROM path for `-GagaImportROM` instead (relative is under Documents).
 /// - `GAGA_WALK_TITLE`: Library title of that game. Default `GagaBenchmark`, the test ROM's name.
 /// - `GAGA_WALK_BATTERY`: `0` when the game writes no battery save. Default `1`.
+/// - `GAGA_WALK_PRO`: `0` plays as a free player, with the Pro locks. Default `1` (`-GagaPro 1`, Debug only).
 final class GagaEmuWalkTests: XCTestCase {
     private let environment = ProcessInfo.processInfo.environment
     private var core: String { environment["GAGA_WALK_CORE"] ?? "mgba" }
@@ -21,15 +22,23 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .landscapeLeft
     }
 
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(pro: Bool? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         if let rom = environment["GAGA_WALK_ROM"] {
             app.launchArguments = ["-GagaImportROM", rom]
         } else {
             app.launchArguments = ["-GagaImportTestROM", core]
         }
-        app.launch()
+        launch(app, pro: pro)
         return app
+    }
+
+    /// Walks run with GagaEmu Pro forced on unless `GAGA_WALK_PRO=0` or the walk already chose.
+    private func launch(_ app: XCUIApplication, pro: Bool? = nil) {
+        if !app.launchArguments.contains("-GagaPro") {
+            app.launchArguments += ["-GagaPro", pro.map { $0 ? "1" : "0" } ?? environment["GAGA_WALK_PRO"] ?? "1"]
+        }
+        app.launch()
     }
 
     /// Never shoots another app: a notification can bring one forward, and the result bundle would keep its screen.
@@ -343,7 +352,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-GagaImportTestROM", core, "-GagaDefaultDisplay", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
-        app.launch()
+        launch(app)
         let cover = importedGame(app, "The \(title) game")
         sleep(3)
         try stopIfPrompt()
@@ -393,7 +402,7 @@ final class GagaEmuWalkTests: XCTestCase {
         // A grid Library at this size: one column, each card a row beside its cover.
         app.terminate()
         app.launchArguments += ["-GagaPerRow", "3"]
-        app.launch()
+        launch(app)
         let card = importedGame(app, "The \(title) game in a grid")
         shoot("10 Library grid")
         XCTAssertGreaterThan(card.frame.width, app.windows.firstMatch.frame.width * 0.6, "The grid card is not one full-width row")
@@ -653,7 +662,7 @@ final class GagaEmuWalkTests: XCTestCase {
         for extra in ["nestopia", "melonds_ds", "azahar"] {
             let other = XCUIApplication()
             other.launchArguments = ["-GagaImportTestROM", extra]
-            other.launch()
+            launch(other)
             _ = importedGame(other, "The \(extra) game")
         }
         let app = launchApp()
@@ -788,7 +797,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-GagaImportTestROM", core]
-        app.launch()
+        launch(app)
         _ = importedGame(app, "The \(title) game")
         guard !promptUp() else { return }
         // The Library keeps earlier tests' test ROMs, all of one title: the platform picks this one.
@@ -899,7 +908,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-GagaImportTestROM", "ppsspp"]
-        app.launch()
+        launch(app)
         _ = importedGame(app, "The \(title) game")
         sleep(6)
         guard !promptUp() else { return }
@@ -946,7 +955,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-GagaImportTestROM", core]
-        app.launch()
+        launch(app)
         let game = importedGame(app, "The \(title) game")
         sleep(8)
         guard !promptUp(), styleSection(app, "Filters") else { return }
@@ -1043,7 +1052,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-GagaImportTestROM", core, "-GagaSeedDownloads", "YES", "-GagaPreviewImage", "YES"]
-        app.launch()
+        launch(app)
         _ = importedGame(app, "The \(title) game")
         sleep(10)
         goTo(app, "Import")
@@ -1103,14 +1112,14 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let psp = XCUIApplication()
         psp.launchArguments = ["-GagaImportTestROM", "ppsspp"]
-        psp.launch()
+        launch(psp)
         _ = importedGame(psp, "The ppsspp game")
         // Another walk's game can be listed already, so the PSP one itself is waited for before the relaunch.
         _ = psp.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ AND label CONTAINS %@", title, "PSP")).firstMatch
             .waitForExistence(timeout: importTimeout)
         let app = XCUIApplication()
         app.launchArguments = ["-GagaSeedDiscs", "YES", "-GagaImportTestROM", core]
-        app.launch()
+        launch(app)
         _ = importedGame(app, "The \(title) game")
         sleep(10)
         guard !promptUp() else { return }
@@ -1154,7 +1163,7 @@ final class GagaEmuWalkTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = ["-AppleLanguages", "(es)", "-AppleLocale", "es_ES", "-GagaImportTestROM", core]
-        app.launch()
+        launch(app)
         _ = importedGame(app, "The \(title) game")
         sleep(10)
         guard !promptUp() else { return }
@@ -1290,7 +1299,7 @@ final class GagaEmuWalkTests: XCTestCase {
         app.launchArguments = (environment["GAGA_WALK_ROM"].map { ["-GagaImportROM", $0] } ?? ["-GagaImportTestROM", core])
             + (environment["GAGA_WALK_CHEATS"].map { ["-GagaCheatFile", $0] } ?? [])
             + (environment["GAGA_WALK_CHEAT_TITLE"].map { ["-GagaCheatTitle", $0] } ?? [])
-        app.launch()
+        launch(app)
         try guardedTap(importedGame(app, "The \(title) game"), "The game")
         try guardedTap(startOnPage(app), "Play on the game's page")
         let pause = app.buttons["Pause game"]
@@ -1403,7 +1412,7 @@ final class GagaEmuWalkTests: XCTestCase {
         session.disableDialogs = true
         XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
-        app.launch()
+        launch(app, pro: false) // The plans show only to someone without Pro.
         try guardedTap(button(app, "Settings"), "Settings in the rail")
         try guardedTap(app.buttons["settings.GagaEmu Pro"].firstMatch, "GagaEmu Pro tab")
         try guardedTap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'GagaEmu Pro' AND NOT (identifier BEGINSWITH 'settings.')")).firstMatch,
@@ -1576,5 +1585,46 @@ final class GagaEmuWalkTests: XCTestCase {
         if environment["GAGA_WALK_BATTERY"] != "0" {
             XCTAssertTrue(app.staticTexts["Written by the game itself"].exists, "No battery save after quit and relaunch")
         }
+    }
+
+    /// As a free player (`-GagaPro 0`): fast forward past 2x and a fifth save state each show the lock and open the
+    /// paywall, which is closed without touching a plan. Buys nothing and signs in to nothing.
+    func testProLocksFree() throws {
+        let app = launchApp(pro: false)
+        try guardedTap(importedGame(app, "The \(title) game"), "The game")
+        try guardedTap(startOnPage(app), "Play on the game's page")
+        let pause = app.buttons["Pause game"]
+        try arrive(pause, "The game")
+        sleep(2)
+        try guardedTap(pause, "Pause game")
+        let paywall = app.buttons["pro.Yearly"].firstMatch
+        let close = app.buttons["Close"].firstMatch
+
+        try arrive(app.buttons["fastForward.2"].firstMatch, "Fast forward 2x")
+        app.buttons["fastForward.2"].firstMatch.tap()
+        XCTAssertFalse(paywall.waitForExistence(timeout: 2), "2x is free, yet it opened the paywall")
+        let faster = app.buttons["fastForward.3"].firstMatch
+        try guardedTap(faster, "Fast forward 3x")
+        snapshot("Free: fast forward 3x")
+        try arrive(paywall, "The paywall from fast forward 3x")
+        snapshot("Paywall from fast forward")
+        try guardedTap(close, "Close the paywall")
+        XCTAssertTrue(app.buttons["fastForward.5"].waitForExistence(timeout: timeout))
+        snapshot("Free: speed row with locks")
+
+        // Four manual slots are free; a fifth asks for Pro. Earlier walks may have left states, so stop at the paywall.
+        var reached = false
+        for attempt in 1...6 where !reached {
+            try guardedTap(app.buttons["pause.saveState"].firstMatch, "Save State \(attempt)")
+            reached = paywall.waitForExistence(timeout: 3)
+        }
+        XCTAssertTrue(reached, "Six saves and no paywall: the free limit of 4 did not hold")
+        snapshot("Paywall from save state 5")
+        try guardedTap(close, "Close the paywall")
+        try arrive(app.buttons["pause.saveState"].firstMatch, "Save State after the paywall")
+        snapshot("Free: Save State locked")
+        try guardedTap(button(app, "Load State"), "Load State")
+        XCTAssertTrue(button(app, "Load Save state").waitForExistence(timeout: timeout), "Saves past the limit must stay loadable")
+        snapshot("Free: saves still listed")
     }
 }

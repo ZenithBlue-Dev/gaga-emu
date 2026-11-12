@@ -541,7 +541,7 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Graphics | Default Filter, which opens the filter picker | built |
 | Controls | Touch Control, connected controllers with their player slot, Touch Layout (Assign Skin), Controller Mapping, Macros, Turbo, Touch Haptics, Hide Touch With a Controller. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a game's rumble on the device while player 1 is on touch; touch presses use Touch Haptics. Rumble Strength scales a game's rumble on controllers and the device; Off stops it everywhere. Skin Sound Effects is a click on each touch press. Assign Skin opens a sheet with a drawing of each built-in layout and a layout per platform. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
-| GagaEmu Pro | Second category. Status (what was bought) and a GagaEmu Pro row that opens the paywall. Shown in Debug builds, and in Release only once the paywall gate opens (`PaywallGate.showsPro`, section 4.5). | built, gated |
+| GagaEmu Pro | Second category. Status (what was bought) and a GagaEmu Pro row that opens the paywall. Shown in every App Store build (`PaywallGate.showsPro`, section 4.5). | built |
 | About | Version, About Us, Share GagaEmu, Reset Tips, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy, Licences. Debug builds add Run Benchmark. About Us is a sheet with what GagaEmu is, version, build, Website, Privacy Policy, Licences and the trademark line. Share GagaEmu is the system share sheet with `SiteLinks.appStore`, which is the site until the app has an App Store ID. Reset Tips shows the first-run tips again (`TipLine`: three one-line tips on the Library, Add and Assign Skin screens, each with Got It). Language opens the app's page in iOS Settings, and appears only when the bundle has more than one localisation; today it has English only, so the row is hidden. Licences (`LicencesView`) is a two-pane paper sheet: components on the left, the chosen one's source and full licence texts on the right. It reads `licences.json`, which `scripts/generate-licences.py` writes with the texts into `Sources/App/Licences` from the committed list `Licences/notices.json`, and shows a component only when a core that brings it in is linked (`GAGA_CORE_SET`); Anime4K and the community filters are in every build. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
 
 All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
@@ -684,25 +684,26 @@ Three products with existing IDs, from `Sources/Store/StoreKitManager.swift`:
 | `com.zenithblue.gagaemu.pro.yearly` | Yearly | Auto-renewing, 1 year, 1-week free trial, same group and level |
 | `com.zenithblue.gagaemu.pro.lifetime` | Forever | Non-consumable, one-time payment |
 
-Prices, periods and the trial length always come from StoreKit (`Product.displayPrice`, the subscription period) and are never hard-coded. `Resources/GagaEmuPro.storekit` mirrors these products for local StoreKit testing; the GagaEmu scheme's Run action uses it, the app bundle never holds it, and a unit test checks its IDs match. `StoreKitManager.isPro` is what was bought (verified `Transaction.currentEntitlements`), whatever the gate; nothing reads it to lock a feature yet.
+Prices, periods and the trial length always come from StoreKit (`Product.displayPrice`, the subscription period) and are never hard-coded. `Resources/GagaEmuPro.storekit` mirrors these products for local StoreKit testing; the GagaEmu scheme's Run action uses it, the app bundle never holds it, and a unit test checks its IDs match. `StoreKitManager.purchased` is what was bought (verified `Transaction.currentEntitlements`); `entitlements` and `isPro` are what the app enforces, the same in every configuration except that a Debug build takes `-GagaPro 1` or `-GagaPro 0` to force Pro on or off for walks.
 
 ### 4.2 What stays free
 
-Emulation stays free: every core, ROM import, saves, baseline shaders, rewind, saved filter presets, `.slangp` import and local multi-controller play. No core or platform is ever gated.
+Emulation stays free: every system and core, ROM import, battery saves, the auto save state, four manual save states and five cheats per game, fast forward to 2x, rewind, four filters, imported filters and saved presets, `.slangp` import, and one or two players. No core or platform is ever gated. No ads, no sign-in.
 
-### 4.3 What premium adds
+### 4.3 What Pro adds
 
-Premium is five items. Free-tier numbers are GagaEmu policy.
+Free-tier numbers are GagaEmu policy, in `StoreKitManager.Entitlements`. Limits stop only making something new or turning a locked feature on: save states past 4, cheats past 5 and filters chosen while Pro was active stay and still load, so a lapsed Pro keeps the app working at the free limits and deletes nothing. A locked option shows a small lock (`ProLockBadge`), VoiceOver says "Requires GagaEmu Pro", and a tap opens the paywall.
 
-| Paywall item | Free | Premium | Enforced in code today |
+| Paywall item | Free | Pro | Enforced in code |
 |---|---|---|---|
-| Higher fast-forward speed | 2x | 5x | Yes: `GameSession.fastForwardSpeeds` filters by `maxFastForward`, and `setFastForward` clamps to it. |
-| Unlimited Save States | 3 | Unlimited | Yes: `GameSession.saveState` checks `canAddSaveState`. The auto save slot does not count. |
-| Unlimited Cheat Codes | 3 | Unlimited | Yes: `GameSession.addCheat` checks `canAddCheat`. |
-| Premium Filters | Original, Cartoon, CRT v1, CRT v2, Film, the Community filters and imported filters | Geom CRT, Geom CRT Border, CRT Deluxe, Anime4K | Yes: `canUseShader` in `FilterPickerView.swift`, and `AppState.makeSession` falls back to Original without it. |
-| Auto Save State | Off | Available | Yes: `AppState.autoSaveEnabled` needs `canUseAutoSaveState`, and the Settings row becomes a locked row without it. |
+| Fast forward above 2x | 2x | 3x and 5x | `GameSession.fastForwardSpeeds` and `setFastForward` clamp; the pause menu shows 3x and 5x locked. |
+| More save slots and cheats | 4 manual save states, 5 cheats per game | Unlimited | `GameSession.saveState`, `quickSave` and `addCheat`; the Save State tile and Add buttons lock at the limit. The auto save and battery save never count. |
+| Players 3 and 4 | Players 1 and 2 | Up to 4, and the multitap | `GameSession.setMultitap` caps `maxPlayers` at 2 and keeps the multitap out; Players shows a locked row. |
+| The full shader catalogue | Original, Sharp Bilinear, Lottes CRT, LCD3x (`ShaderCatalog.freeIDs`), and imported filters | Every other catalogue filter | `canUseShader`; `AppState.makeSession` falls back to Original without it. |
+| iCloud sync | Off | On | `AppState.syncCloud` needs `cloudSync`; Storage shows a locked row and keeps the setting. |
+| Extra app icons and themes | Standard icon and accent, light and dark | Other icons, accents and a custom accent | `AppIconPicker`, `AppearancePane`; a choice already made stays. |
 
-**Sell only what works.** `premiumShaderIDs` is `geom-crt`, `geom-crt-border`, `crt-deluxe` and `anime4k`, each drawn on real core frames (`docs/05` section 3.1). `crt-royale` is GPL and is not shipped; CRT Deluxe is the original multi-pass CRT sold in its place, and a saved `crt-royale` selection resets to Original. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) reach it through the output-texture path when a filter is chosen (`docs/05` section 2.4); a layer-path core without that path would skip host shaders. Netplay is not gated or promised until built.
+**Sell only what works.** `premiumShaderIDs` is every catalogue filter outside `ShaderCatalog.freeIDs`, each drawn on real core frames (`docs/05` section 3.1). `crt-royale` is GPL and is not shipped; CRT Deluxe is the original multi-pass CRT sold in its place, and a saved `crt-royale` selection resets to Original. The Premium Filters entitlement covers only cores whose frames pass through the host shader chain. Layer-path cores (N64, PSP, Dreamcast, 3DS, and Beetle PSX HW in Vulkan mode; `docs/05` section 2.5) reach it through the output-texture path when a filter is chosen (`docs/05` section 2.4); a layer-path core without that path would skip host shaders. Netplay is not gated or promised until built.
 
 ### 4.4 Paywall requirements
 
@@ -722,7 +723,7 @@ Offer badges come from `StoreKitManager.badge`, which needs an intro offer confi
 
 ### 4.5 Release gate
 
-The paywall stays off in submitted builds until a real core runs end to end. While it is off, the Gaga Plus category and premium labels are hidden and premium limits are lifted, so no shipped feature sits behind a purchase the user cannot make. The one switch is the `PAYWALL_ENABLED` compilation condition (`PaywallGate`, `project.yml`), absent today; `docs/07` 7.2 opens it. App Store metadata must be corrected before submission, because it currently describes gameplay that does not exist.
+Open (`docs/07` 7.2, owner approved 2026-11-12). Every App Store build, Debug, Release and TestFlight, shows Settings > GagaEmu Pro and enforces the free limits; `PaywallGate.isOpen` is false only in a sideload build, which sells nothing. The `PAYWALL_ENABLED` compilation condition is retired. Reviewers reach the paywall from Settings > GagaEmu Pro, or from any locked option.
 
 ---
 
@@ -774,8 +775,7 @@ configs:
       GCC_OPTIMIZATION_LEVEL: "s"
 
 settings:
-  # Paywall release gate: stays out until milestone 7.2 opens it (docs/06 section 4.5).
-  # To open it, add here: SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYWALL_ENABLED
+  # GagaEmu Pro is sold in every App Store build (docs/06 section 4.5); PAYWALL_ENABLED is retired.
   SWIFT_VERSION: "5.9"
   ENABLE_BITCODE: NO
   CLANG_ENABLE_MODULES: YES

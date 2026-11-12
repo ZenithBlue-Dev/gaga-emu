@@ -234,7 +234,7 @@ enum CoreCatalog {
         ImportedFilter.isImported(shaderID) || ImportedFilter.isSlang(shaderID) || ShaderPreset.from(id: shaderID) != .original
     }
 
-    /// Names of this build's cores that filters do not reach, for the Gaga Plus filter statement.
+    /// Names of this build's cores that filters do not reach, for the GagaEmu Pro filter statement.
     static var layerPathCoreNames: [String] {
         platforms.flatMap(\.cores).filter { !filtersAvailable($0.id) }.map(\.name)
             .reduce(into: []) { names, name in if !names.contains(name) { names.append(name) } }
@@ -947,29 +947,32 @@ enum ShaderCatalog {
     struct Shader: Identifiable, Equatable {
         let id: String
         let name: String
-        let premium: Bool
         var credit: String? = nil
         var category: ShaderCategory? = nil
+        /// GagaEmu Pro, unless it is in the free set.
+        var premium: Bool { !ShaderCatalog.freeIDs.contains(id) }
     }
+    /// The free filters: none, the smoothing one, one CRT and one LCD. The rest of the catalogue is GagaEmu Pro.
+    static let freeIDs: Set<String> = ["original", "sharp-bilinear", "lottes-crt", "lcd3x"]
     static let builtIn: [Shader] = [
-        .init(id: "original", name: "Original", premium: false),
-        .init(id: "cartoon", name: "Cartoon", premium: false, category: .retro),
-        .init(id: "crt-v1", name: "CRT v1", premium: false, category: .crt),
-        .init(id: "crt-v2", name: "CRT v2", premium: false, category: .crt),
-        .init(id: "geom-crt-border", name: "Geom CRT Border", premium: true, category: .crt),
-        .init(id: "geom-crt", name: "Geom CRT", premium: true, category: .crt),
-        .init(id: "film", name: "Film", premium: false, category: .retro),
-        .init(id: "crt-deluxe", name: "CRT Deluxe", premium: true, category: .crt),
-        .init(id: "anime4k", name: "Anime4K", premium: true, category: .upscaling)
+        .init(id: "original", name: "Original"),
+        .init(id: "cartoon", name: "Cartoon", category: .retro),
+        .init(id: "crt-v1", name: "CRT v1", category: .crt),
+        .init(id: "crt-v2", name: "CRT v2", category: .crt),
+        .init(id: "geom-crt-border", name: "Geom CRT Border", category: .crt),
+        .init(id: "geom-crt", name: "Geom CRT", category: .crt),
+        .init(id: "film", name: "Film", category: .retro),
+        .init(id: "crt-deluxe", name: "CRT Deluxe", category: .crt),
+        .init(id: "anime4k", name: "Anime4K", category: .upscaling)
     ]
     /// Offline conversions that may ship because each source file says so (docs/05 section 5).
     static let community: [Shader] = [
-        .init(id: "lottes-crt", name: "Lottes CRT", premium: false, credit: "Timothy Lottes, public domain", category: .crt),
-        .init(id: "lcd3x", name: "LCD3x", premium: false, credit: "Gigaherz, public domain", category: .lcd),
-        .init(id: "sharp-bilinear", name: "Sharp Bilinear", premium: false, credit: "Themaister, public domain", category: .upscaling)
+        .init(id: "lottes-crt", name: "Lottes CRT", credit: "Timothy Lottes, public domain", category: .crt),
+        .init(id: "lcd3x", name: "LCD3x", credit: "Gigaherz, public domain", category: .lcd),
+        .init(id: "sharp-bilinear", name: "Sharp Bilinear", credit: "Themaister, public domain", category: .upscaling)
     ]
-    /// The in-house catalogue. Free.
-    static let library: [Shader] = ShaderLibrary.entries.map { .init(id: $0.id, name: $0.name, premium: false, category: $0.category) }
+    /// The in-house catalogue.
+    static let library: [Shader] = ShaderLibrary.entries.map { .init(id: $0.id, name: $0.name, category: $0.category) }
     static let all: [Shader] = builtIn + community + library
 }
 
@@ -1502,8 +1505,8 @@ final class AppState: ObservableObject {
         save()
     }
 
-    /// A saved value from the old free toggle must not get past the gate (docs/07 2.6).
-    var autoSaveEnabled: Bool { autoSaveStates && store.canUseAutoSaveState }
+    /// Auto save is free in every build.
+    var autoSaveEnabled: Bool { autoSaveStates }
 
     /// Offers to resume first when there is an auto save to resume.
     func launch(_ game: GameItem) {
@@ -1571,7 +1574,7 @@ final class AppState: ObservableObject {
                 next.autoSaveEnabled = { false }
                 try await next.prepare()
                 await applyImportedFilter(to: next)
-                let shown = store.canUseShader(filter) ? filter : "original (\(filter) needs Gaga Plus)" // As makeSession chose.
+                let shown = store.canUseShader(filter) ? filter : "original (\(filter) needs GagaEmu Pro)" // As makeSession chose.
                 let run = BenchmarkRun(session: next, interface: interface, romURL: romURL, seconds: seconds, input: input,
                                        filter: shown)
                 run.attach()
@@ -1795,7 +1798,8 @@ final class AppState: ObservableObject {
     /// Runs on launch, game exit, leaving the app and iCloud changes. Never while a game holds its save files, so a
     /// game left running in the background waits for its exit.
     func syncCloud() {
-        guard iCloudSync, session == nil, !launching else { return }
+        // iCloud Sync is GagaEmu Pro. Without it the switch keeps its place and nothing is removed; sync just waits.
+        guard iCloudSync, store.entitlements.cloudSync, session == nil, !launching else { return }
         let romDirectory = romDirectory
         cloud.sync(saves: GagaCoreWrapper.savesDirectory, roms: romDirectory, includingROMs: iCloudSyncROMs,
                    manifest: GagaCoreWrapper.savesDirectory.deletingLastPathComponent().appendingPathComponent("CloudSync.json")) { [weak self] names in
