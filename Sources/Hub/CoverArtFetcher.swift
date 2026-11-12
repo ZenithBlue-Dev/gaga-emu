@@ -189,6 +189,16 @@ final class CoverArtFetcher {
         directory.appendingPathComponent("index-\(platformID).txt")
     }
 
+    #if DEBUG
+    /// Store screenshot walk (`-GagaStoreSeed`): puts a local picture where a fetched cover would land.
+    func seedCover(_ file: URL, for game: GameItem) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let target = cacheFile(platformID: game.platformID, title: game.title)
+        try? FileManager.default.removeItem(at: target)
+        try FileManager.default.copyItem(at: file, to: target)
+    }
+    #endif
+
     func cachedCover(for game: GameItem) -> URL? {
         let file = cacheFile(platformID: game.platformID, title: game.title)
         return FileManager.default.fileExists(atPath: file.path) ? file : nil

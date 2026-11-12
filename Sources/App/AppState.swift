@@ -1217,6 +1217,11 @@ final class AppState: ObservableObject {
         let walkLayout = ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") || defaults.object(forKey: "GagaPerRow") != nil
         if ProcessInfo.processInfo.arguments.contains("-GagaDefaultDisplay") { display = LibraryDisplay() }
         if defaults.object(forKey: "GagaPerRow") != nil { display.perRow = defaults.integer(forKey: "GagaPerRow") }
+        // The store walk shows no system names: the shelf heading and the line under each cover are hidden.
+        if defaults.object(forKey: "GagaStoreSeed") != nil, walkLayout {
+            display.hideGroup = true
+            display.hideDetails = true
+        }
         if walkLayout { walkSavedDisplay = savedDisplay }
         #endif
         libraryDisplay = display
@@ -1665,6 +1670,29 @@ final class AppState: ObservableObject {
             }
         } catch {
             launchFailure = LaunchFailure(title: "Import", message: error.localizedDescription)
+        }
+    }
+
+    /// `-GagaStoreSeed <folder>`: the store screenshot walk's Library. Documents/<folder>/order.txt names the ROMs
+    /// in that folder, one per line, in shelf order; each is imported and given the `<name>.png` beside it as its
+    /// cover, as if Cover Art had fetched it. Then the import's filter is cleared, so the whole shelf shows.
+    func seedStoreLibraryIfRequested() async {
+        guard let folder = UserDefaults.standard.string(forKey: "GagaStoreSeed") else { return }
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(folder)
+        do {
+            let names = try String(contentsOf: dir.appendingPathComponent("order.txt"), encoding: .utf8)
+                .split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            for name in names {
+                let rom = dir.appendingPathComponent(name)
+                guard let game = try await importDebugROM(at: rom) else { continue }
+                try coverFetcher.seedCover(rom.deletingPathExtension().appendingPathExtension("png"), for: game)
+            }
+            coverArt = true
+            coverRevision += 1
+            platformFilter = "all"
+            search = ""
+        } catch {
+            launchFailure = LaunchFailure(title: "Store seed", message: error.localizedDescription)
         }
     }
     #endif

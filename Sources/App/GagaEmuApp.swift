@@ -24,6 +24,7 @@ struct GagaEmuApp: App {
                     #if DEBUG
                     await state.importROMIfRequested()
                     await state.importTestROMIfRequested()
+                    await state.seedStoreLibraryIfRequested()
                     state.runBenchmarkIfRequested()
                     NetplayHarness.runIfRequested(state)
                     #endif

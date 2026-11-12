@@ -63,6 +63,6 @@ xcrun --sdk macosx swiftc -D DEBUG "$work/main.swift" "$root/Sources/Debug/ARMAs
     "$root/Sources/Debug/Atari7800TestROM.swift" "$root/Sources/Debug/LynxTestROM.swift" "$root/Sources/Debug/Atari800TestROM.swift" \
     "$root/Sources/Debug/JaguarTestROM.swift" "$root/Sources/Debug/C64TestROM.swift" "$root/Sources/Debug/AmigaTestROM.swift" \
     "$root/Sources/Debug/DoomTestWAD.swift" \
-    "$root/Sources/Hub/RomPatcher.swift" -o "$work/make-rom"
+    "$root/Sources/Hub/RomPatcher.swift" "$root/Sources/Hub/Xdelta.swift" -o "$work/make-rom"
 "$work/make-rom" "$output"
 echo "$output"

@@ -1286,6 +1286,69 @@ final class GagaEmuWalkTests: XCTestCase {
         auditPage(app, "Cheats", as: "R2 13 Cheats")
     }
 
+    /// App Store screenshots (scripts/store/): a Library of ten invented games with their covers, seeded from
+    /// Documents/StoreSeed (scripts/store/seed_device.sh copies it there), then one game played, its pause pages,
+    /// and the Settings and Style pages the store shots show. Upright unless named. Shots are `STORE <nn> <what>`.
+    func testStoreShots() throws {
+        continueAfterFailure = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-GagaStoreSeed", "StoreSeed", "-GagaDefaultDisplay", "-GagaPerRow", "3"]
+        app.launchEnvironment["MTL_HUD_ENABLED"] = "0"   // A device with the Metal HUD on would draw it over the game.
+        launch(app)
+        let cover = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Neon Starfire")).firstMatch
+        try arrive(cover, "The seeded Library")
+        sleep(10)   // Lets the Game Center welcome banner come and go.
+        snapshot("STORE 01 Library")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(3)
+        snapshot("STORE 02 Library landscape")
+        XCUIDevice.shared.orientation = .portrait
+        sleep(3)
+        try guardedTap(cover, "Neon Starfire")
+        try arrive(startOnPage(app), "The game page")
+        sleep(2)
+        snapshot("STORE 03 Game page")
+        try guardedTap(startOnPage(app), "Play")
+        let pause = app.buttons["Pause game"]
+        try arrive(pause, "The game")
+        sleep(4)
+        snapshot("STORE 04 Playing")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(4)
+        snapshot("STORE 05 Playing landscape")
+        XCUIDevice.shared.orientation = .portrait
+        sleep(4)
+        try guardedTap(pause, "Pause game")
+        sleep(1)
+        snapshot("STORE 06 Pause")
+        if open(app, "Save State") { sleep(1) }
+        for (prefix, name) in [("Load State", "07 Load State"), ("Filter", "08 Filter"), ("Cheats", "09 Cheats"),
+                               ("Skin", "10 Skin"), ("Controls", "11 Controls")] where open(app, prefix) {
+            sleep(2)
+            snapshot("STORE \(name)")
+            close(app)
+        }
+        for (id, name) in [("playNearby", "12 Play Nearby"), ("pause.coreOptions", "13 Core Options")] {
+            let row = app.buttons[id].firstMatch
+            guard !promptUp(), row.waitForExistence(timeout: 4) else { continue }
+            row.tap()
+            sleep(2)
+            snapshot("STORE \(name)")
+            close(app)
+        }
+        if open(app, "Quit to Library") { sleep(2) }
+        goTo(app, "Settings")
+        for (tab, name) in [("Controllers", "14 Controllers"), ("Storage and Sync", "15 Storage and Sync")] where selectTab(app, tab) {
+            sleep(1)
+            snapshot("STORE \(name)")
+        }
+        if styleSection(app, "Skins") {
+            sleep(1)
+            snapshot("STORE 16 Style Skins")
+        }
+    }
+
     func testAuditGameGBA() { auditGame("mgba", platform: "Game Boy Advance", tag: "10 GBA") }
     func testAuditGameNES() { auditGame("nestopia", platform: "NES", tag: "11 NES") }
     func testAuditGameNDS() { auditGame("melonds_ds", platform: "Nintendo DS", tag: "12 NDS") }
