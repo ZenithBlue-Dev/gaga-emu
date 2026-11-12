@@ -28,6 +28,7 @@ Copyright (C) 2026 zenithblue. GagaEmu is free software under the [GNU Affero Ge
 | System | Core |
 |---|---|
 | Game Boy Advance | mGBA |
+| Game Boy / Game Boy Color | mGBA |
 | NES | Nestopia UE |
 | SNES / Super Famicom | bsnes (with a clean-room SPC700 boot program) |
 | Genesis / Mega Drive / Mega-CD | JGenesis |
@@ -56,7 +57,7 @@ Copyright (C) 2026 zenithblue. GagaEmu is free software under the [GNU Affero Ge
 | Amiga | PUAE |
 | Doom (WAD) | PrBoom |
 
-Snes9x, Genesis Plus GX, PicoDrive (32X) and FinalBurn Neo have non-commercial licences, so they are only in personal sideload builds (`GAGA_CORE_SET=sideload`), never in App Store builds. Gambatte is GPL-2.0-only, which the AGPL-3.0 app cannot carry, so it is held out of release builds too (`CORE_RELEASE_HOLD=1`); Game Boy and Game Boy Color have no App Store core until mGBA's Game Boy core is built in. [`docs/03`](./docs/03-core-matrix-and-platform-catalog.md) is the full core matrix, with pins, licences and renderer paths.
+Snes9x, Genesis Plus GX, PicoDrive (32X) and FinalBurn Neo have non-commercial licences, so they are only in personal sideload builds (`GAGA_CORE_SET=sideload`), never in App Store builds. Gambatte is GPL-2.0-only, which the AGPL-3.0 app cannot carry, so it is held out of release builds too (`CORE_RELEASE_HOLD=1`); mGBA's own Game Boy core runs Game Boy and Game Boy Color games instead. [`docs/03`](./docs/03-core-matrix-and-platform-catalog.md) is the full core matrix, with pins, licences and renderer paths.
 
 ## Screenshots
 

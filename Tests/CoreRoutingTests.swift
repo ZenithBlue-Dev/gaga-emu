@@ -57,6 +57,15 @@ final class CoreRoutingTests: GagaTestCase {
         XCTAssertEqual(try core("elf"), CoreCatalog.defaultCore(for: "psp"))
     }
 
+    /// Gambatte (GPL-2.0-only) is held out of release builds, so mGBA's own GB machine is the default for both.
+    func testGameBoyFilesGoToMgba() throws {
+        try XCTSkipIf(GagaCoreRegistry_IsExcluded("mgba"), "GAGA_CORE_SET left mGBA out")
+        for ext in ["gb", "gbc"] {
+            XCTAssertEqual(CoreCatalog.defaultCore(for: ext), "mgba", ext)
+            XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension(ext)).pointee.core_id), "mgba", ext)
+        }
+    }
+
     private func write(_ name: String, _ data: Data) throws -> URL {
         let url = dir.appendingPathComponent(name)
         try data.write(to: url)

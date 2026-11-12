@@ -108,12 +108,16 @@ enum CoreCatalog {
             .init(id: "gpsp", name: "gpSP", note: "Interpreter", recommended: false),
             .init(id: "vba_m", name: "VBA-M", note: "ROM hacks", recommended: false)
         ]),
+        // mGBA's own GB machine (MPL-2.0) is the default. Gambatte (GPL-2.0-only) is held out of release builds
+        // (docs/03 section 5) and stays an alternate where GAGA_CORE_SET links it.
         .init(id: "gbc", name: "Game Boy Color", manufacturer: "Nintendo", cores: [
-            .init(id: "gambatte", name: "Gambatte", note: "Cycle accuracy", recommended: true),
+            .init(id: "mgba", name: "mGBA", note: "Default", recommended: true),
+            .init(id: "gambatte", name: "Gambatte", note: "Cycle accuracy", recommended: false),
             .init(id: "sameboy", name: "SameBoy", note: "Audio accuracy", recommended: false)
         ]),
         .init(id: "gb", name: "Game Boy", manufacturer: "Nintendo", cores: [
-            .init(id: "gambatte", name: "Gambatte", note: "Default", recommended: true)
+            .init(id: "mgba", name: "mGBA", note: "Default", recommended: true),
+            .init(id: "gambatte", name: "Gambatte", note: "Cycle accuracy", recommended: false)
         ]),
         .init(id: "snes", name: "Super Famicom", manufacturer: "Nintendo", cores: [
             .init(id: "bsnes", name: "bsnes", note: "Cycle accuracy", recommended: true),

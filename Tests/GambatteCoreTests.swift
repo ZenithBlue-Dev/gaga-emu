@@ -123,13 +123,14 @@ final class GambatteCoreTests: GagaTestCase {
         XCTAssertEqual(String(cString: found.core_version), "0.5.0 77f2567d")
         XCTAssertEqual(found.native_sample_rate, 32768)
         XCTAssertEqual(found.target_fps, 59.7275, accuracy: 0.001)
+        // An alternate: mGBA is the default for .gb and .gbc, and Gambatte is offered beside it.
         for ext in ["gb", "gbc"] {
-            XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension(ext)).pointee.core_id), "gambatte")
+            XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension(ext)).pointee.core_id), "mgba")
+            XCTAssertEqual(CoreCatalog.defaultCore(for: ext), "mgba")
+            XCTAssertTrue(CoreCatalog.platform(ext)?.cores.contains { $0.id == "gambatte" } ?? false, ext)
         }
         var error = [CChar](repeating: 0, count: 64)
         XCTAssertTrue(found.self_test(&error, error.count))
-        XCTAssertEqual(CoreCatalog.defaultCore(for: "gb"), "gambatte")
-        XCTAssertEqual(CoreCatalog.defaultCore(for: "gbc"), "gambatte")
     }
 
     func testLoadsWithNoBootROMAndDrawsTheExpectedPicture() async throws {
@@ -551,20 +552,6 @@ final class GambatteCoreTests: GagaTestCase {
         core.stop()
     }
 
-    @MainActor
-    func testUploadedGamesPickThisCore() async {
-        let state = AppState()
-        let saved = state.games
-        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
-        for ext in ["gb", "gbc"] {
-            let name = "upload-\(UUID().uuidString).\(ext)"
-            await state.addUploads([name])
-            let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
-            XCTAssertEqual(added?.platformID, ext)
-            XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "gambatte")
-        }
-    }
-
     // MARK: - Debug launch arguments
 
     /// `-GagaBenchmarkCore gambatte` with no ROM: the generated GB ROM and a record named for this core.
@@ -629,7 +616,7 @@ final class GambatteCoreTests: GagaTestCase {
         let added = state.games.filter { URL(fileURLWithPath: $0.romPath).lastPathComponent == source.lastPathComponent }
         XCTAssertEqual(added.count, 1)
         XCTAssertEqual(added.first?.platformID, "gb")
-        XCTAssertEqual(added.first?.resolvedCoreID(defaults: [:]), "gambatte")
+        XCTAssertEqual(added.first?.resolvedCoreID(defaults: [:]), "mgba")
         XCTAssertEqual(try Data(contentsOf: dest), try Data(contentsOf: source))
         do {
             try await state.importDebugROM(at: directory.appendingPathComponent("missing.gb"))

@@ -388,7 +388,7 @@ __attribute__((weak)) const GagaCoreInterface* getter(void) { \
 // of a build, and then this refusing row stands in and CoreCatalog hides the core.
 #define GAGA_CORE_EXCLUDED "excluded"
 #ifndef GAGA_HAS_MGBA
-DEFINE_CORE_INTERFACE(Mgba_GetInterface,          "mgba",            "mGBA",              GAGA_CORE_EXCLUDED, "gba",      59.7275, 32768)
+DEFINE_CORE_INTERFACE(Mgba_GetInterface,          "mgba",            "mGBA",              GAGA_CORE_EXCLUDED, "gba|gb|gbc", 59.7275, 32768)
 #endif
 #ifndef GAGA_HAS_GAMBATTE
 DEFINE_CORE_INTERFACE(Gambatte_GetInterface,      "gambatte",        "Gambatte",          GAGA_CORE_EXCLUDED, "gb|gbc",   59.7275, 32768)
@@ -516,7 +516,7 @@ typedef const GagaCoreInterface* (*CoreGetterFunc)(void);
 // extension, of the first platform CoreCatalog.unplacedPlatforms(forExtension:) offers whose default core claims it.
 // Import decides the real platform by content. CoreRoutingTests checks every claimed extension against this rule.
 static const CoreGetterFunc s_core_getters[] = {
-    Mgba_GetInterface,
+    Mgba_GetInterface, // Before Gambatte: mGBA is the default for .gb and .gbc too.
     Gambatte_GetInterface,
     Nestopia_GetInterface,
     Bsnes_GetInterface,

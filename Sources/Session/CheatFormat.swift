@@ -5,7 +5,7 @@ enum CheatFormat {
     /// The line under the code field, by core ID.
     static func hint(coreID: String) -> String {
         switch coreID {
-        case "mgba": "GameShark, Action Replay, CodeBreaker or VBA format."
+        case "mgba": "GameShark, Action Replay, CodeBreaker or VBA format. Game Boy: GameShark or Game Genie."
         case "gambatte": "GameShark 01VVLLHH, or Game Genie VVA-AAA or VVA-AAA-CCC."
         case "nestopia": "Game Genie, or raw RAM AAAA:VV or AAAA?CC:VV."
         case "bsnes": "Pro Action Replay AAAAAADD or Game Genie XXXX-XXXX."

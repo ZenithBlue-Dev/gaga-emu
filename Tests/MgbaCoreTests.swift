@@ -123,7 +123,10 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertEqual(String(cString: found.core_version), "0.10.5 26b7884b")
         XCTAssertEqual(found.native_sample_rate, 32768)
         XCTAssertEqual(found.target_fps, 59.7275, accuracy: 0.001)
-        XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension("gba")).pointee.core_id), "mgba")
+        for ext in ["gba", "gb", "gbc"] {
+            XCTAssertEqual(String(cString: try XCTUnwrap(GagaCoreRegistry_FindByExtension(ext)).pointee.core_id), "mgba", ext)
+            XCTAssertEqual(CoreCatalog.defaultCore(for: ext), "mgba", ext)
+        }
         var error = [CChar](repeating: 0, count: 64)
         XCTAssertTrue(found.self_test(&error, error.count))
     }
@@ -196,8 +199,12 @@ final class MgbaCoreTests: GagaTestCase {
         try Data().write(to: empty)
         let random = directory.appendingPathComponent("noise.gba")
         try Data((0..<4096).map { UInt8(truncatingIfNeeded: $0 &* 73) }).write(to: random)
-        let cases = [(empty.path, "This file is not a Game Boy Advance game."),
-                     (random.path, "This file is not a Game Boy Advance game."),
+        let notAGame = "This file is not a Game Boy, Game Boy Color or Game Boy Advance game."
+        let noiseGB = directory.appendingPathComponent("noise.gb")
+        try Data((0..<0x8000).map { UInt8(truncatingIfNeeded: $0 &* 73) }).write(to: noiseGB)
+        let cases = [(empty.path, notAGame),
+                     (random.path, notAGame),
+                     (noiseGB.path, notAGame), // No logo and a wrong header checksum.
                      (directory.appendingPathComponent("gone.gba").path, "The game file could not be opened.")]
         for (path, message) in cases {
             let (core, _) = try makeCore()
@@ -1013,6 +1020,183 @@ final class MgbaCoreTests: GagaTestCase {
         XCTAssertFalse(session.menuOpen)
         session.menuPair(held: false)
         XCTAssertEqual(session.phase, .running)
+    }
+
+    // MARK: - Game Boy and Game Boy Color (`GBTestROM`)
+
+    private func loadedGB(color: Bool = false) async throws -> (GagaCoreWrapper, Capture, URL) {
+        let rom = directory.appendingPathComponent(color ? "homebrew.gbc" : "homebrew.gb")
+        try GBTestROM.build(color: color).write(to: rom)
+        let (core, capture) = try makeCore()
+        try await core.loadROM(path: rom.path)
+        return (core, capture, rom)
+    }
+
+    /// The four greys come from the frame itself, one per band, so this checks layout rather than mGBA's palette.
+    private func assertGBPicture(_ capture: Capture, keys: UInt32 = 0, toggle: Bool = false, cheat: Bool = false, genie: Bool = false,
+                                 file: StaticString = #filePath, line: UInt = #line) {
+        let shades = [0, 40, 72, 120].map { capture.pixel(x: 80, y: $0) }
+        XCTAssertEqual(Set(shades.map { "\($0.r),\($0.g),\($0.b)" }).count, 4, "four distinct shades", file: file, line: line)
+        var wrong = 0
+        for y in 0..<GBTestROM.height {
+            for x in 0..<GBTestROM.width {
+                let want = shades[GBTestROM.expectedShade(x: x, y: y, keys: keys, toggle: toggle, cheat: cheat, genie: genie)]
+                let got = capture.pixel(x: x, y: y)
+                if got.r != want.r || got.g != want.g || got.b != want.b || got.a != 0xFF { wrong += 1 }
+            }
+        }
+        XCTAssertEqual(wrong, 0, "pixels that differ from the expected picture", file: file, line: line)
+    }
+
+    private var gbChord: UInt32 { UInt32(GAGA_BTN_EAST.rawValue | GAGA_BTN_SOUTH.rawValue) }
+
+    func testGameBoyDrawsAndEachButtonLightsItsCell() async throws {
+        let (core, capture, _) = try await loadedGB()
+        run(core, frames: 12)
+        XCTAssertNil(capture.fatal)
+        XCTAssertEqual(capture.width, 160)
+        XCTAssertEqual(capture.height, 144)
+        XCTAssertEqual(capture.pitch, 640)
+        XCTAssertEqual(capture.format, GAGA_PIXEL_FORMAT_RGBA8888)
+        assertGBPicture(capture)
+        // Joypad order. Touch A is the bridge's EAST, and B is its SOUTH. L and R reach nothing.
+        let order: [GagaButtonMask] = [GAGA_BTN_EAST, GAGA_BTN_SOUTH, GAGA_BTN_SELECT, GAGA_BTN_START,
+                                       GAGA_BTN_RIGHT, GAGA_BTN_LEFT, GAGA_BTN_UP, GAGA_BTN_DOWN]
+        for (bit, button) in order.enumerated() {
+            run(core, frames: 3, buttons: UInt32(button.rawValue))
+            assertGBPicture(capture, keys: 1 << UInt32(bit))
+        }
+        run(core, frames: 3, buttons: UInt32(GAGA_BTN_L1.rawValue | GAGA_BTN_R1.rawValue))
+        assertGBPicture(capture)
+        core.stop()
+    }
+
+    func testAColorCartridgeRunsInColor() async throws {
+        let (core, capture, _) = try await loadedGB(color: true)
+        run(core, frames: 12)
+        XCTAssertNil(capture.fatal)
+        XCTAssertEqual(capture.width, 160)
+        let bands = [capture.pixel(x: 80, y: 0), capture.pixel(x: 80, y: 40), capture.pixel(x: 80, y: 72), capture.pixel(x: 80, y: 120)]
+        XCTAssertTrue(bands[0].r > bands[0].g && bands[0].r > bands[0].b, "red band: \(bands[0])")
+        XCTAssertTrue(bands[1].g > bands[1].r && bands[1].g > bands[1].b, "green band: \(bands[1])")
+        XCTAssertTrue(bands[2].b > bands[2].r && bands[2].b > bands[2].g, "blue band: \(bands[2])")
+        XCTAssertTrue(bands[3].r > 200 && bands[3].g > 200 && bands[3].b > 200, "white band: \(bands[3])")
+        core.stop()
+    }
+
+    func testGameBoyAudioIsTheExpectedTone() async throws {
+        let (core, capture, _) = try await loadedGB()
+        run(core, frames: 120)
+        XCTAssertEqual(capture.sampleRate, 32768)
+        XCTAssertEqual(capture.channels, 2)
+        let tone = capture.left.dropFirst(capture.left.count / 2)
+        XCTAssertGreaterThan(tone.max()! - tone.min()!, 500, "not silent")
+        let mean = tone.reduce(0) { $0 + Int($1) } / tone.count
+        var crossings = 0
+        var previous = tone.first! >= mean
+        for sample in tone {
+            let positive = Int(sample) >= mean
+            if positive != previous { crossings += 1 }
+            previous = positive
+        }
+        let hertz = Double(crossings) / 2 / (Double(tone.count) / 32768)
+        XCTAssertEqual(hertz, GBTestROM.toneHertz, accuracy: GBTestROM.toneHertz * 0.05)
+        core.stop()
+    }
+
+    func testGameBoyBatterySaveReachesItsFileAndSurvivesARestart() async throws {
+        let save = directory.appendingPathComponent("homebrew.sav")
+        for boot in 1...3 {
+            let (core, _, _) = try await loadedGB()
+            run(core, frames: 12)
+            core.flushBatterySave()
+            let flushed = [UInt8](try Data(contentsOf: save))
+            XCTAssertEqual(flushed.count, GBTestROM.cartRAMSize)
+            XCTAssertEqual(Array(flushed[0..<4]), GBTestROM.sramMagic)
+            XCTAssertEqual(Int(flushed[GBTestROM.sramBootCounterOffset]), boot, "on disk when the flush returns")
+            core.stop()
+            XCTAssertEqual(Int((try Data(contentsOf: save))[GBTestROM.sramBootCounterOffset]), boot)
+        }
+    }
+
+    func testGameBoyStateRoundTripRestoresTheCPUAndRefusesAnotherGame() async throws {
+        var other = [UInt8](GBTestROM.build())
+        other[other.count - 1] = 0x55
+        let otherROM = directory.appendingPathComponent("other.gb")
+        try Data(other).write(to: otherROM)
+        let (foreign, _) = try makeCore()
+        try await foreign.loadROM(path: otherROM.path)
+        run(foreign, frames: 2)
+        let otherGame = try foreign.saveState()
+        foreign.stop()
+
+        let (core, capture, _) = try await loadedGB()
+        run(core, frames: 12)
+        run(core, frames: 2, buttons: gbChord)
+        run(core, frames: 3)
+        assertGBPicture(capture, toggle: true)
+        let state = try core.saveState()
+
+        func script() -> [[UInt8]] {
+            (0..<30).map { frame in
+                run(core, frames: 1, buttons: frame == 15 ? gbChord : frame % 7 == 0 ? UInt32(GAGA_BTN_START.rawValue) : 0)
+                return capture.pixels
+            }
+        }
+        let first = script()
+        run(core, frames: 3)
+        assertGBPicture(capture, toggle: false)
+        try core.loadState(state)
+        XCTAssertEqual(script(), first, "the same input from the same state gives the same frames")
+
+        // The flag is only in register E, so this proves the CPU came back, not just memory.
+        try core.loadState(state)
+        run(core, frames: 3)
+        assertGBPicture(capture, toggle: true)
+
+        XCTAssertThrowsError(try core.loadState(otherGame)) {
+            XCTAssertEqual($0.localizedDescription, "This save state belongs to another game or another version of this game.")
+        }
+        run(core, frames: 3)
+        XCTAssertNil(capture.fatal)
+        assertGBPicture(capture, toggle: true)
+        core.stop()
+    }
+
+    func testGameBoyCheatsHaveTheirEffectAndStop() async throws {
+        let shark = "010100C0" // GameShark 01VVLLHH: write 1 to 0xC000.
+        let genie = "014-00F" // Game Genie: 1 at ROM 0x0400.
+        let (core, capture, _) = try await loadedGB()
+        run(core, frames: 12)
+        try core.addCheat(id: 1, code: shark, enabled: true)
+        run(core, frames: 3)
+        assertGBPicture(capture, cheat: true)
+        core.setCheat(id: 1, enabled: false)
+        run(core, frames: 3)
+        assertGBPicture(capture)
+        core.removeCheat(id: 1)
+        try core.addCheat(id: 2, code: genie, enabled: true)
+        run(core, frames: 3)
+        assertGBPicture(capture, genie: true)
+        core.setCheat(id: 2, enabled: false)
+        run(core, frames: 3)
+        assertGBPicture(capture)
+        XCTAssertThrowsError(try core.addCheat(id: 3, code: "ZZZZZZZZ", enabled: true))
+        core.stop()
+    }
+
+    @MainActor
+    func testUploadedGameBoyFilesPickMgba() async {
+        let state = AppState()
+        let saved = state.games
+        defer { state.games = saved; state.save() } // Leaves no upload- entry in the saved Library.
+        for ext in ["gb", "gbc"] {
+            let name = "upload-\(UUID().uuidString).\(ext)"
+            await state.addUploads([name])
+            let added = state.games.first { URL(fileURLWithPath: $0.romPath).lastPathComponent == name }
+            XCTAssertEqual(added?.platformID, ext)
+            XCTAssertEqual(added?.resolvedCoreID(defaults: [:]), "mgba")
+        }
     }
 }
 
