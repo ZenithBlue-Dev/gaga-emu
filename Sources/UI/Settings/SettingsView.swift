@@ -691,6 +691,8 @@ private struct HelpPane: View {
         #endif
         ActionRow(title: "Licences", tile: .symbol("doc.text")) { openSetting(.licences) }
         Rule()
+        LinkRow(title: "Source Code", url: SiteLinks.source, tile: .symbol("chevron.left.forwardslash.chevron.right"))
+        Rule()
         #if DEBUG
         ActionRow(title: "Run Benchmark", value: "Debug build", symbol: "speedometer", tile: .symbol("speedometer")) { state.runBenchmark() }
         Rule()
@@ -718,6 +720,8 @@ struct AboutUsView: View {
                 LinkRow(title: "Website", url: SiteLinks.site)
                 Rule()
                 LinkRow(title: "Privacy Policy", url: SiteLinks.privacy)
+                Rule()
+                LinkRow(title: "Source Code", url: SiteLinks.source)
                 Rule()
                 ActionRow(title: "Licences") { showLicences = true }
                     .fullScreenCover(isPresented: $showLicences) { LicencesView() }

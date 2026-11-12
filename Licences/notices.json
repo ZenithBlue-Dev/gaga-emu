@@ -2,6 +2,11 @@
   "about": "Source list for Settings > About > Licences. scripts/generate-licences.py reads it and writes Sources/App/Licences. A component with cores is shown only when one of those cores is linked (GAGA_CORE_SET); one without cores is in every build. framework names the core framework a component covers, so the test can check every embedded framework has a notice. docs/03 section 5 and docs/05 section 5 record why each part is here.",
   "components": [
     {
+      "id": "gagaemu", "title": "GagaEmu", "licence": "AGPL-3.0",
+      "source": "https://github.com/zenithblue-oss/gaga-emu. Copyright (C) 2026 zenithblue. The complete source code of this app.",
+      "texts": [{ "title": "GNU Affero General Public License 3.0", "from": "LICENSE" }]
+    },
+    {
       "id": "anime4k", "title": "Anime4K", "licence": "MIT",
       "source": "https://github.com/bloc97/Anime4K, commit 28535a4. Ported to Metal as the Anime4K upscaler.",
       "texts": [{ "title": "Anime4K", "from": "Sources/Metal/Anime4K.metal", "comment": true }]

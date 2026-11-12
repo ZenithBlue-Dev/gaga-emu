@@ -29,4 +29,6 @@ GagaEmu is in early development. Speed depends on your device and the software y
 PRIVACY
 GagaEmu has no accounts, analytics, advertising or tracking. Your games and saves stay on your device unless you share a file. With Cover Art turned on, game titles are sent to a cover art service to find box art.
 
+GagaEmu is open source under AGPL-3.0.
+
 GagaEmu is an independent project. It is not affiliated with, endorsed by or sponsored by any console maker. All trademarks belong to their owners.

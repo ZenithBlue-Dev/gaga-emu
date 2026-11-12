@@ -939,6 +939,8 @@ enum SiteLinks {
     /// The site's page is "Support & FAQ", and it is also the feedback route.
     static let support = "\(host)/support.html"
     static let privacy = "\(host)/privacy.html"
+    /// The app's AGPL-3.0 source.
+    static let source = "https://github.com/zenithblue-oss/gaga-emu"
     /// shortcut: the site has no terms.html (404), so this is Apple's standard EULA; replace when the site has one.
     static let terms = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
 }

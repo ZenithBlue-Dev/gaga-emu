@@ -2,7 +2,7 @@
 # Writes build/core-set.yml, which project.yml includes, then runs xcodegen. A build links only the
 # cores in GAGA_CORE_SET; each one must already be built by scripts/build-core.sh.
 #
-#   scripts/generate-project.sh                  every core in Cores/ except the non-commercial ones
+#   scripts/generate-project.sh                  every core in Cores/ except the non-commercial ones and vktest
 #   GAGA_CORE_SET=sideload scripts/generate-project.sh  every core, for a free personal build only
 #   GAGA_CORE_SET="mgba" scripts/generate-project.sh    only those core IDs, space separated
 #
@@ -19,7 +19,8 @@ known=() commercial=()
 for env in Cores/*/core.env; do
     core=$(basename "$(dirname "$env")")
     known+=("$core")
-    grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || commercial+=("$core")
+    # vktest is a debug and test core: name it in GAGA_CORE_SET (or use sideload) to run its tests.
+    [ "$core" = vktest ] || grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || commercial+=("$core")
 done
 sideload_settings='' sideload_tests=''
 case "${GAGA_CORE_SET:-}" in
