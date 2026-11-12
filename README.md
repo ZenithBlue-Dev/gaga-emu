@@ -61,7 +61,13 @@ Snes9x, Genesis Plus GX, PicoDrive (32X) and FinalBurn Neo have non-commercial l
 
 ## Screenshots
 
-App Store screenshots are produced in `design/store` and exported to `AppStore/screenshots/` when available.
+<p>
+  <img src="AppStore/screenshots/en-US/iphone-6.9/01.png" width="32%" alt="GagaEmu screenshot 1">
+  <img src="AppStore/screenshots/en-US/iphone-6.9/02.png" width="32%" alt="GagaEmu screenshot 2">
+  <img src="AppStore/screenshots/en-US/iphone-6.9/03.png" width="32%" alt="GagaEmu screenshot 3">
+</p>
+
+More App Store screenshots for iPhone and iPad are in [`AppStore/screenshots/`](./AppStore/screenshots/); their sources are in `design/store`.
 
 ---
 
