@@ -4,15 +4,12 @@ GagaEmu's UI stays an original design; Manic EMU is a feature reference only, so
 
 Items: 41 open, 63 done (104 total).
 
-The screenshots are gitignored (`maniac-emu-reference-images/walk/`), so the images render only on the owner's Mac.
+Reference screenshots are kept privately, not in the repo.
 
 Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the screenshots. Priority: P1 highest, P3 lowest. Effort: S (days), M (one to two weeks), L (several weeks or more). Done items come first in each area, open items follow ordered by priority.
 
 ## Library
 
-![Games tab, empty](../maniac-emu-reference-images/walk/01-games-empty.png)
-![Play history, empty](../maniac-emu-reference-images/walk/09-play-history.png)
-![Theme, library display options](../maniac-emu-reference-images/walk/16-settings-theme-2.png)
 
 - [x] Game library grid with platform filter chips and search (`Sources/UI/Games/LibraryView.swift`).
 - [x] Play history: Continue panel, Recent filter and per-game play time.
@@ -28,10 +25,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Import
 
-![Import tab](../maniac-emu-reference-images/walk/02-import.png)
-![Downloads, empty](../maniac-emu-reference-images/walk/03-import-downloads.png)
-![More Settings sheet](../maniac-emu-reference-images/walk/04-import-more-settings.png)
-![MultiDisc Helper](../maniac-emu-reference-images/walk/06-import-multidisc-helper.png)
 
 - [x] Files import (`Sources/UI/Import/AddView.swift`).
 - [x] Wi-Fi transfer through a browser, off by default, session PIN (`Sources/Hub/WiFiTransferServer.swift`).
@@ -45,8 +38,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Cloud and sync
 
-![Add Service](../maniac-emu-reference-images/walk/05-import-add-service.png)
-![Settings, Advanced (iCloud Sync row)](../maniac-emu-reference-images/walk/11-settings-2.png)
 
 - [x] iCloud sync of saves and save states, optionally ROMs, off by default in Settings, Storage. `Sources/Hub/CloudSync.swift`, container `iCloud.com.zenithblue.gagaemu`, in build 202611092335. Conflict unit tests and the Settings walk pass on iPhone. (P1, L)
 - [ ] Check iCloud sync between two real devices signed in to one account, including iCloud's own file-version conflicts. Needs the owner. Library metadata (play time, favourites) does not sync, and a deletion does not travel. (P1, S, needs owner)
@@ -58,9 +49,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Online play
 
-![Online Play Settings](../maniac-emu-reference-images/walk/20-settings-online-play.png)
-![Nintendo WFC servers](../maniac-emu-reference-images/walk/21-settings-online-nintendo-wfc.png)
-![PSP Networking](../maniac-emu-reference-images/walk/22-settings-online-psp-networking.png)
 
 - [x] Local multiplayer: nearby lockstep with encrypted transport (`Sources/Netplay/`).
 - [ ] DS online through replacement WFC servers, with a server choice list and a reset button. Third-party services. (P2, L, blocked: legal review)
@@ -71,13 +59,11 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Achievements
 
-![RetroAchievements sign-in](../maniac-emu-reference-images/walk/23-settings-retroachievements.png)
 
 - [x] RetroAchievements sign-in and in-game achievements. The player signs in with their own account; see "Owner requests, 2026-11-09". (P1, M) Built on rcheevos v12.5.0: settings sign-in, token in Keychain, unlock toast, list with progress, hardcore gates. Unit tests with a fake server and a synthetic set pass on iPhone; a real server sign-in is unverified, and hardcore needs RetroAchievements approval of GagaEmu.
 
 ## Skins
 
-![Assign Skin](../maniac-emu-reference-images/walk/17-settings-assign-skin.png)
 
 - [x] Assign a skin per platform and orientation, portrait and landscape (`Sources/UI/Settings/AssignSkinView.swift`).
 - [x] Skin editor (`Sources/UI/Settings/SkinEditorView.swift`).
@@ -87,8 +73,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Controllers
 
-![Controllers panel](../maniac-emu-reference-images/walk/08-controllers.png)
-![TriggerPro, empty](../maniac-emu-reference-images/walk/24-settings-triggerpro.png)
 
 - [x] Player slots, up to four, for touch and external controllers (`Sources/Input/ControllerManager.swift`).
 - [x] Rumble toggle (`Sources/Input/RumbleManager.swift`).
@@ -98,7 +82,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## ROM patcher
 
-![RomPatcher](../maniac-emu-reference-images/walk/07-import-rom-patcher.png)
 
 - [x] IPS, UPS and BPS patching, original left untouched (`Sources/Hub/RomPatcher.swift`).
 - [x] PPF 1, 2 and 3 patches; a disc image is patched on disk, not in memory (`Sources/Hub/RomPatcher.swift`).
@@ -108,7 +91,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Shaders and filters
 
-![Shaders](../maniac-emu-reference-images/walk/26-settings-shaders.png)
 
 - [x] Default presets with live preview (`Sources/UI/Settings/FilterPickerView.swift`).
 - [x] Custom parameters, `.metal` and `.slangp` import, saved presets.
@@ -119,7 +101,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Themes and appearance
 
-![Theme, app icons and colours](../maniac-emu-reference-images/walk/15-settings-theme.png)
 
 - [x] Appearance choice: dark, light or automatic (Settings > Display).
 - [x] Accent colours with a custom colour; any colour is adjusted to meet AA.
@@ -127,11 +108,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Settings
 
-![Settings, General](../maniac-emu-reference-images/walk/11-settings-2.png)
-![Settings, Support and Others](../maniac-emu-reference-images/walk/12-settings-3.png)
-![Settings, Others and promotions](../maniac-emu-reference-images/walk/13-settings-4.png)
-![Settings, About card and version](../maniac-emu-reference-images/walk/14-settings-5.png)
-![Cover Scraping toast](../maniac-emu-reference-images/walk/18-settings-cover-scraping.png)
 
 - [x] Membership banner (`Sources/UI/Settings/GagaPlusView.swift`, behind `PaywallGate`).
 - [x] Quick Start, opens the most recent game.
@@ -153,7 +129,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## BIOS
 
-![BIOS list](../maniac-emu-reference-images/walk/19-settings-bios.png)
 
 - [x] Required BIOS list with Found or Missing state; import validates name and size (`Sources/App/AppState.swift:1384`).
 - [x] Import button on every BIOS file row. The button opens the file picker on the device; choosing a file there cannot be automated, and the copy and size check pass their tests.
@@ -161,7 +136,6 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## Emulator cores
 
-![Emulator Core](../maniac-emu-reference-images/walk/27-settings-emulator-core.png)
 
 - [x] Default core per platform, and per-game core picker (`Sources/UI/Games/CorePickerSheet.swift`).
 - [x] Per-core options page, in Settings > Cores and Pause > Core Options, with every option the core declares, per-game overrides and restart marking (`docs/06` section 2.4).
@@ -171,14 +145,11 @@ Source: `docs/manic-gap-analysis.md` (Manic EMU 2.0.2 walk, 2026-11-08) and the 
 
 ## JIT
 
-![JIT status](../maniac-emu-reference-images/walk/25-settings-jit.png)
 
 - [ ] JIT mode per core, development build only; see "Owner requests, 2026-11-09". Never in App Store or TestFlight builds, and no sideload link in them. The option exists in the DevJIT configuration; no JIT does. (P2, L)
 
 ## Help and about
 
-![FAQ](../maniac-emu-reference-images/walk/28-settings-faq.png)
-![About](../maniac-emu-reference-images/walk/29-settings-about.png)
 
 - [x] About page with project and legal links.
 - [x] Inline guides inside the app (import, network folders, controllers, cheats, skins), Settings > About > Guides.

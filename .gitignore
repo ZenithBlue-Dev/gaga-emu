@@ -41,4 +41,4 @@ fastlane/test_output
 GagaEmu.xcodeproj/
 
 # Manic walk screenshots
-maniac-emu-reference-images/walk/
+maniac-emu-reference-images/

@@ -43,7 +43,7 @@ def self_test():
         (t / "scripts/make_screenshots.swift").write_text('let src = "design/store/captures"\n')
         assert problems(t) == [], problems(t)
         (t / "design/store/captures/manic-01.png").write_bytes(b"")
-        (t / "scripts/make_screenshots.swift").write_text('let src = "maniac-emu-reference-images"\n')
+        (t / "scripts/make_screenshots.swift").write_text('let src = "reference-images"\n')
         assert len(problems(t)) == 2, problems(t)
 
 

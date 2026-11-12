@@ -1,6 +1,6 @@
 # 02 — Feature Set & Manic EMU Reference
 
-Manic EMU is a feature reference only: this document tracks which features exist. The UI is not copied, and nothing here is an instruction to match Manic's screens, labels or layouts. GagaEmu's own original design is in `docs/06` section 3. Feature facts are checked against the 14 screenshots in `maniac-emu-reference-images/`. GagaEmu does not claim 1:1 parity: some Manic features are deliberately dropped, Manic's listing covers more systems than GagaEmu plans, and much of the detail below is GagaEmu's own design.
+Manic EMU is a feature reference only: this document tracks which features exist. The UI is not copied, and nothing here is an instruction to match Manic's screens, labels or layouts. GagaEmu's own original design is in `docs/06` section 3. Feature facts are checked against 14 reference screenshots (kept privately, not in the repo). GagaEmu does not claim 1:1 parity: some Manic features are deliberately dropped, Manic's listing covers more systems than GagaEmu plans, and much of the detail below is GagaEmu's own design.
 
 No screenshot shows a version number. The [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790) showed version 2.0.2 when checked on 2026-11-07.
 

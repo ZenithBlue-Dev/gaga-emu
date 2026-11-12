@@ -96,7 +96,7 @@ All rows are design. Status is in `docs/07`.
 
 ## 3. Reference Analysis: Manic EMU
 
-Evidence is 14 screenshots in `maniac-emu-reference-images/` plus the [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790) (ID `6743335790`). No screenshot shows a version number. The listing showed version 2.0.2 when checked on 2026-11-07.
+Evidence is 14 reference screenshots (kept privately, not in the repo) plus the [App Store listing](https://apps.apple.com/us/app/manic-emu/id6743335790) (ID `6743335790`). No screenshot shows a version number. The listing showed version 2.0.2 when checked on 2026-11-07.
 
 1. **Core selection** [S]: the Emulator Core sheet maps each platform to its current core: J2meJS for Java ME (Manic only; GagaEmu has no Java ME core, `docs/07` 6.4), Beetle PSX HW for PlayStation, Beetle Saturn for Sega Saturn, JGenesis for Mega-CD, Azahar for Nintendo 3DS, melonDS DS for Nintendo DS, mGBA for Game Boy Advance, Gambatte for Game Boy and Game Boy Color, bsnes for Super Famicom. A caption says cores switch by long-pressing a game. No screenshot shows an alternate core. Version notes on the listing name more cores [L].
 2. **Shaders** [S]: four tabs (Default, RetroArch, Import, Custom), one preview card with a per-row eye icon, and the presets Original, Cartoon, CRT v1, CRT v2, Geom CRT Border, Geom CRT and Film. Only the Default tab is shown.

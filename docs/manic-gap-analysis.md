@@ -4,7 +4,7 @@ Walked Manic EMU 2.0.2 (`com.aoshuang.manicemu`, App Store install) on the owner
 
 Manic is a feature reference only. GagaEmu's UI stays an original design, so nothing here proposes copying Manic's layout, labels or art.
 
-Screenshots live in `maniac-emu-reference-images/walk/`, which is gitignored, so the links below only resolve in a working copy that has them. GagaEmu line numbers are from commit `f0818b5` and can drift.
+Reference screenshots are kept privately, not in the repo. GagaEmu line numbers are from commit `f0818b5` and can drift.
 
 **Status:** Missing, Partial, Present. **Effort:** S (days), M (one to two weeks), L (several weeks or more). **Blocked** marks an App Store, licence, account or capability limit.
 
@@ -34,7 +34,6 @@ Manic's library was empty, so everything that needs a game was not reachable. Se
 
 ## Games tab
 
-![Games tab](../maniac-emu-reference-images/walk/01-games-empty.png)
 
 **Offers:** game grid (empty here), a controllers button, a play history button, a legal notice and a community link.
 
@@ -49,7 +48,6 @@ Manic's library was empty, so everything that needs a game was not reachable. Se
 
 ## Import tab
 
-![Import tab](../maniac-emu-reference-images/walk/02-import.png)
 
 **Offers:** Files, Wi-Fi transfer through a browser, read clipboard, multi-disc helper, ROM patcher, drag and drop, plus top-bar entries for add service, downloads, help and more settings.
 
@@ -67,7 +65,6 @@ Manic's library was empty, so everything that needs a game was not reachable. Se
 
 ### Add Service
 
-![Add Service](../maniac-emu-reference-images/walk/05-import-add-service.png)
 
 **Offers:** browse and import from cloud accounts (Google Drive, Dropbox, OneDrive, Baidu Cloud, AliCloud) and local network services (WebDAV, SMB, RomM).
 
@@ -83,7 +80,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ### Downloads
 
-![Downloads](../maniac-emu-reference-images/walk/03-import-downloads.png)
 
 **Offers:** a list of active transfers, empty here.
 
@@ -95,7 +91,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ### More Settings sheet
 
-![More Settings](../maniac-emu-reference-images/walk/04-import-more-settings.png)
 
 **Offers:** add a game by link, and import games from five other iOS emulators (MeloNX, XeniOS, DukeX, ARMSX2, MeloCafe). No row was opened.
 
@@ -108,7 +103,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ### MultiDisc Helper
 
-![MultiDisc Helper](../maniac-emu-reference-images/walk/06-import-multidisc-helper.png)
 
 **Offers:** builds `.m3u` playlists from disc images (`.cue`/`.bin`, `.gdi`, `.chd`, `.cdi`, `.iso`, `.rvz`, `.d64`) picked by hand.
 
@@ -121,7 +115,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ### RomPatcher
 
-![RomPatcher](../maniac-emu-reference-images/walk/07-import-rom-patcher.png)
 
 **Offers:** patch mode and creator mode. Formats listed: IPS, UPS, APS, BPS, RUP, PPF, xdelta. Built on Rom Patcher JS.
 
@@ -136,7 +129,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Controllers panel
 
-![Controllers](../maniac-emu-reference-images/walk/08-controllers.png)
 
 **Offers:** assign each input device, touch included, to a player slot. Help and more buttons were not opened.
 
@@ -149,7 +141,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Play History panel
 
-![Play History](../maniac-emu-reference-images/walk/09-play-history.png)
 
 **Offers:** a list of played games, empty here.
 
@@ -161,8 +152,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Settings, General and Advanced
 
-![Settings 1](../maniac-emu-reference-images/walk/10-settings-1.png)
-![Settings 2](../maniac-emu-reference-images/walk/11-settings-2.png)
 
 **GagaEmu:** `Sources/UI/Settings/SettingsView.swift`, seven categories at `:16`.
 
@@ -185,9 +174,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Settings, Support, Others and promotions
 
-![Settings 3](../maniac-emu-reference-images/walk/12-settings-3.png)
-![Settings 4](../maniac-emu-reference-images/walk/13-settings-4.png)
-![Settings 5](../maniac-emu-reference-images/walk/14-settings-5.png)
 
 | Manic row | Status | GagaEmu | Detail |
 | :--- | :--- | :--- | :--- |
@@ -204,8 +190,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Theme
 
-![Theme](../maniac-emu-reference-images/walk/15-settings-theme.png)
-![Theme 2](../maniac-emu-reference-images/walk/16-settings-theme-2.png)
 
 **Offers:** alternate app icons, theme colours with a custom colour, three cover styles, a corner-radius slider, force square covers, hide title, hide rating badge, games per row (2 to 5), hide scroll indicators, group title style (abbreviation, full, brand), hide group title, sort field and order, manufacturer filter.
 
@@ -224,7 +208,6 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Assign Skin
 
-![Assign Skin](../maniac-emu-reference-images/walk/17-settings-assign-skin.png)
 
 **Offers:** per-platform skin list with portrait and landscape tabs, preview, new skin, edit, help and more. States support for `.manicskin` and `.deltaskin`. Only viewed, none selected.
 
@@ -239,13 +222,11 @@ Pulling a user's own files from their own storage is a different case from an in
 
 ## Cover Scraping
 
-![Cover Scraping](../maniac-emu-reference-images/walk/18-settings-cover-scraping.png)
 
 With no games, Manic only shows a "No compatible games" toast, so its page was not seen. GagaEmu: `CoverArtFetcher.swift`, Status Present, comparison incomplete.
 
 ## BIOS
 
-![BIOS](../maniac-emu-reference-images/walk/19-settings-bios.png)
 
 **Offers:** per-system list of named files, each marked Required or Optional with a description and an Import button. Amiga Kickstart sets are visible at the top. No Import was tapped.
 
@@ -259,9 +240,6 @@ With no games, Manic only shows a "No compatible games" toast, so its page was n
 
 ## Online Play Settings
 
-![Online Play](../maniac-emu-reference-images/walk/20-settings-online-play.png)
-![Nintendo WFC](../maniac-emu-reference-images/walk/21-settings-online-nintendo-wfc.png)
-![PSP Networking](../maniac-emu-reference-images/walk/22-settings-online-psp-networking.png)
 
 **Offers:** four sections. Nintendo WFC: choice of replacement servers (Wiimmfi, WiiLink WFC, AltWFC, PKMClassic) plus reset. PSP Networking: enable toggle, and further options not visible. 3DS: Artic Base setup by IP address and Pretendo Network with an install step for Nimbus (labels read from the accessibility tree; see the stop below). Other Netplay: not reached.
 
@@ -278,7 +256,6 @@ With no games, Manic only shows a "No compatible games" toast, so its page was n
 
 ## RetroAchievements
 
-![RetroAchievements](../maniac-emu-reference-images/walk/23-settings-retroachievements.png)
 
 **Offers:** username and password sign-in, create account link. Not filled in.
 
@@ -286,13 +263,11 @@ With no games, Manic only shows a "No compatible games" toast, so its page was n
 
 ## TriggerPro
 
-![TriggerPro](../maniac-emu-reference-images/walk/24-settings-triggerpro.png)
 
 Empty list with an add button; add was not opened. GagaEmu has `TriggerProManager.swift` plus macro recording in the game menu (`GameView.swift:132`). **Present**, editor not compared.
 
 ## JIT
 
-![JIT](../maniac-emu-reference-images/walk/25-settings-jit.png)
 
 **Offers:** JIT status (unavailable on the App Store build), device and OS info, an install link for a sideload build.
 
@@ -300,7 +275,6 @@ Empty list with an add button; add was not opened. GagaEmu has `TriggerProManage
 
 ## Shaders
 
-![Shaders](../maniac-emu-reference-images/walk/26-settings-shaders.png)
 
 **Offers:** search, four tabs (Default, RetroArch, Import, Custom), preview with an image picker, seven default presets, a preview eye and a radio per row, edit button.
 
@@ -316,7 +290,6 @@ Empty list with an add button; add was not opened. GagaEmu has `TriggerProManage
 
 ## Emulator Core
 
-![Emulator Core](../maniac-emu-reference-images/walk/27-settings-emulator-core.png)
 
 **Offers:** default core per platform; long-press a game to switch it for that game. No row opened.
 
@@ -324,7 +297,6 @@ Empty list with an add button; add was not opened. GagaEmu has `TriggerProManage
 
 ## FAQ
 
-![FAQ](../maniac-emu-reference-images/walk/28-settings-faq.png)
 
 **Offers:** long embedded guides, including game import, controllers, cheats and skins.
 
@@ -332,13 +304,11 @@ Empty list with an add button; add was not opened. GagaEmu has `TriggerProManage
 
 ## About
 
-![About](../maniac-emu-reference-images/walk/29-settings-about.png)
 
 Embedded page with project, community and legal links. GagaEmu: About category and `Sources/UI/Settings/LicencesView.swift`. **Present.**
 
 ## Paywall
 
-![Paywall](../maniac-emu-reference-images/walk/30-paywall.png)
 
 Shown and backed out; no control on it was used. Plans and five feature cards match `docs/02` 2.6. GagaEmu: `GagaPlusView.swift`, `Sources/Store/StoreKitManager.swift`. **Present**, behind `PaywallGate`.
 
@@ -363,7 +333,6 @@ The owner allowed importing games into Manic and playing them. Games went in thr
 
 Screenshots not embedded (`32-game-long-press.png`, `33-game-detail.png`): they show game titles and cover art.
 
-![Game more menu](../maniac-emu-reference-images/walk/31-game-more-menu.png)
 
 **Offers:** tapping a game opens a detail page with cover, description, Play Now, Safe Mode and View Metadata. Long press, and the carousel's more button, give Rename, Edit Cover, Assign Skin, View Save States, Import Game Save, Export Game Save, RetroAchievements and Cheat Codes, plus a Listen with BitBop sister-app promotion. Portrait shows a grouped grid with a system index and search; landscape shows a cover carousel with Play and more buttons. Games get cover art from a scraped database.
 
@@ -376,10 +345,6 @@ Screenshots not embedded (`32-game-long-press.png`, `33-game-detail.png`): they 
 
 ### In-game menu, skin and speed
 
-![In-game menu 1](../maniac-emu-reference-images/walk/34-ingame-menu-1.png)
-![In-game menu 2](../maniac-emu-reference-images/walk/35-ingame-menu-2.png)
-![In-game menu 3](../maniac-emu-reference-images/walk/36-ingame-menu-3.png)
-![Assign skin in game](../maniac-emu-reference-images/walk/39-ingame-assign-skin.png)
 
 **Offers:** a sheet opened by the skin's menu button, with quick buttons for quit, reset, save state and load state. Rows: Assign Skin (per game, portrait and landscape), View Save States, RetroAchievements, Cheat Codes, Core Settings, Save State, Quick Load, Volume, Fast Forward, Slow Motion, Shaders, Screenshot, Haptics, AirPlay, Controllers, Dead Zone.
 
@@ -391,25 +356,21 @@ Screenshots not embedded (`32-game-long-press.png`, `33-game-detail.png`): they 
 
 ### Save states
 
-![Save states](../maniac-emu-reference-images/walk/38-ingame-save-states.png)
 
 **Offers:** Manual Save States and Auto Save States tabs. Empty on the tested game, so the list and its row actions were not seen.
 
 ### Cheats
 
-![Cheats](../maniac-emu-reference-images/walk/37-ingame-cheats.png)
 
 **Offers:** an empty list with Add Cheat Codes. The add form was not opened.
 
 ### Shaders, RetroArch tab
 
-![Shaders RetroArch tab](../maniac-emu-reference-images/walk/40-settings-shaders-retroarch.png)
 
 **Offers:** tabs Default, RetroArch, Import and Custom. The RetroArch tab is empty until the user taps Download Shaders from RetroArch, so the size of the catalogue is still unseen; the download was not started.
 
 ### Other Netplay
 
-![Other Netplay](../maniac-emu-reference-images/walk/42-settings-other-netplay.png)
 
 **Offers:** Announce Publicly (public lobby), Use Relay Server, Server Password, Spectator Mode, Spectator Password.
 
@@ -420,14 +381,11 @@ Screenshots not embedded (`32-game-long-press.png`, `33-game-detail.png`): they 
 
 ### 3DS Pretendo Network
 
-![Pretendo](../maniac-emu-reference-images/walk/43-settings-pretendo.png)
 
 **Offers:** Artic Base transfer from a real 3DS by IP address with a Start Transfer button, then Install Nimbus for Pretendo. No iOS Local Network prompt appeared this time. Nothing was started.
 
 ### Terms of Service and Language
 
-![Terms](../maniac-emu-reference-images/walk/41-settings-terms.png)
-![Language row](../maniac-emu-reference-images/walk/44-settings-language-row.png)
 
 Terms of Use open as a web page in an in-app browser; there is nothing to accept. The Language row shows the current language. Tapping it twice ended the walk with the test connection to Manic lost, consistent with leaving the app, so the destination was not captured.
 
