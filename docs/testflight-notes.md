@@ -2,6 +2,17 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611121425), 2026-11-12
+
+New: GagaEmu Pro.
+
+- GagaEmu Pro is in Settings, GagaEmu Pro: Monthly, Yearly or Forever. Every system and every core stay free to play.
+- Pro unlocks fast forward 3x and 5x, more than 4 save states and 5 cheats per game, players 3 and 4, the full shader catalogue, iCloud sync, and extra app icons and accent colours.
+- Free limits never delete anything. Saves and cheats past the limit still load.
+- The lock badge no longer covers the Save State title in the pause menu.
+
+To test: TestFlight purchases are sandbox and cost nothing. Please try Buy, Restore Purchases and Manage Subscription, and check that locked options show a lock.
+
 ## 1.0.0 (202611120209), 2026-11-12
 
 Settings, Library and skin polish.

@@ -837,6 +837,7 @@ private struct PauseMenu: View {
                     Text(entry.value ?? " ").font(.meta).foregroundStyle(AppTheme.muted)
                         .lineLimit(1, reservesSpace: !large)
                 }
+                .padding(.trailing, entry.locked ? 22 : 0)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(10)
