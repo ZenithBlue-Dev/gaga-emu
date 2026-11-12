@@ -2,12 +2,14 @@
 # Writes build/core-set.yml, which project.yml includes, then runs xcodegen. A build links only the
 # cores in GAGA_CORE_SET; each one must already be built by scripts/build-core.sh.
 #
-#   scripts/generate-project.sh                  every core in Cores/ except the non-commercial ones and vktest
+#   scripts/generate-project.sh                  every core in Cores/ except the non-commercial ones, the held ones and vktest
 #   GAGA_CORE_SET=sideload scripts/generate-project.sh  every core, for a free personal build only
 #   GAGA_CORE_SET="mgba" scripts/generate-project.sh    only those core IDs, space separated
 #
 # A left-out core keeps a refusing stub in the registry and is hidden from CoreCatalog, and the app's
 # no-JIT gate fails the build if its framework is embedded anyway. A core whose core.env sets
+# CORE_RELEASE_HOLD=1 (Gambatte: GPL-2.0-only, not AGPL-3.0 compatible) is built only when GAGA_CORE_SET names it.
+# A core whose core.env sets
 # CORE_NONCOMMERCIAL=1 has a licence that forbids commercial use (docs/03 section 5): it never enters an
 # App Store or TestFlight build, which scripts/appstore_release.sh and scripts/nojit-gate.sh enforce.
 set -euo pipefail
@@ -20,7 +22,7 @@ for env in Cores/*/core.env; do
     core=$(basename "$(dirname "$env")")
     known+=("$core")
     # vktest is a debug and test core: name it in GAGA_CORE_SET (or use sideload) to run its tests.
-    [ "$core" = vktest ] || grep -qx 'CORE_NONCOMMERCIAL=1' "$env" || commercial+=("$core")
+    [ "$core" = vktest ] || grep -qxE 'CORE_(NONCOMMERCIAL|RELEASE_HOLD)=1' "$env" || commercial+=("$core")
 done
 sideload_settings='' sideload_tests=''
 case "${GAGA_CORE_SET:-}" in
