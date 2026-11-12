@@ -541,7 +541,7 @@ Two panes: categories on the left, the selected category on the right. Only rows
 | Graphics | Default Filter, which opens the filter picker | built |
 | Controls | Touch Control, connected controllers with their player slot, Touch Layout (Assign Skin), Controller Mapping, Macros, Turbo, Touch Haptics, Hide Touch With a Controller. A controller that has sent no input in a game says that touch stays on until it does. Unassign is remembered by device name across launches. Rumble is a game's rumble on the device while player 1 is on touch; touch presses use Touch Haptics. Rumble Strength scales a game's rumble on controllers and the device; Off stops it everywhere. Skin Sound Effects is a click on each touch press. Assign Skin opens a sheet with a drawing of each built-in layout and a layout per platform. | built |
 | Storage | Game files size, Clear Cache with confirmation. Clear Cache removes the Caches directory. | built |
-| Gaga Plus | Status and See Plans. Absent while the paywall gate is closed (section 4.5). Lifetime owners get no See Plans row. | built, gated |
+| GagaEmu Pro | Second category. Status (what was bought) and a GagaEmu Pro row that opens the paywall. Shown in Debug builds, and in Release only once the paywall gate opens (`PaywallGate.showsPro`, section 4.5). | built, gated |
 | About | Version, About Us, Share GagaEmu, Reset Tips, Support and FAQ, Feedback, Rate GagaEmu, Terms of Service, Privacy Policy, Licences. Debug builds add Run Benchmark. About Us is a sheet with what GagaEmu is, version, build, Website, Privacy Policy, Licences and the trademark line. Share GagaEmu is the system share sheet with `SiteLinks.appStore`, which is the site until the app has an App Store ID. Reset Tips shows the first-run tips again (`TipLine`: three one-line tips on the Library, Add and Assign Skin screens, each with Got It). Language opens the app's page in iOS Settings, and appears only when the bundle has more than one localisation; today it has English only, so the row is hidden. Licences (`LicencesView`) is a two-pane paper sheet: components on the left, the chosen one's source and full licence texts on the right. It reads `licences.json`, which `scripts/generate-licences.py` writes with the texts into `Sources/App/Licences` from the committed list `Licences/notices.json`, and shows a component only when a core that brings it in is linked (`GAGA_CORE_SET`); Anime4K and the community filters are in every build. | built: Rate GagaEmu uses the system review prompt. Support and Feedback link to `support.html`, because the App Store metadata has no support email. Terms is Apple's standard EULA, because the site has no terms page. |
 
 All site links use `zenithblue-oss.github.io/gaga-emu-site` (`SiteLinks`), the host the App Store metadata uses.
@@ -574,7 +574,7 @@ For a game whose core is on the layer path without the output-texture path (`Cor
 
 ### 3.5 Gaga Plus
 
-The paywall is named Gaga Plus (`GagaPlusView`). Two columns: benefits on the left in plain language, plans on the right as Monthly, Annual and Lifetime. Requirements and logic are in section 4.
+The paywall is named GagaEmu Pro (`GagaPlusView`), opened from Settings > GagaEmu Pro. Two columns, one scroll upright on a phone: what Pro adds on the left, plans on the right as three equal cards (Monthly, Yearly marked Best value with its trial badge, Forever), then the buy button, the subscription disclosure, Restore Purchases, Manage Subscription, Redeem Offer, Terms of Use (Apple's standard EULA) and Privacy Policy. An owner sees "You have GagaEmu Pro" instead of the cards. Requirements and logic are in section 4.
 
 ### 3.6 App icon
 
@@ -680,11 +680,11 @@ Three products with existing IDs, from `Sources/Store/StoreKitManager.swift`:
 
 | Product ID | Label | Type |
 |---|---|---|
-| `monthly.sub` | Monthly | Auto-renewing subscription |
-| `annual.sub` | Annual | Auto-renewing subscription |
-| `lifetime.pass` | Lifetime | Non-consumable, one-time payment |
+| `com.zenithblue.gagaemu.pro.monthly` | Monthly | Auto-renewing, 1 month, group "GagaEmu Pro" |
+| `com.zenithblue.gagaemu.pro.yearly` | Yearly | Auto-renewing, 1 year, 1-week free trial, same group and level |
+| `com.zenithblue.gagaemu.pro.lifetime` | Forever | Non-consumable, one-time payment |
 
-Prices always come from `Product.displayPrice` and are never hard-coded.
+Prices, periods and the trial length always come from StoreKit (`Product.displayPrice`, the subscription period) and are never hard-coded. `Resources/GagaEmuPro.storekit` mirrors these products for local StoreKit testing; the GagaEmu scheme's Run action uses it, the app bundle never holds it, and a unit test checks its IDs match. `StoreKitManager.isPro` is what was bought (verified `Transaction.currentEntitlements`), whatever the gate; nothing reads it to lock a feature yet.
 
 ### 4.2 What stays free
 

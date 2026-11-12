@@ -588,17 +588,30 @@ final class GagaEmuTests: GagaTestCase {
 
     #if !GAGA_SIDELOAD
     @MainActor
-    func testOfferBadgesAndDisclosureMatchTheProduct() {
-        XCTAssertNil(StoreKitManager.badge(for: .annual, intro: nil))
+    func testOfferBadgesMatchTheProduct() {
+        XCTAssertNil(StoreKitManager.badge(for: .yearly, intro: nil))
         XCTAssertNil(StoreKitManager.badge(for: .monthly, intro: nil))
         XCTAssertEqual(StoreKitManager.badge(for: .monthly, intro: .paid), "Introductory Offer")
-        XCTAssertEqual(StoreKitManager.badge(for: .annual, intro: .freeTrial), "Free Trial")
+        XCTAssertEqual(StoreKitManager.badge(for: .yearly, intro: .freeTrial), "Free Trial")
+        XCTAssertEqual(StoreKitManager.badge(for: .yearly, intro: .freeTrial, trialPeriod: "1 week"), "1 week free")
         XCTAssertEqual(StoreKitManager.badge(for: .lifetime, intro: nil), "One payment")
+    }
 
-        XCTAssertEqual(StoreKitManager.disclosure(for: .monthly, intro: nil), "Renews until you cancel. Cancel anytime.")
-        XCTAssertEqual(StoreKitManager.disclosure(for: .annual, intro: .freeTrial),
-                       "The trial is free. Renews after it ends unless you cancel. Cancel anytime.")
-        XCTAssertNil(StoreKitManager.disclosure(for: .lifetime, intro: nil))
+    /// The app asks App Store Connect for exactly the products the Debug StoreKit configuration sells.
+    func testProductIDsMatchStoreKitConfiguration() throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "GagaEmuPro", withExtension: "storekit"))
+        let file = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        let products = (file["products"] as? [[String: Any]] ?? [])
+            + (file["subscriptionGroups"] as? [[String: Any]] ?? []).flatMap { $0["subscriptions"] as? [[String: Any]] ?? [] }
+        XCTAssertEqual(Set(products.compactMap { $0["productID"] as? String }),
+                       Set(StoreKitManager.ProductID.allCases.map(\.rawValue)))
+    }
+
+    @MainActor
+    func testNotProWithoutEntitlements() async {
+        XCTAssertFalse(StoreKitManager().isPro)
+        let bought = await StoreKitManager.currentEntitlements()
+        XCTAssertFalse(bought.premium, "This test device has bought nothing")
     }
     #endif
 

@@ -5,8 +5,8 @@ import SwiftUI
 
 /// Settings' categories. Visual choices (skins, filters, icon, library layout) live in the Style tab.
 enum SettingsCategory: String, CaseIterable, Identifiable, ShellCategory {
-    case profile = "Profile", gameplay = "Gameplay", controllers = "Controllers", screen = "Screen", systems = "Systems",
-         library = "Library", storage = "Storage and Sync", gagaPlus = "Gaga Plus", help = "Help"
+    case profile = "Profile", gagaPlus = "GagaEmu Pro", gameplay = "Gameplay", controllers = "Controllers", screen = "Screen",
+         systems = "Systems", library = "Library", storage = "Storage and Sync", help = "Help"
     var id: String { rawValue }
     var title: String { rawValue }
     var identifier: String { "settings.\(rawValue)" }
@@ -23,8 +23,8 @@ enum SettingsCategory: String, CaseIterable, Identifiable, ShellCategory {
         case .help: return "questionmark.circle"
         }
     }
-    /// Gaga Plus stays out of the app while the paywall gate is closed (docs/06 section 4.5).
-    static var visible: [SettingsCategory] { allCases.filter { $0 != .gagaPlus || PaywallGate.isOpen } }
+    /// GagaEmu Pro stays out of Release builds while the paywall gate is closed (docs/06 section 4.5).
+    static var visible: [SettingsCategory] { allCases.filter { $0 != .gagaPlus || PaywallGate.showsPro } }
 }
 
 /// Settings: search on top, then the categories with icons, and the chosen one's rows, each with a picture. Only rows
@@ -610,21 +610,18 @@ private struct GagaPlusPane: View {
     @EnvironmentObject private var store: StoreKitManager
     @State private var showPlans = false
 
+    /// What was bought, not what the closed gate lets everyone use.
     private var status: String {
-        if store.entitlements.lifetime { return "Lifetime" }
-        return store.entitlements.premium ? "Active" : "Not subscribed"
+        if store.purchased.lifetime { return "Forever" }
+        return store.isPro ? "Active" : "Not subscribed"
     }
 
     var body: some View {
         ValueRow(title: "Status", value: status, tile: .symbol("star.circle"))
-            #if !GAGA_SIDELOAD
             .fullScreenCover(isPresented: $showPlans) { GagaPlusView() }
-            #endif
         Rule()
-        if store.entitlements.showsSubscribePrompts {
-            ActionRow(title: "See Plans", tile: .symbol("star")) { showPlans = true }
-            Rule()
-        }
+        ActionRow(title: "GagaEmu Pro", value: store.isPro ? nil : "See Plans", tile: .symbol("star")) { showPlans = true }
+        Rule()
     }
 }
 #endif

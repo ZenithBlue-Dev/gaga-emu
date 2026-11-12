@@ -29,7 +29,11 @@ final class SettingsSearchTests: XCTestCase {
 
     func testTitlesAreUniqueAndOnlyVisibleCategoriesAnswer() {
         XCTAssertEqual(Set(SettingEntry.all.map(\.title)).count, SettingEntry.all.count)
-        if !PaywallGate.isOpen { XCTAssertTrue(SettingEntry.search("subscription").isEmpty, "A closed paywall gate still shows Gaga Plus") }
+        if PaywallGate.showsPro {
+            XCTAssertEqual(SettingEntry.search("subscription").first?.category, .gagaPlus)
+        } else {
+            XCTAssertTrue(SettingEntry.search("subscription").isEmpty, "A closed paywall gate still shows GagaEmu Pro")
+        }
     }
 
     func testFourOneWordTabsAndFourStylePages() {

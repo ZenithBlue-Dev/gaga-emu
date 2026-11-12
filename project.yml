@@ -99,6 +99,9 @@ targets:
       testTargets:
         - GagaEmuTests
         - GagaEmuUITests
+      # Local StoreKit testing for runs from Xcode: GagaEmu Pro prices without App Store approval. Only the
+      # scheme's Run action reads it, never an archive, and the file is not in the app bundle.
+      storeKitConfiguration: Resources/GagaEmuPro.storekit
 
   # .slangp import (docs/05 section 4.2): glslang compiles a pass to SPIR-V and SPIRV-Cross writes MSL,
   # once, at import. No CPU code is generated. The sources are the pinned submodules the cores already use:
@@ -185,6 +188,9 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Tests
+      # Read by testProductIDsMatchStoreKitConfiguration.
+      - path: Resources/GagaEmuPro.storekit
+        buildPhase: resources
     dependencies:
       - target: GagaEmu
     settings:
@@ -205,6 +211,9 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: UITests
+      # testProPaywallShot's SKTestSession.
+      - path: Resources/GagaEmuPro.storekit
+        buildPhase: resources
     dependencies:
       - target: GagaEmu
     settings:

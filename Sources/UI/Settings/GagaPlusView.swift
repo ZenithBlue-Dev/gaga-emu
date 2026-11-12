@@ -3,15 +3,18 @@
 import StoreKit
 import SwiftUI
 
-/// Paywall: benefits left, plans right. Offer badges and disclosure follow the product.
+/// GagaEmu Pro: what Pro adds on the left, the three plans on the right; upright on a phone, one scroll.
+/// Prices and periods are StoreKit's. Nothing is locked by Pro yet; `StoreKitManager.isPro` is for later.
 struct GagaPlusView: View {
     @EnvironmentObject private var store: StoreKitManager
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSize
     @Environment(\.verticalSizeClass) private var verticalSize
-    @State private var selected: StoreKitManager.ProductID = .annual
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var selected: StoreKitManager.ProductID = .yearly
     @State private var buying = false
     @State private var showRedeem = false
+    @State private var showManage = false
 
     /// Names the cores in this build that draw their own picture, where no filter runs (docs/05 section 2.3).
     static func filterStatement(layerPathCores: [String]) -> String {
@@ -21,29 +24,27 @@ struct GagaPlusView: View {
         return base + " \(layerPathCores.formatted(.list(type: .and))) \(verb) own 3D picture, so filters do not apply there."
     }
 
+    static let disclosure = "Monthly and Yearly renew automatically unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple Account when you confirm. Any unused free trial ends when you subscribe. Manage or cancel in Settings > Apple Account > Subscriptions. Forever is one payment."
+
     private let benefits: [(String, String)] = [
-        ("Faster fast-forward", "Up to 5x instead of 2x."),
-        ("More save states", "No limit instead of 3."),
-        ("More cheat codes", "No limit instead of 3."),
-        ("Premium Filters", "Adds Geom CRT, Geom CRT Border, CRT Deluxe and Anime4K."),
-        ("Auto save state", "Saves your place for you.")
+        ("Fast forward above 2x", "Up to 5x."),
+        ("More save slots and cheats", "Per game, with no limit of 3."),
+        ("Players 3 and 4", "Four controllers on systems that have them."),
+        ("The full shader catalogue", "Every filter, including the CRT and Anime4K ones."),
+        ("iCloud sync", "Saves and states on all your devices."),
+        ("Extra app icons and themes", "More looks for GagaEmu.")
     ]
 
     var body: some View {
-        // Upright on a phone the columns share one scroll, with Close above it.
         let upright = horizontalSize == .compact && verticalSize == .regular
         Group {
             if upright {
                 VStack(spacing: 0) {
-                    HStack {
-                        Spacer(minLength: 0)
-                        Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
-                    }
-                    .padding(.horizontal, 16)
+                    closeBar.padding(.horizontal, 16)
                     ScrollView {
                         VStack(spacing: 0) {
                             benefitsColumn
-                            planColumn(showsClose: false)
+                            planColumn
                         }
                     }
                 }
@@ -51,7 +52,11 @@ struct GagaPlusView: View {
                 HStack(spacing: 0) {
                     ScrollView { benefitsColumn }.frame(maxWidth: .infinity)
                     Rule().ignoresSafeArea(edges: .vertical)
-                    ScrollView { planColumn(showsClose: true) }.frame(maxWidth: .infinity)
+                    VStack(spacing: 0) {
+                        closeBar.padding(.horizontal, 16)
+                        ScrollView { planColumn }
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -61,96 +66,122 @@ struct GagaPlusView: View {
         .offerCodeRedemption(isPresented: $showRedeem) { _ in
             Task { await store.refresh() }
         }
+        .manageSubscriptionsSheet(isPresented: $showManage)
+    }
+
+    private var closeBar: some View {
+        HStack {
+            Spacer(minLength: 0)
+            Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
+        }
     }
 
     private var benefitsColumn: some View {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Gaga Plus").font(.screenTitle).accessibilityAddTraits(.isHeader)
-                    Text("Every core and platform stays free. Plus adds:").foregroundStyle(AppTheme.muted)
-                    Rule()
-                    ForEach(benefits, id: \.0) { title, detail in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(title).fontWeight(.medium)
-                            Text(detail).font(.footnote).foregroundStyle(AppTheme.muted)
-                        }
-                        .accessibilityElement(children: .combine)
-                        Rule()
-                    }
-                    Text(Self.filterStatement(layerPathCores: CoreCatalog.layerPathCoreNames))
-                        .font(.footnote).foregroundStyle(AppTheme.muted)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("GagaEmu Pro").font(.screenTitle).accessibilityAddTraits(.isHeader)
+            Text("Every system and core play stay free.").foregroundStyle(AppTheme.muted)
+            Rule()
+            ForEach(benefits, id: \.0) { title, detail in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LocalizedStringKey(title)).fontWeight(.medium)
+                    Text(LocalizedStringKey(detail)).font(.footnote).foregroundStyle(AppTheme.muted)
                 }
-                .padding(16)
+                .accessibilityElement(children: .combine)
+                Rule()
+            }
+            Text(Self.filterStatement(layerPathCores: CoreCatalog.layerPathCoreNames))
+                .font(.footnote).foregroundStyle(AppTheme.muted)
+        }
+        .padding(16)
     }
 
-    private func planColumn(showsClose: Bool) -> some View {
-                VStack(alignment: .leading, spacing: 8) {
-                    if showsClose {
-                        HStack {
-                            Spacer(minLength: 0)
-                            Button("Close") { dismiss() }.buttonStyle(QuietButtonStyle())
-                        }
-                    }
-                    if store.entitlements.showsSubscribePrompts {
-                        plans
-                    } else {
-                        Text("Your Lifetime plan is active.").font(.gameTitle)
-                    }
-                    HStack(spacing: 16) {
-                        Button("Redeem Offer") { showRedeem = true }
-                        Button("Restore Purchases") { Task { await store.restore() } }
-                    }
-                    .font(.footnote)
-                    .buttonStyle(QuietButtonStyle())
-                    HStack(spacing: 16) {
-                        Link("Terms of Service", destination: URL(string: SiteLinks.terms)!)
-                        Link("Privacy Policy", destination: URL(string: SiteLinks.privacy)!)
-                    }
-                    .font(.footnote)
-                    .buttonStyle(QuietButtonStyle())
-                    if let error = store.lastError {
-                        Text(error).font(.footnote).foregroundStyle(AppTheme.accent)
-                    }
+    private var planColumn: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if store.isPro {
+                Text("You have GagaEmu Pro").font(.gameTitle).accessibilityAddTraits(.isHeader)
+                if store.purchased.lifetime {
+                    Text("Forever: nothing more to pay.").font(.footnote).foregroundStyle(AppTheme.muted)
                 }
-                .padding(.horizontal, 16).padding(.bottom, 16)
+            } else {
+                plans
+            }
+            Text(LocalizedStringKey(Self.disclosure)).font(.footnote).foregroundStyle(AppTheme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+            if let error = store.lastError {
+                Text(error).font(.footnote).foregroundStyle(AppTheme.accent)
+            }
+            links
+        }
+        .padding(.horizontal, 16).padding(.bottom, 16)
     }
 
     @ViewBuilder private var plans: some View {
-        ForEach(offers) { offer in planRow(offer) }
-        if let disclosure = offers.first(where: { $0.productID == selected })?.disclosure {
-            Text(disclosure).font(.footnote).foregroundStyle(AppTheme.muted)
+        LazyVGrid(columns: choiceColumns(minimum: 96, large: typeSize.isAccessibilitySize), spacing: 10) {
+            ForEach(offers) { offer in card(offer) }
         }
-        Button(buying ? "Working…" : selected == .lifetime ? "Buy Lifetime" : "Subscribe") { buy() }
+        Button(buying ? "Working…" : buyTitle) { buy() }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(buying || store.offers.isEmpty && !store.isLoading)
+            .disabled(buying || store.offers.isEmpty)
     }
 
-    private var offers: [StoreKitManager.Offer] { store.offers.isEmpty ? Self.placeholders : store.offers }
+    private var buyTitle: LocalizedStringKey {
+        let offer = store.offers.first { $0.productID == selected }
+        if selected == .lifetime { return "Buy Forever" }
+        if offer?.intro == .freeTrial, let trial = offer?.trialPeriod { return "Start \(trial) Free" }
+        return "Subscribe"
+    }
 
-    private func planRow(_ offer: StoreKitManager.Offer) -> some View {
-        let isSelected = selected == offer.productID
-        return Button { selected = offer.productID } label: {
-            HStack(spacing: 10) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? AppTheme.accent : AppTheme.muted)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(offer.productID.title).fontWeight(isSelected ? .bold : .regular)
-                    if let badge = offer.badge { Text(badge).font(.meta).foregroundStyle(AppTheme.muted) }
-                }
-                Spacer(minLength: 8)
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(offer.displayPrice)\(offer.periodSuffix)").font(.system(.body, design: .monospaced))
-                    if let subtitle = offer.subtitle { Text(subtitle).font(.meta).foregroundStyle(AppTheme.muted) }
-                }
+    /// Wraps at accessibility sizes; side by side would push the links off a phone.
+    private var links: some View {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout(spacing: 16))
+        return VStack(alignment: .leading, spacing: 8) {
+            layout {
+                Button("Restore Purchases") { Task { await store.restore() } }
+                Button("Manage Subscription") { showManage = true }
+                Button("Redeem Offer") { showRedeem = true }
             }
-            .padding(.horizontal, 10).padding(.vertical, 6)
-            .frame(minHeight: 44)
+            layout {
+                Link("Terms of Use", destination: URL(string: SiteLinks.terms)!)
+                Link("Privacy Policy", destination: URL(string: SiteLinks.privacy)!)
+            }
+        }
+        .font(.footnote)
+        .buttonStyle(QuietButtonStyle())
+    }
+
+    /// StoreKit's offers, or empty cards with a dash until StoreKit answers, so the layout never flashes. No price is made up.
+    private var offers: [StoreKitManager.Offer] {
+        store.offers.isEmpty
+            ? StoreKitManager.ProductID.allCases.map { .init(productID: $0, displayPrice: "—", period: "", intro: nil) }
+            : store.offers
+    }
+
+    private func card(_ offer: StoreKitManager.Offer) -> some View {
+        let isSelected = selected == offer.productID
+        let best = offer.productID == .yearly
+        let period = offer.productID == .lifetime ? String(localized: "one payment") : offer.period
+        return Button { selected = offer.productID } label: {
+            ChoiceCard(title: offer.productID.title, detail: offer.badge, reservesDetail: true, aspect: 1, selected: isSelected) {
+                VStack(spacing: 4) {
+                    Text(LocalizedStringKey(best ? "Best value" : " ")).font(.caption2.weight(.bold)).foregroundStyle(AppTheme.accent)
+                    Text(offer.displayPrice).font(.system(.title3, design: .monospaced).weight(.semibold))
+                    Text(period).font(.caption).foregroundStyle(AppTheme.muted)
+                }
+                .lineLimit(1).minimumScaleFactor(0.5)
+                .padding(6)
+                .foregroundStyle(AppTheme.ink)
+            }
             .contentShape(Rectangle())
-            .overlay(RoundedRectangle(cornerRadius: AppTheme.corner)
-                .stroke(isSelected ? AppTheme.accent : AppTheme.rule, lineWidth: isSelected ? 2 : 1))
         }
         .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text([String(localized: String.LocalizationValue(offer.productID.title)), offer.displayPrice, period,
+                                  offer.badge ?? "", best ? String(localized: "Best value") : ""]
+                                    .filter { !$0.isEmpty }.joined(separator: ", ")))
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityIdentifier("pro.\(offer.productID.title)")
     }
 
     private func buy() {
@@ -161,12 +192,5 @@ struct GagaPlusView: View {
             if ok { dismiss() }
         }
     }
-
-    /// Shown before StoreKit answers so the layout never flashes empty.
-    static let placeholders: [StoreKitManager.Offer] = [
-        .init(productID: .monthly, displayPrice: "—", price: 0, periodSuffix: "/month", intro: nil, subtitle: nil),
-        .init(productID: .annual, displayPrice: "—", price: 0, periodSuffix: "/year", intro: nil, subtitle: nil),
-        .init(productID: .lifetime, displayPrice: "—", price: 0, periodSuffix: "", intro: nil, subtitle: nil)
-    ]
 }
 #endif

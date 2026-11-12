@@ -18,25 +18,38 @@ public enum PaywallGate {
     #else
     public static let isOpen = false
     #endif
+
+    /// Settings shows GagaEmu Pro while the gate is open, and in Debug builds so the paywall can be checked and shot
+    /// before then. A Release build with the gate closed sells nothing, because nothing is held back yet.
+    public static var showsPro: Bool {
+        #if GAGA_SIDELOAD
+        return false
+        #elseif DEBUG
+        return true
+        #else
+        return isOpen
+        #endif
+    }
 }
 
-/// StoreKit 2. Three products: monthly, annual, lifetime.
+/// StoreKit 2. GagaEmu Pro: monthly and yearly subscriptions in one group, and Forever, a one-time purchase.
 /// Premium unlocks the items in docs/06 section 4.3.
 @MainActor
 public final class StoreKitManager: ObservableObject {
 
     #if !GAGA_SIDELOAD
+    /// The App Store Connect product IDs, matched by Resources/GagaEmuPro.storekit (checked by a unit test).
     public enum ProductID: String, CaseIterable, Sendable {
-        case monthly = "monthly.sub"
-        case annual = "annual.sub"
-        case lifetime = "lifetime.pass"
+        case monthly = "com.zenithblue.gagaemu.pro.monthly"
+        case yearly = "com.zenithblue.gagaemu.pro.yearly"
+        case lifetime = "com.zenithblue.gagaemu.pro.lifetime"
 
         public var isSubscription: Bool { self != .lifetime }
         public var title: String {
             switch self {
             case .monthly: return "Monthly"
-            case .annual: return "Annual"
-            case .lifetime: return "Lifetime"
+            case .yearly: return "Yearly"
+            case .lifetime: return "Forever"
             }
         }
     }
@@ -48,12 +61,12 @@ public final class StoreKitManager: ObservableObject {
         public var id: String { productID.rawValue }
         public let productID: ProductID
         public let displayPrice: String
-        public let price: Decimal
-        public let periodSuffix: String
+        /// StoreKit's renewal period, such as "1 month"; empty for Forever.
+        public let period: String
         public var intro: IntroOffer?
-        public let subtitle: String?
-        public var badge: String? { StoreKitManager.badge(for: productID, intro: intro) }
-        public var disclosure: String? { StoreKitManager.disclosure(for: productID, intro: intro) }
+        /// StoreKit's free trial length, such as "1 week", when this user can still have it.
+        public var trialPeriod: String?
+        public var badge: String? { StoreKitManager.badge(for: productID, intro: intro, trialPeriod: trialPeriod) }
     }
     #endif
 
@@ -85,11 +98,15 @@ public final class StoreKitManager: ObservableObject {
     #if GAGA_SIDELOAD
     /// Everything, always, with nothing to buy and no subscribe prompts.
     @Published public private(set) var entitlements = Entitlements(premium: true, lifetime: true)
+    public var isPro: Bool { true }
 
     public init() {}
     #else
     @Published public private(set) var offers: [Offer] = []
     @Published public private(set) var entitlements: Entitlements = .effective(.free)
+    /// What this Apple Account has bought, verified, whatever the gate says. Nothing reads it to lock a feature yet.
+    @Published public private(set) var purchased: Entitlements = .free
+    public var isPro: Bool { purchased.premium }
     @Published public private(set) var isLoading = false
     @Published public var lastError: String?
 
@@ -118,7 +135,7 @@ public final class StoreKitManager: ObservableObject {
                 if let offer = Self.offer(from: product, intro: await Self.intro(of: product)) { loaded.append(offer) }
             }
             offers = loaded.sorted { rank($0) < rank($1) }
-            entitlements = await Self.currentEntitlements()
+            await updateEntitlements()
         } catch {
             lastError = error.localizedDescription
         }
@@ -134,7 +151,7 @@ public final class StoreKitManager: ObservableObject {
             switch result {
             case .success(let verification):
                 await handle(verification)
-                return entitlements.premium
+                return purchased.premium
             case .userCancelled, .pending:
                 return false
             @unknown default:
@@ -147,8 +164,12 @@ public final class StoreKitManager: ObservableObject {
     }
 
     public func restore() async {
-        try? await AppStore.sync()
-        entitlements = await Self.currentEntitlements()
+        do {
+            try await AppStore.sync()
+        } catch {
+            lastError = error.localizedDescription
+        }
+        await updateEntitlements()
     }
     #endif
 
@@ -169,10 +190,15 @@ public final class StoreKitManager: ObservableObject {
         case .unverified:
             break
         }
-        entitlements = await Self.currentEntitlements()
+        await updateEntitlements()
     }
 
-    /// Current entitlement wins. Revoked, expired, or upgraded transactions do not count.
+    private func updateEntitlements() async {
+        purchased = await Self.currentEntitlements()
+        entitlements = .effective(purchased)
+    }
+
+    /// What was bought, before the gate. Only verified transactions count; revoked, expired, or upgraded ones do not.
     static func currentEntitlements() async -> Entitlements {
         let ids = Set(ProductID.allCases.map(\.rawValue))
         var current = Entitlements.free
@@ -182,7 +208,7 @@ public final class StoreKitManager: ObservableObject {
             current.premium = true
             if transaction.productID == ProductID.lifetime.rawValue { current.lifetime = true }
         }
-        return .effective(current)
+        return current
     }
 
     /// The offer App Store Connect has configured, if this user is still eligible for it.
@@ -192,46 +218,46 @@ public final class StoreKitManager: ObservableObject {
         return offer.paymentMode == .freeTrial ? .freeTrial : .paid
     }
 
+    /// Price and periods come from StoreKit, never from the app.
     static func offer(from product: Product, intro: IntroOffer?) -> Offer? {
         guard let id = ProductID(rawValue: product.id) else { return nil }
-        switch id {
-        case .annual:
-            let perMonth = product.price / 12
-            let code = product.priceFormatStyle.currencyCode
-            return Offer(productID: id, displayPrice: product.displayPrice, price: product.price,
-                         periodSuffix: "/year", intro: intro,
-                         subtitle: "(\(perMonth.formatted(.currency(code: code)))/month)")
-        case .monthly:
-            return Offer(productID: id, displayPrice: product.displayPrice, price: product.price,
-                         periodSuffix: "/month", intro: intro, subtitle: nil)
-        case .lifetime:
-            return Offer(productID: id, displayPrice: product.displayPrice, price: product.price,
-                         periodSuffix: "", intro: nil, subtitle: nil)
+        let subscription = product.subscription
+        let trial = intro == .freeTrial ? subscription?.introductoryOffer.map { periodText($0.period) } : nil
+        return Offer(productID: id, displayPrice: product.displayPrice,
+                     period: subscription.map { periodText($0.subscriptionPeriod) } ?? "",
+                     intro: id.isSubscription ? intro : nil, trialPeriod: trial)
+    }
+
+    /// A StoreKit period in words in the user's language, such as "1 week" or "1 year".
+    nonisolated static func periodText(_ period: Product.SubscriptionPeriod) -> String {
+        var parts = DateComponents()
+        switch period.unit {
+        case .day: parts.day = period.value
+        case .week: parts.weekOfMonth = period.value
+        case .month: parts.month = period.value
+        case .year: parts.year = period.value
+        @unknown default: parts.day = period.value
         }
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .full
+        formatter.allowedUnits = [.day, .weekOfMonth, .month, .year]
+        return formatter.string(from: parts) ?? ""
     }
 
     /// Offer badges appear only when the product has that offer (docs/06 section 4.4).
-    nonisolated static func badge(for id: ProductID, intro: IntroOffer?) -> String? {
-        if id == .lifetime { return "One payment" }
+    nonisolated static func badge(for id: ProductID, intro: IntroOffer?, trialPeriod: String? = nil) -> String? {
+        if id == .lifetime { return String(localized: "One payment") }
         switch intro {
-        case .freeTrial: return "Free Trial"
-        case .paid: return "Introductory Offer"
+        case .freeTrial: return trialPeriod.map { String(localized: "\($0) free") } ?? String(localized: "Free Trial")
+        case .paid: return String(localized: "Introductory Offer")
         case nil: return nil
         }
-    }
-
-    /// Text under the offers. It must match what the selected product actually offers.
-    nonisolated static func disclosure(for id: ProductID, intro: IntroOffer?) -> String? {
-        guard id.isSubscription else { return nil }
-        return intro == .freeTrial
-            ? "The trial is free. Renews after it ends unless you cancel. Cancel anytime."
-            : "Renews until you cancel. Cancel anytime."
     }
 
     private func rank(_ offer: Offer) -> Int {
         switch offer.productID {
         case .monthly: return 0
-        case .annual: return 1
+        case .yearly: return 1
         case .lifetime: return 2
         }
     }

@@ -1,3 +1,4 @@
+import StoreKitTest
 import XCTest
 
 /// Device walks for a Debug build, run by the orchestrator on the iPhone (docs/06 section 2.5). Each step
@@ -1390,6 +1391,42 @@ final class GagaEmuWalkTests: XCTestCase {
         try guardedTap(app.buttons["settings.Help"].firstMatch, "Help")
         try guardedTap(button(app, "Licences"), "Licences")
         snapshot("Licences")
+    }
+
+    /// Settings > GagaEmu Pro > the paywall, upright and in landscape, for the App Store review screenshot. Waits for
+    /// StoreKit's prices and attaches what loaded as `PRICES`. Taps no plan button and buys nothing.
+    func testProPaywallShot() throws {
+        // Local StoreKit testing from Resources/GagaEmuPro.storekit, so the prices show before App Store approval.
+        let session = try SKTestSession(configurationFileNamed: "GagaEmuPro")
+        session.resetToDefaultState()
+        session.clearTransactions()
+        session.disableDialogs = true
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launch()
+        try guardedTap(button(app, "Settings"), "Settings in the rail")
+        try guardedTap(app.buttons["settings.GagaEmu Pro"].firstMatch, "GagaEmu Pro tab")
+        try guardedTap(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'GagaEmu Pro' AND NOT (identifier BEGINSWITH 'settings.')")).firstMatch,
+                       "GagaEmu Pro row")
+        let cards = ["Monthly", "Yearly", "Forever"].map { app.buttons["pro.\($0)"].firstMatch }
+        for card in cards { try arrive(card, card.identifier) }
+        // A dash is the price before StoreKit answers.
+        let deadline = Date().addingTimeInterval(30)
+        while Date() < deadline, cards.contains(where: { $0.label.contains("—") }) { sleep(1) }
+        let prices = XCTAttachment(string: cards.map(\.label).joined(separator: "\n"))
+        prices.name = "PRICES"
+        prices.lifetime = .keepAlways
+        add(prices)
+        try stopIfPrompt()
+        sleep(1)
+        snapshot("Pro paywall portrait")
+        checkBounds("Pro paywall portrait")
+        XCUIDevice.shared.orientation = .landscapeLeft
+        sleep(2)
+        snapshot("Pro paywall landscape")
+        checkBounds("Pro paywall landscape")
+        XCUIDevice.shared.orientation = .portrait
+        XCTAssertFalse(cards.contains { $0.label.contains("—") }, "StoreKit gave no prices: " + cards.map(\.label).joined(separator: " | "))
     }
 
     /// Settings > RetroAchievements: shows the sign-in form. Types nothing and signs in to nothing.
