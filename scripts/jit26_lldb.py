@@ -4,8 +4,8 @@ Same protocol as StikDebug's universal.js: the core runs `mov x16, #1; brk #0xf0
 (Cores/shared/Jit26.c). This stop hook asks debugserver for an RX region (`_M<size>,rx`), rewrites one byte per
 16 KiB page through debugserver so the page may run, returns the address in x0, steps over the brk and continues.
 
-Xcode: add `command script import <repo>/scripts/jit26-lldb.py` to ~/.lldbinit-Xcode, then Run the DevJIT scheme.
-Command line: `command script import scripts/jit26-lldb.py` before attaching (the hook sits on the dummy target).
+Xcode: add `command script import <repo>/scripts/jit26_lldb.py` to ~/.lldbinit-Xcode, then Run the DevJIT scheme.
+Command line: `command script import scripts/jit26_lldb.py` before attaching (the hook sits on the dummy target).
 """
 import lldb
 

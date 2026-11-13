@@ -161,6 +161,25 @@ CONFIGURATION=DevJIT SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG GAGA_DEV_JIT' ex
 CONFIGURATION=DevJIT ACTION=install expect fail --app "$marked_app" "$fx/good.plist"
 CONFIGURATION=DevJIT GAGA_RELEASE=1 expect fail --app "$marked_app" "$fx/good.plist"
 CONFIGURATION=DevJIT SWIFT_ACTIVE_COMPILATION_CONDITIONS='PAYWALL_ENABLED' expect fail --app "$marked_app" "$fx/good.plist"
+
+# A sideload JIT core (GAGA_JIT=1 build-core.sh): the marker plus a code-generation import its jit.env allows.
+if ! grep -qF "\"$marker\"" "$root/Cores/shared/Jit26.c"; then
+    echo "FAIL: Cores/shared/Jit26.c does not carry the gate's marker" >&2
+    failures=$((failures + 1))
+fi
+jit_app="$fx/jitcore/Free.app"
+mkdir -p "$fx/jitcore" && cp -R "$good_app" "$jit_app"
+printf '#include <mach/mach.h>\nconst char m[] __attribute__((used)) = "%s";\nint f(void){return vm_protect(mach_task_self(),0,0,0,0);}\n' "$marker" >"$fx/jitcore.c"
+cc -dynamiclib "$fx/jitcore.c" -o "$jit_app/Frameworks/FreeCore.framework/FreeCore"
+printf "ALLOWED_IMPORTS='(^|[[:space:]])_vm_protect\$'\n" >"$tmp/Cores/free/jit.env"
+CONFIGURATION=DevJIT expect pass --app "$jit_app" "$fx/good.plist"
+CONFIGURATION=Debug expect fail --app "$jit_app" "$fx/good.plist"
+CONFIGURATION=Release expect fail --app "$jit_app" "$fx/good.plist"
+CONFIGURATION=DevJIT ACTION=install expect fail --app "$jit_app" "$fx/good.plist"
+CONFIGURATION=DevJIT GAGA_RELEASE=1 expect fail --app "$jit_app" "$fx/good.plist"
+expect fail --release-app "$jit_app"
+rm "$tmp/Cores/free/jit.env" # a JIT core whose core has no jit.env gets the default lists
+CONFIGURATION=DevJIT expect fail --app "$jit_app" "$fx/good.plist"
 unset GAGA_CORE_SET
 
 # Only the DevJIT configuration has the flag's xcconfig, and no release path names the flag.

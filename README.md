@@ -92,6 +92,24 @@ Run `xcodebuild test` with the same arguments for the tests. For a device build 
 
 **Benchmark.** In a Debug build, use Settings > About > Run Benchmark, or launch with `-GagaBenchmark` (add `-GagaBenchmarkCore gambatte` for another core). The record lands in Documents/Benchmarks, which the Files app shows. `docs/04` section 7.2 has the procedure. A Debug build launched with `-GagaImportROM <path>` adds that file to the Library as Files import does, once.
 
+### Sideload JIT build
+
+For your own device only. It never goes to TestFlight or the App Store: `scripts/nojit-gate.sh` fails any build but a non-archive `DevJIT` one that holds a JIT core or the JIT option. Today only PPSSPP has a JIT build.
+
+```bash
+GAGA_JIT=1 scripts/build-core.sh ppsspp   # writes build/cores-jit/PpssppCore.xcframework; build/cores is untouched
+scripts/generate-project.sh
+xcodebuild build -project GagaEmu.xcodeproj -scheme GagaEmu -configuration DevJIT \
+  -destination 'generic/platform=iOS'     # sign with your own team to install
+```
+
+The `DevJIT` configuration embeds the JIT core in place of the interpreter one. In the game's Change Core sheet, turn on **JIT**. The switch is active only while a debugger is attached. iOS 26 gives executable memory only through a debugger, so attach one of these before you start the game:
+
+- **StikDebug:** assign the `universal.js` script to GagaEmu, then enable JIT for it.
+- **Xcode:** add `command script import <repo>/scripts/jit26_lldb.py` to `~/.lldbinit-Xcode`, then run the `DevJIT` configuration.
+
+With no debugger, or a debugger that maps no memory, the game runs on the interpreter as in every other build. The core logs `[gaga-core] jit26: JIT engaged` or the reason it fell back. `docs/04` section 8.1 has the details.
+
 ---
 
 ## GagaEmu Pro

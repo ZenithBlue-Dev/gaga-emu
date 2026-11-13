@@ -3,6 +3,9 @@ import UIKit
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func jitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// PPSSPP through the real bridge (milestone 5.5): the IR interpreter, HLE kernel and the Vulkan renderer on
 /// MoltenVK, presenting to a CAMetalLayer. The game is PSPTestELF, linked by the core's HLE kernel, so no
 /// firmware is read. Device pending: these were built but have not run on a device yet (docs/07 5.5).
@@ -220,6 +223,30 @@ final class PpssppCoreTests: GagaTestCase {
         core.stop()
         // The IR interpreter, and MoltenVK's GPU-only shader compiles: no executable CPU pages.
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c (scripts/jit26_lldb.py or StikDebug's universal.js). Waits up to
+    /// 120 s for that debugger to attach, then expects the program drawn from JIT code: new anonymous executable pages.
+    func testJITRunsTheHomebrewProgramUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return jitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        try assertPicture(core)
+        run(core, frames: 120, buttons: UInt32(GAGA_BTN_SOUTH.rawValue))
+        try assertPicture(core, keys: UInt32(GAGA_BTN_SOUTH.rawValue))
+        XCTAssertNil(capture.fatal)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+        core.stop()
     }
 
     func testTeardownAndRelaunchThreeTimes() async throws {

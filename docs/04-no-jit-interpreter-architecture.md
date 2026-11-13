@@ -707,13 +707,31 @@ Limits of the static check:
 
 Because RWX `mmap` becomes `rw-` silently, also run each core under test with crash reports collected. An `EXC_BAD_ACCESS` at a jump into a heap address is a gate failure.
 
-### 8.1 Development JIT option
+### 8.1 Sideload JIT (DevJIT configuration)
 
-Owner request, 2026-11-09: a per-game JIT mode, for future development, that never reaches the App Store. Only the option exists. It stores a preference that nothing reads, so no JIT runs, and no entitlement, executable mapping or core flag changed. The core picker labels it "JIT mode (not functional)". `Sources/UI/Games/DevJITOption.swift` is compiled under `GAGA_DEV_JIT`, set only by `DevJIT.xcconfig` for the `DevJIT` configuration, not by Debug, TestFlight or Release builds.
+Owner requests, 2026-11-09 and 2026-11-13: a per-game JIT mode for sideloaded builds that never reaches TestFlight or the App Store. `Sources/UI/Games/DevJITOption.swift` is compiled under `GAGA_DEV_JIT`, set only by `DevJIT.xcconfig` for the `DevJIT` configuration, not by Debug, TestFlight or Release builds. The README section "Sideload JIT build" has the steps.
 
-It appears for the cores whose upstream has an arm64 recompiler: azahar, beetle_psx, dosbox_pure, flycast, melonds_ds, mupen64plus_next, pcsx_rearmed, picodrive, ppsspp and swanstation. Left out: beetle_saturn (its arm64 emitter is Linux only and covers the DSPs), puae (32-bit ARM only) and mame (no machine in our set has a recompiling CPU).
+**How iOS 26 grants JIT.** On devices with the Trusted Execution Monitor (TXM, A15 and later), neither `MAP_JIT` nor flipping a page between RW and RX works, even with a debugger attached. A page may run only if the debugger prepared it. The working protocol is the one in StikDebug's `universal.js` script, which StikDebug lists for MeloNX, Manic EMU, RPCS3 and others. Play! also uses it. The app sets `x16 = 1`, `x0 = 0` and `x1 = size`, then runs `brk #0xf00d`. The debugger allocates the region with debugserver's `_M<size>,rx` packet and writes one byte per 16 KiB page through debugserver, which marks the page runnable. It returns the address in `x0` and steps over the `brk`. The app then makes a second, RW mapping of the same pages with `vm_remap` and `vm_protect`, and the JIT writes through that mapping. The debugger must stay attached. A `brk` with no debugger kills the process, so the app sends one only when `csops` reports `CS_DEBUGGED`. Sources: [StikDebug `universal.js`](https://github.com/StikDebug/StikDebug/blob/main/StikDebug/Scripts/universal.js), [StikDebug supported apps](https://github.com/StikDebug/StikDebug/blob/main/SUPPORTED_APPS.md), [Play! CodeGen pull 34](https://github.com/jpd002/Play--CodeGen/pull/34). The older paths fail on TXM: those are a debugger attach followed by `mprotect` flips (pre-TXM StikJIT, UTM and DolphiniOS before their iOS 26 updates), and `MAP_JIT`.
 
-`scripts/nojit-gate.sh` fails any app holding the string `GAGA_DEV_JIT_OPTION_MARKER`, or built with the flag, unless it is a non-archive `DevJIT` build. `--release-app` and `--release-ipa` have no exception. `scripts/test-release-gate.sh` proves each case.
+**Pieces.**
+
+- `Cores/shared/Jit26.c` holds the `brk` request, the RW alias, a probe and the `GAGA_JIT` switch. The probe writes `mov w0, #42; ret` and runs it.
+- `Cores/shared/LibretroAdapterJit26.c` wraps the shared adapter unchanged. It answers `RETRO_ENVIRONMENT_GET_JIT_CAPABLE`, and it answers the core's CPU option (`GAGA_JIT_OPTION_KEY`) with the JIT value only when the probe ran.
+- `Cores/ppsspp/jit.env` lists upstream's ARM64 CPU JIT, vertex decoder JIT, `MemoryUtilJit26.cpp` and a build-time copy of `CodeBlock.h` that takes the RW alias. `GAGA_JIT=1 scripts/build-core.sh ppsspp` builds them into `build/cores-jit` with that file's gate lists. `build/cores` is untouched. The interpreter build's code and data stay the same: only upstream's build timestamp string differs between builds.
+- `scripts/devjit-cores.sh` swaps each `build/cores-jit` framework into a `DevJIT` app and signs it. In any other configuration, or in an archive, it does nothing.
+- `scripts/jit26_lldb.py` is the same protocol as an lldb stop hook, for Xcode or command-line lldb.
+
+The app sets `GAGA_JIT=1` only when the game's switch is on and the core has a JIT build. The switch is active only while a debugger is attached. Without a working debugger region, the core falls back to the IR interpreter and logs why.
+
+**Gate.** Each JIT core carries `GAGA_DEV_JIT_OPTION_MARKER`, as the option does. `scripts/nojit-gate.sh` fails any app that holds the marker or was built with the flag, unless it is a non-archive `DevJIT` build. In that build it checks a marked core against its `jit.env` lists. A marked core with no `jit.env` still gets the default lists and fails. `--release-app` and `--release-ipa` have no exception. `scripts/test-release-gate.sh` proves each case.
+
+**Status, 2026-11-13.**
+
+- The JIT core builds, and the `DevJIT` app passes the gate. Debug and Release pass and embed the interpreter core.
+- PPSSPP's tests pass on the simulator in Debug and `DevJIT`. JIT never engages on the simulator.
+- On a device, JIT is **not yet verified**. `PpssppCoreTests.testJITRunsTheHomebrewProgramUnderADebugger` (run with `TEST_RUNNER_GAGA_JIT_TEST=1`) waits for a debugger, then expects JIT code pages. Its first device run attached no debugger, because `device process attach -w` in lldb batch mode did not wait. Attach by pid instead.
+
+Follow-ups: Flycast and Azahar JIT builds, then beetle_psx, dosbox_pure, melonds_ds, mupen64plus_next, pcsx_rearmed, picodrive and swanstation, whose upstreams have arm64 recompilers.
 
 ---
 
