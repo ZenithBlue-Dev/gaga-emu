@@ -881,7 +881,7 @@ final class GagaEmuTests: GagaTestCase {
     @MainActor
     func testSideloadUnlocksEverythingAndSellsNothing() {
         XCTAssertFalse(PaywallGate.isOpen)
-        XCTAssertFalse(SettingsView.Category.visible.contains(.gagaPlus))
+        XCTAssertFalse(SettingsCategory.visible.contains(.gagaPlus))
         let store = StoreKitManager()
         XCTAssertTrue(store.entitlements.premium)
         XCTAssertFalse(store.entitlements.showsSubscribePrompts)

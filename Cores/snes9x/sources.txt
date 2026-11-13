@@ -17,7 +17,7 @@ upstream/dsp.c
 upstream/filter/snes_ntsc.c
 upstream/apu/apu.cpp
 upstream/apu/bapu/dsp/sdsp.cpp
-upstream/apu/bapu/smp/smp.cpp
+Snes9xSmpGaga.cpp -Iupstream/apu/bapu/smp
 upstream/apu/bapu/smp/smp_state.cpp
 upstream/cheats2.cpp
 upstream/clip.cpp

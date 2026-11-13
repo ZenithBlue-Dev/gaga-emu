@@ -149,8 +149,12 @@ build_core() {
     # Optional, so one core's value must not reach the next.
     unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS SOURCE_AUDIT_REVIEWED
     unset CORE_UPSTREAM_SUBMODULES CORE_BLANK_FILES CORE_SYSTEM_FILES CORE_JIT_MARKER
+    unset -f core_prepare
     # shellcheck source=/dev/null
     source "$dir/core.env"
+    # Optional: core.env's core_prepare writes build-time copies of upstream files, such as one with a boot ROM
+    # swapped out (Cores/snes9x). Run from the core's directory; the submodule itself is never changed.
+    if declare -F core_prepare >/dev/null; then (cd "$dir" && core_prepare); fi
     local sources="$dir/sources.txt"
     if [ "${GAGA_JIT:-}" = 1 ]; then
         [ -f "$dir/jit.env" ] || { echo "$core has no JIT build (Cores/$core/jit.env)" >&2; exit 2; }
