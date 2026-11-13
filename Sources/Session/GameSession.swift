@@ -294,6 +294,9 @@ final class GameSession: NSObject, ObservableObject, Identifiable {
         wire(core)
         for (key, value) in coreOptionValues { core.setOption(key, value) } // Before the game, which reads them as it loads.
         setenv("GAGA_USERNAME", PlayerName.effective, 1) // RETRO_ENVIRONMENT_GET_USERNAME and Azahar's 3DS profile.
+        #if GAGA_DEV_JIT
+        setenv("GAGA_JIT", DevJITOption.requested(gameID: game.id, coreID: core.coreID) ? "1" : "0", 1) // Cores/shared/Jit26.c
+        #endif
         do {
             try await core.loadROM(path: romPath)
         } catch {

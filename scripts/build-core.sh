@@ -4,10 +4,14 @@
 # refused and no xcframework is written. Needs Xcode and the core's submodule, nothing else.
 #
 #   scripts/build-core.sh [core-id ...]     no arguments: every core in Cores/
+#   GAGA_JIT=1 scripts/build-core.sh ppsspp sideload JIT build (Cores/<core>/jit.env) into build/cores-jit, for the
+#                                           DevJIT configuration only (docs/04 section 8.1)
 set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 min_ios=17.0
+cores_dir="$root/build/cores"
+[ "${GAGA_JIT:-}" != 1 ] || cores_dir="$root/build/cores-jit"
 
 # xargs runs this script again per source file. Run from the core's directory, so sources.txt and the
 # include paths in core.env stay relative to it.
@@ -26,8 +30,9 @@ fi
 
 build_slice() { # core dir sdk target
     local core=$1 dir=$2 sdk=$3 target=$4
-    local out="$root/build/cores/$core/$sdk"
+    local out="$cores_dir/$core/$sdk"
     local framework="$out/$CORE_FRAMEWORK.framework" binary="$out/$CORE_FRAMEWORK.framework/$CORE_FRAMEWORK"
+    # $sources is build_core's: sources.txt, or the JIT build's list.
     local sysroot source link_driver=clang objects=() link_extra=()
     sysroot=$(xcrun --sdk "$sdk" --show-sdk-path)
     # A layer-path core links the one shared MoltenVK.framework, which the app embeds once (docs/06 section
@@ -44,13 +49,13 @@ build_slice() { # core dir sdk target
         cd "$dir"
         export COMPILE_OUT="$out" COMPILE_SDK="$sdk" COMPILE_TARGET="$target" COMPILE_SYSROOT="$sysroot" \
             COMPILE_VERSION="$CORE_VERSION ${UPSTREAM_COMMIT:0:8}" CORE_CFLAGS CORE_CXXFLAGS
-        xargs -L 1 -P "$(sysctl -n hw.ncpu)" "$root/scripts/build-core.sh" --compile-one <sources.txt
+        xargs -L 1 -P "$(sysctl -n hw.ncpu)" "$root/scripts/build-core.sh" --compile-one <"$sources"
     )
 
     while read -r source _; do
         objects+=("$out/obj/$source.o")
         case "$source" in *.cpp | *.cc | *.cxx) link_driver=clang++ ;; esac
-    done <"$dir/sources.txt"
+    done <"$sources"
 
     # Optional: a Rust part of the core, a static library linked with the bridge sources (Cores/jgenesis).
     # --locked builds exactly what Cargo.lock pins; after the first fetch it needs no network.
@@ -116,6 +121,11 @@ PLIST
     "$root/scripts/nojit-gate.sh" "$binary" "$FORBIDDEN_STRINGS" "" "${ALLOWED_IMPORTS:-}"
     # No boot ROM or other firmware in any core (docs/03 section 5), including a file upstream embeds.
     python3 -I "$root/scripts/bootrom-gate.py" "$binary" "$dir"
+    # A JIT build carries the marker the no-JIT gate looks for, so no build but DevJIT can embed it.
+    if [ "${GAGA_JIT:-}" = 1 ] && ! grep -qaF "$CORE_JIT_MARKER" "$binary"; then
+        echo "$CORE_FRAMEWORK ($sdk) is a JIT build without $CORE_JIT_MARKER" >&2
+        exit 1
+    fi
 
     # Optional: source paths that must never be compiled, such as a dynarec's. The dSYM names every compiled
     # file, including any a source file includes, so this checks what was built, not what sources.txt says.
@@ -138,9 +148,17 @@ build_core() {
     [ -f "$dir/core.env" ] || { echo "unknown core: $core" >&2; exit 2; }
     # Optional, so one core's value must not reach the next.
     unset FORBIDDEN_SOURCES FORBIDDEN_DEBUG_STRINGS CORE_CARGO_MANIFEST CORE_CARGO_LIB CORE_USES_MOLTENVK CORE_LDFLAGS SOURCE_AUDIT_REVIEWED
-    unset CORE_UPSTREAM_SUBMODULES CORE_BLANK_FILES CORE_SYSTEM_FILES
+    unset CORE_UPSTREAM_SUBMODULES CORE_BLANK_FILES CORE_SYSTEM_FILES CORE_JIT_MARKER
     # shellcheck source=/dev/null
     source "$dir/core.env"
+    local sources="$dir/sources.txt"
+    if [ "${GAGA_JIT:-}" = 1 ]; then
+        [ -f "$dir/jit.env" ] || { echo "$core has no JIT build (Cores/$core/jit.env)" >&2; exit 2; }
+        # shellcheck source=/dev/null
+        source "$dir/jit.env"
+        (cd "$dir" && core_jit_prepare)
+        sources="$cores_dir/$core/sources.txt"
+    fi
 
     local commit hits
     # An empty UPSTREAM_COMMIT is a core written in this repository, such as the vktest debug core.
@@ -174,7 +192,7 @@ build_core() {
     # Source audit, docs/04 section 8. A hit needs a read and a per-core decision, not a silent build. The
     # decision is SOURCE_AUDIT_REVIEWED in core.env: file:line: prefixes, so a new pin's moved lines fail again.
     # Status is not used: xargs fails whenever one of its grep batches finds nothing, even if another found a hit.
-    hits=$(cd "$dir" && cut -d ' ' -f 1 sources.txt | xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit' || true)
+    hits=$(cd "$dir" && cut -d ' ' -f 1 "$sources" | xargs grep -nE 'PROT_EXEC|MAP_JIT|vm_protect|mach_vm_remap|__clear_cache|sys_icache_invalidate|pthread_jit' || true)
     hits=$(printf '%s\n' "$hits" | grep -vE "${SOURCE_AUDIT_REVIEWED:-^\$}" | grep -v '^$' || true)
     if [ -n "$hits" ]; then
         echo "Source audit found code-generation calls in Cores/$core:" >&2
@@ -201,13 +219,13 @@ build_core() {
     build_slice "$core" "$dir" iphonesimulator "arm64-apple-ios$min_ios-simulator"
     build_slice "$core" "$dir" iphoneos "arm64-apple-ios$min_ios"
 
-    local output="$root/build/cores/$CORE_FRAMEWORK.xcframework"
+    local output="$cores_dir/$CORE_FRAMEWORK.xcframework"
     rm -rf "$output"
     xcodebuild -create-xcframework -output "$output" \
-        -framework "$root/build/cores/$core/iphonesimulator/$CORE_FRAMEWORK.framework" \
-        -debug-symbols "$root/build/cores/$core/iphonesimulator/$CORE_FRAMEWORK.framework.dSYM" \
-        -framework "$root/build/cores/$core/iphoneos/$CORE_FRAMEWORK.framework" \
-        -debug-symbols "$root/build/cores/$core/iphoneos/$CORE_FRAMEWORK.framework.dSYM" >/dev/null
+        -framework "$cores_dir/$core/iphonesimulator/$CORE_FRAMEWORK.framework" \
+        -debug-symbols "$cores_dir/$core/iphonesimulator/$CORE_FRAMEWORK.framework.dSYM" \
+        -framework "$cores_dir/$core/iphoneos/$CORE_FRAMEWORK.framework" \
+        -debug-symbols "$cores_dir/$core/iphoneos/$CORE_FRAMEWORK.framework.dSYM" >/dev/null
     echo "$core: $output"
 }
 

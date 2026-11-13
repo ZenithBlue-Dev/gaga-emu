@@ -29,7 +29,8 @@ extern "C" void *gaga_ppsspp_no_dlopen(const char *path, int mode) {
 // The ARM64 code emitter (Common/Arm64Emitter.cpp) is not compiled. The vertex decoder and the software
 // renderer still hold an ARM64CodeBlock, and the ARM64 disassembler decodes float immediates, so these are
 // upstream's own bodies for the parts that never emit an instruction. The code space they point into is
-// never allocated: AllocateExecutableMemory returns null (MemoryUtil.cpp).
+// never allocated: AllocateExecutableMemory returns null (MemoryUtil.cpp). The sideload JIT build (jit.env) compiles both.
+#ifndef GAGA_CORE_JIT
 namespace Arm64Gen {
 void ARM64XEmitter::SetCodePointer(const u8 *ptr, u8 *writePtr) {
 	m_code = ptr;
@@ -62,6 +63,7 @@ JittedVertexDecoder VertexDecoderJitCache::Compile(const VertexDecoder &dec, int
 	*jittedSize = 0;
 	return nullptr;
 }
+#endif
 
 // The software renderer's code block (RasterizerRegCache.cpp) is not compiled. Upstream compiles pixel and
 // sampler functions on x86-64 only; on ARM64 its Compile calls only Clear, so no space is needed.

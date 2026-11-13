@@ -80,6 +80,10 @@ targets:
       - AudioToolbox
       - GameKit
     postBuildScripts:
+      # DevJIT only: swaps in sideload JIT cores from build/cores-jit. Exits at once in every other configuration.
+      - name: DevJIT cores
+        script: '"$SRCROOT/scripts/devjit-cores.sh"'
+        basedOnDependencyAnalysis: false
       - name: No-JIT gate
         script: '"$SRCROOT/scripts/nojit-gate.sh" --app "$TARGET_BUILD_DIR/$WRAPPER_NAME" "$SRCROOT/$CODE_SIGN_ENTITLEMENTS"'
         basedOnDependencyAnalysis: false

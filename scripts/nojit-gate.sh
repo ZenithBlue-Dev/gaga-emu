@@ -21,7 +21,8 @@ default_strings='asmjit::JitRuntime'
 code_gen_imports='_pthread_jit_write_protect_np|_pthread_jit_write_with_callback_np|_sys_icache_invalidate|_sys_dcache_flush|___clear_cache|_mach_vm_protect|_vm_protect$|_mach_vm_remap|_vm_remap$'
 # get-task-allow is in the source plist's refusal list: Xcode adds it when it signs a development build, never the plist.
 jit_entitlements='allow-jit|allow-unsigned-executable-memory|disable-executable-page-protection|dynamic-codesigning|get-task-allow'
-# The development JIT option (Sources/UI/Games/DevJITOption.swift, docs/04 section 8.1): only this configuration may hold it.
+# The development JIT option (Sources/UI/Games/DevJITOption.swift, docs/04 section 8.1) and the sideload JIT cores
+# (Cores/shared/Jit26.c) carry this marker: only this configuration may hold it.
 dev_jit_marker='GAGA_DEV_JIT_OPTION_MARKER'
 dev_jit_config='DevJIT'
 
@@ -111,8 +112,10 @@ core_var() {
     local env
     for env in "$root"/Cores/*/core.env; do
         if grep -qx "CORE_FRAMEWORK=$1" "$env"; then
+            # $3 = jit: the core's sideload JIT build reads its jit.env too. A core without one prints nothing, so
+            # check_binary falls back to the default lists and refuses the JIT.
             # shellcheck source=/dev/null
-            (source "$env" && eval "echo \"\${$2:-}\"")
+            (source "$env" && { [ -z "${3:-}" ] || source "$(dirname "$env")/jit.env"; } && eval "echo \"\${$2:-}\"")
             return
         fi
     done
@@ -121,7 +124,14 @@ core_var() {
 # One embedded core: its strings, plus the same FORBIDDEN_IMPORTS as build-core.sh, so a stale framework in
 # DerivedData cannot skip them.
 check_core_binary() {
-    check_binary "$2" "$(core_var "$1" FORBIDDEN_STRINGS)" "$(core_var "$1" FORBIDDEN_IMPORTS)" "$(core_var "$1" ALLOWED_IMPORTS)"
+    local jit=''
+    # Only check_app in the DevJIT configuration sets dev_jit_allowed. A sideload JIT build (GAGA_JIT=1
+    # scripts/build-core.sh) carries the marker, so every other build refuses it in check_no_dev_jit.
+    if [ "${dev_jit_allowed:-}" = 1 ] && grep -qaF -- "$dev_jit_marker" "$2"; then
+        jit=jit
+        echo "no-JIT gate: $1 is a sideload JIT build, checked against its jit.env (DevJIT only)"
+    fi
+    check_binary "$2" "$(core_var "$1" FORBIDDEN_STRINGS $jit)" "$(core_var "$1" FORBIDDEN_IMPORTS $jit)" "$(core_var "$1" ALLOWED_IMPORTS $jit)"
 }
 
 # Entitlements of the signed product (codesign), not the source plist. An unsigned app has none to read.
@@ -306,6 +316,8 @@ check_app() {
     if [ "${CONFIGURATION:-}" != "$dev_jit_config" ] || [ "${GAGA_RELEASE:-}" = 1 ] || [ "${ACTION:-}" = install ] ||
         [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" PAYWALL_ENABLED "* ]]; then
         check_no_dev_jit "$app"
+    else
+        dev_jit_allowed=1
     fi
     # GAGA_SIDELOAD is a build setting from scripts/generate-project.sh for GAGA_CORE_SET=sideload.
     [ "${GAGA_SIDELOAD:-}" != 1 ] || check_sideload_app "$app"
