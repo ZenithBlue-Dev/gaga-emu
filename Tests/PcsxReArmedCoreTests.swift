@@ -1,6 +1,9 @@
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func pcsxJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// PCSX-ReARMed through the shared libretro adapter and the real bridge, running the generated homebrew
 /// program (`PS1TestEXE`) on the core's HLE BIOS. No Sony BIOS is in the system folder.
 final class PcsxReArmedCoreTests: GagaTestCase {
@@ -267,6 +270,31 @@ final class PcsxReArmedCoreTests: GagaTestCase {
         core.stop()
         XCTAssertEqual(capture.width, PS1TestEXE.width)
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c. Waits up to 120 s for it, then expects the program drawn by the
+    /// ARM64 dynarec: new anonymous executable pages. Skips everywhere else, the simulator included.
+    func testDynarecRunsTheHomebrewProgramUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return pcsxJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        XCTAssertNil(capture.fatal)
+        assertPicture(capture)
+        flipToggle(core)
+        assertPicture(capture, toggle: true)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+        core.stop()
     }
 
     // MARK: - Discs and playlists

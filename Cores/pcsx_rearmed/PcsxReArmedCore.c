@@ -20,6 +20,10 @@ static const GagaLibretroVariable s_variables[] = {
     { "pcsx_rearmed_display_info", "disabled" },
     { "pcsx_rearmed_vibration", "disabled" },
     { "pcsx_rearmed_multitap", "disabled" }, // s_multitap_port1 replaces it while players 3 to 5 play.
+#ifdef GAGA_CORE_JIT
+    // Sideload JIT build (jit.env): the interpreter unless LibretroAdapterJit26.c finds runnable memory.
+    { "pcsx_rearmed_drc", "disabled" },
+#endif
     { NULL, NULL },
 };
 
