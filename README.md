@@ -94,7 +94,7 @@ Run `xcodebuild test` with the same arguments for the tests. For a device build 
 
 ### Sideload JIT build
 
-For your own device only. It never goes to TestFlight or the App Store: `scripts/nojit-gate.sh` fails any build but a non-archive `DevJIT` one that holds a JIT core or the JIT option. Today PPSSPP, DOSBox Pure (`dosbox_pure`), melonDS DS (`melonds_ds`), PCSX-ReARMed (`pcsx_rearmed`), SwanStation (`swanstation`) and Mupen64Plus-Next (`mupen64plus_next`, R4300 dynarec; the RSP stays an interpreter) have JIT builds.
+For your own device only. It never goes to TestFlight or the App Store: `scripts/nojit-gate.sh` fails any build but a non-archive `DevJIT` one that holds a JIT core or the JIT option. Today PPSSPP, DOSBox Pure (`dosbox_pure`), melonDS DS (`melonds_ds`), PCSX-ReARMed (`pcsx_rearmed`), SwanStation (`swanstation`), Mupen64Plus-Next (`mupen64plus_next`, R4300 dynarec; the RSP stays an interpreter) and Flycast (`flycast`, SH-4 recompiler; the ARM7 and AICA DSP stay interpreters) have JIT builds.
 
 melonDS DS (`melonds_ds`) has one too: `GAGA_JIT=1 scripts/build-core.sh melonds_ds`.
 

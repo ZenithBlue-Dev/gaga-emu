@@ -65,11 +65,14 @@ void ondemand_page(void* address, unsigned size_bytes) { (void)address; (void)si
 void create_mappings(const Mapping* vmem_maps, unsigned nummaps) { (void)vmem_maps; (void)nummaps; }
 void destroy() {}
 
-// The recompilers that call these are not compiled (TARGET_NO_REC). Each refuses.
+// The recompilers that call these are not compiled (TARGET_NO_REC). Each refuses. The sideload JIT build
+// (jit.env) takes the RW/RX pair functions from FlycastJit26.cpp; region_set_exec stays a refusal there, since
+// its code memory is never re-protected.
 bool prepare_jit_block(void* code_area, size_t size, void** code_area_rwx) {
     (void)code_area; (void)size; (void)code_area_rwx;
     return false;
 }
+#ifndef GAGA_CORE_JIT
 bool prepare_jit_block(void* code_area, size_t size, void** code_area_rw, ptrdiff_t* rx_offset) {
     (void)code_area; (void)size; (void)code_area_rw; (void)rx_offset;
     return false;
@@ -77,9 +80,10 @@ bool prepare_jit_block(void* code_area, size_t size, void** code_area_rw, ptrdif
 void flush_cache(void* icache_start, void* icache_end, void* dcache_start, void* dcache_end) {
     (void)icache_start; (void)icache_end; (void)dcache_start; (void)dcache_end;
 }
+void release_jit_block(void* code_area1, void* code_area2, size_t size) { (void)code_area1; (void)code_area2; (void)size; }
+#endif
 void jit_set_exec(void* code, size_t size, bool enable) { (void)code; (void)size; (void)enable; }
 void release_jit_block(void* code_area, size_t size) { (void)code_area; (void)size; }
-void release_jit_block(void* code_area1, void* code_area2, size_t size) { (void)code_area1; (void)code_area2; (void)size; }
 bool region_set_exec(void* start, std::size_t len) { (void)start; (void)len; return false; }
 
 // Only video memory is locked in this build: the RAM and sound RAM watchers belong to GGPO, which

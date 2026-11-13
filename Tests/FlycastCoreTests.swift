@@ -3,6 +3,9 @@ import UIKit
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func flycastJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// Flycast through the real bridge (milestone 6.2): the SH-4, ARM7 and AICA DSP interpreters, and Flycast's
 /// Vulkan renderer on MoltenVK, presenting to a CAMetalLayer. Device pending: built, not yet run on a device
 /// (docs/07 6.2). The running-game test boots DreamcastTestDisc, a self-made GD-ROM image, through reios.
@@ -113,6 +116,39 @@ final class FlycastCoreTests: GagaTestCase {
         let middle = Array(frame.pixels[i..<i + 4])
         XCTAssertTrue(zip(middle, DreamcastTestDisc.colorBGRA).allSatisfy { abs(Int($0) - Int($1)) <= 8 }, "\(middle)")
         XCTAssertFalse(FileManager.default.fileExists(atPath: directory.appendingPathComponent("dc/dc_boot.bin").path))
+        core.stop()
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c. Waits up to 120 s for it, then boots the test disc on the SH-4
+    /// recompiler and expects its picture and new anonymous executable pages. Skips everywhere else, the simulator too.
+    func testSH4RecompilerBootsTheTestDiscUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return flycastJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        for file in DreamcastTestDisc.files() { _ = try write(file.data, name: file.name) }
+        let core = try makeCore()
+        final class Capture { var fatal: String? }
+        let capture = Capture()
+        core.onEvent = { event in if event.severity == GAGA_EVENT_FATAL { capture.fatal = event.message } }
+        try await core.loadROM(path: directory.appendingPathComponent("GagaDreamcast.gdi").path)
+        for _ in 0..<120 { core.step(inputs: [GagaInputState()]) }
+        try core.loadState(try core.saveState())
+        for _ in 0..<5 { core.step(inputs: [GagaInputState()]) }
+        XCTAssertNil(capture.fatal)
+        let frame = try XCTUnwrap(core.readLayerPixels(), "no frame presented")
+        let i = ((frame.height / 2) * frame.width + frame.width / 2) * 4
+        let middle = Array(frame.pixels[i..<i + 4])
+        XCTAssertTrue(zip(middle, DreamcastTestDisc.colorBGRA).allSatisfy { abs(Int($0) - Int($1)) <= 8 }, "\(middle)")
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
         core.stop()
     }
 
