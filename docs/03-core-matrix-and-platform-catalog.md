@@ -749,6 +749,16 @@ Source: [github.com/azahar-emu/azahar](https://github.com/azahar-emu/azahar), ta
 
 Not compiled: Dynarmic, oaknut, xbyak, every `shader_jit*` file, `src/core/arm/dynarmic`, the OpenGL renderer and glad, SPIRV-Tools, inih, cubeb, OpenAL, SDL, libusb, Discord RPC, cpp-jwt and the web service. `FORBIDDEN_SOURCES` refuses a framework that compiles any of the JIT or GL files.
 
+Sideload JIT build only (`Cores/azahar/jit.env`, `build/cores-jit`, DevJIT configuration, never TestFlight or the App Store, `docs/04` section 8.1). It also compiles the parts below, from upstream's own submodules at the commits `2126.2` records, checked out only for this build. None of them is in the interpreter framework, so `Licences/notices.json` (the release licence screen) does not list them.
+
+| Part | Pin | Licence | What it asks of a binary release |
+|---|---|---|---|
+| `externals/dynarmic` ([azahar-emu/dynarmic](https://github.com/azahar-emu/dynarmic); A32 front end, IR, arm64 back end, generic exception handler) | `e77b1ba0` | 0BSD | None. |
+| `externals/oaknut` ([merryhime/oaknut](https://github.com/merryhime/oaknut), headers; GagaEmu's `jit/oaknut/code_block.hpp` replaces its code block) | `6b1d57ea` (2.0.2) | MIT | Reproduce the notice. |
+| Dynarmic's `externals/mcl` ([azahar-emu/mcl](https://github.com/azahar-emu/mcl)) | `5fc4beaf` | MIT | Reproduce the notice. |
+
+Still not compiled there: xbyak, Dynarmic's x64, RISC-V and mach exception handler sources, every `shader_jit*` file and the OpenGL renderer.
+
 No keys, firmware, system archives (other than the free ones above), shared font dump or game is bundled or fetched. `ENABLE_BUILTIN_KEYBLOB` is off. Only decrypted content runs: `.3ds`, `.cci`, `.cxi`, `.app` decrypted dumps, and `.3dsx`, `.elf` and `.axf` homebrew. `.cia` is not accepted: installing a title needs the player's keys and NAND, which GagaEmu does not handle. **Decrypted dumps only, and owner-supplied keys do not change that** (device run 13): Azahar `2126.2` refuses any NCCH whose NoCrypto flag (bit 2 of the flags byte at NCCH 0x18F) is clear, whatever keys it has (`NCCHContainer::Load`, `ErrorEncrypted`); its `sysdata/keys.txt` serves system data only, so GagaEmu offers no keys file. `AzaharCore.c` reads the header at load, from partition 0 for an NCSD, and refuses an encrypted game at once with "This 3DS game is encrypted. GagaEmu plays decrypted dumps only." Network, online features, camera and microphone are off: socket and name lookup calls go to refusing stubs (`AzaharSupport.cpp`).
 
 ### App archive reader (LZMA SDK) and RAR

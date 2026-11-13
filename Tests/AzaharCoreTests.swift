@@ -3,6 +3,14 @@ import UIKit
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func azaharJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
+private func azaharJitTestDebugged() -> Bool {
+    var flags: UInt32 = 0
+    return azaharJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+}
+
 /// Azahar through the real bridge (milestone 6.3): the dyncom ARM11 interpreter, the shader interpreter, and
 /// Azahar's Vulkan renderer on MoltenVK presenting to a CAMetalLayer. Device pending: built, not yet run on a
 /// device (docs/07 6.3). The running-game test boots N3DSTestProgram, a self-made .3dsx.
@@ -128,6 +136,37 @@ final class AzaharCoreTests: GagaTestCase {
     /// Device pending: N3DSTestProgram fills each default framebuffer with its own colour. Side by side, the top
     /// screen is the left 400 of every 720 columns and the bottom screen the right 320.
     func testBootsTheTestProgramAndDrawsBothScreens() async throws {
+        try await bootsTheTestProgram()
+    }
+
+    /// Sideload JIT (docs/04 section 8.1). Asked for with no debugger (the simulator, or a device run without one),
+    /// the JIT build's probe fails and the ARM11 stays on the interpreter: same picture, no generated code. The
+    /// interpreter build ignores GAGA_JIT.
+    func testRequestingJITWithoutADebuggerRunsTheInterpreter() async throws {
+        try XCTSkipIf(azaharJitTestDebugged(), "a debugger is attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        try await bootsTheTestProgram()
+        XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT: a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a debugger that serves
+    /// Cores/shared/Jit26.c. Waits up to 120 s for it, then expects the test program's picture from Dynarmic: new
+    /// anonymous executable pages. Skips everywhere else, the simulator included.
+    func testDynarmicRunsTheTestProgramUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        let deadline = Date().addingTimeInterval(120)
+        while !azaharJitTestDebugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(azaharJitTestDebugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        try await bootsTheTestProgram()
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+    }
+
+    private func bootsTheTestProgram() async throws {
         final class Capture {
             var frames = 0
             var fatal: String?

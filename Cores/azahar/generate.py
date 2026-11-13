@@ -7,6 +7,10 @@ reads compile_commands.json, and keeps every file it compiles except the ones li
 else is built here; scripts/build-core.sh compiles the list.
 
     Cores/azahar/generate.py            needs cmake and ninja (Homebrew), and the submodules in core.env
+    Cores/azahar/generate.py --jit      the sideload JIT build's lists (jit.env): jit-sources.txt and jit-cmake.env,
+                                        from the same configure with ENABLE_GENERIC off, so Dynarmic and oaknut are
+                                        in. Needs externals/dynarmic, externals/oaknut and dynarmic's externals/mcl.
+                                        Leaves sources.txt, cmake.env and generated/ alone.
 
 CMake runs on a copy-on-write copy of upstream without its .git file, because upstream's configure step
 copies a pre-commit hook into .git/hooks, which must not touch the pinned submodule.
@@ -73,6 +77,16 @@ EXCLUDE = [
     r"\.(mm|m|S|s|asm)$",
 ]
 
+# The JIT build (--jit) compiles Dynarmic's A32 front end and arm64 back end with oaknut, and nothing else that
+# the interpreter build leaves out. Dynarmic's macOS exception handler (a mach exception port, only for fastmem,
+# which Azahar never configures) gives way to its generic one, which jit.env adds.
+JIT_EXCLUDE = [p for p in EXCLUDE if not p.startswith(r"^src/core/arm/dynarmic/") and "dynarmic|oaknut" not in p] + [
+    r"^externals/xbyak/",
+    r"^externals/dynarmic/src/dynarmic/backend/exception_handler_",
+    r"^externals/dynarmic/src/dynarmic/backend/(x64|riscv64)/",
+    r"^externals/dynarmic/src/dynarmic/backend/x64/mig/",
+]
+
 # The upstream submodules these files come from, each at the commit upstream 2126.2 records (core.env).
 SUBMODULES = ("externals/boost externals/cryptopp externals/fmt externals/inih/inih externals/faad2/faad2 "
               "externals/library-headers externals/soundtouch externals/teakra externals/zstd externals/enet "
@@ -125,7 +139,48 @@ def extra_flags(flags, base):
     return extra
 
 
+def write_jit(files, by_name, base):
+    """jit-cmake.env: the Core library's flags that the interpreter build's cmake.env lacks (Dynarmic's, mcl's,
+    oaknut's include paths). jit-sources.txt: each file the JIT configure compiles that sources.txt does not, or
+    compiles with other flags, as a sources.txt line against those flags. jit.env merges both into its list."""
+    with open(os.path.join(here, "cmake.env")) as f:
+        default_base = shlex.split(shlex.split(f.read().split("cmake_flags=", 1)[1])[0])
+    lost = [f for f in default_base if f not in base]
+    if lost:
+        raise SystemExit(f"the JIT configure drops interpreter-build flags: {lost}")
+    jit_base = [f for f in base if f not in default_base]
+    default = {}
+    with open(os.path.join(here, "sources.txt")) as f:
+        for line in f:
+            words = shlex.split(line)
+            default[words[0]] = words[1:]
+    gone = [n for n in default if n.startswith(("upstream/", "generated/")) and n not in by_name]
+    if gone:
+        raise SystemExit(f"the JIT configure leaves out interpreter-build files: {gone[:5]}")
+    generic = "upstream/externals/dynarmic/src/dynarmic/backend/exception_handler_generic.cpp"
+    by_name[generic] = by_name["upstream/externals/dynarmic/src/dynarmic/backend/block_range_information.cpp"]
+    lines = []
+    for name in sorted(files + [generic]):
+        flags = extra_flags(by_name[name], base)
+        if name in default and flags == default[name]:
+            continue
+        if name.startswith("generated/") and name not in default:
+            raise SystemExit(f"the JIT configure generates a source the interpreter build lacks: {name}")
+        lines.append(" ".join([name] + [shlex.quote(f) for f in flags]) + "\n")
+    with open(os.path.join(here, "jit-sources.txt"), "w") as out:
+        out.writelines(lines)
+    with open(os.path.join(here, "jit-cmake.env"), "w") as out:
+        out.write("# Written by generate.py --jit: the Core library's flags that cmake.env lacks in the JIT configure.\n")
+        out.write("jit_cmake_flags='" + " ".join(jit_base) + "'\n")
+    print(f"{len(lines)} JIT lines, {len(jit_base)} extra Core flags", file=sys.stderr)
+
+
 def main():
+    jit =sys.argv[1:] == ["--jit"]
+    if sys.argv[1:] and not jit:
+        raise SystemExit("usage: generate.py [--jit]")
+    options = [o.replace("ENABLE_GENERIC=ON", "ENABLE_GENERIC=OFF") for o in CMAKE_OPTIONS] if jit else CMAKE_OPTIONS
+    exclude = JIT_EXCLUDE if jit else EXCLUDE
     tmp = os.path.realpath(tempfile.mkdtemp(prefix="azahar-cmake-"))
     src, build = os.path.join(tmp, "src"), os.path.join(tmp, "build")
     try:
@@ -143,7 +198,7 @@ def main():
         with open(os.path.join(src, "GIT-TAG"), "w") as f:
             f.write(git("describe", "--tags", "--exact-match"))
         env = dict(os.environ, SOURCE_DATE_EPOCH=git("log", "-1", "--format=%ct"))
-        subprocess.run(["cmake", "-S", src, "-B", build, "-G", "Ninja"] + CMAKE_OPTIONS,
+        subprocess.run(["cmake", "-S", src, "-B", build, "-G", "Ninja"] + options,
                        check=True, stdout=subprocess.DEVNULL, env=env)
         subprocess.run(["ninja", "-C", build, "host_shaders"], check=True, stdout=subprocess.DEVNULL)
         with open(os.path.join(build, "compile_commands.json")) as f:
@@ -162,19 +217,26 @@ def main():
             obj = os.path.realpath(os.path.join(entry["directory"], entry.get("output", "")))
             if obj not in wanted:
                 continue
+            # Dynarmic's multi-architecture wrapper (CMAKE_OSX_ARCHITECTURES set): an #if for the target
+            # architecture around the source itself, which is arm64 here. The source is compiled directly.
+            if "/arch_gen/" in path:
+                path = path.split("/arch_gen", 1)[1]
             if path.startswith(build + os.sep):
                 name = os.path.join("generated", os.path.relpath(path, build))
             else:
                 name = os.path.join("upstream", os.path.relpath(path, src))
             flags = flags_of(entry["command"], src, build)
             rel = name.split("/", 1)[1]
-            if any(re.search(p, rel) for p in EXCLUDE) or name in by_name:
+            if any(re.search(p, rel) for p in exclude) or name in by_name:
                 continue
             by_name[name] = flags
             files.append(name)
             if rel == "src/core/core.cpp":
                 base = flags
         assert base, "src/core/core.cpp not in compile_commands.json"
+        if jit:
+            write_jit(files, by_name, base)
+            return
 
         # Generated files: every source in the build folder, and every header under a build include path.
         shutil.rmtree(os.path.join(here, "generated"), ignore_errors=True)

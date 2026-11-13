@@ -18,7 +18,9 @@
 // JIT with CITRA_ARCH(arm64), which boost/predef sets from the compiler. Setting it to 0 sends every one of
 // those choices to the interpreters: the dyncom CPU and shader_interpreter.cpp. No JIT file is compiled
 // either (generate.py, FORBIDDEN_SOURCES), so a missed selection fails at link time instead of running.
-#ifdef __cplusplus
+// The sideload JIT build (jit.env, GAGA_CORE_JIT) keeps CITRA_ARCH(arm64) for Dynarmic; its shader.cpp copy
+// still picks the shader interpreter.
+#if defined(__cplusplus) && !defined(GAGA_CORE_JIT)
 #include "common/arch.h"
 #undef CITRA_ARCH_arm64
 #define CITRA_ARCH_arm64 0
