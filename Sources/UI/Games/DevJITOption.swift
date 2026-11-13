@@ -10,7 +10,7 @@ enum DevJITOption {
     static let marker = "GAGA_DEV_JIT_OPTION_MARKER"
 
     /// Cores with a sideload JIT build (Cores/<id>/jit.env, built into build/cores-jit).
-    static let cores: Set<String> = ["ppsspp", "pcsx_rearmed"]
+    static let cores: Set<String> = ["ppsspp", "dosbox_pure", "pcsx_rearmed"]
 
     static func key(_ gameID: UUID) -> String { marker + "." + gameID.uuidString }
 

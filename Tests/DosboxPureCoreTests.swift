@@ -1,6 +1,9 @@
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func dosboxJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// DOSBox Pure through the shared libretro adapter and the real bridge, running the generated DOS program
 /// (`DOSTestCOM`). DOS runs on its own thread between frames and boots for a while first, so each check
 /// steps until the picture is the expected one, within a frame budget.
@@ -241,6 +244,29 @@ final class DosboxPureCoreTests: GagaTestCase {
         run(core, frames: 240, finger: true)
         core.stop()
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c (scripts/jit26_lldb.py or StikDebug's universal.js). Waits up to
+    /// 120 s for that debugger, then expects the program drawn by the dynamic core: new anonymous executable pages.
+    func testDynamicCoreRunsTheProgramUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return dosboxJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        expectPicture(core, capture)
+        press(core, GAGA_BTN_START)
+        expectPicture(core, capture, presses: 1)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+        core.stop()
     }
 
     /// Each session starts from its own file, also after another file ran in the same process.
