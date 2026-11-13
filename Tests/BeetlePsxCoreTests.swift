@@ -3,6 +3,9 @@ import UIKit
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func beetleJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// Beetle PSX HW through the shared libretro adapter and the real bridge (milestone 5.4): Mednafen's interpreter
 /// and the Vulkan renderer on MoltenVK, presenting to a CAMetalLayer. No Sony BIOS is in the system folder, so the
 /// core boots the OpenBIOS build it embeds. Upstream starts a PS-EXE only by patching a Sony BIOS, and OpenBIOS
@@ -149,6 +152,34 @@ final class BeetlePsxCoreTests: GagaTestCase {
         core.stop()
         // Interpreter only, and MoltenVK's GPU-only shader compiles: no executable CPU pages.
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c. Waits up to 120 s for it, then expects OpenBIOS's screen drawn with
+    /// lightrec running the R3000A: new anonymous executable pages. Skips everywhere else, the simulator included.
+    func testLightrecRunsOpenBIOSUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return beetleJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        run(core, frames: 180)
+        XCTAssertNil(capture.fatal)
+        let pixels = try picture(core)
+        var colors = Set<Int>()
+        for index in stride(from: 0, to: pixels.count - 3, by: 4) {
+            colors.insert(Int(pixels[index]) << 16 | Int(pixels[index + 1]) << 8 | Int(pixels[index + 2]))
+        }
+        XCTAssertGreaterThan(colors.count, 2, "not one flat colour")
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+        core.stop()
     }
 
     /// Beetle loads by path and has no is_rom, so the adapter never opens the file and upstream's refusal is the
