@@ -3,6 +3,9 @@ import UIKit
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func mupenJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// Mupen64Plus-Next through the real bridge (milestone 5.2): the pure interpreter, the cxd4 RSP and
 /// paraLLEl-RDP on MoltenVK, presenting to a CAMetalLayer. The game is N64TestROM, booted by the core's HLE
 /// PIF boot. Device pending: these were built but have not run on a device yet (docs/07 5.2).
@@ -202,6 +205,31 @@ final class Mupen64PlusNextCoreTests: GagaTestCase {
         core.stop()
         // Pure interpreter, cxd4 interpreter, and MoltenVK's GPU-only shader compiles: no executable CPU pages.
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c. Waits up to 120 s for it, then expects the cartridge drawn by the
+    /// R4300 dynarec: new anonymous executable pages. Skips everywhere else, the simulator included.
+    func testDynarecRunsTheHomebrewCartridgeUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return mupenJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        run(core, frames: 10)
+        XCTAssertNil(capture.fatal)
+        try assertPicture(core)
+        run(core, frames: 3, buttons: UInt32(GAGA_BTN_SOUTH.rawValue))
+        try assertPicture(core, keys: N64TestROM.buttonA)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to an interpreter")
+        core.stop()
     }
 
     func testBadFilesGiveAMessageForThePlayer() async throws {
