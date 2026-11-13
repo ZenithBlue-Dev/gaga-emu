@@ -1,6 +1,9 @@
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func picodriveJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// PicoDrive, the sideload-only 32X core and alternate Mega Drive core, through the shared libretro adapter and the real
 /// bridge, running the generated homebrew ROM (`MDTestROM`). No BIOS and no commercial game.
 /// Device-pending: written against a macOS host run of the same core and adapter, not yet run on the iPhone.
@@ -142,6 +145,33 @@ final class PicodriveCoreTests: GagaTestCase {
         try core.loadState(try core.saveState())
         core.stop()
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c. Waits up to 120 s for it, then runs the homebrew ROM with JIT
+    /// requested: the DRC_SH2 build's Mega Drive side draws and reacts as before, and Jit26 gave runnable memory.
+    /// The SH-2 recompiler itself runs only for 32X content, which no generated test ROM provides yet. Skips
+    /// everywhere else, the simulator included.
+    func testJITBuildRunsTheHomebrewROMUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return picodriveJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        XCTAssertNil(capture.fatal)
+        assertPicture(capture)
+        flipToggle(core)
+        assertPicture(capture, toggle: true)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT pages: the debugger gave no runnable memory")
+        core.stop()
     }
 
     /// PicoDrive loads by path and has no is_rom, so the adapter never opens the file and upstream's refusal is the
