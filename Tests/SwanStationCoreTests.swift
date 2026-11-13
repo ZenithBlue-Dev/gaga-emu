@@ -1,6 +1,9 @@
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func swanJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// SwanStation through the shared libretro adapter and the real bridge, with no Sony BIOS in the system folder,
 /// so the core boots the OpenBIOS build it embeds. OpenBIOS does not start `PS1TestEXE`: upstream starts a
 /// PS-EXE by patching a Sony BIOS at fixed offsets, and OpenBIOS refuses a disc with no licence sector. So these
@@ -108,6 +111,35 @@ final class SwanStationCoreTests: GagaTestCase {
         try core.loadState(try core.saveState())
         core.stop()
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c. Waits up to 120 s for it, then expects OpenBIOS's moving screen
+    /// from the AArch64 recompiler: new anonymous executable pages. Skips everywhere else, the simulator included.
+    func testRecompilerRunsOpenBIOSUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return swanJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        run(core, frames: 120)
+        XCTAssertNil(capture.fatal)
+        let first = capture.pixels
+        run(core, frames: 4)
+        XCTAssertNotEqual(capture.pixels, first, "the picture moves")
+        XCTAssertGreaterThan(Int(capture.left.max()!) - Int(capture.left.min()!), 5000, "not silent")
+        try core.loadState(try core.saveState())
+        run(core, frames: 4)
+        XCTAssertNil(capture.fatal)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+        core.stop()
     }
 
     /// SwanStation loads by path and has no is_rom, so the adapter never opens the file and upstream's refusal is
