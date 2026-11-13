@@ -1,6 +1,9 @@
 import XCTest
 @testable import GagaEmu
 
+@_silgen_name("csops")
+private func melonJitTestCsops(_ pid: pid_t, _ ops: UInt32, _ useraddr: UnsafeMutableRawPointer?, _ usersize: Int) -> Int32
+
 /// melonDS DS through the shared libretro adapter and the real bridge, running the generated homebrew ROM
 /// (`NDSTestROM`) on melonDS's free BIOS and built-in firmware.
 final class MelonDSCoreTests: GagaTestCase {
@@ -265,6 +268,31 @@ final class MelonDSCoreTests: GagaTestCase {
         core.stop()
         XCTAssertEqual(capture.width, NDSTestROM.frameWidth)
         XCTAssertEqual(CodeGenCheck.violations(), [])
+    }
+
+    /// Sideload JIT (docs/04 section 8.1): a DevJIT build on a device, run with TEST_RUNNER_GAGA_JIT_TEST=1, with a
+    /// debugger that serves Cores/shared/Jit26.c (scripts/jit26_lldb.py or StikDebug's universal.js). Waits up to
+    /// 120 s for that debugger to attach, then expects the picture drawn from JIT code: new anonymous executable pages.
+    func testJITRunsTheHomebrewProgramUnderADebugger() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["GAGA_JIT_TEST"] == "1", "a DevJIT device run only")
+        func debugged() -> Bool {
+            var flags: UInt32 = 0
+            return melonJitTestCsops(getpid(), 0, &flags, MemoryLayout<UInt32>.size) == 0 && flags & 0x1000_0000 != 0 // CS_DEBUGGED
+        }
+        let deadline = Date().addingTimeInterval(120)
+        while !debugged() && Date() < deadline { try await Task.sleep(for: .seconds(1)) }
+        try XCTSkipUnless(debugged(), "no debugger attached")
+        setenv("GAGA_JIT", "1", 1)
+        defer { setenv("GAGA_JIT", "0", 1) }
+        CodeGenCheck.captureBaseline()
+        let (core, capture) = try await loaded()
+        run(core, frames: 12)
+        assertPicture(capture)
+        run(core, frames: 3, buttons: UInt32(GAGA_BTN_SOUTH.rawValue))
+        assertPicture(capture, keys: 1 << 1) // B, KEYINPUT bit 1
+        XCTAssertNil(capture.fatal)
+        XCTAssertFalse(CodeGenCheck.violations().isEmpty, "no JIT code pages: the core fell back to the interpreter")
+        core.stop()
     }
 
     func testSessionPerLaunchIsFreshEachTime() async throws {

@@ -96,6 +96,8 @@ Run `xcodebuild test` with the same arguments for the tests. For a device build 
 
 For your own device only. It never goes to TestFlight or the App Store: `scripts/nojit-gate.sh` fails any build but a non-archive `DevJIT` one that holds a JIT core or the JIT option. Today PPSSPP and DOSBox Pure (`dosbox_pure`) have JIT builds.
 
+melonDS DS (`melonds_ds`) has one too: `GAGA_JIT=1 scripts/build-core.sh melonds_ds`. Mupen64Plus-Next has none (`docs/04` section 8.1 says why).
+
 ```bash
 GAGA_JIT=1 scripts/build-core.sh ppsspp   # writes build/cores-jit/PpssppCore.xcframework; build/cores is untouched
 scripts/generate-project.sh

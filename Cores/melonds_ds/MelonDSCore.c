@@ -21,6 +21,11 @@ static const GagaLibretroVariable s_variables[] = {
     { "melonds_touch_mode", "touch" }, // Pointer only: the right stick and R2 do not move a cursor.
     { "melonds_show_cursor", "disabled" }, // A finger is the cursor. A drawn one would also change the picture.
     { "melonds_show_bios_warnings", "disabled" },
+#ifdef GAGA_CORE_JIT
+    // Sideload JIT build (jit.env): upstream's default is "enabled". LibretroAdapterJit26.c serves "enabled" only
+    // when Cores/shared/Jit26.c has runnable memory.
+    { "melonds_jit_enable", "disabled" },
+#endif
     { NULL, NULL },
 };
 
