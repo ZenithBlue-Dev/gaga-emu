@@ -98,8 +98,11 @@ function glow(s, x, y, r, color) {
                      background: `radial-gradient(circle, ${color} 0%, transparent 70%)`, zIndex: 1 });
 }
 
-const C = n => `source/cover-${String(n).padStart(2, "0")}.png`;
+// Real box art (scripts/store/real_covers.swift), always thumbnail-sized: never the hero.
+const C = n => `source/covers-real/cover-${String(n).padStart(2, "0")}.png`;
 const S = n => `screens/${n}.png`;
+/// A small cover, w as a fraction of H, 3:4.
+const cover = (s, x, y, w, n, rot = 0, z = 2) => card(s, x, y, w, C(n), { rot, aspect: 3 / 4, z, radius: 0.004 });
 
 function storeShots() {
   pano.style.width = px(9 * W); pano.style.height = px(H);
@@ -110,8 +113,9 @@ function storeShots() {
   background(1, 2, { backgroundImage: "url(source/background.png)" });
   el("div", "bg", { left: "0px", width: px(2 * W), height: px(H), background: "linear-gradient(180deg, rgba(14,10,30,.78) 0%, rgba(14,10,30,.2) 30%, rgba(14,10,30,0) 55%, rgba(14,10,30,.55) 100%)", zIndex: 0 });
   caption(1, "Your games.<br>One app.", "Play homebrew and the backups you own.", { dark: true, size: 0.05 });
-  [[0.29, 0.335, 1, -5], [0.72, 0.36, 3, 4], [0.26, 0.475, 6, 3], [0.73, 0.5, 2, -4], [0.3, 0.615, 9, -3]]
-    .forEach(([x, y, n, r]) => card(1, x, y, 0.165, C(n), { rot: r, z: 2 }));
+  [[0.2, 0.36, 1, -4], [0.42, 0.35, 4, 2], [0.64, 0.37, 2, -2], [0.86, 0.355, 6, 3],
+   [0.25, 0.5, 9, 3], [0.48, 0.51, 3, -3], [0.71, 0.5, 7, 2]]
+    .forEach(([x, y, n, r]) => cover(1, x, y, 0.072, n, r));
   phone(1, 1.0, 0.79, 0.58, S("play-landscape"), { land: true, rot: -5, z: 5 });
   glow(1, 1.0, 0.79, 0.3, "rgba(228,87,46,.35)");
   caption(2, "Landscape, with<br>the controls on top.", "Touch buttons sit over the picture, never in its way.", { dark: true });
@@ -123,8 +127,8 @@ function storeShots() {
   background(3, 1, { background: "var(--paper)" });
   caption(3, "One shelf for the<br>games you own.", "Your own covers, sorted the way you like.");
   phone(3, 0.5, 0.62, 0.68, S("library"), { rot: 0, z: 3 });
-  card(3, 0.17, 0.4, 0.12, C(8), { rot: -9, z: 2 });
-  card(3, 0.84, 0.8, 0.12, C(4), { rot: 7, z: 4 });
+  cover(3, 0.13, 0.4, 0.07, 8, -8);
+  cover(3, 0.87, 0.8, 0.07, 5, 7, 4);
 
   // 4-5: touch, then a controller; the pad sits across the edge.
   background(4, 2, { background: "var(--paper)" });
@@ -151,7 +155,7 @@ function storeShots() {
   // 8: per-game options and cheats.
   background(8, 1, { background: "var(--surface)" });
   caption(8, "Options and cheats<br>for each game.", "Add a code or import a .cht file.");
-  card(8, 0.78, 0.33, 0.17, C(5), { rot: 6, z: 2 });
+  cover(8, 0.84, 0.31, 0.075, 10, 6);
   phone(8, 0.47, 0.64, 0.64, S("cheats"), { rot: -2, z: 3 });
 
   // 9: saves, sync, nearby.
@@ -177,17 +181,20 @@ function artwork(kind) {
     el("div", "rule", { left: px(W * 0.07), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
     head(0.07, 0.33, 0.12, "GagaEmu", "var(--paper)");
     sub(0.072, 0.5, 0.04, "Your games. One app.", "rgba(244,239,230,.85)");
-    [[0.62, 0.22, 1, -6], [0.86, 0.2, 3, 5], [0.9, 0.8, 6, -4], [0.55, 0.82, 2, 4]].forEach(([x, y, n, r]) => card(1, x, y, 0.3, C(n), { rot: r }));
+    // A shelf of small covers along the bottom, under the phone.
+    [1, 4, 2, 6, 9, 3, 7, 5].forEach((n, i) => cover(1, 0.42 + i * 0.068, 0.86, 0.11, n, [-3, 2, -2, 3, -3, 2, -2, 3][i]));
     phone(1, 0.72, 0.52, 0.86, S("play-landscape"), { land: true, rot: -4, z: 5 });
   } else if (kind === "search") {
-    [[0.17, 0.25, 3, -6], [0.83, 0.25, 1, 6], [0.15, 0.76, 9, 5], [0.85, 0.76, 6, -5]].forEach(([x, y, n, r]) => card(1, x, y, 0.3, C(n), { rot: r }));
+    [[0.09, 0.3, 3, -5], [0.2, 0.22, 1, 4], [0.11, 0.72, 9, 4], [0.22, 0.8, 7, -3],
+     [0.8, 0.2, 4, 5], [0.91, 0.3, 2, -4], [0.78, 0.8, 6, -4], [0.89, 0.72, 10, 3]]
+      .forEach(([x, y, n, r]) => cover(1, x, y, 0.13, n, r));
     phone(1, 0.5, 0.5, 0.95, S("play-landscape"), { land: true, rot: -3, z: 5 });
   } else {
     el("div", "rule", { left: px(W * 0.08), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
     head(0.08, 0.33, 0.09, "Pick up where<br>you left off.", "var(--ink)");
     sub(0.082, 0.58, 0.035, "Your shelf, your saves, your games.", "var(--muted)");
-    card(1, 0.86, 0.27, 0.26, C(2), { rot: 6 });
-    card(1, 0.88, 0.75, 0.26, C(8), { rot: -5 });
+    cover(1, 0.89, 0.27, 0.13, 2, 6);
+    cover(1, 0.9, 0.76, 0.13, 8, -5);
     phone(1, 0.66, 0.52, 0.84, S("library"), { rot: -4, z: 5 });
   }
 }

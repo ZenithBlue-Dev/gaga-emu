@@ -1289,6 +1289,8 @@ final class GagaEmuWalkTests: XCTestCase {
     /// App Store screenshots (scripts/store/): a Library of ten invented games with their covers, seeded from
     /// Documents/StoreSeed (scripts/store/seed_device.sh copies it there), then one game played, its pause pages,
     /// and the Settings and Style pages the store shots show. Upright unless named. Shots are `STORE <nn> <what>`.
+    /// `GAGA_STORE_GAME` (TEST_RUNNER_GAGA_STORE_GAME from xcodebuild) names the seeded game to play when the shelf
+    /// is seeded with other titles.
     func testStoreShots() throws {
         continueAfterFailure = true
         XCUIDevice.shared.orientation = .portrait
@@ -1296,7 +1298,8 @@ final class GagaEmuWalkTests: XCTestCase {
         app.launchArguments = ["-GagaStoreSeed", "StoreSeed", "-GagaDefaultDisplay", "-GagaPerRow", "3"]
         app.launchEnvironment["MTL_HUD_ENABLED"] = "0"   // A device with the Metal HUD on would draw it over the game.
         launch(app)
-        let cover = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Neon Starfire")).firstMatch
+        let played = ProcessInfo.processInfo.environment["GAGA_STORE_GAME"] ?? "Neon Starfire"
+        let cover = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", played)).firstMatch
         try arrive(cover, "The seeded Library")
         sleep(10)   // Lets the Game Center welcome banner come and go.
         snapshot("STORE 01 Library")
@@ -1305,7 +1308,7 @@ final class GagaEmuWalkTests: XCTestCase {
         snapshot("STORE 02 Library landscape")
         XCUIDevice.shared.orientation = .portrait
         sleep(3)
-        try guardedTap(cover, "Neon Starfire")
+        try guardedTap(cover, played)
         try arrive(startOnPage(app), "The game page")
         sleep(2)
         snapshot("STORE 03 Game page")
