@@ -1,6 +1,9 @@
 // Turns the device captures of UITests testStoreShots into the screens the store render puts in its frames.
 //
-//     swift -O scripts/store/prep_screens.swift <captures-dir>
+//     swift -O scripts/store/prep_screens.swift <captures-dir> [library-dy]
+//
+// [library-dy] moves the Library's two painted areas up or down, in pixels: the iPhone 17 simulator draws that page
+// 36 px higher than the device (-36). Default 0, the device.
 //
 // <captures-dir> holds the walk's shots as 01.png ... 16.png (the number after "STORE"). Writes
 // design/store/screens/*.png. Each screen is the real capture with only these changes:
@@ -14,7 +17,8 @@ import ImageIO
 import UniformTypeIdentifiers
 
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-guard CommandLine.arguments.count == 2 else { print("usage: prep_screens.swift <captures-dir>"); exit(2) }
+guard (2...3).contains(CommandLine.arguments.count) else { print("usage: prep_screens.swift <captures-dir> [library-dy]"); exit(2) }
+let libraryDY = CommandLine.arguments.count == 3 ? Int(CommandLine.arguments[2])! : 0
 let caps = URL(fileURLWithPath: CommandLine.arguments[1])
 let art = root.appendingPathComponent("design/store/source")
 let out = root.appendingPathComponent("design/store/screens")
@@ -173,8 +177,8 @@ func upright(_ b: Bitmap) -> Bitmap {
 // Library: no system chip, no details line on the Continue card.
 var library = cap(1)
 statusBar(&library)
-cover(&library, 330, 428, 530, 482, sample: (322, 455))
-cover(&library, 374, 716, 524, 826, sample: (364, 700))
+cover(&library, 330, 428 + libraryDY, 530, 482 + libraryDY, sample: (322, 455 + libraryDY))
+cover(&library, 374, 716 + libraryDY, 524, 826 + libraryDY, sample: (364, 700 + libraryDY))
 save(library, "library.png")
 
 // Playing upright: the touch controls below the game.
