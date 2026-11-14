@@ -14,3 +14,10 @@ extern "C"
 #endif
 int gaga_melonds_shm_open(const char* name, int flags, mode_t mode);
 #define shm_open gaga_melonds_shm_open
+// ARMJIT_Memory reserves VirtmemAreaSize (two 4 GiB fastmem windows plus the emulated RAM) with one PROT_NONE mmap.
+// iOS refuses a reservation that large without the extended virtual addressing entitlement, the mmap returns
+// MAP_FAILED, and the first write to DTCM lands at MAP_FAILED plus its offset (device run, 2026-11-14). Without
+// fastmem only the RAM block at the start is used, so that reservation and its munmap shrink to MemoryTotalSize.
+// Keyed on the length, so the fastmem paths' own mappings are unchanged; ARMJIT.cpp maps nothing.
+#define mmap(addr, len, prot, flags, fd, off) mmap(addr, (len) == VirtmemAreaSize ? MemoryTotalSize : (len), prot, flags, fd, off)
+#define munmap(addr, len) munmap(addr, (len) == VirtmemAreaSize ? MemoryTotalSize : (len))
