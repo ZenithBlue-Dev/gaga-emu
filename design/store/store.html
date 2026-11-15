@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  GagaEmu App Store art, laid out in Paper and Ink with the owner's generated art (design/store/source) and real
+  GagaEmu App Store art, laid out in Paper and Ink with the owner's generated art and real covers (design/store/source) and real
   device screens (design/store/screens). scripts/store/render.py opens it in headless Chrome:
     ?w=1320&h=2868&shot=1..9      one store screenshot: the nine sit side by side on one panorama, so the pairs
                                    1-2 and 4-5 share pieces across their edge
@@ -44,6 +44,25 @@ const px = v => v + "px";
 const X = (s, x) => (s - 1 + x) * W;
 
 function background(s, n, css) { el("div", "bg", { left: px(X(s, 0)), width: px(n * W), height: px(H), ...css }); }
+
+// Paper grain, drawn here (no source art): fractal noise in ink at a few percent, tiled at a size tied to H.
+const GRAIN = (a, c) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 ${c[0]} 0 0 0 0 ${c[1]} 0 0 0 0 ${c[2]} 0 0 0 ${a} 0'/></filter><rect width='256' height='256' filter='url(#n)'/></svg>`)}")`;
+
+/// A sheet of paper (light) or ink (dark) across n shots: flat tone, a soft vermilion wash, fine rings round
+/// (cx, cy) in the first shot's coordinates, and grain on top. Calm on purpose: the screens carry the colour.
+function sheet(s, n, { dark = false, tone, cx = 0.5, cy = 0.7, wash = 0.7 } = {}) {
+  const base = tone || (dark ? "var(--ink)" : "var(--paper)");
+  const x = px(cx * W), y = px(cy * H), line = Math.max(1, H * 0.0011), gap = H * 0.03;
+  const ring = dark ? "rgba(244,239,230,.06)" : "rgba(28,26,23,.05)";
+  background(s, n, { background: base, zIndex: 0 });
+  background(s, n, { zIndex: 0, background:
+    `radial-gradient(ellipse ${px(H * 0.75)} ${px(H * 0.55)} at ${x} ${y}, rgba(228,87,46,${dark ? 0.32 * wash : 0.1 * wash}) 0%, transparent 70%),` +
+    `radial-gradient(ellipse ${px(H * 0.9)} ${px(H * 0.6)} at ${px(n * W * 0.15)} 0px, ${dark ? "rgba(244,239,230,.05)" : "rgba(255,255,255,.45)"} 0%, transparent 70%)` });
+  background(s, n, { zIndex: 0, background: `repeating-radial-gradient(circle at ${x} ${y}, ${ring} 0 ${px(line)}, transparent ${px(line)} ${px(gap)})`,
+                     WebkitMaskImage: `radial-gradient(circle ${px(H * 0.62)} at ${x} ${y}, #000 0%, transparent 100%)` });
+  background(s, n, { zIndex: 0, backgroundImage: dark ? GRAIN(0.055, [0.96, 0.94, 0.9]) : GRAIN(0.1, [0.11, 0.1, 0.09]),
+                     backgroundSize: `${px(H * 0.09)} ${px(H * 0.09)}` });
+}
 
 /// An iPhone in a CSS frame. h: screen height (portrait) or screen width (landscape) as a fraction of H.
 function phone(s, x, y, h, src, { rot = 0, land = false, z = 3 } = {}) {
@@ -109,9 +128,8 @@ function storeShots() {
   pano.style.transform = `translateX(${-(shot - 1) * W}px)`;
   document.body.style.width = px(W); document.body.style.height = px(H);
 
-  // 1-2: the hero pair on the starfield, one landscape phone across the edge.
-  background(1, 2, { backgroundImage: "url(source/background.png)" });
-  el("div", "bg", { left: "0px", width: px(2 * W), height: px(H), background: "linear-gradient(180deg, rgba(14,10,30,.78) 0%, rgba(14,10,30,.2) 30%, rgba(14,10,30,0) 55%, rgba(14,10,30,.55) 100%)", zIndex: 0 });
+  // 1-2: the hero pair on an ink sheet, one landscape phone across the edge.
+  sheet(1, 2, { dark: true, cx: 1.0, cy: 0.79, wash: 1 });
   caption(1, "Your games.<br>One app.", "Play homebrew and the backups you own.", { dark: true, size: 0.05 });
   [[0.2, 0.36, 1, -4], [0.42, 0.35, 4, 2], [0.64, 0.37, 2, -2], [0.86, 0.355, 6, 3],
    [0.25, 0.5, 9, 3], [0.48, 0.51, 3, -3], [0.71, 0.5, 7, 2]]
@@ -124,14 +142,14 @@ function storeShots() {
   card(2, 0.78, 0.56, 0.15, "source/game-shooter.png", { rot: -3, z: 2 });
 
   // 3: the Library.
-  background(3, 1, { background: "var(--paper)" });
+  sheet(3, 1, { cy: 0.62 });
   caption(3, "One shelf for the<br>games you own.", "Your own covers, sorted the way you like.");
   phone(3, 0.5, 0.62, 0.68, S("library"), { rot: 0, z: 3 });
   cover(3, 0.13, 0.4, 0.07, 8, -8);
   cover(3, 0.87, 0.8, 0.07, 5, 7, 4);
 
   // 4-5: touch, then a controller; the pad sits across the edge.
-  background(4, 2, { background: "var(--paper)" });
+  sheet(4, 2, { cx: 1.0, cy: 0.62 });
   caption(4, "Touch controls,<br>sized for thumbs.", "Move, resize and fade every button.");
   phone(4, 0.42, 0.56, 0.62, S("play-portrait"), { z: 3 });
   gamepad(4, 1.12, 0.8, 0.4, { rot: -8, z: 5 });
@@ -139,7 +157,7 @@ function storeShots() {
   phone(5, 0.5, 0.43, 0.45, S("play-landscape-3d"), { land: true, rot: 3, z: 3 });
 
   // 6: skins.
-  background(6, 1, { background: "var(--ink)" });
+  sheet(6, 1, { dark: true, cx: 0.38, cy: 0.62, wash: 1 });
   caption(6, "A skin for<br>every grip.", "Standard, low reach or two big buttons.", { dark: true });
   phone(6, 0.38, 0.62, 0.62, S("skin"), { rot: -3, z: 3 });
   card(6, 0.8, 0.5, 0.14, "source/game-dual-top.png", { aspect: 1044 / 804, rot: 4, z: 4 });
@@ -147,19 +165,19 @@ function storeShots() {
   chip(6, 0.79, 0.69, "Two screens, too");
 
   // 7: filters.
-  background(7, 1, { background: "var(--paper)" });
+  sheet(7, 1, { cx: 0.55, cy: 0.66 });
   caption(7, "CRT and LCD<br>filters, live.", "Try each one on your game before you pick.");
   card(7, 0.5, 0.31, 0.3, "source/game-16bit.png", { aspect: 2000 / 1493, rot: -4, z: 2 });
   phone(7, 0.55, 0.66, 0.6, S("filter"), { rot: 2, z: 3 });
 
   // 8: per-game options and cheats.
-  background(8, 1, { background: "var(--surface)" });
+  sheet(8, 1, { tone: "var(--surface)", cx: 0.47, cy: 0.64 });
   caption(8, "Options and cheats<br>for each game.", "Add a code or import a .cht file.");
   cover(8, 0.84, 0.31, 0.075, 10, 6);
   phone(8, 0.47, 0.64, 0.64, S("cheats"), { rot: -2, z: 3 });
 
   // 9: saves, sync, nearby.
-  background(9, 1, { background: "var(--paper)" });
+  sheet(9, 1, { cx: 0.52, cy: 0.64 });
   caption(9, "Saves, iCloud and<br>Play Nearby.", "Save states, game saves and sync across devices.");
   phone(9, 0.36, 0.6, 0.56, S("saves"), { rot: -4, z: 3 });
   phone(9, 0.69, 0.68, 0.56, S("sync"), { rot: 4, z: 4 });
@@ -170,10 +188,9 @@ function artwork(kind) {
   document.body.style.width = px(W); document.body.style.height = px(H);
   const dark = kind !== "retention";
   if (dark) {
-    background(1, 1, { backgroundImage: "url(source/background.png)" });
-    el("div", "bg", { left: "0px", width: px(W), height: px(H), background: "linear-gradient(90deg, rgba(14,10,30,.82) 0%, rgba(14,10,30,.35) 45%, rgba(14,10,30,.1) 100%)" });
+    sheet(1, 1, { dark: true, cx: kind === "header" ? 0.72 : 0.5, cy: 0.52, wash: 1 });
   } else {
-    background(1, 1, { background: "var(--paper)" });
+    sheet(1, 1, { cx: 0.66, cy: 0.52 });
   }
   const head = (x, y, size, text, color) => el("div", "head", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);
   const sub = (x, y, size, text, color) => el("div", "sub", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);

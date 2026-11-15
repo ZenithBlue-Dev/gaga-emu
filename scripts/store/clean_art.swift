@@ -225,7 +225,7 @@ func clean(_ n: Int, _ name: String, _ edit: (inout Bitmap) -> Void = { _ in }) 
     return b
 }
 
-_ = clean(9, "background.png")
+// 9.webp (the starfield background) is no longer used: store.html draws its own paper and ink sheets.
 _ = clean(10, "gamepad.png") { b in
     // Measured on the 2000 x 1493 source: Y top, X left, B right, A bottom. The cluster is greyed first, so the
     // coloured skirts under the caps go too.
