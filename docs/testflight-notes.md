@@ -2,6 +2,16 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611161534), 2026-11-16
+
+JIT status page and core build fixes.
+
+- New: Settings, Help, JIT. It shows that this version runs every core as an interpreter, with no JIT, and lists the cores that have JIT in the separate sideload build.
+- Snes9x is not in this build. Super Nintendo runs on bsnes.
+- Core build fixes. Every core in this build is still an interpreter.
+
+To test: open Settings, Help, JIT and check it says "Not available in this version" and lists 10 cores. Search Settings for "JIT". Play a few games on different systems and check saves and save states still load.
+
 ## 1.0.0 (202611122356), 2026-11-12
 
 Open source and a new Game Boy core.
