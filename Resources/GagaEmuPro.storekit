@@ -73,12 +73,7 @@
           "familyShareable" : true,
           "groupNumber" : 1,
           "internalID" : "6755000002",
-          "introductoryOffer" : {
-            "internalID" : "6755000004",
-            "numberOfPeriods" : 1,
-            "paymentMode" : "free",
-            "subscriptionPeriod" : "P1W"
-          },
+          "introductoryOffer" : null,
           "localizations" : [
             {
               "description" : "GagaEmu Pro, renewed every year.",

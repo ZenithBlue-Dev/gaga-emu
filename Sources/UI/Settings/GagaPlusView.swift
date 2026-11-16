@@ -24,7 +24,7 @@ struct GagaPlusView: View {
         return base + " \(layerPathCores.formatted(.list(type: .and))) \(verb) own 3D picture, so filters do not apply there."
     }
 
-    static let disclosure = "Monthly and Yearly renew automatically unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple Account when you confirm. Any unused free trial ends when you subscribe. Manage or cancel in Settings > Apple Account > Subscriptions. Forever is one payment."
+    static let disclosure = "Monthly and Yearly renew automatically unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple Account when you confirm. Manage or cancel in Settings > Apple Account > Subscriptions. Forever is one payment."
 
     private let benefits: [(String, String)] = [
         ("Fast forward above 2x", "Up to 5x."),
