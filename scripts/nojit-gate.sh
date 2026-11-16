@@ -321,6 +321,11 @@ check_app() {
     fi
     # GAGA_SIDELOAD is a build setting from scripts/generate-project.sh for GAGA_CORE_SET=sideload.
     [ "${GAGA_SIDELOAD:-}" != 1 ] || check_sideload_app "$app"
+    # Sideload unlocks all of Pro for free: a store build (GAGA_RELEASE=1 from scripts/appstore_release.sh) never has it.
+    if [ "${GAGA_SIDELOAD:-}" = 1 ] && [ "${GAGA_RELEASE:-}" = 1 ]; then
+        echo "no-JIT gate: GAGA_SIDELOAD unlocks Pro and is refused in a release build" >&2
+        return 1
+    fi
     # Xcode passes build settings to this step. GAGA_RELEASE=1 comes from scripts/appstore_release.sh, and a
     # build that can sell (PAYWALL_ENABLED) is commercial, so neither may carry a non-commercial core.
     if [ "${GAGA_RELEASE:-}" = 1 ] || [[ " ${SWIFT_ACTIVE_COMPILATION_CONDITIONS:-} " == *" PAYWALL_ENABLED "* ]]; then
