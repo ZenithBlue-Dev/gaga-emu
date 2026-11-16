@@ -94,6 +94,8 @@ Run `xcodebuild test` with the same arguments for the tests. For a device build 
 
 ### Sideload JIT build
 
+To install a prebuilt JIT IPA (SideStore, StikDebug with `universal.js`), see [`docs/release/INSTALL-JIT.md`](./docs/release/INSTALL-JIT.md).
+
 For your own device only. It never goes to TestFlight or the App Store: `scripts/nojit-gate.sh` fails any build but a non-archive `DevJIT` one that holds a JIT core or the JIT option. Today PPSSPP, DOSBox Pure (`dosbox_pure`), melonDS DS (`melonds_ds`), PCSX-ReARMed (`pcsx_rearmed`), SwanStation (`swanstation`), Mupen64Plus-Next (`mupen64plus_next`, R4300 dynarec; the RSP stays an interpreter), Flycast (`flycast`, SH-4 recompiler; the ARM7 and AICA DSP stay interpreters), Beetle PSX HW (`beetle_psx`, lightrec) and PicoDrive (`picodrive`, SH-2 recompiler for the 32X; sideload core set only) have JIT builds. So does Azahar (`azahar`, Dynarmic for the ARM11; PICA200 shaders stay on the interpreter). It needs `git -C Cores/azahar/upstream submodule update --init externals/dynarmic externals/oaknut` and `git -C Cores/azahar/upstream/externals/dynarmic submodule update --init externals/mcl` first.
 
 melonDS DS (`melonds_ds`) has one too: `GAGA_JIT=1 scripts/build-core.sh melonds_ds`.
