@@ -5,13 +5,17 @@
 #pragma once
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// The process runs under a debugger (csops CS_DEBUGGED). Needed before any brk, which would kill it otherwise.
+// The process runs under a debugger: csops CS_DEBUGGED and a live tracer (sysctl KERN_PROC_PID, P_TRACED). Needed
+// before any brk, which would kill it otherwise. CS_DEBUGGED alone stays set after a debugger detaches.
 bool gaga_jit26_debugged(void);
+// The rule above on given flags (csops status, kp_proc.p_flag), for scripts/test-release-gate.sh.
+bool gaga_jit26_may_brk(uint32_t cs_flags, int p_flag);
 // A debugger-prepared RX region, size rounded up to 16 KiB, or NULL. Its RW alias: gaga_jit26_writable.
 void* gaga_jit26_alloc(size_t size);
 void gaga_jit26_free(void* rx, size_t size);

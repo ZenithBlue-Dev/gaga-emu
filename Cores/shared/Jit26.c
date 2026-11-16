@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/proc.h>
+#include <sys/sysctl.h>
 #include <unistd.h>
 
 // scripts/nojit-gate.sh refuses any build but the DevJIT configuration that holds this string (DevJITOption.swift).
@@ -27,13 +29,29 @@ static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 
 #define jit26_log(...) do { printf("[gaga-core] jit26: " __VA_ARGS__); printf("\n"); fflush(stdout); } while (0)
 
-bool gaga_jit26_debugged(void) {
-#if TARGET_OS_SIMULATOR
-    return false;
-#else
-    uint32_t flags = 0;
-    return csops(getpid(), CS_OPS_STATUS, &flags, sizeof flags) == 0 && (flags & CS_DEBUGGED);
+bool gaga_jit26_may_brk(uint32_t cs_flags, int p_flag) {
+    return (cs_flags & CS_DEBUGGED) && (p_flag & P_TRACED);
+}
+
+// Both flags of this process, so the log can say which one is missing.
+static void jit26_flags(uint32_t* cs_flags, int* p_flag) {
+    *cs_flags = 0;
+    *p_flag = 0;
+#if !TARGET_OS_SIMULATOR
+    if (csops(getpid(), CS_OPS_STATUS, cs_flags, sizeof *cs_flags) != 0) *cs_flags = 0;
+    struct kinfo_proc info;
+    size_t len = sizeof info;
+    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid() };
+    memset(&info, 0, sizeof info);
+    if (sysctl(mib, 4, &info, &len, NULL, 0) == 0) *p_flag = info.kp_proc.p_flag;
 #endif
+}
+
+bool gaga_jit26_debugged(void) {
+    uint32_t cs;
+    int p;
+    jit26_flags(&cs, &p);
+    return gaga_jit26_may_brk(cs, p);
 }
 
 // mov x16, #1; brk #0xf00d: the debugger returns the region in x0. Naked, so x0 and x1 reach it untouched.
@@ -124,7 +142,14 @@ bool gaga_jit26_wanted(void) {
         said = state;
         if (state == 0) jit26_log("not requested: interpreter (%s)", s_marker);
         else if (state == 1) jit26_log("JIT engaged");
-        else jit26_log("requested, but no debugger gave runnable memory (debugged=%d): interpreter", gaga_jit26_debugged());
+        else {
+            uint32_t cs;
+            int p;
+            jit26_flags(&cs, &p);
+            // CS_DEBUGGED outlives a detached debugger: without a tracer the brk would be SIGTRAP, so none is issued.
+            if ((cs & CS_DEBUGGED) && !(p & P_TRACED)) jit26_log("requested, but CS_DEBUGGED without a tracer (debugger detached, or no JIT script): interpreter");
+            else jit26_log("requested, but no debugger gave runnable memory (CS_DEBUGGED=%d P_TRACED=%d): interpreter", !!(cs & CS_DEBUGGED), !!(p & P_TRACED));
+        }
     }
     pthread_mutex_unlock(&lock);
     return ok;

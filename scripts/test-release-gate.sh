@@ -167,6 +167,27 @@ if ! grep -qF "\"$marker\"" "$root/Cores/shared/Jit26.c"; then
     echo "FAIL: Cores/shared/Jit26.c does not carry the gate's marker" >&2
     failures=$((failures + 1))
 fi
+# Jit26.c issues brk only with CS_DEBUGGED and P_TRACED: CS_DEBUGGED alone outlives a detached debugger (SIGTRAP).
+# On this Mac, untraced, gaga_jit26_alloc must return NULL rather than trap.
+if [ "$(uname -m)" = arm64 ]; then
+    cat >"$fx/jit26test.c" <<'EOF'
+#include "Jit26.h"
+#include <stdio.h>
+#include <sys/proc.h>
+int main(void) {
+    int bad = 0;
+    bad |= gaga_jit26_may_brk(0x10000000u, 0);
+    bad |= gaga_jit26_may_brk(0, P_TRACED);
+    bad |= !gaga_jit26_may_brk(0x10000000u, P_TRACED);
+    bad |= gaga_jit26_alloc(0x4000) != NULL;
+    return bad;
+}
+EOF
+    if ! cc -I"$root/Cores/shared" "$fx/jit26test.c" "$root/Cores/shared/Jit26.c" -o "$fx/jit26test" || ! "$fx/jit26test" >/dev/null; then
+        echo "FAIL: Cores/shared/Jit26.c may brk without CS_DEBUGGED and P_TRACED" >&2
+        failures=$((failures + 1))
+    fi
+fi
 jit_app="$fx/jitcore/Free.app"
 mkdir -p "$fx/jitcore" && cp -R "$good_app" "$jit_app"
 printf '#include <mach/mach.h>\nconst char m[] __attribute__((used)) = "%s";\nint f(void){return vm_protect(mach_task_self(),0,0,0,0);}\n' "$marker" >"$fx/jitcore.c"
