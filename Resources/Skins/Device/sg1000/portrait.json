@@ -141,7 +141,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#222226",
   "ink" : "#F1F0ECBF",
   "labels" : [
     {
@@ -189,13 +189,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-grape.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#553D7D",
       "ink" : "#F1F0ECBF",
       "name" : "Grape"
     },
     {
       "background" : "portrait-shell-sunflower.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#B68E30",
       "ink" : "#26262BBF",
       "name" : "Sunflower"
     }

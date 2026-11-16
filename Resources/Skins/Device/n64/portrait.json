@@ -234,7 +234,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#4A4B52",
   "ink" : "#F1F0ECBF",
   "labels" : [
     {
@@ -304,13 +304,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-sunflower.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#B68E30",
       "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "portrait-shell-mint.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#709D8A",
       "ink" : "#26262BBF",
       "name" : "Mint"
     }

@@ -273,7 +273,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#161618",
   "ink" : "#F1F0ECBF",
   "labels" : [
     {
@@ -344,13 +344,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-mint.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#709D8A",
       "ink" : "#26262BBF",
       "name" : "Mint"
     },
     {
       "background" : "portrait-shell-coral.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#AE5C4C",
       "ink" : "#26262BBF",
       "name" : "Coral"
     }

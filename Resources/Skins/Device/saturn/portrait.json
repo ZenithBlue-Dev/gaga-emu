@@ -213,7 +213,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#2E2E33",
   "ink" : "#F1F0ECBF",
   "labels" : [
     {
@@ -304,13 +304,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-ocean.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#26567D",
       "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     },
     {
       "background" : "portrait-shell-mint.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#709D8A",
       "ink" : "#26262BBF",
       "name" : "Mint"
     }

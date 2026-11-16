@@ -225,7 +225,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#A1A1A3",
   "ink" : "#26262BBF",
   "labels" : [
     {
@@ -296,13 +296,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-coral.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#AE5C4C",
       "ink" : "#26262BBF",
       "name" : "Coral"
     },
     {
       "background" : "portrait-shell-charcoal.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#26262A",
       "ink" : "#F1F0ECBF",
       "name" : "Charcoal"
     }

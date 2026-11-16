@@ -201,7 +201,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#A1A0A6",
   "ink" : "#26262BBF",
   "labels" : [
     {
@@ -286,13 +286,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-grape.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#553D7D",
       "ink" : "#F1F0ECBF",
       "name" : "Grape"
     },
     {
       "background" : "portrait-shell-ocean.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#26567D",
       "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     }

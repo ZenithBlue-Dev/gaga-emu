@@ -721,7 +721,8 @@ func bezel(_ ctx: CGContext, _ b: CGRect, _ screen: CGRect, _ L: Layout, trim: U
     linear(ctx, path, mix(trim, 0.1), mix(trim, -0.12), b)
     if s.family == .arcade { ctx.addPath(path); ctx.setStrokeColor(col(s.theme.trim)); ctx.setLineWidth(4); ctx.strokePath() }
     let recess = screen.insetBy(dx: -4, dy: -4)
-    ctx.addPath(rounded(recess, 5)); ctx.setFillColor(col(0x050506)); ctx.fillPath()
+    // The recess round the picture in a dark tone of the bezel, not black; the picture covers the screen itself.
+    ctx.addPath(rounded(recess, 5)); ctx.setFillColor(col(mix(trim, -0.35))); ctx.fillPath()
     ctx.setFillColor(col(0x030303)); ctx.fill(screen)
     if led && b.maxY - screen.maxY >= 18 {
         let c = CGPoint(x: b.minX + 18, y: (screen.maxY + b.maxY) / 2 + 2)
@@ -735,15 +736,9 @@ func drawBody(_ ctx: CGContext, _ L: Layout, body: UInt32) {
     ctx.setFillColor(col(0x0C0C0E)); ctx.fill(full)
     let handheld = L.landscape || [.tall, .wide, .clam].contains(s.family)
     if handheld {
-        let shell = full.insetBy(dx: 3, dy: 3)
-        let path = s.bigCorner && !L.landscape ? bodyPath(shell, 50, br: 150) : rounded(shell, L.landscape ? 120 : 52)
-        linear(ctx, path, mix(body, 0.1), mix(body, -0.12), shell)
-        ctx.saveGState(); ctx.addPath(path); ctx.clip()
-        ctx.addPath(path); ctx.setStrokeColor(col(0xFFFFFF, 0.22)); ctx.setLineWidth(3); ctx.strokePath()
-        ctx.restoreGState()
-        let inner = shell.insetBy(dx: 10, dy: 10)
-        ctx.addPath(s.bigCorner && !L.landscape ? bodyPath(inner, 42, br: 140) : rounded(inner, L.landscape ? 110 : 44))
-        ctx.setStrokeColor(col(0, 0.12)); ctx.setLineWidth(1); ctx.strokePath()
+        // The shell fills the whole canvas, edge to edge: the phone's own display corners round it, so no black
+        // shows in the corners or along the edges.
+        linear(ctx, CGPath(rect: full, transform: nil), mix(body, 0.1), mix(body, -0.12), full)
         if let h = L.hinge {
             linear(ctx, CGPath(rect: h, transform: nil), mix(body, -0.35), mix(body, -0.1), h)
             ctx.setFillColor(col(0, 0.25)); ctx.fill(r(h.minX, h.minY, h.width, 1)); ctx.fill(r(h.minX, h.maxY - 1, h.width, 1))
@@ -755,7 +750,8 @@ func drawBody(_ ctx: CGContext, _ L: Layout, body: UInt32) {
         }
     } else {
         // Portrait home systems: a screen surround up top, the controller, panel or keyboard below.
-        linear(ctx, CGPath(rect: full, transform: nil), 0x1C1B21, 0x0B0B0E, full)
+        // A darker tone of the body behind it all, edge to edge, so no black shows round the panel.
+        linear(ctx, CGPath(rect: full, transform: nil), mix(body, -0.05), mix(body, -0.2), full)
         if let p = L.panel {
             let path: CGPath
             switch (s.family, s.pad) {
@@ -852,7 +848,7 @@ func json(_ L: Layout, prefix: String) -> [String: Any] {
     let s = L.spec
     // The colour at the canvas edge, for filling a taller or wider screen than the canvas.
     let handheld = L.landscape || [.tall, .wide, .clam].contains(s.family)
-    func edge(_ body: UInt32) -> String { hex(handheld ? body : 0x0B0B0E) }
+    func edge(_ body: UInt32) -> String { hex(handheld ? body : mix(body, -0.2)) }
     let under = !L.landscape && s.family == .pad && s.pad == .rect ? s.theme.trim : s.theme.body
     let texts = labels(L, under: under).map { l -> [String: Any] in
         var o: [String: Any] = ["text": l.text, "x": round4(l.center.x / L.size.width), "y": round4(l.center.y / L.size.height),

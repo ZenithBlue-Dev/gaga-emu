@@ -141,7 +141,7 @@
     "height" : 852,
     "width" : 393
   },
-  "fill" : "#0B0B0E",
+  "fill" : "#151515",
   "ink" : "#F1F0ECBF",
   "labels" : [
     {
@@ -182,13 +182,13 @@
   "variants" : [
     {
       "background" : "portrait-shell-sunflower.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#B68E30",
       "ink" : "#26262BBF",
       "name" : "Sunflower"
     },
     {
       "background" : "portrait-shell-ocean.pdf",
-      "fill" : "#0B0B0E",
+      "fill" : "#26567D",
       "ink" : "#F1F0ECBF",
       "name" : "Ocean"
     }
