@@ -4,7 +4,7 @@
   device screens (design/store/screens). scripts/store/render.py opens it in headless Chrome:
     ?w=1320&h=2868&shot=1..9      one store screenshot: the nine sit side by side on one panorama, so the pairs
                                    1-2 and 4-5 share pieces across their edge
-    ?w=5244&h=2950&art=header     header, search and retention artwork
+    ?w=5244&h=2950&art=header     header (5244x2950), search (3840x1646) and retention artwork
   Device frames are plain CSS. Positions: x as a fraction of the shot width (1.0 is the next shot's edge),
   y and sizes as fractions of the height, so one layout serves every size.
 -->
@@ -194,24 +194,30 @@ function artwork(kind) {
   document.body.style.width = px(W); document.body.style.height = px(H);
   const dark = kind !== "retention";
   if (dark) {
-    sheet(1, 1, { dark: true, cx: kind === "header" ? 0.72 : 0.5, cy: 0.52, wash: 1 });
+    sheet(1, 1, { dark: true, cx: 0.5, cy: 0.52, wash: 1 });
   } else {
     sheet(1, 1, { cx: 0.66, cy: 0.52 });
   }
   const head = (x, y, size, text, color) => el("div", "head", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);
   const sub = (x, y, size, text, color) => el("div", "sub", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);
-  if (kind === "header") {
-    el("div", "rule", { left: px(W * 0.07), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
-    head(0.07, 0.33, 0.12, "GagaEmu", "var(--paper)");
-    sub(0.072, 0.5, 0.04, "Your games. One app.", "rgba(244,239,230,.85)");
-    // A shelf of small covers along the bottom, under the phone.
-    [1, 4, 2, 6, 9, 3, 7, 5].forEach((n, i) => cover(1, 0.42 + i * 0.068, 0.86, 0.11, n, [-3, 2, -2, 3, -3, 2, -2, 3][i]));
-    phone(1, 0.72, 0.52, 0.86, S("play-landscape"), { land: true, rot: -4, z: 5 });
-  } else if (kind === "search") {
-    [[0.09, 0.3, 3, -5], [0.2, 0.22, 1, 4], [0.11, 0.72, 9, 4], [0.22, 0.8, 7, -3],
-     [0.8, 0.2, 4, 5], [0.91, 0.3, 2, -4], [0.78, 0.8, 6, -4], [0.89, 0.72, 10, 3]]
-      .forEach(([x, y, n, r]) => cover(1, x, y, 0.13, n, r));
-    phone(1, 0.5, 0.5, 0.95, S("play-landscape"), { land: true, rot: -3, z: 5 });
+  if (kind === "header" || kind === "search") {
+    // App Store Connect crops these across orientations: icon, wordmark and line stay in the centre column,
+    // and the small covers (a 3 x 3 grid each side) are the only thing allowed to fall off the edges.
+    const g = kind === "header" ? { cw: 0.12, xs: [0.07, 0.16, 0.25], icon: 0.2, iy: 0.28, wy: 0.4, ws: 0.13, ly: 0.6, ls: 0.04 }
+                                : { cw: 0.16, xs: [0.06, 0.15, 0.24], icon: 0.24, iy: 0.26, wy: 0.4, ws: 0.15, ly: 0.64, ls: 0.05 };
+    const rots = [-4, 3, -2, 2, -3, 4, 3, -2, -4];
+    [0, 1].forEach(side => g.xs.forEach((x, c) => [0.2, 0.5, 0.8].forEach((y, r) => {
+      const i = side * 9 + c * 3 + r;
+      cover(1, side ? 1 - x : x, y, g.cw, (i % 10) + 1, rots[i % 9] * (side ? -1 : 1));
+    })));
+    const s = g.icon * H;
+    el("img", "abs", { left: px(W / 2 - s / 2), top: px(g.iy * H - s / 2), width: px(s), height: px(s), borderRadius: px(s * 0.2237),
+                       boxShadow: `0 ${px(H * 0.02)} ${px(H * 0.05)} rgba(0,0,0,.45)`, zIndex: 6 })
+      .src = "../../Sources/App/Assets.xcassets/AppIcon.appiconset/AppIcon.png";
+    el("div", "head", { left: 0, width: px(W), textAlign: "center", top: px(H * g.wy), fontSize: px(H * g.ws), color: "var(--paper)", zIndex: 6 }, "GagaEmu");
+    el("div", "rule", { left: px(W / 2 - H * 0.04), top: px(H * (g.ly - 0.035)), width: px(H * 0.08), height: px(H * 0.006), zIndex: 6 });
+    el("div", "sub", { left: 0, width: px(W), textAlign: "center", top: px(H * g.ly), fontSize: px(H * g.ls), color: "rgba(244,239,230,.85)", zIndex: 6 },
+       "Your games. One app.");
   } else {
     el("div", "rule", { left: px(W * 0.08), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
     head(0.08, 0.33, 0.09, "Pick up where<br>you left off.", "var(--ink)");

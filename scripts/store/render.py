@@ -6,7 +6,7 @@
 
 Inputs: design/store/source (scripts/store/clean_art.swift) and design/store/screens (scripts/store/prep_screens.swift).
 Outputs: AppStore/screenshots/en-US/<folder>/01..09.png, in the folders and sizes scripts/appstore_metadata.py
-uploads (portrait), and design/store/header-5244x2950.png, search-3840x2560.png, retention-3840x2160.png.
+uploads (portrait), AppStore/creative/header-5244x2950.png and search-3840x1646.png, and design/store/retention-3840x2160.png.
 Each shot is its own Chrome window onto the one panorama, so the pairs 1-2 and 4-5 meet exactly at their edge.
 Chrome writes RGB PNGs with no alpha channel; the check below fails if one ever has alpha or the wrong size.
 """
@@ -23,7 +23,9 @@ PAGE = ROOT / "design/store/store.html"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 # Folder -> portrait size, as scripts/appstore_metadata.py SCREENSHOT_TYPES / SCREENSHOT_SIZES expect.
 SHOTS = {"iphone-6.9": (1320, 2868), "iphone-6.3": (1206, 2622), "ipad-13": (2064, 2752)}
-ART = {"header": (5244, 2950), "search": (3840, 2560), "retention": (3840, 2160)}
+ART = {"header": (5244, 2950), "search": (3840, 1646), "retention": (3840, 2160)}
+# Product page creative (App Store Connect "Header" and "Search Results") goes in AppStore/creative; the rest in design/store.
+ART_DIR = {"header": "AppStore/creative", "search": "AppStore/creative"}
 
 
 def png_info(path):
@@ -59,7 +61,8 @@ def main():
         for name, (w, h) in ART.items():
             if only and only != name:
                 continue
-            dest = ROOT / f"design/store/{name}-{w}x{h}.png"
+            dest = ROOT / ART_DIR.get(name, "design/store") / f"{name}-{w}x{h}.png"
+            dest.parent.mkdir(parents=True, exist_ok=True)
             chrome(f"{PAGE.as_uri()}?w={w}&h={h}&art={name}", (w, h), dest, tmp)
             print(f"{dest.relative_to(ROOT)}")
 

@@ -3,7 +3,7 @@ GagaEmu is a retro game emulator (App Review Guideline 4.7) with 30 interpreter 
 No account, login or demo account is needed. The app has no analytics, advertising or tracking. Optional services, all off until the user turns them on: Cover Art (Settings > Library) sends game titles to thumbnails.libretro.com to look up box art; RetroAchievements sign-in uses the user's own retroachievements.org account; iCloud sync (Pro) uses the user's private iCloud container.
 
 How to test with a game:
-- The attachment GagaEmu-test-pattern.zip holds a homebrew test ROM we wrote (colour bars, no third-party code); GagaEmu unpacks the zip on import. Save it to Files, then in GagaEmu open the Import tab, tap Choose from Files and pick it. It appears on the shelf; tap it to play with the on-screen touch controls. The menu button pauses the game: save a state, fast forward, filters, or stop.
+- The attachment GagaEmu-test-pattern.zip is a zip archive holding one file, GagaEmu-test-pattern.gba, a 4 KB homebrew test ROM we wrote (colour bars, no third-party code); GagaEmu unpacks the zip on import. Save it to Files, then in GagaEmu open the Import tab, tap Choose from Files and pick it. It appears on the shelf; tap it to play with the on-screen touch controls. The menu button pauses the game: save a state, fast forward, filters, or stop.
 - Files can also be copied into GagaEmu with the Files app (On My iPhone or On My iPad > GagaEmu).
 - Without any game, the Library starts empty because the app ships without software; Settings works fully.
 
