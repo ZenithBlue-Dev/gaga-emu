@@ -123,6 +123,7 @@ struct SettingsView: View {
         case .guides: GuidesView()
         case .licences: LicencesView()
         case .aboutUs: AboutUsView()
+        case .jit: JITStatusView()
         }
     }
 
@@ -651,6 +652,8 @@ private struct HelpPane: View {
         LinkRow(title: "Support and FAQ", url: SiteLinks.support, tile: .symbol("questionmark.bubble"))
         Rule()
         ActionRow(title: "About Us", tile: .symbol("info.circle")) { openSetting(.aboutUs) }
+        Rule()
+        ActionRow(title: "JIT", value: JITStatus.status, tile: .symbol("bolt")) { openSetting(.jit) }
         Rule()
         ValueRow(title: "Version", value: version, tile: .symbol("number"))
         Rule()

@@ -301,6 +301,19 @@ enum CoreCatalog {
         platforms.flatMap(\.cores).first { $0.id == id }?.name ?? id
     }
 
+    /// Cores with a sideload JIT build (Cores/<id>/jit.env, built into build/cores-jit). Names only: a store build
+    /// holds no JIT code. DevJITOption reads this list, Settings > Help > JIT shows it.
+    static let sideloadJITCores = ["ppsspp", "dosbox_pure", "melonds_ds", "pcsx_rearmed", "swanstation",
+                                   "mupen64plus_next", "flycast", "azahar", "beetle_psx", "picodrive"]
+
+    /// Each JIT core's name and systems, from every platform: cores this build left out are listed too.
+    static var sideloadJITCoreRows: [(name: String, systems: String)] {
+        sideloadJITCores.map { id in
+            let systems = allPlatforms.filter { $0.cores.contains { $0.id == id } }
+            return (systems.flatMap(\.cores).first { $0.id == id }?.name ?? id, systems.map(\.name).joined(separator: ", "))
+        }
+    }
+
     /// Extension to platform. Used by import.
     static func platformID(forExtension ext: String) -> String? {
         switch ext.lowercased() {

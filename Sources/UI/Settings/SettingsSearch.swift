@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A sheet or cover a Settings pane opens. Panes open them through `openSetting`, so a search result can too.
 enum SettingsTarget: String, Identifiable {
-    case bios, achievements, skins, filters, layout, look, screen, mapping, macros, turbo, players, guides, licences, aboutUs
+    case bios, achievements, skins, filters, layout, look, screen, mapping, macros, turbo, players, guides, licences, aboutUs, jit
     var id: String { rawValue }
     var fullScreen: Bool { self == .licences }
 
@@ -131,6 +131,8 @@ struct SettingEntry: Identifiable, Hashable {
               category: .gagaPlus, symbol: "star.circle"),
         .init(title: "Guides", keywords: ["help", "how", "guide", "tutorial", "faq"], category: .help, symbol: "book", target: .guides),
         .init(title: "About Us", keywords: ["about", "version", "build"], category: .help, symbol: "info.circle", target: .aboutUs),
+        .init(title: "JIT", keywords: ["jit", "speed", "fast", "sideload", "stikdebug", "debugger", "dynarec", "recompiler"],
+              category: .help, symbol: "bolt", target: .jit),
         .init(title: "Licences", keywords: ["licence", "license", "open source", "credits", "gpl"], category: .help, symbol: "doc.text", target: .licences),
         .init(title: "Support and Feedback", keywords: ["support", "feedback", "contact", "privacy", "terms"], category: .help, symbol: "envelope"),
         .init(title: "Reset Tips", keywords: ["tips", "hints"], category: .help, symbol: "lightbulb")
