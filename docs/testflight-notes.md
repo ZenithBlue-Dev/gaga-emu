@@ -2,6 +2,16 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.0 (202611162018), 2026-11-16
+
+Device skins fill the screen.
+
+- Device skins now fill the whole screen edge to edge, with no black corners or edges.
+- The paywall no longer mentions a free trial.
+- App Store listing and screenshot fixes.
+
+To test: open Settings, pick a few device skins, and check each fills the whole screen in portrait and landscape with no black corners. Open the GagaEmu Pro paywall and check it has no free trial line.
+
 ## 1.0.0 (202611161534), 2026-11-16
 
 JIT status page and core build fixes.
