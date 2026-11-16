@@ -2,6 +2,7 @@
 //
 //     swift -O scripts/store/prep_screens.swift <captures-dir> [library-dy]
 //     swift -O scripts/store/prep_screens.swift --ipad <captures-dir>    iPad Pro 13-inch simulator, to screens-ipad
+//     swift -O scripts/store/prep_screens.swift --shelves <dir>          Library and shot 10 only (see below)
 //
 // [library-dy] moves the Library's two painted areas up or down, in pixels: the iPhone 17 simulator draws that page
 // 36 px higher than the device (-36). Default 0, the device.
@@ -20,7 +21,7 @@ import UniformTypeIdentifiers
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
 // --ipad: captures from the iPad Pro 13-inch simulator (2064x2752), written to design/store/screens-ipad.
 let ipad = CommandLine.arguments.contains("--ipad")
-let args = CommandLine.arguments.filter { $0 != "--ipad" }
+let args = CommandLine.arguments.filter { $0 != "--ipad" && $0 != "--shelves" }
 guard (2...3).contains(args.count) else { print("usage: prep_screens.swift [--ipad] <captures-dir> [library-dy]"); exit(2) }
 let libraryDY = args.count == 3 ? Int(args[2])! : 0
 let caps = URL(fileURLWithPath: args[1])
@@ -217,6 +218,20 @@ func dimmedGame(_ b: inout Bitmap, _ name: String) {
         let p = a[x - x0, y - y0]
         b[x, y] = (p.0 * k + off, p.1 * k + off, p.2 * k + off)
     } }
+}
+
+// --shelves <dir>: only the Library (library.png: the 3DS, DS and PSP shelves seeded with lesser-known and invented
+// covers) and shot 10's skin in play (play.png: the test ROM in the GBA device skin), both from the iPhone.
+// The game area gets our own village art, so no real game shows in the skin.
+if CommandLine.arguments.contains("--shelves") {
+    let dir = URL(fileURLWithPath: CommandLine.arguments.last!)
+    var library = load(dir.appendingPathComponent("library.png"))
+    statusBar(&library)
+    save(library, "library.png")
+    var play = load(dir.appendingPathComponent("play.png"))
+    game(&play, barsRect(play, within: (0, 0, play.w, play.h / 2)), "game-16bit.png", unmix: false)
+    save(play, "skin-play.png")
+    exit(0)
 }
 
 if ipad {

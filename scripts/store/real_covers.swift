@@ -1,4 +1,4 @@
-// Cuts the real box art used, small, on the store shelves into design/store/source/covers-real/cover-01..10.png
+// Cuts the real box art used, small, on the store shelves into design/store/source/covers-real/cover-01..16.png
 // (600 x 800, the Library's 3:4).
 //
 //     swift scripts/store/real_covers.swift <boxarts-dir>
@@ -18,16 +18,24 @@ try FileManager.default.createDirectory(at: out, withIntermediateDirectories: tr
 
 // Source file and crop (x0, y0, x1, y1) as fractions of the box art, top-left origin.
 let covers: [(file: String, crop: (Double, Double, Double, Double))] = [
-    ("01", (0.19, 0.00, 0.83, 0.82)),   // Game Boy Advance
-    ("02", (0.00, 0.00, 0.45, 0.80)),   // Super NES
-    ("03", (0.04, 0.00, 0.96, 0.84)),   // NES
-    ("04", (0.10, 0.09, 0.90, 0.86)),   // Mega Drive
-    ("05", (0.16, 0.00, 0.88, 1.00)),   // PlayStation
-    ("06", (0.05, 0.02, 0.55, 0.98)),   // Nintendo 64
-    ("07", (0.21, 0.00, 0.84, 0.76)),   // Game Boy Color
-    ("08", (0.12, 0.00, 0.79, 0.90)),   // PC Engine
-    ("11", (0.12, 0.00, 0.85, 0.95)),   // Dreamcast
-    ("13", (0.19, 0.00, 0.78, 0.78)),   // Game Boy
+    // Lesser-known titles only: no big franchises or console makers' mascots on the store pages.
+    ("01", (0.36, 0.00, 1.00, 0.84)),   // Game Boy Advance
+    ("02", (0.00, 0.06, 0.45, 0.76)),   // Super NES
+    ("03", (0.00, 0.045, 1.00, 0.86)),  // NES
+    ("04", (0.18, 0.09, 1.00, 0.87)),   // Mega Drive
+    ("05", (0.15, 0.00, 1.00, 0.93)),   // PlayStation
+    ("06", (0.00, 0.00, 0.62, 0.86)),   // Nintendo 64
+    ("07", (0.22, 0.00, 1.00, 0.68)),   // Game Boy Color
+    ("08", (0.00, 0.00, 0.75, 0.85)),   // PC Engine
+    ("09", (0.15, 0.00, 1.00, 0.80)),   // Dreamcast
+    ("10", (0.21, 0.12, 1.00, 0.80)),   // Game Boy
+    // 11-16 seed the Library capture's 3DS, PSP and DS shelves.
+    ("11", (0.10, 0.00, 0.88, 0.80)),   // Nintendo 3DS
+    ("12", (0.00, 0.00, 0.88, 0.93)),   // Nintendo 3DS
+    ("13", (0.00, 0.04, 1.00, 0.88)),   // PSP
+    ("14", (0.00, 0.04, 1.00, 0.86)),   // PSP
+    ("15", (0.16, 0.00, 1.00, 0.78)),   // Nintendo DS
+    ("16", (0.16, 0.18, 0.95, 0.92)),   // Nintendo DS
 ]
 
 let W = 600, H = 800
