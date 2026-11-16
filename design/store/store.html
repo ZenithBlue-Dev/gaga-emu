@@ -2,7 +2,7 @@
 <!--
   GagaEmu App Store art, laid out in Paper and Ink with the owner's generated art and real covers (design/store/source) and real
   device screens (design/store/screens). scripts/store/render.py opens it in headless Chrome:
-    ?w=1320&h=2868&shot=1..9      one store screenshot: the nine sit side by side on one panorama, so the pairs
+    ?w=1320&h=2868&shot=1..10     one store screenshot: the ten sit side by side on one panorama, so the pairs
                                    1-2 and 4-5 share pieces across their edge
     ?w=5244&h=2950&art=header     header (5244x2950), search (3840x2560) and retention artwork
   Device frames are plain CSS. Positions: x as a fraction of the shot width (1.0 is the next shot's edge),
@@ -53,17 +53,18 @@ const GRAIN = (a, c) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmln
 
 /// A sheet of paper (light) or ink (dark) across n shots: flat tone, a soft vermilion wash, fine rings round
 /// (cx, cy) in the first shot's coordinates, and grain on top. Calm on purpose: the screens carry the colour.
-function sheet(s, n, { dark = false, tone, cx = 0.5, cy = 0.7, wash = 0.7 } = {}) {
+/// z lifts the sheet over a neighbour's pieces that would cross its edge.
+function sheet(s, n, { dark = false, tone, cx = 0.5, cy = 0.7, wash = 0.7, z = 0 } = {}) {
   const base = tone || (dark ? "var(--ink)" : "var(--paper)");
   const x = px(cx * W), y = px(cy * H), line = Math.max(1, H * 0.0011), gap = H * 0.03;
   const ring = dark ? "rgba(244,239,230,.06)" : "rgba(28,26,23,.05)";
-  background(s, n, { background: base, zIndex: 0 });
-  background(s, n, { zIndex: 0, background:
+  background(s, n, { background: base, zIndex: z });
+  background(s, n, { zIndex: z, background:
     `radial-gradient(ellipse ${px(H * 0.75)} ${px(H * 0.55)} at ${x} ${y}, rgba(228,87,46,${dark ? 0.32 * wash : 0.1 * wash}) 0%, transparent 70%),` +
     `radial-gradient(ellipse ${px(H * 0.9)} ${px(H * 0.6)} at ${px(n * W * 0.15)} 0px, ${dark ? "rgba(244,239,230,.05)" : "rgba(255,255,255,.45)"} 0%, transparent 70%)` });
-  background(s, n, { zIndex: 0, background: `repeating-radial-gradient(circle at ${x} ${y}, ${ring} 0 ${px(line)}, transparent ${px(line)} ${px(gap)})`,
+  background(s, n, { zIndex: z, background: `repeating-radial-gradient(circle at ${x} ${y}, ${ring} 0 ${px(line)}, transparent ${px(line)} ${px(gap)})`,
                      WebkitMaskImage: `radial-gradient(circle ${px(H * 0.62)} at ${x} ${y}, #000 0%, transparent 100%)` });
-  background(s, n, { zIndex: 0, backgroundImage: dark ? GRAIN(0.055, [0.96, 0.94, 0.9]) : GRAIN(0.1, [0.11, 0.1, 0.09]),
+  background(s, n, { zIndex: z, backgroundImage: dark ? GRAIN(0.055, [0.96, 0.94, 0.9]) : GRAIN(0.1, [0.11, 0.1, 0.09]),
                      backgroundSize: `${px(H * 0.09)} ${px(H * 0.09)}` });
 }
 
@@ -102,7 +103,7 @@ function gamepad(s, x, y, w, { rot = 0, z = 4 } = {}) {
 /// The caption: a short vermilion rule, the headline and a quiet line under it.
 function caption(s, title, sub, { dark = false, size = 0.034, top = 0.062 } = {}) {
   const left = X(s, 0.085), width = W * 0.83;
-  el("div", "rule", { left: px(left), top: px(H * top), width: px(H * 0.05) });
+  el("div", "rule", { left: px(left), top: px(H * top), width: px(H * 0.05), zIndex: 6 });
   el("div", "head", { left: px(left), top: px(H * (top + 0.016)), width: px(width), fontSize: px(H * size),
                       color: dark ? "var(--paper)" : "var(--ink)", zIndex: 6 }, title);
   if (sub) el("div", "sub", { left: px(left), top: px(H * (top + 0.03 + size * 1.08 * title.split("<br>").length)), width: px(width),
@@ -128,7 +129,7 @@ const S = n => `${P("screens", "screens-ipad")}/${n}.png`;
 const cover = (s, x, y, w, n, rot = 0, z = 2) => card(s, x, y, w, C(n), { rot, aspect: 3 / 4, z, radius: 0.004 });
 
 function storeShots() {
-  pano.style.width = px(9 * W); pano.style.height = px(H);
+  pano.style.width = px(10 * W); pano.style.height = px(H);
   pano.style.transform = `translateX(${-(shot - 1) * W}px)`;
   document.body.style.width = px(W); document.body.style.height = px(H);
 
@@ -187,6 +188,14 @@ function storeShots() {
   phone(9, P(0.36, 0.33), P(0.6, 0.56), P(0.56, 0.46), S("saves"), { rot: -4, z: 3 });
   phone(9, P(0.69, 0.67), P(0.68, 0.7), P(0.56, 0.46), S("sync"), { rot: 4, z: 4 });
   chip(9, 0.5, 0.205, "iCloud sync with GagaEmu Pro", { dark: true });
+
+  // 10 (iPhone only): a device skin in play, captured on an iPhone, with three more of our skins beside it.
+  // z 5: shot 9's right phone crosses this edge; the sheet hides it here, so this shot's pieces sit at 6 and up.
+  sheet(10, 1, { dark: true, cx: 0.42, cy: 0.62, wash: 1, z: 5 });
+  caption(10, "Make the controls<br>yours.", "A skin drawn for each system, or move every button.", { dark: true });
+  phone(10, 0.42, P(0.62, 0.6), P(0.66, 0.62), S("skin-play"), { rot: -3, z: 6 });
+  [["megadrive", 0.4, 5], ["lynx", 0.62, -4], ["ws", 0.84, 4]]
+    .forEach(([name, y, r]) => card(10, 0.86, y, 0.1, `source/skins/${name}-portrait.png`, { aspect: 786 / 1704, rot: r, z: 7, radius: 0.008 }));
 }
 
 function artwork(kind) {

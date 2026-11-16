@@ -5,7 +5,7 @@
     scripts/store/render.py --only iphone-6.9
 
 Inputs: design/store/source (scripts/store/clean_art.swift) and design/store/screens (scripts/store/prep_screens.swift).
-Outputs: AppStore/screenshots/en-US/<folder>/01..09.png, in the folders and sizes scripts/appstore_metadata.py
+Outputs: AppStore/screenshots/en-US/<folder>/01..10.png (iPad 01..09), in the folders and sizes scripts/appstore_metadata.py
 uploads (portrait), AppStore/creative/header-5244x2950.png and search-3840x2560.png, and design/store/retention-3840x2160.png.
 Each shot is its own Chrome window onto the one panorama, so the pairs 1-2 and 4-5 meet exactly at their edge.
 Chrome writes RGB PNGs with no alpha channel; the check below fails if one ever has alpha or the wrong size.
@@ -54,10 +54,11 @@ def main():
                 continue
             out = ROOT / "AppStore/screenshots/en-US" / folder
             out.mkdir(parents=True, exist_ok=True)
-            for shot in range(1, 10):
-                ipad = "&ipad=1" if folder.startswith("ipad") else ""   # iPad frames and design/store/screens-ipad
+            ipad = "&ipad=1" if folder.startswith("ipad") else ""   # iPad frames and design/store/screens-ipad
+            count = 9 if ipad else 10   # shot 10 is an iPhone capture; the iPad has none
+            for shot in range(1, count + 1):
                 chrome(f"{PAGE.as_uri()}?w={w}&h={h}&shot={shot}{ipad}", (w, h), out / f"{shot:02d}.png", tmp)
-            print(f"{folder}: 9 shots, {w}x{h}")
+            print(f"{folder}: {count} shots, {w}x{h}")
         for name, (w, h) in ART.items():
             if only and only != name:
                 continue
