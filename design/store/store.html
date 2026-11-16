@@ -4,7 +4,7 @@
   device screens (design/store/screens). scripts/store/render.py opens it in headless Chrome:
     ?w=1320&h=2868&shot=1..9      one store screenshot: the nine sit side by side on one panorama, so the pairs
                                    1-2 and 4-5 share pieces across their edge
-    ?w=5244&h=2950&art=header     header (5244x2950), search (3840x1646) and retention artwork
+    ?w=5244&h=2950&art=header     header (5244x2950), search (3840x2560) and retention artwork
   Device frames are plain CSS. Positions: x as a fraction of the shot width (1.0 is the next shot's edge),
   y and sizes as fractions of the height, so one layout serves every size.
 -->
@@ -203,8 +203,9 @@ function artwork(kind) {
   if (kind === "header" || kind === "search") {
     // App Store Connect crops these across orientations: icon, wordmark and line stay in the centre column,
     // and the small covers (a 3 x 3 grid each side) are the only thing allowed to fall off the edges.
+    // Search (3840x2560) is narrower than the header, so smaller covers further out and a smaller wordmark.
     const g = kind === "header" ? { cw: 0.12, xs: [0.07, 0.16, 0.25], icon: 0.2, iy: 0.28, wy: 0.4, ws: 0.13, ly: 0.6, ls: 0.04 }
-                                : { cw: 0.16, xs: [0.06, 0.15, 0.24], icon: 0.24, iy: 0.26, wy: 0.4, ws: 0.15, ly: 0.64, ls: 0.05 };
+                                : { cw: 0.1, xs: [0.05, 0.12, 0.19], icon: 0.17, iy: 0.3, wy: 0.41, ws: 0.1, ly: 0.57, ls: 0.035 };
     const rots = [-4, 3, -2, 2, -3, 4, 3, -2, -4];
     [0, 1].forEach(side => g.xs.forEach((x, c) => [0.2, 0.5, 0.8].forEach((y, r) => {
       const i = side * 9 + c * 3 + r;
