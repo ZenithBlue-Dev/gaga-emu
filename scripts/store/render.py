@@ -53,7 +53,8 @@ def main():
             out = ROOT / "AppStore/screenshots/en-US" / folder
             out.mkdir(parents=True, exist_ok=True)
             for shot in range(1, 10):
-                chrome(f"{PAGE.as_uri()}?w={w}&h={h}&shot={shot}", (w, h), out / f"{shot:02d}.png", tmp)
+                ipad = "&ipad=1" if folder.startswith("ipad") else ""   # iPad frames and design/store/screens-ipad
+                chrome(f"{PAGE.as_uri()}?w={w}&h={h}&shot={shot}{ipad}", (w, h), out / f"{shot:02d}.png", tmp)
             print(f"{folder}: 9 shots, {w}x{h}")
         for name, (w, h) in ART.items():
             if only and only != name:

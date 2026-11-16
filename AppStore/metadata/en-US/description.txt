@@ -21,13 +21,16 @@ PLAYING
 - Custom skins for the touch controls.
 
 GAGAEMU PRO
-Every system and core is free to play, with no ads and no sign-in. GagaEmu Pro is an optional subscription or one-time purchase. It adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and colours.
+All 30 emulator cores are free to play, with no ads and no sign-in. GagaEmu Pro is optional: GagaEmu Pro Monthly (1 month, auto-renewing), GagaEmu Pro Yearly (1 year, auto-renewing) or Forever (one-time purchase). It adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and colours. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple Account at confirmation. Manage or cancel in your Apple Account settings.
 
 EARLY RELEASE
 GagaEmu is in early development. Speed depends on your device and the software you load. We make no promise that any particular title will run.
 
 PRIVACY
-GagaEmu has no accounts, analytics, advertising or tracking. Your games and saves stay on your device unless you share a file. With Cover Art turned on, game titles are sent to a cover art service to find box art.
+GagaEmu has no GagaEmu account, analytics, advertising or tracking. Your games and saves stay on your device unless you share a file or turn on an optional service: iCloud sync, RetroAchievements (you sign in with your own account at retroachievements.org) or Cover Art (game titles are sent to a cover art service to find box art).
+
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+Privacy Policy: https://zenithblue-oss.github.io/gaga-emu-site/privacy.html
 
 GagaEmu is open source under AGPL-3.0.
 

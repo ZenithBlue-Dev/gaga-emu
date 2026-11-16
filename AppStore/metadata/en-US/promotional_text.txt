@@ -1,1 +1,1 @@
-Play homebrew and the backups you own, in landscape, with touch controls or a game controller. GagaEmu comes with no games, ROMs or BIOS.
+Play homebrew and the backups you own, in portrait or landscape, with touch controls or a game controller. GagaEmu comes with no games, ROMs or BIOS.

@@ -1,6 +1,7 @@
 // Turns the device captures of UITests testStoreShots into the screens the store render puts in its frames.
 //
 //     swift -O scripts/store/prep_screens.swift <captures-dir> [library-dy]
+//     swift -O scripts/store/prep_screens.swift --ipad <captures-dir>    iPad Pro 13-inch simulator, to screens-ipad
 //
 // [library-dy] moves the Library's two painted areas up or down, in pixels: the iPhone 17 simulator draws that page
 // 36 px higher than the device (-36). Default 0, the device.
@@ -17,11 +18,14 @@ import ImageIO
 import UniformTypeIdentifiers
 
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-guard (2...3).contains(CommandLine.arguments.count) else { print("usage: prep_screens.swift <captures-dir> [library-dy]"); exit(2) }
-let libraryDY = CommandLine.arguments.count == 3 ? Int(CommandLine.arguments[2])! : 0
-let caps = URL(fileURLWithPath: CommandLine.arguments[1])
+// --ipad: captures from the iPad Pro 13-inch simulator (2064x2752), written to design/store/screens-ipad.
+let ipad = CommandLine.arguments.contains("--ipad")
+let args = CommandLine.arguments.filter { $0 != "--ipad" }
+guard (2...3).contains(args.count) else { print("usage: prep_screens.swift [--ipad] <captures-dir> [library-dy]"); exit(2) }
+let libraryDY = args.count == 3 ? Int(args[2])! : 0
+let caps = URL(fileURLWithPath: args[1])
 let art = root.appendingPathComponent("design/store/source")
-let out = root.appendingPathComponent("design/store/screens")
+let out = root.appendingPathComponent(ipad ? "design/store/screens-ipad" : "design/store/screens")
 try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
 let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
 
@@ -172,6 +176,90 @@ func upright(_ b: Bitmap) -> Bitmap {
     ctx.rotate(by: .pi / 2)
     ctx.draw(img, in: CGRect(x: 0, y: 0, width: b.w, height: b.h))
     return Bitmap(cg: ctx.makeImage()!)
+}
+
+/// iPad: the status bar keeps time and date; the app name after them goes, the green charging battery becomes a plain
+/// full one, and the window's resize corner goes.
+func statusBarPad(_ b: inout Bitmap) {
+    cover(&b, 340, 12, 500, 54, sample: (338, 8))
+    cover(&b, 1952, 12, 2020, 54, sample: (2030, 8))
+    cover(&b, 1996, 2686, b.w, b.h, sample: (1990, 2746))
+    let H = Double(b.h)
+    b.draw { ctx in
+        ctx.setStrokeColor(CGColor(gray: 1, alpha: 0.45)); ctx.setLineWidth(2)
+        ctx.addPath(CGPath(roundedRect: CGRect(x: 1959, y: H - 44, width: 48, height: 24), cornerWidth: 7, cornerHeight: 7, transform: nil))
+        ctx.strokePath()
+        ctx.setFillColor(CGColor(gray: 1, alpha: 1))
+        ctx.addPath(CGPath(roundedRect: CGRect(x: 1962, y: H - 41, width: 42, height: 18), cornerWidth: 4.5, cornerHeight: 4.5, transform: nil))
+        ctx.fillPath()
+        ctx.setFillColor(CGColor(gray: 1, alpha: 0.45))
+        ctx.addPath(CGPath(roundedRect: CGRect(x: 2009, y: H - 36, width: 3, height: 8), cornerWidth: 1.5, cornerHeight: 1.5, transform: nil))
+        ctx.fillPath()
+    }
+}
+
+/// iPad pause sheets dim the game behind them: the dimmed bars become the art, dimmed the same way.
+func dimmedGame(_ b: inout Bitmap, _ name: String) {
+    // The bars' extent, from the strip left of the sheet (the sheet's orange text would pass for a dimmed bar).
+    var x0 = Int.max, y0 = Int.max, y1 = 0
+    for y in 0..<(b.h / 2) { for x in 0..<400 {
+        let (R, G, B) = b[x, y]
+        if (R > 50 && G < 20 && B < 20) || (G > 50 && R < 20 && B < 20) || (B > 50 && R < 20 && G < 20) || (R > 50 && G > 50 && B < 60) { x0 = min(x0, x); y0 = min(y0, y); y1 = max(y1, y) }
+    } }
+    let x1 = b.w - 1 - x0
+    let red = b[x0 + 40, y0 + 40], off = red.2, k = (red.0 - off) / 255
+    let a = fill(name, x1 + 1 - x0, y1 + 1 - y0)
+    for y in y0...y1 { for x in x0...x1 {
+        // Only pixels that are a dimmed bar (dark and saturated, or the near-black strip): the sheet over the game, its
+        // text and the dimmed pause buttons stay.
+        let c = b[x, y], mx = max(c.0, c.1, c.2), mn = min(c.0, c.1, c.2)
+        guard (mx - mn > 25 && mx < 120) || mx < 14 else { continue }
+        let p = a[x - x0, y - y0]
+        b[x, y] = (p.0 * k + off, p.1 * k + off, p.2 * k + off)
+    } }
+}
+
+if ipad {
+    // Library: no system chip, no system on the Continue card.
+    var library = cap(1)
+    statusBarPad(&library)
+    cover(&library, 668, 200, 776, 272, sample: (720, 194))
+    cover(&library, 24, 764, 220, 810, sample: (14, 787))
+    save(library, "library.png")
+
+    var play = cap(4)
+    game(&play, barsRect(play, within: (0, 0, play.w, play.h / 2)), "game-16bit.png", unmix: true)
+    save(play, "play-portrait.png")
+
+    let land = upright(cap(5))
+    let landBars = barsRect(land, within: (0, 0, land.w, land.h))
+    for (artName, name) in [("game-shooter.png", "play-landscape.png"), ("game-3d.png", "play-landscape-3d.png")] {
+        var b = land
+        game(&b, landBars, artName, unmix: true)
+        save(b, name)
+    }
+
+    var filter = cap(8)
+    statusBarPad(&filter)
+    game(&filter, barsRect(filter, within: (660, 150, 1540, 2700)), "game-handheld.png", unmix: false)
+    save(filter, "filter.png")
+
+    // Pause sheets: the core's name on the Core Options tile behind each; the cheat formats; the skin's system.
+    for (n, name) in [(7, "saves.png"), (9, "cheats.png"), (10, "skin.png")] {
+        var b = cap(n)
+        dimmedGame(&b, "game-16bit.png")
+        cover(&b, 836, 2390, 930, 2428, sample: (832, 2410))
+        if n == 9 { cover(&b, 476, 1184, 1590, 1266, sample: (470, 1225)) }
+        if n == 10 { cover(&b, 540, 922, 820, 964, sample: (532, 943)) }
+        save(b, name)
+    }
+
+    for (n, name) in [(14, "controllers.png"), (15, "sync.png")] {
+        var b = cap(n)
+        statusBarPad(&b)
+        save(b, name)
+    }
+    exit(0)
 }
 
 // Library: no system chip, no details line on the Continue card.

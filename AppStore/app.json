@@ -5,7 +5,7 @@
   "locale": "en-US",
   "primaryCategory": "ENTERTAINMENT",
   "secondaryCategory": null,
-  "contentRightsDeclaration": "DOES_NOT_USE_THIRD_PARTY_CONTENT",
+  "contentRightsDeclaration": "USES_THIRD_PARTY_CONTENT",
   "ageRatingDeclaration": {
     "alcoholTobaccoOrDrugUseOrReferences": "NONE",
     "contests": "NONE",
@@ -33,7 +33,7 @@
   },
   "ITSAppUsesNonExemptEncryption": false,
   "manual": {
-    "appPrivacy": "Other Data, for App Functionality, not linked to the user, no tracking. Game titles go to thumbnails.libretro.com only with the Cover Art setting on, which is off by default. No other data leaves the device.",
+    "appPrivacy": "No tracking. Declare: Other Data (game titles to thumbnails.libretro.com, only with Cover Art on, off by default), App Functionality, not linked. User ID (RetroAchievements username) and Gameplay Content (game hash, unlocked achievements, play status to retroachievements.org, only after the user signs in with their own RA account), App Functionality, linked to the user's RA account. iCloud sync stays in the user's private iCloud container (not collected). No analytics, crash reporting or ads.",
     "usesNonExemptEncryption": false,
     "exportComplianceNote": "Info.plist sets ITSAppUsesNonExemptEncryption to false.",
     "pricing": "Owner's choice",

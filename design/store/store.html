@@ -29,7 +29,10 @@ const q = new URLSearchParams(location.search);
 const W = +q.get("w") || 1320, H = +q.get("h") || 2868;
 const shot = +q.get("shot") || 1, artKind = q.get("art");
 const pano = document.getElementById("pano");
-const SCREEN = 2622 / 1206;   // the iPhone captures: height / width
+// ?ipad=1 (render.py, ipad-13): iPad frames round the iPad captures in design/store/screens-ipad.
+const IPAD = q.get("ipad") === "1";
+const SCREEN = IPAD ? 2752 / 2064 : 2622 / 1206;   // the captures: height / width
+const P = (phoneValue, ipadValue) => IPAD ? ipadValue : phoneValue;
 
 function el(tag, cls, css, html) {
   const e = document.createElement(tag);
@@ -64,11 +67,12 @@ function sheet(s, n, { dark = false, tone, cx = 0.5, cy = 0.7, wash = 0.7 } = {}
                      backgroundSize: `${px(H * 0.09)} ${px(H * 0.09)}` });
 }
 
-/// An iPhone in a CSS frame. h: screen height (portrait) or screen width (landscape) as a fraction of H.
+/// An iPhone (or with ?ipad=1 an iPad: slimmer bezel, smaller corners) in a CSS frame. h: screen height (portrait)
+/// or screen width (landscape) as a fraction of H.
 function phone(s, x, y, h, src, { rot = 0, land = false, z = 3 } = {}) {
-  const long = h * H, short = long / SCREEN, bez = short * 0.045;
+  const long = h * H, short = long / SCREEN, bez = short * P(0.045, 0.028);
   const sw = land ? long : short, sh = land ? short : long;
-  const fw = sw + 2 * bez, fh = sh + 2 * bez, r = Math.min(fw, fh) * 0.16;
+  const fw = sw + 2 * bez, fh = sh + 2 * bez, r = Math.min(fw, fh) * P(0.16, 0.06);
   const d = el("div", "dev", { left: px(X(s, x) - fw / 2), top: px(y * H - fh / 2), width: px(fw), height: px(fh),
                                borderRadius: px(r), transform: `rotate(${rot}deg)`, zIndex: z });
   const img = document.createElement("img");
@@ -119,7 +123,7 @@ function glow(s, x, y, r, color) {
 
 // Real box art (scripts/store/real_covers.swift), always thumbnail-sized: never the hero.
 const C = n => `source/covers-real/cover-${String(n).padStart(2, "0")}.png`;
-const S = n => `screens/${n}.png`;
+const S = n => `${P("screens", "screens-ipad")}/${n}.png`;
 /// A small cover, w as a fraction of H, 3:4.
 const cover = (s, x, y, w, n, rot = 0, z = 2) => card(s, x, y, w, C(n), { rot, aspect: 3 / 4, z, radius: 0.004 });
 
@@ -144,7 +148,7 @@ function storeShots() {
   // 3: the Library.
   sheet(3, 1, { cy: 0.62 });
   caption(3, "One shelf for the<br>games you own.", "Your own covers, sorted the way you like.");
-  phone(3, 0.5, 0.62, 0.68, S("library"), { rot: 0, z: 3 });
+  phone(3, 0.5, P(0.62, 0.6), P(0.68, 0.72), S("library"), { rot: 0, z: 3 });
   cover(3, 0.13, 0.4, 0.07, 8, -8);
   cover(3, 0.87, 0.8, 0.07, 5, 7, 4);
 
@@ -159,28 +163,30 @@ function storeShots() {
   // 6: skins.
   sheet(6, 1, { dark: true, cx: 0.38, cy: 0.62, wash: 1 });
   caption(6, "A skin for<br>every grip.", "Standard, low reach or two big buttons.", { dark: true });
-  phone(6, 0.38, 0.62, 0.62, S("skin"), { rot: -3, z: 3 });
-  card(6, 0.8, 0.5, 0.14, "source/game-dual-top.png", { aspect: 1044 / 804, rot: 4, z: 4 });
-  card(6, 0.8, 0.61, 0.14, "source/game-dual-bottom.png", { aspect: 1044 / 779, rot: 4, z: 4 });
-  chip(6, 0.79, 0.69, "Two screens, too");
+  phone(6, 0.38, 0.62, P(0.62, 0.6), S("skin"), { rot: -3, z: 3 });
+  card(6, P(0.8, 0.85), 0.5, 0.14, "source/game-dual-top.png", { aspect: 1044 / 804, rot: 4, z: 4 });
+  card(6, P(0.8, 0.85), 0.61, 0.14, "source/game-dual-bottom.png", { aspect: 1044 / 779, rot: 4, z: 4 });
+  chip(6, P(0.79, 0.84), 0.69, "Two screens, too");
 
   // 7: filters.
   sheet(7, 1, { cx: 0.55, cy: 0.66 });
   caption(7, "CRT and LCD<br>filters, live.", "Try each one on your game before you pick.");
-  card(7, 0.5, 0.31, 0.3, "source/game-16bit.png", { aspect: 2000 / 1493, rot: -4, z: 2 });
+  card(7, 0.5, 0.345, 0.3, "source/game-16bit.png", { aspect: 2000 / 1493, rot: -4, z: 2 });
   phone(7, 0.55, 0.66, 0.6, S("filter"), { rot: 2, z: 3 });
+  chip(7, 0.5, 0.19, "Full filter catalogue with GagaEmu Pro", { dark: true });
 
   // 8: per-game options and cheats.
   sheet(8, 1, { tone: "var(--surface)", cx: 0.47, cy: 0.64 });
   caption(8, "Options and cheats<br>for each game.", "Add a code or import a .cht file.");
-  cover(8, 0.84, 0.31, 0.075, 10, 6);
+  cover(8, P(0.84, 0.86), P(0.31, 0.26), 0.075, 10, 6);
   phone(8, 0.47, 0.64, 0.64, S("cheats"), { rot: -2, z: 3 });
 
   // 9: saves, sync, nearby.
   sheet(9, 1, { cx: 0.52, cy: 0.64 });
   caption(9, "Saves, iCloud and<br>Play Nearby.", "Save states, game saves and sync across devices.");
-  phone(9, 0.36, 0.6, 0.56, S("saves"), { rot: -4, z: 3 });
-  phone(9, 0.69, 0.68, 0.56, S("sync"), { rot: 4, z: 4 });
+  phone(9, P(0.36, 0.33), P(0.6, 0.56), P(0.56, 0.46), S("saves"), { rot: -4, z: 3 });
+  phone(9, P(0.69, 0.67), P(0.68, 0.7), P(0.56, 0.46), S("sync"), { rot: 4, z: 4 });
+  chip(9, 0.5, 0.205, "iCloud sync with GagaEmu Pro", { dark: true });
 }
 
 function artwork(kind) {

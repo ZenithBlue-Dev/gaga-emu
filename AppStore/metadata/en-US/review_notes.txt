@@ -1,13 +1,13 @@
-GagaEmu is a retro game emulator (App Review Guideline 4.7). It contains no games, ROMs or BIOS, and it does not sell, link to or help obtain any. Users run only homebrew or legally owned backups of software they dumped from cartridges, discs and consoles they own.
+GagaEmu is a retro game emulator (App Review Guideline 4.7) with 30 interpreter cores. It contains no games, ROMs or BIOS, and it does not sell, link to or help obtain any. Users run only homebrew or legally owned backups of software they dumped from cartridges, discs and consoles they own.
 
-No account, login or demo account is needed. The app has no analytics, advertising or tracking. One optional setting, Cover Art in Settings > Library, is off by default; when the user turns it on, game titles are sent to thumbnails.libretro.com to look up box art.
+No account, login or demo account is needed. The app has no analytics, advertising or tracking. Optional services, all off until the user turns them on: Cover Art (Settings > Library) sends game titles to thumbnails.libretro.com to look up box art; RetroAchievements sign-in uses the user's own retroachievements.org account; iCloud sync (Pro) uses the user's private iCloud container.
 
-How to review without any game:
-- On first launch the library is empty, because the app ships without any software. The import button opens the iOS file picker; files can also be copied into GagaEmu with the Files app (On My iPhone).
-- Settings shows core status and a button to share a session log. All of this works without any game.
-- While a game runs, the view is full screen with on-screen touch controls. The menu pauses or stops the game.
+How to test with a game:
+- The attachment GagaEmu-test-pattern.zip holds a homebrew test ROM we wrote (colour bars, no third-party code); GagaEmu unpacks the zip on import. Save it to Files, then in GagaEmu open the Import tab, tap Choose from Files and pick it. It appears on the shelf; tap it to play with the on-screen touch controls. The menu button pauses the game: save a state, fast forward, filters, or stop.
+- Files can also be copied into GagaEmu with the Files app (On My iPhone or On My iPad > GagaEmu).
+- Without any game, the Library starts empty because the app ships without software; Settings works fully.
 
-In-app purchases (GagaEmu Pro): open Settings > GagaEmu Pro, then the GagaEmu Pro row, to reach the paywall with Monthly, Yearly and Forever, Restore Purchases, Redeem Offer, and the Terms and Privacy links. Any option marked with a lock (for example fast forward above 2x in a game's pause menu, or a locked filter in Style) opens the same paywall. Every system and core is free to play, with no ads and no sign-in. Pro adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and accent colours. Nothing a user made is removed if Pro ends.
+In-app purchases (GagaEmu Pro), testable in the sandbox: open Settings > GagaEmu Pro, then the GagaEmu Pro row, to reach the paywall. It shows Monthly (1 month), Yearly (1 year) and Forever (one payment) with their prices, Restore Purchases, Redeem Offer, and working Terms of Use (Apple standard EULA) and Privacy Policy links. Any option marked with a lock (for example fast forward above 2x in a game's pause menu, or a locked filter in Style) opens the same paywall. Every system and core is free to play, with no ads and no sign-in. Pro adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and accent colours. Nothing a user made is removed if Pro ends. There is no free trial.
 
 The app does not generate or execute new CPU code at run time, and it never makes memory executable. A user may import a .metal shader file, which the system's Metal compiler turns into GPU code; this runs on the GPU only.
 
