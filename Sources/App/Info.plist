@@ -19,9 +19,9 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>1.0.1</string>
     <key>CFBundleVersion</key>
-    <string>202611162018</string>
+    <string>202611182318</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.games</string>
     <key>LSRequiresIPhoneOS</key>

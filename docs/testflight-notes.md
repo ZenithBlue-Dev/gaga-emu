@@ -2,6 +2,14 @@
 
 Newest first. Each entry is the "What to Test" text for that build.
 
+## 1.0.1 (202611182318), 2026-11-18
+
+1.0.1: listing update, no app changes.
+
+- Same app as 1.0.0 build 202611162018, with a new version number for the new App Store listing.
+
+To test: open Settings, About and check it shows version 1.0.1. Play a game and check saves and save states still load.
+
 ## 1.0.0 (202611162018), 2026-11-16
 
 Device skins fill the screen.
