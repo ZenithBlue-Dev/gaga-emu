@@ -7,7 +7,7 @@
 Inputs: design/store/source (scripts/store/clean_art.swift) and design/store/screens (scripts/store/prep_screens.swift).
 Outputs: AppStore/screenshots/en-US/<folder>/01..10.png (iPad 01..09), in the folders and sizes scripts/appstore_metadata.py
 uploads (portrait), AppStore/creative/header-5244x2950.png and search-3840x2560.png, and design/store/retention-3840x2160.png.
-Each shot is its own Chrome window onto the one panorama, so the pairs 1-2 and 4-5 meet exactly at their edge.
+Each shot is its own Chrome window onto the one panorama, so the pairs 3-4 and 6-7 meet exactly at their edge.
 Chrome writes RGB PNGs with no alpha channel; the check below fails if one ever has alpha or the wrong size.
 """
 

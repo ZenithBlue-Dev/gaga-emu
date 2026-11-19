@@ -3,7 +3,7 @@
   GagaEmu App Store art, laid out in Paper and Ink with the owner's generated art and real covers (design/store/source) and real
   device screens (design/store/screens). scripts/store/render.py opens it in headless Chrome:
     ?w=1320&h=2868&shot=1..10     one store screenshot: the ten sit side by side on one panorama, so the pairs
-                                   1-2 and 4-5 share pieces across their edge
+                                   3-4 and 6-7 share pieces across their edge
     ?w=5244&h=2950&art=header     header (5244x2950), search (3840x2560) and retention artwork
   Device frames are plain CSS. Positions: x as a fraction of the shot width (1.0 is the next shot's edge),
   y and sizes as fractions of the height, so one layout serves every size.
@@ -131,70 +131,107 @@ const S = n => `${P("screens", "screens-ipad")}/${n}.png`;
 /// A small cover, w as a fraction of H, 3:4.
 const cover = (s, x, y, w, n, rot = 0, z = 2) => card(s, x, y, w, C(n), { rot, aspect: 3 / 4, z, radius: 0.004 });
 
+// The cover grids (shots 1-2, header, search): real box art of lesser-known games, covers-real/cover-17..91
+// (scripts/store/real_covers.swift), each system at its own box shape (aspect w/h).
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const GRIDS = {
+  nds:  { label: "NDS",  aspect: 1.12, covers: range(17, 26) },
+  psp:  { label: "PSP",  aspect: 0.78, covers: [...range(27, 34), 36, ...range(75, 79)] },
+  gba:  { label: "GBA",  aspect: 1.12, covers: [...range(37, 46), ...range(80, 82)] },
+  ps1:  { label: "PS1",  aspect: 1.05, covers: [...range(47, 53), ...range(83, 91)] },
+  n64:  { label: "N64",  aspect: 1.25, covers: range(55, 64) },
+  snes: { label: "SNES", aspect: 1.61, covers: [...range(65, 69), ...range(71, 73)] },
+};
+const GC = n => `source/covers-real/cover-${n}.png`;
+/// One grid cover: x, y, w, h in pixels on the panorama.
+function tile(x, y, w, h, n, z = 3) {
+  el("img", "card", { left: px(x), top: px(y), width: px(w), height: px(h), zIndex: z, borderRadius: px(H * 0.004),
+                      boxShadow: `0 ${px(H * 0.004)} ${px(H * 0.012)} rgba(0,0,0,.45)` }).src = GC(n);
+}
+
+/// A dense grid of covers on shot s, one labelled block per system, rows high, filling top..bottom (fractions of H).
+/// Each block fits as many columns as its box shape allows and stretches them to the full width (at most 20%;
+/// a block short of covers is centred instead).
+function coverGrid(s, keys, top, bottom, rows = 2) {
+  const gap = H * 0.008, groupGap = H * 0.02, labelH = H * 0.03, margin = W * 0.06, avail = W - 2 * margin;
+  const th = ((bottom - top) * H - keys.length * (labelH + (rows - 1) * gap) - (keys.length - 1) * groupGap) / (keys.length * rows);
+  let y = top * H;
+  keys.forEach(k => {
+    const g = GRIDS[k], tw0 = th * g.aspect;
+    const cols = Math.min(Math.max(1, Math.round((avail + gap) / (tw0 + gap))), Math.floor(g.covers.length / rows));
+    const tw = Math.min((avail - (cols - 1) * gap) / cols, tw0 * 1.2), x0 = X(s, 0) + margin + (avail - cols * tw - (cols - 1) * gap) / 2;
+    el("div", "rule", { left: px(x0), top: px(y + labelH * 0.42), width: px(H * 0.02), zIndex: 6 });
+    el("div", "chip", { left: px(x0 + H * 0.028), top: px(y), fontSize: px(H * 0.014), lineHeight: px(labelH * 0.9),
+                        color: "rgba(244,239,230,.85)", letterSpacing: ".12em", zIndex: 6 }, g.label);
+    y += labelH;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) tile(x0 + c * (tw + gap), y, tw, th, g.covers[r * cols + c]);
+      y += th + (r < rows - 1 ? gap : 0);
+    }
+    y += groupGap;
+  });
+}
+
 function storeShots() {
   pano.style.width = px(10 * W); pano.style.height = px(H);
   pano.style.transform = `translateX(${-(shot - 1) * W}px)`;
   document.body.style.width = px(W); document.body.style.height = px(H);
 
-  // 1-2: the hero pair on an ink sheet, one landscape phone across the edge.
-  sheet(1, 2, { dark: true, cx: 1.0, cy: 0.79, wash: 1 });
-  caption(1, "Your games.<br>One app.", "Play homebrew and the backups you own.", { dark: true, size: 0.05 });
+  // 1-2: the cover grids, a big shelf of box art by system.
+  sheet(1, 2, { dark: true, cx: 1.0, cy: 0.6, wash: 0.8 });
+  caption(1, "Your NDS, PSP &amp; GBA<br>library in one app", "Box art on shelves by system, for the games you bring.", { dark: true, size: 0.034 });
+  coverGrid(1, ["nds", "psp", "gba"], 0.235, 0.965);
+  caption(2, "PS1, N64, SNES,<br>all on one shelf", "Plus GB, GBC, NES, MD, arcade, DOS and more.", { dark: true, size: 0.034 });
+  coverGrid(2, ["ps1", "n64", "snes"], 0.235, 0.965);
+
+  // 3-4: the hero pair on an ink sheet, one landscape phone across the edge.
+  sheet(3, 2, { dark: true, cx: 1.0, cy: 0.79, wash: 1 });
+  caption(3, "Your games.<br>One app.", "Play homebrew and the backups you own.", { dark: true, size: 0.05 });
   [[0.2, 0.36, 1, -4], [0.42, 0.35, 14, 2], [0.64, 0.37, 2, -2], [0.86, 0.355, 16, 3],
    [0.25, 0.5, 13, 3], [0.48, 0.51, 9, -3], [0.71, 0.5, 17, 2]]
-    .forEach(([x, y, n, r]) => cover(1, x, y, 0.072, n, r));
-  phone(1, 1.0, 0.79, 0.58, S("play-landscape"), { land: true, rot: -5, z: 5 });
-  glow(1, 1.0, 0.79, 0.3, "rgba(228,87,46,.35)");
-  caption(2, "Landscape, with<br>the controls on top.", "Touch buttons sit over the picture, never in its way.", { dark: true });
-  card(2, 0.66, 0.36, 0.2, "source/game-3d.png", { rot: 5, z: 3 });
-  card(2, 0.3, 0.43, 0.17, "source/game-8bit.png", { rot: -6, aspect: 2000 / 1493, z: 2 });
-  card(2, 0.78, 0.56, 0.15, "source/game-shooter.png", { rot: -3, z: 2 });
+    .forEach(([x, y, n, r]) => cover(3, x, y, 0.072, n, r));
+  phone(3, 1.0, 0.79, 0.58, S("play-landscape"), { land: true, rot: -5, z: 5 });
+  glow(3, 1.0, 0.79, 0.3, "rgba(228,87,46,.35)");
+  caption(4, "Landscape, with<br>the controls on top.", "Touch buttons sit over the picture, never in its way.", { dark: true });
+  card(4, 0.66, 0.36, 0.2, "source/game-3d.png", { rot: 5, z: 3 });
+  card(4, 0.3, 0.43, 0.17, "source/game-8bit.png", { rot: -6, aspect: 2000 / 1493, z: 2 });
+  card(4, 0.78, 0.56, 0.15, "source/game-shooter.png", { rot: -3, z: 2 });
 
-  // 3: the Library.
-  sheet(3, 1, { cy: 0.62 });
-  caption(3, "One shelf for the<br>games you own.", "Your own covers, sorted the way you like.");
+  // 5: the Library.
+  sheet(5, 1, { cy: 0.62 });
+  caption(5, "One shelf for the<br>games you own.", "Your own covers, sorted the way you like.");
   // The iPad set shows the iPhone Library too: its 3DS, DS and PSP shelves are an iPhone capture.
-  phone(3, 0.5, P(0.62, 0.6), 0.68, "screens/library.png", { rot: 0, z: 3, iphone: true });
-  cover(3, 0.13, 0.4, 0.07, 8, -8);
-  cover(3, 0.87, 0.8, 0.07, 15, 7, 4);
+  phone(5, 0.5, P(0.62, 0.6), 0.68, "screens/library.png", { rot: 0, z: 3, iphone: true });
+  cover(5, 0.13, 0.4, 0.07, 8, -8);
+  cover(5, 0.87, 0.8, 0.07, 15, 7, 4);
 
-  // 4-5: touch, then a controller; the pad sits across the edge.
-  sheet(4, 2, { cx: 1.0, cy: 0.62 });
-  caption(4, "Touch controls,<br>sized for thumbs.", "Move, resize and fade every button.");
-  phone(4, 0.42, 0.56, 0.62, S("play-portrait"), { z: 3 });
-  gamepad(4, 1.12, 0.8, 0.4, { rot: -8, z: 5 });
-  caption(5, "Or pick up<br>a controller.", "Map every button, with turbo and macros.");
-  phone(5, 0.5, 0.43, 0.45, S("play-landscape-3d"), { land: true, rot: 3, z: 3 });
+  // 6-7: touch, then a controller; the pad sits across the edge.
+  sheet(6, 2, { cx: 1.0, cy: 0.62 });
+  caption(6, "Touch controls,<br>sized for thumbs.", "Move, resize and fade every button.");
+  phone(6, 0.42, 0.56, 0.62, S("play-portrait"), { z: 3 });
+  gamepad(6, 1.12, 0.8, 0.4, { rot: -8, z: 5 });
+  caption(7, "Or pick up<br>a controller.", "Map every button, with turbo and macros.");
+  phone(7, 0.5, 0.43, 0.45, S("play-landscape-3d"), { land: true, rot: 3, z: 3 });
 
-  // 6: skins.
-  sheet(6, 1, { dark: true, cx: 0.38, cy: 0.62, wash: 1 });
-  caption(6, "A skin for<br>every grip.", "Standard, low reach or two big buttons.", { dark: true });
-  phone(6, 0.38, 0.62, P(0.62, 0.6), S("skin"), { rot: -3, z: 3 });
-  card(6, P(0.8, 0.85), 0.5, 0.14, "source/game-dual-top.png", { aspect: 1044 / 804, rot: 4, z: 4 });
-  card(6, P(0.8, 0.85), 0.61, 0.14, "source/game-dual-bottom.png", { aspect: 1044 / 779, rot: 4, z: 4 });
-  chip(6, P(0.79, 0.84), 0.69, "Two screens, too");
+  // 8: skins.
+  sheet(8, 1, { dark: true, cx: 0.38, cy: 0.62, wash: 1 });
+  caption(8, "A skin for<br>every grip.", "Standard, low reach or two big buttons.", { dark: true });
+  phone(8, 0.38, 0.62, P(0.62, 0.6), S("skin"), { rot: -3, z: 3 });
+  card(8, P(0.8, 0.85), 0.5, 0.14, "source/game-dual-top.png", { aspect: 1044 / 804, rot: 4, z: 4 });
+  card(8, P(0.8, 0.85), 0.61, 0.14, "source/game-dual-bottom.png", { aspect: 1044 / 779, rot: 4, z: 4 });
+  chip(8, P(0.79, 0.84), 0.69, "Two screens, too");
 
-  // 7: filters.
-  sheet(7, 1, { cx: 0.55, cy: 0.66 });
-  caption(7, "CRT and LCD<br>filters, live.", "Try each one on your game before you pick.");
-  card(7, 0.5, 0.345, 0.3, "source/game-16bit.png", { aspect: 2000 / 1493, rot: -4, z: 2 });
-  phone(7, 0.55, 0.66, 0.6, S("filter"), { rot: 2, z: 3 });
-  chip(7, 0.5, 0.19, "Full filter catalogue with GagaEmu Pro", { dark: true });
+  // 9: filters.
+  sheet(9, 1, { cx: 0.55, cy: 0.66 });
+  caption(9, "CRT and LCD<br>filters, live.", "Try each one on your game before you pick.");
+  card(9, 0.5, 0.345, 0.3, "source/game-16bit.png", { aspect: 2000 / 1493, rot: -4, z: 2 });
+  phone(9, 0.55, 0.66, 0.6, S("filter"), { rot: 2, z: 3 });
+  chip(9, 0.5, 0.19, "Full filter catalogue with GagaEmu Pro", { dark: true });
 
-  // 8: per-game options and cheats.
-  sheet(8, 1, { tone: "var(--surface)", cx: 0.47, cy: 0.64 });
-  caption(8, "Options and cheats<br>for each game.", "Add a code or import a .cht file.");
-  cover(8, P(0.84, 0.86), P(0.31, 0.26), 0.075, 10, 6);
-  phone(8, 0.47, 0.64, 0.64, S("cheats"), { rot: -2, z: 3 });
-
-  // 9: saves, sync, nearby.
-  sheet(9, 1, { cx: 0.52, cy: 0.64 });
-  caption(9, "Saves, iCloud and<br>Play Nearby.", "Save states, game saves and sync across devices.");
-  phone(9, P(0.36, 0.33), P(0.6, 0.56), P(0.56, 0.46), S("saves"), { rot: -4, z: 3 });
-  phone(9, P(0.69, 0.67), P(0.68, 0.7), P(0.56, 0.46), S("sync"), { rot: 4, z: 4 });
-  chip(9, 0.5, 0.205, "iCloud sync with GagaEmu Pro", { dark: true });
+  // The cheats and saves shots made room for the cover grids (design/store/screens keeps their captures).
 
   // 10 (iPhone only): a device skin in play, captured on an iPhone, with three more of our skins beside it.
-  // z 5: shot 9's right phone crosses this edge; the sheet hides it here, so this shot's pieces sit at 6 and up.
+  // z 5: lifts the sheet over anything from shot 9 that crosses this edge; this shot's pieces sit at 6 and up.
   sheet(10, 1, { dark: true, cx: 0.42, cy: 0.62, wash: 1, z: 5 });
   caption(10, "Make the controls<br>yours.", "A skin drawn for each system, or move every button.", { dark: true });
   phone(10, 0.42, P(0.62, 0.6), P(0.66, 0.62), S("skin-play"), { rot: -3, z: 6 });
@@ -215,15 +252,23 @@ function artwork(kind) {
   const sub = (x, y, size, text, color) => el("div", "sub", { left: px(W * x), top: px(H * y), fontSize: px(H * size), color, zIndex: 6 }, text);
   if (kind === "header" || kind === "search") {
     // App Store Connect crops these across orientations: icon, wordmark and line stay in the centre column,
-    // and the small covers (a 3 x 3 grid each side) are the only thing allowed to fall off the edges.
-    // Search (3840x2560) is narrower than the header, so smaller covers further out and a smaller wordmark.
-    const g = kind === "header" ? { cw: 0.12, xs: [0.07, 0.16, 0.25], icon: 0.2, iy: 0.28, wy: 0.4, ws: 0.13, ly: 0.6, ls: 0.04 }
-                                : { cw: 0.1, xs: [0.05, 0.12, 0.19], icon: 0.17, iy: 0.3, wy: 0.41, ws: 0.1, ly: 0.57, ls: 0.035 };
-    const rots = [-4, 3, -2, 2, -3, 4, 3, -2, -4];
-    [0, 1].forEach(side => g.xs.forEach((x, c) => [0.2, 0.5, 0.8].forEach((y, r) => {
-      const i = side * 9 + c * 3 + r;
-      cover(1, side ? 1 - x : x, y, g.cw, (i % 2 ? 11 : 1) + (i >> 1), rots[i % 9] * (side ? -1 : 1));   // real and invented in turn
-    })));
+    // and the cover grids (one row per system each side, as on shots 1-2) are the only thing allowed to fall off the edges.
+    // Search (3840x2560) is narrower than the header, so a wider centre column and a smaller wordmark.
+    const g = kind === "header" ? { col: 0.2, icon: 0.2, iy: 0.28, wy: 0.4, ws: 0.13, ly: 0.6, ls: 0.04 }
+                                : { col: 0.22, icon: 0.17, iy: 0.3, wy: 0.41, ws: 0.1, ly: 0.57, ls: 0.035 };
+    const keys = ["nds", "psp", "gba", "ps1", "n64", "snes"], gap = H * 0.012;
+    const th = (H - (keys.length + 1) * gap) / keys.length;
+    keys.forEach((k, r) => {
+      const { aspect, covers } = GRIDS[k], tw = th * aspect, y = gap + r * (th + gap), half = Math.ceil(covers.length / 2);
+      // Each row starts at the centre column and runs off the outer edge; left takes the first half of the covers.
+      [0, 1].forEach(side => {
+        const list = side ? covers.slice(half) : covers.slice(0, half);
+        for (let c = 0; c * (tw + gap) < W * (0.5 - g.col) && c < list.length; c++) {
+          const inner = W * (0.5 - g.col) - c * (tw + gap);   // distance from the outer edge to this tile's inner side
+          tile(side ? W - inner : inner - tw, y, tw, th, list[c]);
+        }
+      });
+    });
     const s = g.icon * H;
     el("img", "abs", { left: px(W / 2 - s / 2), top: px(g.iy * H - s / 2), width: px(s), height: px(s), borderRadius: px(s * 0.2237),
                        boxShadow: `0 ${px(H * 0.02)} ${px(H * 0.05)} rgba(0,0,0,.45)`, zIndex: 6 })
@@ -231,7 +276,7 @@ function artwork(kind) {
     el("div", "head", { left: 0, width: px(W), textAlign: "center", top: px(H * g.wy), fontSize: px(H * g.ws), color: "var(--paper)", zIndex: 6 }, "GagaEmu");
     el("div", "rule", { left: px(W / 2 - H * 0.04), top: px(H * (g.ly - 0.035)), width: px(H * 0.08), height: px(H * 0.006), zIndex: 6 });
     el("div", "sub", { left: 0, width: px(W), textAlign: "center", top: px(H * g.ly), fontSize: px(H * g.ls), color: "rgba(244,239,230,.85)", zIndex: 6 },
-       "Your games. One app.");
+       "Retro Game Emulator");
   } else {
     el("div", "rule", { left: px(W * 0.08), top: px(H * 0.3), width: px(H * 0.07), height: px(H * 0.006) });
     head(0.08, 0.33, 0.09, "Pick up where<br>you left off.", "var(--ink)");

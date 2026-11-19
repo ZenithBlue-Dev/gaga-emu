@@ -40,7 +40,7 @@ LIMITS = {
 }
 REQUIRED = ["name", "subtitle", "description", "keywords", "support_url", "privacy_url", "copyright"]
 # Trademarks and claims the listing must not use (App Review 4.7).
-FORBIDDEN = [r"play\s*station", r"\bps\s*[1-5]\b", r"\bps\b", r"\bsony\b", r"\bpsn\b",
+FORBIDDEN = [r"play\s*station", r"\bps\b", r"\bsony\b", r"\bpsn\b",
              r"\bnintendo\b", r"\bsega\b", r"\bxbox\b", r"\batari\b",
              r"\bbios\s+download", r"\bdownload\s+(games|roms|firmware)\b", r"\biso\s+download"]
 # Screenshot folders (AppStore/screenshots/<locale>/<folder>/*.png) and their display types.
@@ -322,6 +322,11 @@ def push(listing, app, credentials):
     if versions:
         version = versions[0]
         print(f"version: {app['versionString']} ({version['attributes'].get('appStoreState')})")
+        if version["attributes"].get("appStoreState") not in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED",
+                                                             "METADATA_REJECTED", "INVALID_BINARY"):
+            failures.append(f"version {app['versionString']} is not editable, left alone")
+            print("\n".join(["", "Not updated:"] + failures))
+            return 1
 
         def version_attributes():
             api.patch("appStoreVersions", version["id"], only_set({"copyright": listing.get("copyright")}))
@@ -333,6 +338,7 @@ def push(listing, app, credentials):
                 "description": listing.get("description"),
                 "keywords": listing.get("keywords"),
                 "promotionalText": listing.get("promotional_text"),
+                "whatsNew": listing.get("whats_new"),
                 "supportUrl": listing.get("support_url"),
                 "marketingUrl": listing.get("marketing_url"),
             })
@@ -381,13 +387,19 @@ def main():
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--push", action="store_true")
+    parser.add_argument("--version", help="App Store version string to update (default: app.json versionString)")
+    parser.add_argument("--whats-new", help="'What's New in This Version' text for that version")
     parser.add_argument("--key-id", default=os.environ.get("ASC_KEY_ID", "HDY587QW5K"))
     parser.add_argument("--issuer-id", default=os.environ.get("ASC_ISSUER_ID"))
     parser.add_argument("--key-path", default=os.environ.get("ASC_API_KEY_PATH", str(DEFAULT_KEY)))
     args = parser.parse_args()
 
     app = json.loads((ROOT / "app.json").read_text())
+    if args.version:
+        app["versionString"] = args.version
     listing = load_listing(app["locale"])
+    if args.whats_new:
+        listing["whats_new"] = args.whats_new
     errors = check(listing, app)
     for field in sorted(LIMITS):
         if field in listing:

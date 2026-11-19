@@ -1,4 +1,6 @@
-GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, on iPhone and iPad, in portrait or landscape.
+Retro game emulator for NDS, 3DS, PSP, PS1, GBA, N64, SNES and more, on your phone and tablet.
+
+GagaEmu is a quiet shelf for games you already own. It plays homebrew and backups of your own cartridges and discs, in portrait or landscape.
 
 You provide every game and every BIOS file yourself, and they must be legally obtained. GagaEmu does not include any games, ROMs or BIOS, and it does not sell, link to or help you obtain them.
 
@@ -15,19 +17,19 @@ ADDING FILES
 - Patch a ROM applies an IPS, UPS or BPS patch to a copy. The original is left untouched.
 
 PLAYING
-- Touch controls, or a game controller supported by iOS.
+- Touch controls, or a supported game controller.
 - Save states and fast forward from the pause menu. Rewind where the system supports it.
 - Picture filters, from Original to CRT.
 - Custom skins for the touch controls.
 
 GAGAEMU PRO
-All 30 emulator cores are free to play, with no ads and no sign-in. GagaEmu Pro is optional: GagaEmu Pro Monthly (1 month, auto-renewing), GagaEmu Pro Yearly (1 year, auto-renewing) or Forever (one-time purchase). It adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, iCloud sync, and extra app icons and colours. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple Account at confirmation. Manage or cancel in your Apple Account settings.
+All 30 emulator cores are free to play, with no ads and no sign-in. GagaEmu Pro is optional: GagaEmu Pro Monthly (1 month, auto-renewing), GagaEmu Pro Yearly (1 year, auto-renewing) or Forever (one-time purchase). It adds fast forward above 2x, more than 4 save states and 5 cheats per game, players 3 and 4, the full filter catalogue, cloud sync, and extra app icons and colours. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Payment is charged to your Apple Account at confirmation. Manage or cancel in your Apple Account settings.
 
 EARLY RELEASE
 GagaEmu is in early development. Speed depends on your device and the software you load. We make no promise that any particular title will run.
 
 PRIVACY
-GagaEmu has no GagaEmu account, analytics, advertising or tracking. Your games and saves stay on your device unless you share a file or turn on an optional service: iCloud sync, RetroAchievements (you sign in with your own account at retroachievements.org) or Cover Art (game titles are sent to a cover art service to find box art).
+GagaEmu has no GagaEmu account, analytics, advertising or tracking. Your games and saves stay on your device unless you share a file or turn on an optional service: cloud sync to your private cloud storage, RetroAchievements (you sign in with your own account at retroachievements.org) or Cover Art (game titles are sent to a cover art service to find box art).
 
 Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 Privacy Policy: https://zenithblue-oss.github.io/gaga-emu-site/privacy.html

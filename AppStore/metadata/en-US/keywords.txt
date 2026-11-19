@@ -1,1 +1,1 @@
-homebrew,retro,classic,controller,gamepad,save states,rewind,landscape,crt filter,rom patch
+gb,gbc,nes,md,psx,arcade,mame,ngp,pce,dos,homebrew,retro,console,handheld,c64,amiga,ws

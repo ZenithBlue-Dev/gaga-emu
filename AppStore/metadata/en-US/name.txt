@@ -1,1 +1,1 @@
-GagaEmu - Game Emulator
+GagaEmu: NDS 3DS PSP Emulator
