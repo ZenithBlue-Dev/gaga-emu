@@ -1,1 +1,1 @@
-gb,gbc,nes,md,psx,arcade,mame,ngp,pce,dos,homebrew,retro,console,handheld,c64,amiga,ws
+gb,gbc,nes,snes,nds,ps1,md,psx,arcade,mame,ngp,pce,dos,homebrew,console,handheld,c64,amiga,ws
